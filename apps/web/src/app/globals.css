@@ -1,0 +1,201 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ── Stariva · Luxury Monochrome palette ─────────────────────────
+     Inspired by The Row / Loro Piana / Jil Sander.
+     No accent color. Hierarchy through white, warm grey, deep dark.
+     ────────────────────────────────────────────────────────────── */
+
+  --white: #fdfcfb; /* primary background — warm optical white     */
+  --off-white: #f5f3f0; /* cards, subtle section separator             */
+  --light-grey: #eae8e4; /* hover surfaces, light borders               */
+  --mid-grey: #b0aca6; /* secondary text, disabled states             */
+  --dark-grey: #4a4845; /* body text, captions                         */
+  --near-black: #161513; /* headings, primary text, dark UI elements    */
+
+  /* Semantic aliases — every existing bg-parchment / text-espresso etc. keeps working */
+  --parchment: var(--white);
+  --sand: var(--off-white);
+  --cream: var(--off-white);
+  --espresso: var(--near-black);
+  --taupe: var(--mid-grey);
+  --terracotta: var(
+    --near-black
+  ); /* buttons & accents → dark instead of colour */
+  --terracotta-dark: var(--dark-grey);
+  --linen: var(--light-grey);
+  --birch: var(--mid-grey);
+  --sage: var(--dark-grey);
+  --sage-light: var(--mid-grey);
+  --sage-pale: var(--off-white);
+  --warm-beige: var(--light-grey);
+  --chalk: var(--white);
+  --chalk-card: var(--off-white);
+  --graphite: var(--near-black);
+  --smoke: var(--mid-grey);
+
+  /* shadcn tokens */
+  --background: var(--white);
+  --foreground: var(--near-black);
+  --card: var(--off-white);
+  --card-foreground: var(--near-black);
+  --popover: var(--white);
+  --popover-foreground: var(--near-black);
+  --primary: var(--near-black);
+  --primary-foreground: var(--white);
+  --secondary: var(--off-white);
+  --secondary-foreground: var(--near-black);
+  --muted: var(--off-white);
+  --muted-foreground: var(--mid-grey);
+  --accent: var(--light-grey);
+  --accent-foreground: var(--near-black);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: rgba(22, 21, 19, 0.1);
+  --input: rgba(22, 21, 19, 0.13);
+  --ring: var(--near-black);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-sans), "Inter Fallback", system-ui, sans-serif;
+  --font-serif:
+    var(--font-serif), "Cormorant Garamond Fallback", Georgia, serif;
+  --font-mono: ui-monospace, monospace;
+
+  /* Core tokens */
+  --color-white: var(--white);
+  --color-off-white: var(--off-white);
+  --color-light-grey: var(--light-grey);
+  --color-mid-grey: var(--mid-grey);
+  --color-dark-grey: var(--dark-grey);
+  --color-near-black: var(--near-black);
+  /* Full alias set — nothing breaks in existing components */
+  --color-chalk: var(--chalk);
+  --color-chalk-card: var(--chalk-card);
+  --color-graphite: var(--graphite);
+  --color-smoke: var(--smoke);
+  --color-sage: var(--sage);
+  --color-sage-light: var(--sage-light);
+  --color-sage-pale: var(--sage-pale);
+  --color-warm-beige: var(--warm-beige);
+  --color-parchment: var(--parchment);
+  --color-sand: var(--sand);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-dark: var(--terracotta-dark);
+  --color-espresso: var(--espresso);
+  --color-taupe: var(--taupe);
+  --color-linen: var(--linen);
+  --color-birch: var(--birch);
+  --color-cream: var(--cream);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--white);
+    color: var(--near-black);
+    font-feature-settings: "ss01", "cv01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background-color: var(--near-black);
+    color: var(--white);
+  }
+}
+
+@layer utilities {
+  .label-caps {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .label-caps-md {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .film-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0 0.1  0 0 0 0.35 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+  }
+  .group:hover .film-grain::after {
+    opacity: 0.5;
+  }
+  .marquee-track {
+    animation: marquee 50s linear infinite;
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/* Custom scrollbar for atmosphere horizontal scroll */
+.atmosphere-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.atmosphere-scroll::-webkit-scrollbar-track {
+  background: var(--off-white);
+}
+.atmosphere-scroll::-webkit-scrollbar-thumb {
+  background: var(--mid-grey);
+  border-radius: 2px;
+}
+
+/* Hidden scrollbar for chat textarea — scroll works, bar invisible */
+.chat-input-scroll {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.chat-input-scroll::-webkit-scrollbar {
+  display: none;
+}
