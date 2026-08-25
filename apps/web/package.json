@@ -14,11 +14,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@stariva/auth": "workspace:*",
-    "@stariva/config": "workspace:*",
-    "@stariva/db": "workspace:*",
-    "@stariva/emails": "workspace:*",
-    "@stariva/storage": "workspace:*",
     "@ai-sdk/groq": "^4.0.15",
     "@ai-sdk/openai-compatible": "^3.0.16",
     "@ai-sdk/otel": "^1.0.40",
@@ -56,6 +51,11 @@
     "@radix-ui/react-toggle-group": "1.1.19",
     "@radix-ui/react-tooltip": "1.2.16",
     "@sindresorhus/slugify": "^3.0.0",
+    "@stariva/auth": "workspace:*",
+    "@stariva/config": "workspace:*",
+    "@stariva/db": "workspace:*",
+    "@stariva/emails": "workspace:*",
+    "@stariva/storage": "workspace:*",
     "@t3-oss/env-nextjs": "0.13.11",
     "@vercel/analytics": "^2.0.1",
     "ai": "^7.0.40",

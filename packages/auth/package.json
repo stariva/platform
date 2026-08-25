@@ -22,8 +22,8 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@stariva/tsconfig": "workspace:*",
     "@better-auth/cli": "1.4.21",
+    "@stariva/tsconfig": "workspace:*",
     "@types/node": "26.3.0",
     "typescript": "7.0.2"
   }
