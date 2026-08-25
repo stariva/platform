@@ -1,6 +1,6 @@
 "use client";
 
-import { paths } from "@acme/config";
+import { paths } from "@stariva/config";
 import {
   Avatar,
   AvatarFallback,
@@ -16,7 +16,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@acme/ui";
+} from "@stariva/ui";
 import {
   IconCreditCard,
   IconDotsVertical,

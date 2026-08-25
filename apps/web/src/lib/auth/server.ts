@@ -1,14 +1,14 @@
 import "server-only";
 
-import { initAuth } from "@acme/auth";
-import { env } from "@acme/config";
+import { initAuth } from "@stariva/auth";
+import { env } from "@stariva/config";
 import {
   StarivaChangeEmailEmail,
   StarivaMagicLinkEmail,
   StarivaResetPasswordEmail,
   StarivaVerifyEmail,
   sendEmail,
-} from "@acme/emails";
+} from "@stariva/emails";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
 

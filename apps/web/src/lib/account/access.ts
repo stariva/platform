@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { db } from "@acme/db";
-import { courseAccess, lessonProgress } from "@acme/db/schema";
+import { db } from "@stariva/db";
+import { courseAccess, lessonProgress } from "@stariva/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { getWorkshopLessons, type Workshop } from "@/lib/workshops-data";
 

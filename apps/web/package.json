@@ -1,5 +1,5 @@
 {
-  "name": "@acme/web",
+  "name": "@stariva/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,11 +14,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@acme/auth": "workspace:*",
-    "@acme/config": "workspace:*",
-    "@acme/db": "workspace:*",
-    "@acme/emails": "workspace:*",
-    "@acme/storage": "workspace:*",
+    "@stariva/auth": "workspace:*",
+    "@stariva/config": "workspace:*",
+    "@stariva/db": "workspace:*",
+    "@stariva/emails": "workspace:*",
+    "@stariva/storage": "workspace:*",
     "@ai-sdk/groq": "^4.0.15",
     "@ai-sdk/openai-compatible": "^3.0.16",
     "@ai-sdk/otel": "^1.0.40",
@@ -83,8 +83,8 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@acme/tailwind-config": "workspace:*",
-    "@acme/tsconfig": "workspace:*",
+    "@stariva/tailwind-config": "workspace:*",
+    "@stariva/tsconfig": "workspace:*",
     "@types/node": "26.3.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",

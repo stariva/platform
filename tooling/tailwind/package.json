@@ -1,5 +1,5 @@
 {
-  "name": "@acme/tailwind-config",
+  "name": "@stariva/tailwind-config",
   "private": true,
   "type": "module",
   "exports": {
@@ -20,7 +20,7 @@
     "tailwindcss": "4.3.3"
   },
   "devDependencies": {
-    "@acme/tsconfig": "workspace:*",
+    "@stariva/tsconfig": "workspace:*",
     "@types/node": "26.3.0",
     "typescript": "7.0.2"
   }

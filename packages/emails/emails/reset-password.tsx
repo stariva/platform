@@ -1,4 +1,4 @@
-import { APP_CONFIG, env } from "@acme/config";
+import { APP_CONFIG, env } from "@stariva/config";
 import {
   Body,
   Button,

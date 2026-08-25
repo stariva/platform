@@ -1,4 +1,4 @@
-import { Post, sql, user } from "@acme/db";
+import { Post, sql, user } from "@stariva/db";
 
 import { adminProcedure } from "../../../orpc";
 

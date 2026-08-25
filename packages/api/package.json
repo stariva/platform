@@ -1,5 +1,5 @@
 {
-  "name": "@acme/api",
+  "name": "@stariva/api",
   "private": true,
   "type": "module",
   "exports": {
@@ -19,10 +19,10 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@acme/auth": "workspace:*",
-    "@acme/config": "workspace:*",
-    "@acme/db": "workspace:*",
-    "@acme/validators": "workspace:*",
+    "@stariva/auth": "workspace:*",
+    "@stariva/config": "workspace:*",
+    "@stariva/db": "workspace:*",
+    "@stariva/validators": "workspace:*",
     "@orpc/contract": "^1.15.0",
     "@orpc/server": "^1.15.0",
     "better-auth": "1.7.1",
@@ -30,7 +30,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@acme/tsconfig": "workspace:*",
+    "@stariva/tsconfig": "workspace:*",
     "@types/node": "26.3.0",
     "typescript": "7.0.2"
   }

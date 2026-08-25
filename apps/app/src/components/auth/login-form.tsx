@@ -1,6 +1,6 @@
 "use client";
 
-import { paths } from "@acme/config";
+import { paths } from "@stariva/config";
 import {
   Button,
   Card,
@@ -16,8 +16,8 @@ import {
   FormLabel,
   FormMessage,
   Input,
-} from "@acme/ui";
-import { type LoginFormData, loginFormSchema } from "@acme/validators";
+} from "@stariva/ui";
+import { type LoginFormData, loginFormSchema } from "@stariva/validators";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

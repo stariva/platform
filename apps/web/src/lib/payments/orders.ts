@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { db } from "@acme/db";
-import { orders } from "@acme/db/schema";
+import { db } from "@stariva/db";
+import { orders } from "@stariva/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 
 export interface CreateOrderInput {

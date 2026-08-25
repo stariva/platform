@@ -1,4 +1,4 @@
-import { getDownloadUrl, isStorageConfigured } from "@acme/storage";
+import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";

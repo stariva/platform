@@ -46,8 +46,8 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@acme/ui";
-import { useIsMobile } from "@acme/ui/hooks";
+} from "@stariva/ui";
+import { useIsMobile } from "@stariva/ui/hooks";
 import {
   type DataTableItemData,
   dataTableItemSchema,
@@ -55,7 +55,7 @@ import {
   limitFormSchema,
   type TargetFormData,
   targetFormSchema,
-} from "@acme/validators";
+} from "@stariva/validators";
 import {
   closestCenter,
   DndContext,
@@ -117,7 +117,7 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { toast } from "sonner";
 import type { z } from "zod";
 
-// Use schema from @acme/validators
+// Use schema from @stariva/validators
 export const schema = dataTableItemSchema;
 type DataTableItem = z.infer<typeof schema>;
 

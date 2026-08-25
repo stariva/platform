@@ -1,7 +1,7 @@
 "use client";
 
-import { paths } from "@acme/config";
-import { cn } from "@acme/ui";
+import { paths } from "@stariva/config";
+import { cn } from "@stariva/ui";
 import { Bell, Circle, Globe, Monitor, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

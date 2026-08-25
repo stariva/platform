@@ -1,5 +1,5 @@
 {
-  "name": "@acme/auth",
+  "name": "@stariva/auth",
   "private": true,
   "type": "module",
   "exports": {
@@ -16,13 +16,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@acme/config": "workspace:*",
-    "@acme/db": "workspace:*",
+    "@stariva/config": "workspace:*",
+    "@stariva/db": "workspace:*",
     "better-auth": "1.7.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@acme/tsconfig": "workspace:*",
+    "@stariva/tsconfig": "workspace:*",
     "@better-auth/cli": "1.4.21",
     "@types/node": "26.3.0",
     "typescript": "7.0.2"

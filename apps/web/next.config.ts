@@ -44,11 +44,11 @@ const securityHeaders = [
 const config: NextConfig = {
   output: "standalone",
   transpilePackages: [
-    "@acme/auth",
-    "@acme/config",
-    "@acme/db",
-    "@acme/emails",
-    "@acme/storage",
+    "@stariva/auth",
+    "@stariva/config",
+    "@stariva/db",
+    "@stariva/emails",
+    "@stariva/storage",
     "@t3-oss/env-nextjs",
     "@t3-oss/env-core",
   ],

@@ -1,5 +1,5 @@
-import { eq, user } from "@acme/db";
-import { accountFormSchema } from "@acme/validators";
+import { eq, user } from "@stariva/db";
+import { accountFormSchema } from "@stariva/validators";
 
 import { protectedProcedure } from "../../orpc";
 

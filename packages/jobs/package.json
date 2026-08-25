@@ -1,5 +1,5 @@
 {
-  "name": "@acme/jobs",
+  "name": "@stariva/jobs",
   "private": true,
   "type": "module",
   "exports": {
@@ -22,7 +22,7 @@
     "@hatchet-dev/typescript-sdk": "1.29.0"
   },
   "devDependencies": {
-    "@acme/tsconfig": "workspace:*",
+    "@stariva/tsconfig": "workspace:*",
     "@types/node": "26.3.0",
     "typescript": "7.0.2"
   }

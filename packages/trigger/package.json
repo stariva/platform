@@ -1,5 +1,5 @@
 {
-  "name": "@acme/trigger",
+  "name": "@stariva/trigger",
   "private": true,
   "type": "module",
   "exports": {
@@ -23,7 +23,7 @@
     "@trigger.dev/sdk": "4.5.10"
   },
   "devDependencies": {
-    "@acme/tsconfig": "workspace:*",
+    "@stariva/tsconfig": "workspace:*",
     "@types/node": "26.3.0",
     "typescript": "7.0.2"
   }
