@@ -595,9 +595,9 @@ export function ProductDetails({
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        unoptimized={(p.images[0] ?? "/placeholder.jpg").startsWith(
-                          "http",
-                        )}
+                        unoptimized={(
+                          p.images[0] ?? "/placeholder.jpg"
+                        ).startsWith("http")}
                       />
                     </div>
                     <div className="p-4">

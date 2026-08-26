@@ -4,7 +4,15 @@
     {
       "name": "stariva-web",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "--cwd", "apps/web", "dev", "--", "--port", "3010"],
+      "runtimeArgs": [
+        "run",
+        "--cwd",
+        "apps/web",
+        "dev",
+        "--",
+        "--port",
+        "3010"
+      ],
       "port": 3010
     }
   ]
