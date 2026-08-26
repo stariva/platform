@@ -1,29 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { resolveCatalogItems } from "@/lib/commerce/catalog";
 import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
 import { checkout } from "@/lib/ozon-delivery/client";
 
 export const runtime = "nodejs";
 
-const deliverySchema = z.union([
-  z.object({ method: z.literal("pickup"), pointId: z.string().min(1) }),
-  z.object({
-    method: z.literal("courier"),
-    address: z.string().min(3),
-    latitude: z.number(),
-    longitude: z.number(),
-  }),
-]);
+const deliverySchema = z.object({
+  method: z.literal("pickup"),
+  pointId: z.string().min(1),
+});
 
 const bodySchema = z.object({
+  contactPhone: z.string().min(5).max(20),
   items: z
     .array(
       z.object({
-        sku: z.number().int().positive(),
-        quantity: z.number().int().positive(),
+        productSlug: z.string().min(1),
+        quantity: z.number().int().positive().max(99),
       }),
     )
-    .min(1),
+    .min(1)
+    .max(100),
   delivery: deliverySchema,
 });
 
@@ -42,7 +40,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await checkout(parsed.data);
+    const items = await resolveCatalogItems(parsed.data.items);
+    const result = await checkout({
+      items: items.map((item) => ({
+        sku: item.ozonSku,
+        quantity: item.quantity,
+      })),
+      delivery: parsed.data.delivery,
+      buyerPhone: parsed.data.contactPhone,
+    });
     return NextResponse.json(result);
   } catch (error) {
     console.error("[checkout/quote] Ошибка:", error);

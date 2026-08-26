@@ -53,6 +53,12 @@ export const productOrders = pgTable("product_orders", {
   // Заполняются после успешного v2/order/create
   ozonOrderId: text("ozon_order_id"),
   ozonPostingNumbers: text("ozon_posting_numbers").array(),
+  ozonShipmentStatus: text("ozon_shipment_status")
+    .$type<"pending" | "creating" | "failed" | "created">()
+    .notNull()
+    .default("pending"),
+  ozonShipmentAttemptId: text("ozon_shipment_attempt_id"),
+  ozonShipmentAttemptedAt: timestamp("ozon_shipment_attempted_at"),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),

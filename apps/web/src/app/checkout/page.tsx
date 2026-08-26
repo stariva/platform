@@ -9,7 +9,6 @@ import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { useCart } from "@/lib/cart/cart-context";
 import type {
@@ -30,11 +29,8 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [checkingPhone, setCheckingPhone] = useState(false);
 
-  const [deliveryMethod, setDeliveryMethod] =
-    useState<DeliverySelection["method"]>("pickup");
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[] | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string>("");
-  const [address, setAddress] = useState("");
   const [loadingPoints, setLoadingPoints] = useState(false);
 
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
@@ -100,29 +96,26 @@ export default function CheckoutPage() {
     setLoadingPoints(true);
     try {
       const res = await fetch("/api/checkout/pickup-points");
-      const data = await res.json();
-      if (res.ok) setPickupPoints(data.points);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(data?.error ?? "Не удалось загрузить пункты выдачи");
+        return;
+      }
+      setPickupPoints(data.points);
+    } catch {
+      toast.error("Не удалось загрузить пункты выдачи");
     } finally {
       setLoadingPoints(false);
     }
   }
 
   async function handleGetQuote() {
-    const delivery: DeliverySelection | null =
-      deliveryMethod === "pickup"
-        ? selectedPointId
-          ? { method: "pickup", pointId: selectedPointId }
-          : null
-        : address.trim()
-          ? { method: "courier", address, latitude: 0, longitude: 0 }
-          : null;
+    const delivery: DeliverySelection | null = selectedPointId
+      ? { method: "pickup", pointId: selectedPointId }
+      : null;
 
     if (!delivery) {
-      toast.error(
-        deliveryMethod === "pickup"
-          ? "Выберите пункт выдачи"
-          : "Укажите адрес доставки",
-      );
+      toast.error("Выберите пункт выдачи");
       return;
     }
 
@@ -132,7 +125,11 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({ sku: i.ozonSku, quantity: i.quantity })),
+          contactPhone: phone,
+          items: items.map((i) => ({
+            productSlug: i.productSlug,
+            quantity: i.quantity,
+          })),
           delivery,
         }),
       });
@@ -152,10 +149,10 @@ export default function CheckoutPage() {
 
   async function handleConfirm() {
     if (!quote) return;
-    const delivery: DeliverySelection =
-      deliveryMethod === "pickup"
-        ? { method: "pickup", pointId: selectedPointId }
-        : { method: "courier", address, latitude: 0, longitude: 0 };
+    const delivery: DeliverySelection = {
+      method: "pickup",
+      pointId: selectedPointId,
+    };
 
     setSubmitting(true);
     try {
@@ -166,9 +163,11 @@ export default function CheckoutPage() {
           contactName: name,
           contactPhone: phone,
           contactEmail: email || undefined,
-          items,
+          items: items.map((item) => ({
+            productSlug: item.productSlug,
+            quantity: item.quantity,
+          })),
           delivery,
-          checkout: quote,
         }),
       });
       const data = await res.json();
@@ -276,50 +275,21 @@ export default function CheckoutPage() {
               <h2 className="font-serif text-xl text-espresso mb-2">
                 Способ доставки
               </h2>
-              <RadioGroup
-                value={deliveryMethod}
-                onValueChange={(v) =>
-                  setDeliveryMethod(v as DeliverySelection["method"])
-                }
-                className="flex gap-4"
-              >
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="pickup" id="pickup" />
-                  <Label htmlFor="pickup">Пункт выдачи</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="courier" id="courier" />
-                  <Label htmlFor="courier">Курьер</Label>
-                </div>
-              </RadioGroup>
-
-              {deliveryMethod === "pickup" ? (
-                loadingPoints ? (
-                  <Spinner className="text-taupe" />
-                ) : (
-                  <select
-                    value={selectedPointId}
-                    onChange={(e) => setSelectedPointId(e.target.value)}
-                    className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
-                  >
-                    <option value="">Выберите пункт выдачи</option>
-                    {pickupPoints?.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} — {p.address}
-                      </option>
-                    ))}
-                  </select>
-                )
+              {loadingPoints ? (
+                <Spinner className="text-taupe" />
               ) : (
-                <div>
-                  <Label htmlFor="address">Адрес доставки</Label>
-                  <Input
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Город, улица, дом, квартира"
-                  />
-                </div>
+                <select
+                  value={selectedPointId}
+                  onChange={(e) => setSelectedPointId(e.target.value)}
+                  className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
+                >
+                  <option value="">Выберите пункт выдачи</option>
+                  {pickupPoints?.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — {p.address}
+                    </option>
+                  ))}
+                </select>
               )}
 
               <Button
