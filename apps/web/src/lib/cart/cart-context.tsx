@@ -8,16 +8,18 @@ import {
   useMemo,
   useState,
 } from "react";
+import { z } from "zod";
 
-export interface CartItem {
-  productSlug: string;
-  ozonSku: number;
-  name: string;
-  image: string;
-  /** Цена за единицу в копейках */
-  price: number;
-  quantity: number;
-}
+const cartItemSchema = z.object({
+  productSlug: z.string().min(1),
+  ozonSku: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  name: z.string().min(1),
+  image: z.string(),
+  price: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  quantity: z.number().int().positive().max(99),
+});
+
+export type CartItem = z.infer<typeof cartItemSchema>;
 
 interface CartContextValue {
   items: CartItem[];
@@ -39,7 +41,11 @@ function readStoredCart(): CartItem[] {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const items = parsed.map((item) => cartItemSchema.safeParse(item));
+    return items.every((item) => item.success)
+      ? items.map((item) => item.data)
+      : [];
   } catch {
     return [];
   }

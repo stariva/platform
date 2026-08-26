@@ -1,7 +1,4 @@
-// Ozon Доставка — типы запросов/ответов.
-// Собраны по официальному описанию методов (docs.ozon.ru/api/rocket →
-// заменено на Ozon Доставка, dev.ozon.ru, статья от 06.11.2025), а не по
-// готовому SDK — публичной OpenAPI-схемы на момент написания нет.
+// Нормализованные типы поверх официального контракта Ozon Seller API.
 
 export interface DeliveryCheckRequest {
   phone: string;
@@ -44,19 +41,26 @@ export type DeliverySelection =
 export interface DeliveryCheckoutRequest {
   items: CheckoutItem[];
   delivery: DeliverySelection;
+  buyerPhone: string;
 }
 
 export interface CheckoutSplitItem {
   sku: number;
   quantity: number;
-  warehouseId: number;
 }
 
 export interface CheckoutSplit {
+  deliverySchema: "FBO" | "FBS";
   warehouseId: number;
   items: CheckoutSplitItem[];
-  /** Ожидаемая дата доставки, ISO-8601 */
-  estimatedDeliveryDate: string;
+  deliveryMethod: {
+    id: number;
+    type: "COURIER" | "PVZ" | "POSTAMAT";
+    timeslotId: number;
+    logisticDateFrom: string;
+    logisticDateTo: string;
+    priceKopecks: number;
+  };
 }
 
 export interface DeliveryCheckoutResponse {
@@ -74,13 +78,11 @@ export interface OrderRecipient {
 }
 
 export interface CreateOrderRequest {
-  items: CheckoutItem[];
+  items: (CheckoutItem & { price: number })[];
   delivery: DeliverySelection;
   recipient: OrderRecipient;
   /** Снапшот ответа v2/delivery/checkout — состав нельзя менять после checkout */
   checkout: DeliveryCheckoutResponse;
-  /** Ключ идемпотентности на нашей стороне (id нашего productOrder) */
-  clientOrderId: string;
 }
 
 export interface CreateOrderResponse {

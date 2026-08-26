@@ -2,21 +2,17 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
 import { getSession } from "@/lib/auth/session";
+import { resolveCatalogItems } from "@/lib/commerce/catalog";
 import { attachPaymentId, createProductOrder } from "@/lib/commerce/orders";
-import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
+import { checkout, isOzonDeliveryConfigured } from "@/lib/ozon-delivery/client";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 
 export const runtime = "nodejs";
 
-const deliverySchema = z.union([
-  z.object({ method: z.literal("pickup"), pointId: z.string().min(1) }),
-  z.object({
-    method: z.literal("courier"),
-    address: z.string().min(3),
-    latitude: z.number(),
-    longitude: z.number(),
-  }),
-]);
+const deliverySchema = z.object({
+  method: z.literal("pickup"),
+  pointId: z.string().min(1),
+});
 
 const bodySchema = z.object({
   contactName: z.string().min(1).max(120),
@@ -26,22 +22,12 @@ const bodySchema = z.object({
     .array(
       z.object({
         productSlug: z.string().min(1),
-        ozonSku: z.number().int().positive(),
-        name: z.string().min(1),
-        price: z.number().int().positive(),
-        quantity: z.number().int().positive(),
+        quantity: z.number().int().positive().max(99),
       }),
     )
-    .min(1),
+    .min(1)
+    .max(100),
   delivery: deliverySchema,
-  // Снапшот ответа /api/checkout/quote — воспроизводим его при создании
-  // заказа в Ozon, состав нельзя изменить после checkout.
-  checkout: z.object({
-    available: z.boolean(),
-    reason: z.string().optional(),
-    deliveryPriceKopecks: z.number().int().nonnegative(),
-    splits: z.array(z.unknown()),
-  }),
 });
 
 function siteUrl(request: NextRequest): string {
@@ -53,7 +39,7 @@ function siteUrl(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isYooKassaConfigured()) {
+  if (!isYooKassaConfigured() || !isOzonDeliveryConfigured()) {
     return NextResponse.json(
       { error: "Приём платежей временно недоступен" },
       { status: 503 },
@@ -67,7 +53,27 @@ export async function POST(request: NextRequest) {
   }
   const data = parsed.data;
 
-  if (!data.checkout.available) {
+  let items: Awaited<ReturnType<typeof resolveCatalogItems>>;
+  let deliveryQuote: Awaited<ReturnType<typeof checkout>>;
+  try {
+    items = await resolveCatalogItems(data.items);
+    deliveryQuote = await checkout({
+      items: items.map((item) => ({
+        sku: item.ozonSku,
+        quantity: item.quantity,
+      })),
+      delivery: data.delivery,
+      buyerPhone: data.contactPhone,
+    });
+  } catch (error) {
+    console.error("[checkout/create] Ошибка проверки заказа:", error);
+    return NextResponse.json(
+      { error: "Не удалось проверить товары и доставку" },
+      { status: 502 },
+    );
+  }
+
+  if (!deliveryQuote.available) {
     return NextResponse.json(
       { error: "Доставка по выбранному адресу недоступна" },
       { status: 400 },
@@ -76,30 +82,26 @@ export async function POST(request: NextRequest) {
 
   const session = await getSession();
 
-  const orderId = await createProductOrder({
+  const order = await createProductOrder({
     userId: session?.user.id,
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,
-    items: data.items,
+    items,
     delivery: data.delivery,
-    checkout: data.checkout as DeliveryCheckoutResponse,
+    checkout: deliveryQuote,
   });
-
-  const amountKopecks =
-    data.items.reduce((sum, i) => sum + i.price * i.quantity, 0) +
-    data.checkout.deliveryPriceKopecks;
 
   try {
     const payment = await createPayment({
-      amountKopecks,
-      description: `Заказ Stariva №${orderId.slice(0, 8)}`,
-      returnUrl: `${siteUrl(request)}/order/${orderId}?payment=success`,
-      metadata: { orderId, kind: "product" },
-      idempotenceKey: orderId,
+      amountKopecks: order.amountTotal,
+      description: `Заказ Stariva №${order.id.slice(0, 8)}`,
+      returnUrl: `${siteUrl(request)}/order/${order.id}?payment=success`,
+      metadata: { orderId: order.id, kind: "product" },
+      idempotenceKey: order.id,
     });
 
-    await attachPaymentId(orderId, payment.id);
+    await attachPaymentId(order.id, payment.id);
 
     const confirmationUrl = payment.confirmation?.confirmation_url;
     if (!confirmationUrl) {
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ confirmationUrl, orderId });
+    return NextResponse.json({ confirmationUrl, orderId: order.id });
   } catch (error) {
     console.error("[checkout/create] Ошибка создания платежа:", error);
     return NextResponse.json(

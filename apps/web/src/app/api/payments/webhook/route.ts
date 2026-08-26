@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { grantAccess } from "@/lib/account/access";
 import {
   attachOzonOrder,
+  claimProductOrderShipment,
   getProductOrderById,
   getProductOrderItems,
   markProductOrderCanceled,
@@ -31,7 +32,6 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const paymentId: unknown = body?.object?.id;
-  const event: unknown = body?.event;
 
   if (typeof paymentId !== "string") {
     // Невалидное уведомление — отвечаем 200, чтобы YooKassa не повторяла бесконечно
@@ -48,8 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const isProductOrder = payment.metadata?.kind === "product";
-    const canceled =
-      payment.status === "canceled" || event === "payment.canceled";
+    const canceled = payment.status === "canceled";
     const succeeded = payment.status === "succeeded" && payment.paid;
 
     if (isProductOrder) {
@@ -124,8 +123,9 @@ async function handleProductOrderWebhook(
     return;
   }
 
-  const wasUpdated = await markProductOrderPaid(orderId);
-  if (!wasUpdated) return; // уже обработан — не создаём заказ в Ozon повторно
+  await markProductOrderPaid(orderId);
+  const attemptId = await claimProductOrderShipment(orderId);
+  if (!attemptId) return;
 
   try {
     const items = await getProductOrderItems(orderId);
@@ -141,7 +141,11 @@ async function handleProductOrderWebhook(
           };
 
     const ozonOrder = await createOzonDeliveryOrder({
-      items: items.map((i) => ({ sku: i.ozonSku, quantity: i.quantity })),
+      items: items.map((i) => ({
+        sku: i.ozonSku,
+        quantity: i.quantity,
+        price: i.price,
+      })),
       delivery,
       recipient: {
         name: order.contactName,
@@ -149,19 +153,23 @@ async function handleProductOrderWebhook(
         email: order.contactEmail ?? undefined,
       },
       checkout: order.checkoutSnapshot as DeliveryCheckoutResponse,
-      clientOrderId: orderId,
     });
 
-    await attachOzonOrder(orderId, ozonOrder.orderId, ozonOrder.postingNumbers);
+    await attachOzonOrder(
+      orderId,
+      attemptId,
+      ozonOrder.orderId,
+      ozonOrder.postingNumbers,
+    );
     console.info(
       `[payments/webhook] Заказ товаров ${orderId} оплачен, создан заказ Ozon Доставка ${ozonOrder.orderId}`,
     );
   } catch (error) {
-    // Деньги уже списаны — нужна ручная обработка (см. status = ozon_order_failed)
     console.error(
       `[payments/webhook] КРИТИЧНО: заказ ${orderId} оплачен, но создание заказа в Ozon Доставка не удалось:`,
       error,
     );
-    await markProductOrderOzonFailed(orderId);
+    await markProductOrderOzonFailed(orderId, attemptId);
+    throw error;
   }
 }

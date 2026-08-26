@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
 import { productOrderItems, productOrders } from "@stariva/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
@@ -28,13 +28,21 @@ export interface CreateProductOrderInput {
 /** Создаёт заказ на товары в статусе pending вместе с его позициями. */
 export async function createProductOrder(
   input: CreateProductOrderInput,
-): Promise<string> {
+): Promise<{ id: string; amountTotal: number }> {
   const orderId = randomUUID();
   const amountProducts = input.items.reduce(
     (sum, i) => sum + i.price * i.quantity,
     0,
   );
   const amountDelivery = input.checkout.deliveryPriceKopecks;
+  const amountTotal = amountProducts + amountDelivery;
+  if (
+    !Number.isSafeInteger(amountTotal) ||
+    amountTotal <= 0 ||
+    amountTotal > 2_147_483_647
+  ) {
+    throw new Error("invalid_product_order_total");
+  }
 
   await db.insert(productOrders).values({
     id: orderId,
@@ -45,7 +53,7 @@ export async function createProductOrder(
     status: "pending",
     amountProducts,
     amountDelivery,
-    amountTotal: amountProducts + amountDelivery,
+    amountTotal,
     currency: "RUB",
     deliveryMethod: input.delivery.method,
     deliveryPointId:
@@ -73,7 +81,7 @@ export async function createProductOrder(
     })),
   );
 
-  return orderId;
+  return { id: orderId, amountTotal };
 }
 
 export async function attachPaymentId(
@@ -118,12 +126,48 @@ export async function markProductOrderCanceled(orderId: string): Promise<void> {
   await db
     .update(productOrders)
     .set({ status: "canceled" })
-    .where(eq(productOrders.id, orderId));
+    .where(
+      and(eq(productOrders.id, orderId), eq(productOrders.status, "pending")),
+    );
+}
+
+/** Claims unfinished Ozon shipment creation for one webhook worker. */
+export async function claimProductOrderShipment(
+  orderId: string,
+): Promise<string | null> {
+  const attemptId = randomUUID();
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - 15 * 60_000);
+  const result = await db
+    .update(productOrders)
+    .set({
+      status: "paid",
+      ozonShipmentStatus: "creating",
+      ozonShipmentAttemptId: attemptId,
+      ozonShipmentAttemptedAt: now,
+    })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        inArray(productOrders.status, ["paid", "ozon_order_failed"]),
+        isNull(productOrders.ozonOrderId),
+        or(
+          inArray(productOrders.ozonShipmentStatus, ["pending", "failed"]),
+          and(
+            eq(productOrders.ozonShipmentStatus, "creating"),
+            lt(productOrders.ozonShipmentAttemptedAt, staleBefore),
+          ),
+        ),
+      ),
+    )
+    .returning({ id: productOrders.id });
+  return result.length > 0 ? attemptId : null;
 }
 
 /** Записывает результат успешного v2/order/create и переводит заказ в сборку. */
 export async function attachOzonOrder(
   orderId: string,
+  attemptId: string,
   ozonOrderId: string,
   postingNumbers: string[],
 ): Promise<void> {
@@ -132,19 +176,33 @@ export async function attachOzonOrder(
     .set({
       ozonOrderId,
       ozonPostingNumbers: postingNumbers,
+      ozonShipmentStatus: "created",
       status: "fulfilling",
     })
-    .where(eq(productOrders.id, orderId));
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.ozonShipmentStatus, "creating"),
+        eq(productOrders.ozonShipmentAttemptId, attemptId),
+      ),
+    );
 }
 
 /** Помечает заказ как требующий ручной обработки — оплата прошла, но заказ в Ozon не создался. */
 export async function markProductOrderOzonFailed(
   orderId: string,
+  attemptId: string,
 ): Promise<void> {
   await db
     .update(productOrders)
-    .set({ status: "ozon_order_failed" })
-    .where(eq(productOrders.id, orderId));
+    .set({ status: "ozon_order_failed", ozonShipmentStatus: "failed" })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.ozonShipmentStatus, "creating"),
+        eq(productOrders.ozonShipmentAttemptId, attemptId),
+      ),
+    );
 }
 
 export async function listUserProductOrders(userId: string) {
