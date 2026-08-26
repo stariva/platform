@@ -18,12 +18,11 @@ interface OzonProductListResponse {
   };
 }
 
-async function fetchProductIds(
+async function fetchProductIdsByVisibility(
+  visibility: "ALL" | "ARCHIVED",
   clientId: string,
   apiKey: string,
 ): Promise<number[] | null> {
-  console.log("[v0] Fetching Ozon product list...");
-
   const res = await fetch(`${OZON_API_URL}/v3/product/list`, {
     method: "POST",
     headers: {
@@ -32,7 +31,7 @@ async function fetchProductIds(
       "Api-Key": apiKey,
     },
     body: JSON.stringify({
-      filter: { visibility: "ALL" },
+      filter: { visibility },
       last_id: "",
       limit: 100,
     }),
@@ -41,13 +40,37 @@ async function fetchProductIds(
 
   if (!res.ok) {
     const text = await res.text();
-    console.log("[v0] Ozon list request failed:", res.status, text);
+    console.log(
+      `[v0] Ozon list request (${visibility}) failed:`,
+      res.status,
+      text,
+    );
     return null;
   }
 
   const data: OzonProductListResponse = await res.json();
-  console.log("[v0] Found", data.result.items.length, "products in Ozon");
   return data.result.items.map((item) => item.product_id);
+}
+
+async function fetchProductIds(
+  clientId: string,
+  apiKey: string,
+): Promise<number[] | null> {
+  console.log("[v0] Fetching Ozon product list...");
+
+  // "ALL" возвращает все товары, кроме архивных — Ozon у нас выступает
+  // как админка товаров, поэтому архивные/недоступные к покупке товары
+  // тоже должны отображаться на сайте, их нужно запрашивать отдельно.
+  const [active, archived] = await Promise.all([
+    fetchProductIdsByVisibility("ALL", clientId, apiKey),
+    fetchProductIdsByVisibility("ARCHIVED", clientId, apiKey),
+  ]);
+
+  if (active === null && archived === null) return null;
+
+  const ids = new Set([...(active ?? []), ...(archived ?? [])]);
+  console.log("[v0] Found", ids.size, "products in Ozon (incl. archived)");
+  return [...ids];
 }
 
 async function fetchProductDetails(
@@ -95,34 +118,55 @@ async function fetchProductDetails(
   return items;
 }
 
+async function fetchProductAttributesByVisibility(
+  visibility: "ALL" | "ARCHIVED",
+  productIds: number[],
+  clientId: string,
+  apiKey: string,
+): Promise<{ id: number; attributes?: { id?: number; attribute_id?: number; values?: { value?: string }[] }[] }[]> {
+  const res = await fetch(`${OZON_API_URL}/v4/product/info/attributes`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Client-Id": clientId,
+      "Api-Key": apiKey,
+    },
+    body: JSON.stringify({
+      filter: { product_id: productIds, visibility },
+      last_id: "",
+      limit: 100,
+      sort_by: "",
+      sort_dir: "",
+    }),
+    next: { revalidate: 3600 },
+  });
+
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  return data.result ?? [];
+}
+
 async function fetchProductAttributes(
   productIds: number[],
   clientId: string,
   apiKey: string,
 ): Promise<Map<number, ExtractedAttributes>> {
   try {
-    const res = await fetch(`${OZON_API_URL}/v4/product/info/attributes`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Client-Id": clientId,
-        "Api-Key": apiKey,
-      },
-      body: JSON.stringify({
-        filter: { product_id: productIds, visibility: "ALL" },
-        last_id: "",
-        limit: 100,
-        sort_by: "",
-        sort_dir: "",
-      }),
-      next: { revalidate: 3600 },
-    });
+    // Как и со списком товаров, "ALL" не включает архивные — запрашиваем
+    // атрибуты обоими фильтрами, чтобы у архивных товаров тоже был материал/цвет/размеры.
+    const [active, archived] = await Promise.all([
+      fetchProductAttributesByVisibility("ALL", productIds, clientId, apiKey),
+      fetchProductAttributesByVisibility(
+        "ARCHIVED",
+        productIds,
+        clientId,
+        apiKey,
+      ),
+    ]);
 
-    if (!res.ok) return new Map();
-
-    const data = await res.json();
     const result = new Map<number, ExtractedAttributes>();
-    for (const item of data.result ?? []) {
+    for (const item of [...active, ...archived]) {
       result.set(item.id, extractAttributes(item.attributes ?? []));
     }
     return result;
