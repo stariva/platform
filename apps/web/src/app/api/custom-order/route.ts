@@ -101,7 +101,7 @@ async function sendTelegramMessage(
   // Telegram лимит — 4096 символов
   const truncated =
     message.length > 4096
-      ? message.slice(0, 4090) + "\n...(обрезано)"
+      ? `${message.slice(0, 4090)}\n...(обрезано)`
       : message;
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
