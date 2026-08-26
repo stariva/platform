@@ -14,10 +14,11 @@ import { getCategoryBySlug } from "@/lib/products";
 import { ProductDetails } from "./product-details";
 
 // ─── FAQ per category (mirrors product-details.tsx) ──────────────────────────
-const categoryFaqJsonLd: Record<
-  string,
-  { question: string; answer: string }[]
-> = {
+type FaqJsonLdEntry = { question: string; answer: string }[];
+
+const categoryFaqJsonLd: Record<string, FaqJsonLdEntry> & {
+  interior: FaqJsonLdEntry;
+} = {
   interior: [
     {
       question: "Из чего сделан абажур?",
@@ -190,7 +191,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         material={product.material}
       />
       <FAQJsonLd
-        items={categoryFaqJsonLd[categorySlug] ?? categoryFaqJsonLd.interior!}
+        items={categoryFaqJsonLd[categorySlug] ?? categoryFaqJsonLd.interior}
       />
       <ProductDetails
         product={product}

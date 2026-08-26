@@ -169,12 +169,14 @@ function ProductCard({
         {/* Image */}
         <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-sand">
           <Image
-            src={product.images[0]!}
+            src={product.images[0] ?? "/placeholder.jpg"}
             alt={product.name}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            unoptimized={product.images[0]!.startsWith("http")}
+            unoptimized={(product.images[0] ?? "/placeholder.jpg").startsWith(
+              "http",
+            )}
           />
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">

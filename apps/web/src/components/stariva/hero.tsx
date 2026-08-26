@@ -50,7 +50,7 @@ const directions = [
 export function Hero() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const current = directions[active] ?? directions[0]!;
+  const current = directions[active] ?? directions[0];
 
   // Auto-advance every 5 seconds unless user interacted
   useEffect(() => {
@@ -60,6 +60,8 @@ export function Hero() {
     }, 5000);
     return () => clearTimeout(timer);
   }, [paused]);
+
+  if (!current) return null;
 
   return (
     <section className="relative h-[100dvh] min-h-[640px] max-h-[1080px] overflow-hidden bg-espresso">

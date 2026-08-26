@@ -429,11 +429,12 @@ export function createFallbackModel(
   entries: FallbackEntry[],
   options: FallbackModelOptions = {},
 ): LanguageModelV4 {
-  if (entries.length === 0) {
+  const [firstEntry] = entries;
+  if (!firstEntry) {
     throw new Error("createFallbackModel: требуется хотя бы одна модель");
   }
 
-  const primary = entries[0]!.model;
+  const primary = firstEntry.model;
   const onFallback =
     options.onFallback ??
     ((from, to, error) => {

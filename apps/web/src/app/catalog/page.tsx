@@ -58,12 +58,14 @@ function ProductCard({ product }: { product: Product; index?: number }) {
     >
       <div className="relative aspect-[4/5] rounded-xl overflow-hidden mb-4 bg-cream">
         <Image
-          src={product.images[0]!}
+          src={product.images[0] ?? "/placeholder.jpg"}
           alt={product.name}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, 33vw"
-          unoptimized={product.images[0]!.startsWith("http")}
+          unoptimized={(product.images[0] ?? "/placeholder.jpg").startsWith(
+            "http",
+          )}
         />
         {product.oldPrice && (
           <span className="absolute top-4 left-4 bg-terracotta text-white label-caps px-3 py-1 rounded-full">

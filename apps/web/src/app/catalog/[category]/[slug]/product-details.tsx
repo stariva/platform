@@ -30,7 +30,9 @@ interface ProductDetailsProps {
 }
 
 // ─── FAQ data per category ────────────────────────────────────────────────────
-const categoryFaq: Record<string, { q: string; a: string }[]> = {
+type FaqEntry = { q: string; a: string }[];
+
+const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
   interior: [
     {
       q: "Из чего сделан абажур?",
@@ -95,7 +97,7 @@ export function ProductDetails({
 }: ProductDetailsProps) {
   const [activeImage, setActiveImage] = useState(0);
   const productColors = parseMultipleColors(product.color);
-  const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior!;
+  const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior;
 
   return (
     <main className="min-h-screen bg-parchment">
@@ -148,7 +150,11 @@ export function ProductDetails({
             >
               <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-sand mb-4">
                 <Image
-                  src={product.images[activeImage] ?? product.images[0]!}
+                  src={
+                    product.images[activeImage] ??
+                    product.images[0] ??
+                    "/placeholder.jpg"
+                  }
                   alt={product.name}
                   fill
                   className="object-cover"
@@ -156,7 +162,9 @@ export function ProductDetails({
                   loading="eager"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                   unoptimized={(
-                    product.images[activeImage] ?? product.images[0]!
+                    product.images[activeImage] ??
+                    product.images[0] ??
+                    "/placeholder.jpg"
                   ).startsWith("http")}
                 />
                 {product.oldPrice && (
@@ -582,12 +590,14 @@ export function ProductDetails({
                   >
                     <div className="relative aspect-[3/4] overflow-hidden bg-sand">
                       <Image
-                        src={p.images[0]!}
+                        src={p.images[0] ?? "/placeholder.jpg"}
                         alt={p.name}
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        unoptimized={p.images[0]!.startsWith("http")}
+                        unoptimized={(p.images[0] ?? "/placeholder.jpg").startsWith(
+                          "http",
+                        )}
                       />
                     </div>
                     <div className="p-4">

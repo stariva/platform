@@ -237,8 +237,8 @@ function extractMaterial(description: string): string | null {
 
   for (const pattern of materialPatterns) {
     const match = description.match(pattern);
-    if (match) {
-      return match[1]!.trim();
+    if (match?.[1]) {
+      return match[1].trim();
     }
   }
 
@@ -255,8 +255,8 @@ function extractDimensions(description: string): string | undefined {
 
   for (const pattern of dimensionPatterns) {
     const match = description.match(pattern);
-    if (match) {
-      return match[1]!.trim();
+    if (match?.[1]) {
+      return match[1].trim();
     }
   }
 
@@ -281,8 +281,8 @@ function extractColor(description: string): string | undefined {
 
   for (const pattern of colorPatterns) {
     const match = description.match(pattern);
-    if (match) {
-      return match[1]!.trim();
+    if (match?.[1]) {
+      return match[1].trim();
     }
   }
 
@@ -291,7 +291,7 @@ function extractColor(description: string): string | undefined {
 
 function extractCareInstructions(description: string): string | undefined {
   const careMatch = description.match(/уход[:\s]+([^.\n]+)/i);
-  return careMatch ? careMatch[1]!.trim() : undefined;
+  return careMatch?.[1] ? careMatch[1].trim() : undefined;
 }
 
 function generateShortDescription(description: string): string {

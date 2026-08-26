@@ -1,5 +1,13 @@
 import { ColorIndicator } from "@/components/stariva/color-indicator";
-import { COLOR_MAP } from "@/lib/colors";
+import { COLOR_MAP, type ColorInfo } from "@/lib/colors";
+
+function getColor(key: string): ColorInfo {
+  const info = COLOR_MAP[key];
+  if (!info) {
+    throw new Error(`Missing color in COLOR_MAP: ${key}`);
+  }
+  return info;
+}
 
 export default function ColorsDemo() {
   const colorGroups = {
@@ -81,7 +89,7 @@ export default function ColorsDemo() {
                 Один цвет: "Бежевый"
               </h3>
               <div className="flex gap-2">
-                <ColorIndicator color={COLOR_MAP.бежевый!} size="lg" />
+                <ColorIndicator color={getColor("бежевый")} size="lg" />
               </div>
             </div>
 
@@ -90,9 +98,9 @@ export default function ColorsDemo() {
                 Несколько цветов: "Белый, Бежевый, Серый"
               </h3>
               <div className="flex gap-2">
-                <ColorIndicator color={COLOR_MAP.белый!} size="lg" />
-                <ColorIndicator color={COLOR_MAP.бежевый!} size="lg" />
-                <ColorIndicator color={COLOR_MAP.серый!} size="lg" />
+                <ColorIndicator color={getColor("белый")} size="lg" />
+                <ColorIndicator color={getColor("бежевый")} size="lg" />
+                <ColorIndicator color={getColor("серый")} size="lg" />
               </div>
             </div>
 
@@ -101,7 +109,7 @@ export default function ColorsDemo() {
                 Разноцветный товар
               </h3>
               <div className="flex gap-2">
-                <ColorIndicator color={COLOR_MAP.разноцветный!} size="lg" />
+                <ColorIndicator color={getColor("разноцветный")} size="lg" />
               </div>
             </div>
           </div>

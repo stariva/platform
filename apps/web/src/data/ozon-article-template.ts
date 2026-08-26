@@ -261,6 +261,9 @@ export function parseArticle(article: string): {
   }
 
   const [, categoryCode, subcategoryCode, numberStr] = match;
+  if (!categoryCode || !subcategoryCode || !numberStr) {
+    return null;
+  }
   const prefix = `${categoryCode}-${subcategoryCode}`;
 
   for (const [category, prefixes] of Object.entries(ARTICLE_PREFIXES)) {
@@ -269,7 +272,7 @@ export function parseArticle(article: string): {
       return {
         category,
         subcategory: found.subcategory,
-        number: Number.parseInt(numberStr!, 10),
+        number: Number.parseInt(numberStr, 10),
       };
     }
   }
@@ -298,7 +301,7 @@ export function getNextArticle(
     .filter((article) => article.startsWith(prefix))
     .map((article) => {
       const match = article.match(/-(\d{3})$/);
-      return match ? Number.parseInt(match[1]!, 10) : 0;
+      return match?.[1] ? Number.parseInt(match[1], 10) : 0;
     })
     .filter((num) => num > 0);
 

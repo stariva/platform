@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/blog`,
     images: [
       {
-        url: `${BASE_URL}${blogPosts[0]!.coverImage}`,
+        url: `${BASE_URL}${blogPosts[0]?.coverImage ?? ""}`,
         width: 1200,
         height: 630,
         alt: "Блог Stariva",
@@ -33,8 +33,12 @@ export const metadata: Metadata = {
 };
 
 export default function BlogPage() {
-  const featuredPost = blogPosts[0]!;
+  const featuredPost = blogPosts[0];
   const otherPosts = blogPosts.slice(1);
+
+  if (!featuredPost) {
+    return null;
+  }
 
   return (
     <>

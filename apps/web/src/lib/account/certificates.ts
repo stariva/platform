@@ -31,7 +31,7 @@ export async function getCertificate(
 /** Генерирует человекочитаемый номер сертификата. */
 function generateNumber(workshopSlug: string): string {
   const year = new Date().getFullYear();
-  const rand = randomUUID().split("-")[0]!.toUpperCase();
+  const rand = (randomUUID().split("-")[0] ?? "").toUpperCase();
   // Короткий префикс из slug курса
   const prefix = workshopSlug.slice(0, 3).toUpperCase();
   return `STV-${year}-${prefix}-${rand}`;
