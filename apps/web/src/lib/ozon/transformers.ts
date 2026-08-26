@@ -14,6 +14,8 @@ export interface OzonProductInfoV3 {
   old_price: string;
   currency_code: string;
   sku: number;
+  fbs_sku?: number;
+  fbo_sku?: number;
   stocks?: {
     stocks?: { present: number; reserved: number }[];
   };
@@ -199,6 +201,11 @@ export function transformOzonProduct(
     category,
     subcategory,
     ozonId: ozonProduct.id,
+    ozonSku:
+      ozonProduct.fbs_sku ||
+      ozonProduct.fbo_sku ||
+      ozonProduct.sku ||
+      undefined,
     ozonUrl: `https://www.ozon.ru/product/${ozonProduct.sku || ozonProduct.id}`,
     inStock,
     material: attrs?.material || "100% хлопок",

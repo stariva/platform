@@ -161,6 +161,8 @@ export interface Product {
   category: ProductCategory;
   subcategory: ProductSubcategory;
   ozonId?: number;
+  /** fbs_sku/fbo_sku (или общий sku) — нужен для Ozon Доставка (checkout/order/create) */
+  ozonSku?: number;
   ozonUrl?: string;
   inStock: boolean;
   material: string;
