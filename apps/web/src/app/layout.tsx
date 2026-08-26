@@ -9,6 +9,7 @@ import {
 } from "@/components/stariva/json-ld";
 import { Toaster } from "@/components/ui/sonner";
 import { baseEnv } from "@/env";
+import { CartProvider } from "@/lib/cart/cart-context";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -118,8 +119,10 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-white text-near-black">
         <OrganizationJsonLd />
         <WebSiteJsonLd />
-        {children}
-        <ChatWidget />
+        <CartProvider>
+          {children}
+          <ChatWidget />
+        </CartProvider>
         <Toaster position="top-center" richColors />
         {baseEnv.NODE_ENV === "production" && <Analytics />}
         {baseEnv.NODE_ENV === "production" && (

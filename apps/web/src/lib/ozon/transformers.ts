@@ -1,4 +1,5 @@
 import slugifyLib from "@sindresorhus/slugify";
+import { z } from "zod";
 import type { Product } from "../ozon-types";
 import { mapOfferIdToCategory } from "./category-mapper";
 
@@ -13,11 +14,43 @@ export interface OzonProductInfoV3 {
   price: string;
   old_price: string;
   currency_code: string;
-  sku: number;
+  sku?: number;
+  fbs_sku?: number;
+  fbo_sku?: number;
   stocks?: {
     stocks?: { present: number; reserved: number }[];
   };
 }
+
+const validSku = z
+  .number()
+  .int()
+  .positive()
+  .max(Number.MAX_SAFE_INTEGER)
+  .optional()
+  .catch(undefined);
+
+export const ozonProductInfoV3Schema = z.looseObject({
+  id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  offer_id: z.string(),
+  name: z.string(),
+  description: z.string().default(""),
+  images: z.array(z.string()).default([]),
+  primary_image: z.union([z.string(), z.array(z.string())]).default(""),
+  price: z.string(),
+  old_price: z.string().default(""),
+  currency_code: z.string(),
+  sku: validSku,
+  fbs_sku: validSku,
+  fbo_sku: validSku,
+  stocks: z
+    .object({
+      stocks: z
+        .array(z.object({ present: z.number(), reserved: z.number() }))
+        .optional(),
+    })
+    .optional(),
+});
 
 export type ExtractedAttributes = {
   material?: string;
@@ -199,6 +232,11 @@ export function transformOzonProduct(
     category,
     subcategory,
     ozonId: ozonProduct.id,
+    ozonSku:
+      ozonProduct.fbs_sku ||
+      ozonProduct.fbo_sku ||
+      ozonProduct.sku ||
+      undefined,
     ozonUrl: `https://www.ozon.ru/product/${ozonProduct.sku || ozonProduct.id}`,
     inStock,
     material: attrs?.material || "100% хлопок",

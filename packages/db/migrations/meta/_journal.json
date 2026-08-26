@@ -8,6 +8,20 @@
       "when": 1787669857870,
       "tag": "0000_sleepy_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787724925754,
+      "tag": "0001_lucky_forge",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787732231377,
+      "tag": "0002_redundant_ares",
+      "breakpoints": true
     }
   ]
 }

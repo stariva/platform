@@ -1,7 +1,12 @@
+import { z } from "zod";
 import { env } from "@/env";
 import type { OzonReview, Product, Review } from "../ozon-types";
 import type { ExtractedAttributes, OzonProductInfoV3 } from "./transformers";
-import { extractAttributes, transformOzonProduct } from "./transformers";
+import {
+  extractAttributes,
+  ozonProductInfoV3Schema,
+  transformOzonProduct,
+} from "./transformers";
 
 const OZON_API_URL = "https://api-seller.ozon.ru";
 
@@ -73,8 +78,19 @@ async function fetchProductDetails(
     return null;
   }
 
-  const data = await res.json();
-  const items: OzonProductInfoV3[] = data.items || data.result?.items || [];
+  const responseSchema = z.looseObject({
+    items: z.array(ozonProductInfoV3Schema).optional(),
+    result: z
+      .looseObject({ items: z.array(ozonProductInfoV3Schema).optional() })
+      .optional(),
+  });
+  const parsed = responseSchema.safeParse(await res.json());
+  if (!parsed.success) {
+    console.log("[v0] Ozon info response validation failed");
+    return null;
+  }
+  const items: OzonProductInfoV3[] =
+    parsed.data.items ?? parsed.data.result?.items ?? [];
   console.log("[v0] Successfully fetched", items.length, "product details");
   return items;
 }

@@ -1,6 +1,6 @@
 {
-  "id": "bd46400a-ef0a-4cf2-9f28-68947aec15c4",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "41bd31a8-1cdc-4ed2-bf66-d818e020c71b",
+  "prevId": "bd46400a-ef0a-4cf2-9f28-68947aec15c4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -312,6 +312,214 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.product_order_items": {
+      "name": "product_order_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_slug": {
+          "name": "product_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ozon_sku": {
+          "name": "ozon_sku",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "product_order_items_order_id_product_orders_id_fk": {
+          "name": "product_order_items_order_id_product_orders_id_fk",
+          "tableFrom": "product_order_items",
+          "tableTo": "product_orders",
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.product_orders": {
+      "name": "product_orders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_name": {
+          "name": "contact_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contact_phone": {
+          "name": "contact_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contact_email": {
+          "name": "contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "product_order_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "amount_products": {
+          "name": "amount_products",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_delivery": {
+          "name": "amount_delivery",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "amount_total": {
+          "name": "amount_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'RUB'"
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivery_method": {
+          "name": "delivery_method",
+          "type": "product_delivery_method",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delivery_point_id": {
+          "name": "delivery_point_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivery_address": {
+          "name": "delivery_address",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checkout_snapshot": {
+          "name": "checkout_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ozon_order_id": {
+          "name": "ozon_order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ozon_posting_numbers": {
+          "name": "ozon_posting_numbers",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "product_orders_user_id_users_id_fk": {
+          "name": "product_orders_user_id_users_id_fk",
+          "tableFrom": "product_orders",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -657,6 +865,25 @@
     }
   },
   "enums": {
+    "public.product_delivery_method": {
+      "name": "product_delivery_method",
+      "schema": "public",
+      "values": ["pickup", "courier"]
+    },
+    "public.product_order_status": {
+      "name": "product_order_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "paid",
+        "canceled",
+        "refunded",
+        "ozon_order_failed",
+        "fulfilling",
+        "shipped",
+        "delivered"
+      ]
+    },
     "public.order_status": {
       "name": "order_status",
       "schema": "public",

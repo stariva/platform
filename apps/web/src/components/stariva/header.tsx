@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth/client";
+import { CartTrigger } from "./cart-drawer";
 
 const catalogNav = [
   {
@@ -462,6 +463,8 @@ export function Header({ variant = "solid" }: HeaderProps) {
               </Link>
             )}
 
+            <CartTrigger isSolid={isSolid} />
+
             <Button
               asChild
               className={`hidden lg:inline-flex items-center gap-2 label-caps-md px-5 py-2 h-auto rounded-full transition-all ${
@@ -563,6 +566,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
             </div>
             {[
               { label: "Весь каталог", href: "/catalog" },
+              { label: "Корзина", href: "/checkout" },
               { label: "Мастер-классы", href: "/workshops" },
               { label: "Блог", href: "/blog" },
               { label: "О бренде", href: "/about" },

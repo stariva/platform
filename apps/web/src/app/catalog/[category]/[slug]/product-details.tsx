@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { ColorSwatches } from "@/components/stariva/color-indicator";
 import { OzonIcon } from "@/components/stariva/icons";
 import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
@@ -334,6 +335,7 @@ export function ProductDetails({
 
               {/* CTA Buttons */}
               <div className="space-y-3 mt-auto">
+                <AddToCartButton product={product} />
                 {product.ozonUrl ? (
                   <a
                     href={product.ozonUrl}
