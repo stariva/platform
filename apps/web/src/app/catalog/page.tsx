@@ -11,7 +11,11 @@ import { categories, getFeaturedProducts } from "@/lib/ozon-service";
 import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 
-export const revalidate = 3600; // ISR: revalidate every hour
+// Рендерим страницу динамически на каждый запрос: сборка образа идёт без
+// боевых Ozon-креденшелов (Dockerfile копирует .env.example), поэтому
+// статическая генерация на билде всегда даёт пустой каталог. Кэширование
+// данных Ozon на 1 час обеспечивает revalidate у fetch() в api-client.ts.
+export const dynamic = "force-dynamic";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";

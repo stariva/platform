@@ -14,6 +14,10 @@ import { Button } from "@/components/ui/button";
 import { getFeaturedProducts } from "@/lib/ozon-service";
 import { formatPrice } from "@/lib/products";
 
+// Билд-образ не имеет боевых Ozon-креденшелов (см. Dockerfile), поэтому
+// статический пререндер на билде всегда пустой — рендерим динамически.
+export const dynamic = "force-dynamic";
+
 const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
 

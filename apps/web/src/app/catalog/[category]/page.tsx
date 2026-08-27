@@ -9,7 +9,9 @@ import { categories, getProductsByCategory } from "@/lib/ozon-service";
 import { getCategoryBySlug } from "@/lib/products";
 import CategoryFilters from "./category-filters";
 
-export const revalidate = 3600;
+// Билд-образ не имеет боевых Ozon-креденшелов (см. Dockerfile), поэтому
+// статический пререндер на билде всегда пустой — рендерим динамически.
+export const dynamic = "force-dynamic";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
