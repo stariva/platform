@@ -30,6 +30,8 @@ export async function GET() {
     "seller-api.product",
   ].join(" ");
 
+  const state = crypto.randomUUID();
+
   const url = new URL("https://seller.ozon.ru/app/appstore/oauth/authorize");
   url.searchParams.set("response_type", "code");
   url.searchParams.set("access_type", "offline");
@@ -37,7 +39,15 @@ export async function GET() {
   url.searchParams.set("client_id", env.OZON_DELIVERY_CLIENT_ID);
   url.searchParams.set("redirect_uri", env.OZON_DELIVERY_REDIRECT_URI);
   url.searchParams.set("scope", scope);
-  url.searchParams.set("state", crypto.randomUUID());
+  url.searchParams.set("state", state);
 
-  return NextResponse.redirect(url);
+  const response = NextResponse.redirect(url);
+  response.cookies.set("ozon_delivery_oauth_state", state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 600,
+    path: "/api/ozon-delivery/oauth",
+  });
+  return response;
 }
