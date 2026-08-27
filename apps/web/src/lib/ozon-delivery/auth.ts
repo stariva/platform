@@ -32,20 +32,31 @@ async function refreshAccessToken(): Promise<string> {
     throw new Error("ozon_delivery_not_configured");
   }
 
-  const res = await fetch(OAUTH_TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "refresh_token",
-      client_id: env.OZON_DELIVERY_CLIENT_ID,
-      client_secret: env.OZON_DELIVERY_CLIENT_SECRET,
-      refresh_token: env.OZON_DELIVERY_REFRESH_TOKEN,
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(OAUTH_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        client_id: env.OZON_DELIVERY_CLIENT_ID,
+        client_secret: env.OZON_DELIVERY_CLIENT_SECRET,
+        refresh_token: env.OZON_DELIVERY_REFRESH_TOKEN,
+      }),
+    });
+  } catch (error) {
+    throw new Error(
+      `ozon_delivery_oauth_refresh_failed_network: ${String(error)}`,
+    );
+  }
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(`ozon_delivery_oauth_refresh_failed_${res.status}: ${detail}`);
+    throw new Error(
+      `ozon_delivery_oauth_refresh_failed_${res.status}: ${detail}`,
+    );
   }
 
   const data = tokenResponseSchema.parse(await res.json());
