@@ -205,9 +205,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         heading="Отзывы о товаре"
       />
       <Footer />
-      {product.ozonUrl && (
-        <MobileStickyBar ozonUrl={product.ozonUrl} productName={product.name} />
-      )}
+      <MobileStickyBar />
     </>
   );
 }
