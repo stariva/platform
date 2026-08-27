@@ -12,7 +12,15 @@ export const env = createEnv({
 
     // Ozon Доставка — приватное приложение (OAuth), отдельно от классического
     // Seller API выше. Нужен для продажи со своего сайта с доставкой Ozon.
-    OZON_DELIVERY_ACCESS_TOKEN: z.string().min(1).optional(),
+    // client_id/client_secret выдаются в личном кабинете продавца при
+    // создании частного приложения (Настройки → Управление частными
+    // приложениями). refresh_token получаем один раз через authorization_code
+    // (см. /api/ozon-delivery/oauth/callback), дальше access_token обновляется
+    // автоматически.
+    OZON_DELIVERY_CLIENT_ID: z.string().min(1).optional(),
+    OZON_DELIVERY_CLIENT_SECRET: z.string().min(1).optional(),
+    OZON_DELIVERY_REFRESH_TOKEN: z.string().min(1).optional(),
+    OZON_DELIVERY_REDIRECT_URI: z.string().url().optional(),
 
     // Groq AI (ai-sdk) — основной провайдер AI-помощника
     GROQ_API_KEY: z.string().min(1).optional(),
@@ -69,7 +77,10 @@ export const env = createEnv({
   runtimeEnv: {
     OZON_API_KEY: process.env.OZON_API_KEY,
     OZON_CLIENT_ID: process.env.OZON_CLIENT_ID,
-    OZON_DELIVERY_ACCESS_TOKEN: process.env.OZON_DELIVERY_ACCESS_TOKEN,
+    OZON_DELIVERY_CLIENT_ID: process.env.OZON_DELIVERY_CLIENT_ID,
+    OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
+    OZON_DELIVERY_REFRESH_TOKEN: process.env.OZON_DELIVERY_REFRESH_TOKEN,
+    OZON_DELIVERY_REDIRECT_URI: process.env.OZON_DELIVERY_REDIRECT_URI,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     GROQ_MODEL: process.env.GROQ_MODEL,
     CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY,
