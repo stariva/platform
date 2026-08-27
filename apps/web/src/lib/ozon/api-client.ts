@@ -123,7 +123,16 @@ async function fetchProductAttributesByVisibility(
   productIds: number[],
   clientId: string,
   apiKey: string,
-): Promise<{ id: number; attributes?: { id?: number; attribute_id?: number; values?: { value?: string }[] }[] }[]> {
+): Promise<
+  {
+    id: number;
+    attributes?: {
+      id?: number;
+      attribute_id?: number;
+      values?: { value?: string }[];
+    }[];
+  }[]
+> {
   const res = await fetch(`${OZON_API_URL}/v4/product/info/attributes`, {
     method: "POST",
     headers: {
