@@ -7,8 +7,11 @@ export const runtime = "nodejs";
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1),
-  expires_in: z.number().int().positive(),
-  scope: z.string().optional(),
+  expires_in: z.coerce.number().int().positive(),
+  scope: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((value) => (Array.isArray(value) ? value.join(" ") : value)),
 });
 
 const callbackQuerySchema = z.object({
@@ -72,7 +75,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const data = tokenResponseSchema.parse(await res.json());
+  const parsedToken = tokenResponseSchema.safeParse(await res.json());
+  if (!parsedToken.success) {
+    return NextResponse.json(
+      {
+        error: "Неожиданный формат ответа Ozon",
+        detail: parsedToken.error.flatten(),
+      },
+      { status: 502 },
+    );
+  }
+  const data = parsedToken.data;
   const response = NextResponse.json({
     message:
       "Скопируйте refresh_token в OZON_DELIVERY_REFRESH_TOKEN и перезапустите приложение. Больше эта страница не понадобится.",

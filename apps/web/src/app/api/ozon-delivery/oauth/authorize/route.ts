@@ -44,7 +44,7 @@ export async function GET() {
   const response = NextResponse.redirect(url);
   response.cookies.set("ozon_delivery_oauth_state", state, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 600,
     path: "/api/ozon-delivery/oauth",
