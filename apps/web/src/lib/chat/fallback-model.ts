@@ -10,7 +10,7 @@ import type {
  * Описание провайдера в цепочке fallback.
  */
 export type FallbackEntry = {
-  /** Человекочитаемое имя провайдера для логов (groq, cerebras, ...) */
+  /** Человекочитаемое имя провайдера для логов */
   name: string;
   /** Модель, реализующая интерфейс LanguageModelV4 */
   model: LanguageModelV4;
