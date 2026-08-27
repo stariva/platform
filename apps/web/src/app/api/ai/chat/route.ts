@@ -1,4 +1,3 @@
-import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { observe, propagateAttributes } from "@langfuse/tracing";
@@ -36,42 +35,21 @@ const MAX_CHARS_PER_MESSAGE = 4000;
 // ─── Провайдеры ──────────────────────────────────────────────────────────────
 
 /**
- * Возвращает список доступных моделей в порядке приоритета.
- * Groq — основной, Cerebras — резервный, OpenRouter — последний запасной.
+ * Возвращает список доступных моделей. Единственный провайдер — OpenAI-совместимый
+ * роутер (env.AI_BASE_URL), ключ и модель задаются через AI_API_KEY / AI_MODEL.
  */
 function getAvailableModels(): FallbackEntry[] {
   const models: FallbackEntry[] = [];
 
-  if (env.GROQ_API_KEY) {
-    const groq = createGroq({ apiKey: env.GROQ_API_KEY });
-    models.push({
-      name: "groq",
-      model: groq(env.GROQ_MODEL) as LanguageModelV4,
-    });
-  }
-
-  if (env.CEREBRAS_API_KEY) {
-    const cerebras = createOpenAICompatible({
-      name: "cerebras",
-      apiKey: env.CEREBRAS_API_KEY,
-      baseURL: "https://api.cerebras.ai/v1",
-      headers: { "X-Cerebras-3rd-Party-Integration": "vercel-ai-sdk" },
+  if (env.AI_API_KEY) {
+    const router = createOpenAICompatible({
+      name: "router",
+      apiKey: env.AI_API_KEY,
+      baseURL: env.AI_BASE_URL,
     });
     models.push({
-      name: "cerebras",
-      model: cerebras(env.CEREBRAS_MODEL) as LanguageModelV4,
-    });
-  }
-
-  if (env.OPENROUTER_API_KEY) {
-    const openrouter = createOpenAICompatible({
-      name: "openrouter",
-      apiKey: env.OPENROUTER_API_KEY,
-      baseURL: "https://openrouter.ai/api/v1",
-    });
-    models.push({
-      name: "openrouter",
-      model: openrouter(env.OPENROUTER_MODEL) as LanguageModelV4,
+      name: "router",
+      model: router(env.AI_MODEL) as LanguageModelV4,
     });
   }
 

@@ -1,4 +1,3 @@
-import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateObject, type LanguageModel } from "ai";
 import { type NextRequest, NextResponse } from "next/server";
@@ -41,24 +40,18 @@ const estimateSchema = z.object({
     .describe("Короткая заметка о том, что итоговую цену подтвердит мастер"),
 });
 
-// ─── Провайдеры (тот же порядок приоритетов, что в chat route) ──────────────
+// ─── Провайдер (тот же роутер, что в chat route) ─────────────────────────────
 
 function getAvailableModels(): Array<{ name: string; model: LanguageModel }> {
   const models: Array<{ name: string; model: LanguageModel }> = [];
 
-  if (env.GROQ_API_KEY) {
-    const groq = createGroq({ apiKey: env.GROQ_API_KEY });
-    models.push({ name: "groq", model: groq(env.GROQ_MODEL) });
-  }
-
-  if (env.CEREBRAS_API_KEY) {
-    const cerebras = createOpenAICompatible({
-      name: "cerebras",
-      apiKey: env.CEREBRAS_API_KEY,
-      baseURL: "https://api.cerebras.ai/v1",
-      headers: { "X-Cerebras-3rd-Party-Integration": "vercel-ai-sdk" },
+  if (env.AI_API_KEY) {
+    const router = createOpenAICompatible({
+      name: "router",
+      apiKey: env.AI_API_KEY,
+      baseURL: env.AI_BASE_URL,
     });
-    models.push({ name: "cerebras", model: cerebras(env.CEREBRAS_MODEL) });
+    models.push({ name: "router", model: router(env.AI_MODEL) });
   }
 
   return models;

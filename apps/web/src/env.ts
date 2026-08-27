@@ -22,20 +22,10 @@ export const env = createEnv({
     OZON_DELIVERY_REFRESH_TOKEN: z.string().min(1).optional(),
     OZON_DELIVERY_REDIRECT_URI: z.string().url().optional(),
 
-    // Groq AI (ai-sdk) — основной провайдер AI-помощника
-    GROQ_API_KEY: z.string().min(1).optional(),
-    GROQ_MODEL: z
-      .string()
-      .min(1)
-      .default("llama3-groq-70b-8192-tool-use-preview"),
-
-    // Cerebras AI (резервный провайдер, если Groq недоступен или вернул ошибку)
-    CEREBRAS_API_KEY: z.string().min(1).optional(),
-    CEREBRAS_MODEL: z.string().min(1).default("gpt-oss-120b"),
-
-    // OpenRouter (последний резервный провайдер, если Groq и Cerebras недоступны)
-    OPENROUTER_API_KEY: z.string().min(1).optional(),
-    OPENROUTER_MODEL: z.string().min(1).default("openai/gpt-oss-120b:free"),
+    // AI-провайдер (OpenAI-совместимый роутер) — единственный провайдер AI-помощника
+    AI_API_KEY: z.string().min(1).optional(),
+    AI_BASE_URL: z.string().url().default("https://router.cheap/v1"),
+    AI_MODEL: z.string().min(1).default("gpt-4o-mini"),
 
     // Langfuse — трассировка и логирование запросов к AI (опционально)
     // Ключи: https://cloud.langfuse.com → Settings → API Keys
@@ -81,12 +71,9 @@ export const env = createEnv({
     OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
     OZON_DELIVERY_REFRESH_TOKEN: process.env.OZON_DELIVERY_REFRESH_TOKEN,
     OZON_DELIVERY_REDIRECT_URI: process.env.OZON_DELIVERY_REDIRECT_URI,
-    GROQ_API_KEY: process.env.GROQ_API_KEY,
-    GROQ_MODEL: process.env.GROQ_MODEL,
-    CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY,
-    CEREBRAS_MODEL: process.env.CEREBRAS_MODEL,
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-    OPENROUTER_MODEL: process.env.OPENROUTER_MODEL,
+    AI_API_KEY: process.env.AI_API_KEY,
+    AI_BASE_URL: process.env.AI_BASE_URL,
+    AI_MODEL: process.env.AI_MODEL,
     LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY,
     LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY,
     LANGFUSE_BASE_URL: process.env.LANGFUSE_BASE_URL,
