@@ -17,7 +17,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { trackOzonClick } from "@/lib/analytics";
 import { parseMultipleColors } from "@/lib/colors";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
@@ -344,26 +343,7 @@ export function ProductDetails({
               {/* CTA Buttons */}
               <div className="space-y-3 mt-auto">
                 <AddToCartButton product={product} />
-                {product.ozonUrl ? (
-                  <a
-                    href={product.ozonUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() =>
-                      product.ozonUrl &&
-                      trackOzonClick("product", product.name, product.ozonUrl)
-                    }
-                    className="group flex flex-col items-center justify-center w-full bg-[#005BFF] hover:bg-[#0047CC] text-white py-4 px-6 rounded-2xl transition-all duration-200 hover:shadow-[0_8px_24px_rgba(0,91,255,0.35)]"
-                  >
-                    <span className="flex items-center gap-2.5 label-caps text-[13px]">
-                      <OzonIcon className="w-5 h-5" />
-                      Купить на Ozon
-                    </span>
-                    <span className="text-white/70 text-[10px] mt-0.5 label-caps">
-                      Быстрая доставка · Безопасная оплата
-                    </span>
-                  </a>
-                ) : (
+                {!(product.ozonSku && product.inStock) && (
                   <Button
                     asChild
                     className="flex items-center justify-center gap-2 w-full bg-espresso hover:bg-terracotta text-white py-4 h-auto rounded-2xl transition-colors label-caps"

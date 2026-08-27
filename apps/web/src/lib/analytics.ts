@@ -14,17 +14,3 @@ export function reachGoal(goal: string, params?: Record<string, unknown>) {
   if (typeof window.ym !== "function") return;
   window.ym(COUNTER_ID, "reachGoal", goal, params);
 }
-
-/**
- * Трекинг перехода на Озон.
- * @param source - откуда был клик: 'product' | 'workshop'
- * @param name - название товара или мастер-класса
- * @param url - URL на Озон
- */
-export function trackOzonClick(
-  source: "product" | "workshop",
-  name: string,
-  url: string,
-) {
-  reachGoal("ozon_click", { source, name, url });
-}

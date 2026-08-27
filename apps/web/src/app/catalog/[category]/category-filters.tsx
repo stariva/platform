@@ -186,31 +186,6 @@ function ProductCard({
               </span>
             )}
           </div>
-          {/* Quick Ozon link on hover */}
-          {product.ozonUrl && (
-            <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <span className="flex items-center justify-center gap-1.5 w-full bg-[#005BFF] text-white label-caps text-[10px] py-2 rounded-lg">
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9Z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M12 7c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5Z"
-                    fill="currentColor"
-                  />
-                </svg>
-                Купить на Ozon
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Info */}
