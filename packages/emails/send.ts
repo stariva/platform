@@ -1,4 +1,5 @@
 import { render } from "@react-email/components";
+import { logger } from "@stariva/config";
 import nodemailer from "nodemailer";
 import type Mail from "nodemailer/lib/mailer";
 import type { ReactNode } from "react";
@@ -39,7 +40,7 @@ export const sendEmail = async (email: Emails) => {
     return transporter.sendMail(mailOptions);
   }
   if (!resend) {
-    console.log(
+    logger.warn(
       "Resend is not configured. You need to add a RESEND_API_KEY in your .env file for emails to work.",
     );
     return Promise.resolve();
@@ -54,7 +55,7 @@ export const sendEmail = async (email: Emails) => {
 
 export const sendEmailHtml = async (email: EmailHtml) => {
   if (!resend) {
-    console.log(
+    logger.warn(
       "Resend is not configured. You need to add a RESEND_API_KEY in your .env file for emails to work.",
     );
     return Promise.resolve();

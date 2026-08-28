@@ -1,3 +1,4 @@
+import { logger } from "@stariva/config";
 import { NextResponse } from "next/server";
 import { env } from "@/env";
 import type {
@@ -12,7 +13,6 @@ async function fetchOzonProducts(): Promise<OzonProductInfoResponse | null> {
   const apiKey = env.OZON_API_KEY;
 
   if (!clientId || !apiKey) {
-    console.log("[v0] Ozon credentials not configured");
     return null;
   }
 
@@ -36,10 +36,7 @@ async function fetchOzonProducts(): Promise<OzonProductInfoResponse | null> {
     });
 
     if (!listResponse.ok) {
-      console.log(
-        "[v0] Ozon product list request failed:",
-        listResponse.status,
-      );
+      logger.warn("ozon.route.list_failed", { status: listResponse.status });
       return null;
     }
 
@@ -65,16 +62,13 @@ async function fetchOzonProducts(): Promise<OzonProductInfoResponse | null> {
     });
 
     if (!infoResponse.ok) {
-      console.log(
-        "[v0] Ozon product info request failed:",
-        infoResponse.status,
-      );
+      logger.warn("ozon.route.info_failed", { status: infoResponse.status });
       return null;
     }
 
     return await infoResponse.json();
   } catch (error) {
-    console.log("[v0] Ozon API error:", error);
+    logger.error("ozon.route.error", error);
     return null;
   }
 }
