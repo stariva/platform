@@ -1,3 +1,4 @@
+import { logger } from "@stariva/config";
 import { z } from "zod";
 import { env } from "@/env";
 import type { OzonReview, Product, Review } from "../ozon-types";
@@ -40,11 +41,7 @@ async function fetchProductIdsByVisibility(
 
   if (!res.ok) {
     const text = await res.text();
-    console.log(
-      `[v0] Ozon list request (${visibility}) failed:`,
-      res.status,
-      text,
-    );
+    logger.warn("ozon.list.failed", { visibility, status: res.status, text });
     return null;
   }
 
@@ -56,8 +53,6 @@ async function fetchProductIds(
   clientId: string,
   apiKey: string,
 ): Promise<number[] | null> {
-  console.log("[v0] Fetching Ozon product list...");
-
   // "ALL" возвращает все товары, кроме архивных — Ozon у нас выступает
   // как админка товаров, поэтому архивные/недоступные к покупке товары
   // тоже должны отображаться на сайте, их нужно запрашивать отдельно.
@@ -69,7 +64,6 @@ async function fetchProductIds(
   if (active === null && archived === null) return null;
 
   const ids = new Set([...(active ?? []), ...(archived ?? [])]);
-  console.log("[v0] Found", ids.size, "products in Ozon (incl. archived)");
   return [...ids];
 }
 
@@ -78,12 +72,6 @@ async function fetchProductDetails(
   clientId: string,
   apiKey: string,
 ): Promise<OzonProductInfoV3[] | null> {
-  console.log(
-    "[v0] Fetching product details for",
-    productIds.length,
-    "products...",
-  );
-
   const res = await fetch(`${OZON_API_URL}/v3/product/info/list`, {
     method: "POST",
     headers: {
@@ -97,7 +85,7 @@ async function fetchProductDetails(
 
   if (!res.ok) {
     const text = await res.text();
-    console.log("[v0] Ozon info request failed:", res.status, text);
+    logger.warn("ozon.info.failed", { status: res.status, text });
     return null;
   }
 
@@ -109,12 +97,11 @@ async function fetchProductDetails(
   });
   const parsed = responseSchema.safeParse(await res.json());
   if (!parsed.success) {
-    console.log("[v0] Ozon info response validation failed");
+    logger.warn("ozon.info.validation_failed");
     return null;
   }
   const items: OzonProductInfoV3[] =
     parsed.data.items ?? parsed.data.result?.items ?? [];
-  console.log("[v0] Successfully fetched", items.length, "product details");
   return items;
 }
 
@@ -242,7 +229,7 @@ export async function fetchOzonReviews(
         return null;
       }
       const text = await res.text();
-      console.log("[ozon] Reviews request failed:", res.status, text);
+      logger.warn("ozon.reviews.failed", { status: res.status, text });
       return null;
     }
 
@@ -254,10 +241,7 @@ export async function fetchOzonReviews(
     );
     return published.map(transformOzonReview);
   } catch (error) {
-    console.log(
-      "[ozon] Reviews fetch error:",
-      error instanceof Error ? error.message : error,
-    );
+    logger.error("ozon.reviews.error", error);
     return null;
   }
 }
@@ -269,44 +253,30 @@ export async function fetchFromOzon(): Promise<Product[] | null> {
   const apiKey = env.OZON_API_KEY;
 
   if (!clientId || !apiKey) {
-    console.log("[v0] Ozon credentials not configured, skipping fetch");
     return null;
   }
-
-  console.log(
-    "[v0] Ozon credentials found. Client ID starts with:",
-    `${clientId.substring(0, 5)}...`,
-  );
 
   try {
     const productIds = await fetchProductIds(clientId, apiKey);
     if (productIds === null) return null;
     if (productIds.length === 0) {
-      console.log("[v0] No products found in Ozon account");
       return [];
     }
 
     const items = await fetchProductDetails(productIds, clientId, apiKey);
     if (!items) return null;
     if (items.length === 0) {
-      console.log("[v0] No product details returned");
       return [];
     }
 
-    console.log("[v0] Fetching product attributes...");
     const attrsMap = await fetchProductAttributes(productIds, clientId, apiKey);
-    console.log("[v0] Attributes fetched for", attrsMap.size, "products");
 
     const products = items.map((item) =>
       transformOzonProduct(item, attrsMap.get(item.id)),
     );
-    console.log("[v0] Transformed", products.length, "products for display");
     return products;
   } catch (error) {
-    console.log(
-      "[v0] Ozon API error:",
-      error instanceof Error ? error.message : error,
-    );
+    logger.error("ozon.fetch.error", error);
     return null;
   }
 }

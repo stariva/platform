@@ -2,6 +2,7 @@
  * Маппер для трансформации товаров Ozon во внутренние артикулы
  */
 
+import { logger } from "@stariva/config";
 import { getNextArticle } from "@/data/ozon-article-template";
 import type {
   OzonProductInfo,
@@ -144,7 +145,7 @@ export function transformOzonToProduct(
   }
 
   if (!categoryInfo) {
-    console.warn(`Cannot detect category for product: ${ozonProduct.name}`);
+    logger.warn("ozon.article.category_undetected", { name: ozonProduct.name });
     return null;
   }
 
@@ -154,9 +155,10 @@ export function transformOzonToProduct(
       ...existingArticles,
       ...Object.values(OZON_TO_ARTICLE_MAP),
     ]);
-    console.log(
-      `Generated new article ${article} for Ozon offer_id: ${ozonProduct.offer_id}`,
-    );
+    logger.debug("ozon.article.generated", {
+      article,
+      offerId: ozonProduct.offer_id,
+    });
   }
 
   // Создание slug из артикула

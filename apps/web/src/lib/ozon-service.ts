@@ -1,17 +1,16 @@
+import { logger } from "@stariva/config";
 import { fetchFromOzon, fetchOzonReviews } from "./ozon/api-client";
 import type { Product, Review } from "./ozon-types";
 import { categories } from "./products";
 
 export async function getProducts(): Promise<Product[]> {
-  console.log("[ozon] 🔄 Fetching products...");
   const ozonProducts = await fetchFromOzon();
 
   if (ozonProducts && ozonProducts.length > 0) {
-    console.log("[ozon] ✓ Using Ozon products:", ozonProducts.length, "items");
     return ozonProducts;
   }
 
-  console.log("[ozon] ⚠️ No products available from Ozon");
+  logger.warn("ozon.products.unavailable");
   return [];
 }
 
