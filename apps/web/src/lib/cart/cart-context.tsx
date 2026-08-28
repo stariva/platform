@@ -29,6 +29,10 @@ interface CartContextValue {
   clear: () => void;
   subtotal: number;
   count: number;
+  isOpen: boolean;
+  setOpen: (open: boolean) => void;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -54,6 +58,7 @@ function readStoredCart(): CartItem[] {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [isOpen, setOpen] = useState(false);
 
   useEffect(() => {
     setItems(readStoredCart());
@@ -100,6 +105,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = useCallback(() => setItems([]), []);
 
+  const openCart = useCallback(() => setOpen(true), []);
+  const closeCart = useCallback(() => setOpen(false), []);
+
   const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     [items],
@@ -110,8 +118,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ items, add, remove, setQty, clear, subtotal, count }),
-    [items, add, remove, setQty, clear, subtotal, count],
+    () => ({
+      items,
+      add,
+      remove,
+      setQty,
+      clear,
+      subtotal,
+      count,
+      isOpen,
+      setOpen,
+      openCart,
+      closeCart,
+    }),
+    [
+      items,
+      add,
+      remove,
+      setQty,
+      clear,
+      subtotal,
+      count,
+      isOpen,
+      openCart,
+      closeCart,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

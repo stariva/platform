@@ -2,17 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useCart } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/products";
+
+const AUTO_CLOSE_MS = 3500;
 
 function CartIcon({ className }: { className?: string }) {
   return (
@@ -38,11 +38,33 @@ function CartIcon({ className }: { className?: string }) {
 }
 
 export function CartTrigger({ isSolid }: { isSolid: boolean }) {
-  const { count } = useCart();
+  const { count, isOpen, setOpen } = useCart();
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    clearCloseTimer();
+    closeTimer.current = setTimeout(() => setOpen(false), AUTO_CLOSE_MS);
+  }, [clearCloseTimer, setOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      scheduleClose();
+    } else {
+      clearCloseTimer();
+    }
+    return clearCloseTimer;
+  }, [isOpen, scheduleClose, clearCloseTimer]);
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
+    <Popover open={isOpen} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <button
           type="button"
           aria-label="Корзина"
@@ -59,27 +81,35 @@ export function CartTrigger({ isSolid }: { isSolid: boolean }) {
             </span>
           )}
         </button>
-      </SheetTrigger>
-      <CartDrawerContent />
-    </Sheet>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={12}
+        onMouseEnter={clearCloseTimer}
+        onMouseLeave={scheduleClose}
+        className="w-[360px] p-0 rounded-2xl border-espresso/8 shadow-[0_24px_60px_rgba(22,21,19,0.14)] overflow-hidden"
+      >
+        <CartPopoverContent />
+      </PopoverContent>
+    </Popover>
   );
 }
 
-function CartDrawerContent() {
-  const { items, remove, setQty, subtotal } = useCart();
+function CartPopoverContent() {
+  const { items, remove, setQty, subtotal, closeCart } = useCart();
 
   return (
-    <SheetContent className="flex flex-col">
-      <SheetHeader>
-        <SheetTitle className="font-serif">Корзина</SheetTitle>
-      </SheetHeader>
+    <div className="flex flex-col max-h-[70vh]">
+      <div className="px-4 py-3 border-b border-espresso/8">
+        <span className="font-serif text-espresso text-lg">Корзина</span>
+      </div>
 
       {items.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="px-6 py-10 text-center">
           <p className="text-taupe text-sm">Корзина пуста</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {items.map((item) => (
             <div key={item.productSlug} className="flex gap-3">
               <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-sand flex-shrink-0">
@@ -133,7 +163,7 @@ function CartDrawerContent() {
       )}
 
       {items.length > 0 && (
-        <SheetFooter className="border-t border-espresso/8 pt-4">
+        <div className="border-t border-espresso/8 p-4">
           <div className="flex items-center justify-between w-full mb-3">
             <span className="text-taupe text-sm">Товары</span>
             <span className="text-espresso font-medium">
@@ -143,11 +173,12 @@ function CartDrawerContent() {
           <Button
             asChild
             className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+            onClick={closeCart}
           >
             <Link href="/checkout">Оформить заказ</Link>
           </Button>
-        </SheetFooter>
+        </div>
       )}
-    </SheetContent>
+    </div>
   );
 }

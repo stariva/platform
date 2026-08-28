@@ -12,7 +12,7 @@ export function AddToCartButton({
   product: Product;
   className?: string;
 }) {
-  const { add } = useCart();
+  const { add, openCart } = useCart();
   const [added, setAdded] = useState(false);
 
   if (!product.ozonSku || !product.inStock) return null;
@@ -28,6 +28,7 @@ export function AddToCartButton({
           image: product.images[0] ?? "",
           price: Math.round(product.price * 100),
         });
+        openCart();
         setAdded(true);
         setTimeout(() => setAdded(false), 1500);
       }}
