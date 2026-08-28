@@ -153,10 +153,8 @@ export function transformOzonProduct(
   const price = parseFloat(ozonProduct.price) || 0;
   const oldPrice = parseFloat(ozonProduct.old_price) || undefined;
 
-  const stocksList: Array<{ present: number; reserved: number }> =
-    ozonProduct.stocks?.stocks || [];
-  const totalPresent = stocksList.reduce((sum, s) => sum + (s.present || 0), 0);
-  const inStock = totalPresent > 0;
+  // Товары всегда доступны для заказа независимо от статуса/остатков в Озоне.
+  const inStock = true;
 
   // primary_image в v3 — массив строк; ставим первой, затем остальные из images[]
   const primaryImage = Array.isArray(ozonProduct.primary_image)

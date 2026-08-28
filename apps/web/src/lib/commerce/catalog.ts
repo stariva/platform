@@ -31,7 +31,7 @@ export async function resolveCatalogItems(
     const product = productsBySlug.get(productSlug);
     const price = product ? Math.round(product.price * 100) : 0;
     if (
-      !product?.inStock ||
+      !product ||
       product.currency !== "RUB" ||
       !Number.isSafeInteger(product.ozonSku) ||
       (product.ozonSku ?? 0) <= 0 ||
