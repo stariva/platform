@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
+import { ProductImageSwitcher } from "@/components/stariva/product-image-switcher";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { categories, getFeaturedProducts } from "@/lib/ozon-service";
@@ -61,15 +62,12 @@ function ProductCard({ product }: { product: Product; index?: number }) {
       className="group block"
     >
       <div className="relative aspect-[4/5] rounded-xl overflow-hidden mb-4 bg-cream">
-        <Image
-          src={product.images[0] ?? "/placeholder.jpg"}
+        <ProductImageSwitcher
+          images={product.images}
           alt={product.name}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, 33vw"
-          unoptimized={(product.images[0] ?? "/placeholder.jpg").startsWith(
-            "http",
-          )}
+          className="size-full"
+          imageClassName="transition-transform duration-500 group-hover:scale-105"
         />
         {product.oldPrice && (
           <span className="absolute top-4 left-4 bg-terracotta text-white label-caps px-3 py-1 rounded-full">
