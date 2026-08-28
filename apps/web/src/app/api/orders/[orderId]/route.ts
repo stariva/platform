@@ -48,6 +48,7 @@ export async function POST(
 
   return NextResponse.json({
     status: order.status,
+    paymentMethod: order.paymentMethod,
     amountTotal: order.amountTotal,
     amountDelivery: order.amountDelivery,
     createdAt: order.createdAt,

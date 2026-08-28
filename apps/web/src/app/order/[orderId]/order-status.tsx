@@ -21,6 +21,7 @@ const statusLabels: Record<string, string> = {
 
 interface OrderData {
   status: string;
+  paymentMethod: string;
   amountTotal: number;
   amountDelivery: number;
   createdAt: string;
@@ -117,6 +118,13 @@ export function OrderStatus({ orderId }: { orderId: string }) {
           {formatPrice(order.amountTotal / 100)}
         </span>
       </div>
+
+      {order.status === "pending" && order.paymentMethod === "seller_link" && (
+        <p className="text-taupe text-xs bg-sand/60 rounded-lg p-3">
+          Заказ принят без online-оплаты. Продавец свяжется с вами и пришлёт
+          ссылку на оплату лично.
+        </p>
+      )}
 
       {order.postings.length > 0 && (
         <div className="border-t border-espresso/8 pt-3">

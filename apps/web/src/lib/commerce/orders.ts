@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { db } from "@stariva/db";
 import { productOrderItems, productOrders } from "@stariva/db/schema";
 import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
@@ -23,13 +23,18 @@ export interface CreateProductOrderInput {
   items: OrderLineInput[];
   delivery: DeliverySelection;
   checkout: DeliveryCheckoutResponse;
+  /** yookassa (по умолчанию) — оплата картой/СБП на сайте; seller_link — продавец
+   * присылает покупателю ссылку на оплату сам и подтверждает её вручную. */
+  paymentMethod?: "yookassa" | "seller_link";
 }
 
 /** Создаёт заказ на товары в статусе pending вместе с его позициями. */
 export async function createProductOrder(
   input: CreateProductOrderInput,
-): Promise<{ id: string; amountTotal: number }> {
+): Promise<{ id: string; amountTotal: number; confirmToken: string | null }> {
   const orderId = randomUUID();
+  const paymentMethod = input.paymentMethod ?? "yookassa";
+  const confirmToken = paymentMethod === "seller_link" ? randomUUID() : null;
   const amountProducts = input.items.reduce(
     (sum, i) => sum + i.price * i.quantity,
     0,
@@ -55,6 +60,8 @@ export async function createProductOrder(
     amountDelivery,
     amountTotal,
     currency: "RUB",
+    paymentMethod,
+    confirmToken,
     deliveryMethod: input.delivery.method,
     deliveryPointId:
       input.delivery.method === "pickup" ? input.delivery.pointId : null,
@@ -81,7 +88,7 @@ export async function createProductOrder(
     })),
   );
 
-  return { id: orderId, amountTotal };
+  return { id: orderId, amountTotal, confirmToken };
 }
 
 export async function attachPaymentId(
@@ -108,6 +115,30 @@ export async function getProductOrderItems(orderId: string) {
     .select()
     .from(productOrderItems)
     .where(eq(productOrderItems.orderId, orderId));
+}
+
+/**
+ * Подтверждает оплату заказа с paymentMethod === "seller_link" по токену из
+ * ссылки, присланной продавцу. Возвращает true, если оплата зачтена (в том
+ * числе повторный переход по той же ссылке — идемпотентно).
+ */
+export async function confirmProductOrderPaymentByToken(
+  orderId: string,
+  token: string,
+): Promise<boolean> {
+  const order = await getProductOrderById(orderId);
+  if (
+    !order ||
+    order.paymentMethod !== "seller_link" ||
+    !order.confirmToken ||
+    order.confirmToken.length !== token.length ||
+    !timingSafeEqual(Buffer.from(order.confirmToken), Buffer.from(token))
+  ) {
+    return false;
+  }
+  if (order.status === "canceled") return false;
+  if (order.status !== "pending") return true; // уже подтверждено ранее
+  return markProductOrderPaid(orderId);
 }
 
 /** Идемпотентно помечает заказ оплаченным. Возвращает true, если статус реально сменился. */

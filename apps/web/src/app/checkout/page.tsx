@@ -36,6 +36,9 @@ export default function CheckoutPage() {
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<
+    "yookassa" | "seller_link"
+  >("yookassa");
 
   if (items.length === 0) {
     return (
@@ -168,16 +171,17 @@ export default function CheckoutPage() {
             quantity: item.quantity,
           })),
           delivery,
+          paymentMethod,
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data.confirmationUrl) {
+      if (!res.ok || (!data.confirmationUrl && !data.manualPayment)) {
         toast.error(data.error ?? "Не удалось создать заказ");
         setSubmitting(false);
         return;
       }
       clear();
-      window.location.href = data.confirmationUrl;
+      window.location.href = data.confirmationUrl ?? `/order/${data.orderId}`;
     } catch {
       toast.error("Не удалось создать заказ. Попробуйте позже.");
       setSubmitting(false);
@@ -319,12 +323,46 @@ export default function CheckoutPage() {
                   {formatPrice((subtotal + quote.deliveryPriceKopecks) / 100)}
                 </span>
               </div>
+
+              <div className="space-y-2 border-t border-espresso/8 pt-3">
+                <p className="text-taupe text-xs">Способ оплаты</p>
+                <label className="flex items-start gap-2 text-sm text-espresso cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={paymentMethod === "yookassa"}
+                    onChange={() => setPaymentMethod("yookassa")}
+                    className="mt-1"
+                  />
+                  <span>Картой или СБП онлайн</span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-espresso cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={paymentMethod === "seller_link"}
+                    onChange={() => setPaymentMethod("seller_link")}
+                    className="mt-1"
+                  />
+                  <span>
+                    По ссылке от продавца — мы свяжемся с вами и пришлём
+                    реквизиты для оплаты лично
+                  </span>
+                </label>
+              </div>
+
               <Button
                 onClick={handleConfirm}
                 disabled={submitting}
                 className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6"
               >
-                {submitting ? <Spinner /> : "Оплатить"}
+                {submitting ? (
+                  <Spinner />
+                ) : paymentMethod === "yookassa" ? (
+                  "Оплатить"
+                ) : (
+                  "Оформить заказ"
+                )}
               </Button>
             </div>
           )}

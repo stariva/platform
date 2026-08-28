@@ -22,6 +22,13 @@
       "when": 1787732231377,
       "tag": "0002_redundant_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787774400000,
+      "tag": "0003_add_seller_link_payment",
+      "breakpoints": true
     }
   ]
 }

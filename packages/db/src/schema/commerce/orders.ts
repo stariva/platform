@@ -40,8 +40,18 @@ export const productOrders = pgTable("product_orders", {
   amountDelivery: integer("amount_delivery").notNull().default(0),
   amountTotal: integer("amount_total").notNull(),
   currency: text("currency").notNull().default("RUB"),
+  // yookassa — оплата картой/СБП через ЮKassa на сайте;
+  // seller_link — заказ без online-оплаты, продавец (самозанятый) сам
+  // присылает покупателю ссылку/реквизиты и подтверждает оплату вручную.
+  paymentMethod: text("payment_method")
+    .$type<"yookassa" | "seller_link">()
+    .notNull()
+    .default("yookassa"),
   // Идентификатор платежа в YooKassa
   paymentId: text("payment_id"),
+  // Токен для ручного подтверждения оплаты продавцом (paymentMethod === "seller_link"),
+  // ссылка с ним уходит продавцу в уведомлении о новом заказе
+  confirmToken: text("confirm_token"),
   deliveryMethod: productDeliveryMethod("delivery_method").notNull(),
   deliveryPointId: text("delivery_point_id"),
   // { address: string; lat: number; lng: number } — для курьерской доставки

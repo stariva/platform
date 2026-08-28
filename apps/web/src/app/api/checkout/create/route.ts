@@ -4,6 +4,7 @@ import { baseEnv, env } from "@/env";
 import { getSession } from "@/lib/auth/session";
 import { resolveCatalogItems } from "@/lib/commerce/catalog";
 import { attachPaymentId, createProductOrder } from "@/lib/commerce/orders";
+import { notifySellerAboutManualOrder } from "@/lib/notify/seller-order";
 import { checkout, isOzonDeliveryConfigured } from "@/lib/ozon-delivery/client";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 
@@ -28,6 +29,9 @@ const bodySchema = z.object({
     .min(1)
     .max(100),
   delivery: deliverySchema,
+  // seller_link — заказ без online-оплаты: продавец сам присылает покупателю
+  // ссылку на оплату и подтверждает её. По умолчанию — обычная оплата ЮKassa.
+  paymentMethod: z.enum(["yookassa", "seller_link"]).default("yookassa"),
 });
 
 function siteUrl(request: NextRequest): string {
@@ -39,19 +43,25 @@ function siteUrl(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isYooKassaConfigured() || !isOzonDeliveryConfigured()) {
-    return NextResponse.json(
-      { error: "Приём платежей временно недоступен" },
-      { status: 503 },
-    );
-  }
-
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
   const data = parsed.data;
+
+  if (!isOzonDeliveryConfigured()) {
+    return NextResponse.json(
+      { error: "Приём заказов временно недоступен" },
+      { status: 503 },
+    );
+  }
+  if (data.paymentMethod === "yookassa" && !isYooKassaConfigured()) {
+    return NextResponse.json(
+      { error: "Приём платежей временно недоступен" },
+      { status: 503 },
+    );
+  }
 
   let items: Awaited<ReturnType<typeof resolveCatalogItems>>;
   let deliveryQuote: Awaited<ReturnType<typeof checkout>>;
@@ -90,7 +100,29 @@ export async function POST(request: NextRequest) {
     items,
     delivery: data.delivery,
     checkout: deliveryQuote,
+    paymentMethod: data.paymentMethod,
   });
+
+  if (data.paymentMethod === "seller_link") {
+    if (order.confirmToken) {
+      const confirmUrl = `${siteUrl(request)}/api/orders/${order.id}/confirm-payment?token=${order.confirmToken}`;
+      await notifySellerAboutManualOrder({
+        orderId: order.id,
+        contactName: data.contactName,
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+        amountTotal: order.amountTotal,
+        items,
+        confirmUrl,
+      }).catch((error) => {
+        console.error(
+          "[checkout/create] Не удалось уведомить продавца о заказе:",
+          error,
+        );
+      });
+    }
+    return NextResponse.json({ orderId: order.id, manualPayment: true });
+  }
 
   try {
     const payment = await createPayment({
