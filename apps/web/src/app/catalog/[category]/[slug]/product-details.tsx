@@ -8,6 +8,7 @@ import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { ColorSwatches } from "@/components/stariva/color-indicator";
 import { OzonIcon } from "@/components/stariva/icons";
 import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
+import { ProductImageSwitcher } from "@/components/stariva/product-image-switcher";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -569,15 +570,12 @@ export function ProductDetails({
                     className="group block bg-parchment rounded-2xl overflow-hidden border border-espresso/8 hover:shadow-[0_8px_32px_rgba(44,36,27,0.10)] hover:-translate-y-0.5 transition-all duration-300"
                   >
                     <div className="relative aspect-[3/4] overflow-hidden bg-sand">
-                      <Image
-                        src={p.images[0] ?? "/placeholder.jpg"}
+                      <ProductImageSwitcher
+                        images={p.images}
                         alt={p.name}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        unoptimized={(
-                          p.images[0] ?? "/placeholder.jpg"
-                        ).startsWith("http")}
+                        className="size-full"
+                        imageClassName="transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
                     <div className="p-4">

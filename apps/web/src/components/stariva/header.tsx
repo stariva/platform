@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth/client";
-import { CartTrigger } from "./cart-drawer";
+import { CartTrigger } from "./cart-trigger";
 
 const catalogNav = [
   {
@@ -566,7 +566,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
             </div>
             {[
               { label: "Весь каталог", href: "/catalog" },
-              { label: "Корзина", href: "/checkout" },
+              { label: "Корзина", href: "/cart" },
               { label: "Мастер-классы", href: "/workshops" },
               { label: "Блог", href: "/blog" },
               { label: "О бренде", href: "/about" },

@@ -231,7 +231,7 @@ export default function CheckoutPage() {
               <h2 className="font-serif text-xl text-espresso mb-2">
                 Контактные данные
               </h2>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="name">Имя</Label>
                 <Input
                   id="name"
@@ -240,7 +240,7 @@ export default function CheckoutPage() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="phone">Телефон</Label>
                 <Input
                   id="phone"
@@ -251,7 +251,7 @@ export default function CheckoutPage() {
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="email">Email (необязательно)</Label>
                 <Input
                   id="email"

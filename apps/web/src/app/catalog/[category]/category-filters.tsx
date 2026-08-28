@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ProductImageSwitcher } from "@/components/stariva/product-image-switcher";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -168,15 +168,12 @@ function ProductCard({
       >
         {/* Image */}
         <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-sand">
-          <Image
-            src={product.images[0] ?? "/placeholder.jpg"}
+          <ProductImageSwitcher
+            images={product.images}
             alt={product.name}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            unoptimized={(product.images[0] ?? "/placeholder.jpg").startsWith(
-              "http",
-            )}
+            className="size-full"
+            imageClassName="transition-transform duration-500 group-hover:scale-105"
           />
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
