@@ -1,4 +1,3 @@
-import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import Script from "next/script";
@@ -124,7 +123,6 @@ export default function RootLayout({
           <ChatWidget />
         </CartProvider>
         <Toaster position="top-center" richColors />
-        {baseEnv.NODE_ENV === "production" && <Analytics />}
         {baseEnv.NODE_ENV === "production" && (
           <>
             <Script id="yandex-metrika" strategy="afterInteractive">
