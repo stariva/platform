@@ -60,7 +60,7 @@ export default function CartPage() {
                             setQty(item.productSlug, item.quantity - 1)
                           }
                           className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
-                          aria-label="Уменьшить количество"
+                          aria-label={`Уменьшить количество товара ${item.name}`}
                         >
                           −
                         </button>
@@ -73,7 +73,7 @@ export default function CartPage() {
                             setQty(item.productSlug, item.quantity + 1)
                           }
                           className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
-                          aria-label="Увеличить количество"
+                          aria-label={`Увеличить количество товара ${item.name}`}
                         >
                           +
                         </button>
