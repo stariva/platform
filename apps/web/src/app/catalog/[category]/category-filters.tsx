@@ -172,12 +172,24 @@ function ProductCard({
             src={product.images[0] ?? "/placeholder.jpg"}
             alt={product.name}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className={`object-cover transition-opacity duration-300 ${
+              product.images[1] ? "group-hover:opacity-0" : ""
+            }`}
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
             unoptimized={(product.images[0] ?? "/placeholder.jpg").startsWith(
               "http",
             )}
           />
+          {product.images[1] && (
+            <Image
+              src={product.images[1]}
+              alt={product.name}
+              fill
+              className="object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              unoptimized={product.images[1].startsWith("http")}
+            />
+          )}
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {product.oldPrice && (
