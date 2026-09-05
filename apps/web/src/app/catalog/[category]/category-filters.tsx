@@ -172,8 +172,10 @@ function ProductCard({
             src={product.images[0] ?? "/placeholder.jpg"}
             alt={product.name}
             fill
-            className={`object-cover transition-opacity duration-300 ${
-              product.images[1] ? "group-hover:opacity-0" : ""
+            className={`object-cover ${
+              product.images[1]
+                ? "transition-opacity duration-300 group-hover:opacity-0"
+                : "transition-transform duration-500 group-hover:scale-105"
             }`}
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
             unoptimized={(product.images[0] ?? "/placeholder.jpg").startsWith(
@@ -183,7 +185,7 @@ function ProductCard({
           {product.images[1] && (
             <Image
               src={product.images[1]}
-              alt={product.name}
+              alt=""
               fill
               className="object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
