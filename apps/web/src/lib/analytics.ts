@@ -24,7 +24,14 @@ export function analyticsUrl(value: string): string {
   try {
     const url = new URL(value);
     const query = new URLSearchParams();
-    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "yclid"]) {
+    for (const key of [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "yclid",
+    ]) {
       const entry = url.searchParams.get(key);
       if (entry) query.set(key, entry);
     }
@@ -35,24 +42,38 @@ export function analyticsUrl(value: string): string {
   }
 }
 
-type QueuedMetrika = NonNullable<Window["ym"]> & { a?: unknown[][]; l?: number };
+type QueuedMetrika = NonNullable<Window["ym"]> & {
+  a?: unknown[][];
+  l?: number;
+};
 let initialized = false;
 let previousPage = "";
 const recordedOrders = new Set<string>();
 
 function metrika() {
-  if (typeof window === "undefined" || process.env.NODE_ENV !== "production" || !isAnalyticsHost(window.location.hostname)) return;
+  if (
+    typeof window === "undefined" ||
+    process.env.NODE_ENV !== "production" ||
+    !isAnalyticsHost(window.location.hostname)
+  )
+    return;
   try {
     if (!initialized) {
       window.dataLayer ??= [];
       if (!window.ym) {
-        const queue: QueuedMetrika = (...args) => { (queue.a ??= []).push(args); };
+        const queue: QueuedMetrika = (...args) => {
+          (queue.a ??= []).push(args);
+        };
         queue.l = Date.now();
         window.ym = queue;
       }
       window.ym(COUNTER_ID, "init", {
-        defer: true, ecommerce: "dataLayer", webvisor: true,
-        clickmap: true, trackLinks: true, accurateTrackBounce: true,
+        defer: true,
+        ecommerce: "dataLayer",
+        webvisor: true,
+        clickmap: true,
+        trackLinks: true,
+        accurateTrackBounce: true,
       });
       const script = document.createElement("script");
       script.src = "https://mc.yandex.ru/metrika/tag.js";
@@ -72,27 +93,49 @@ export function trackPageView() {
   if (!ym) return;
   const url = analyticsUrl(window.location.href);
   if (url === previousPage) return;
-  ym(COUNTER_ID, "hit", url, { title: document.title, referer: previousPage || analyticsUrl(document.referrer) });
+  ym(COUNTER_ID, "hit", url, {
+    title: document.title,
+    referer: previousPage || analyticsUrl(document.referrer),
+  });
   previousPage = url;
 }
 
 export function reachGoal(goal: string, params?: Record<string, unknown>) {
-  try { metrika()?.(COUNTER_ID, "reachGoal", goal, params); } catch { /* optional */ }
+  try {
+    metrika()?.(COUNTER_ID, "reachGoal", goal, params);
+  } catch {
+    /* optional */
+  }
 }
 
-export function trackProductEvent(event: "detail" | "add" | "remove", products: AnalyticsProduct[]) {
+export function trackProductEvent(
+  event: "detail" | "add" | "remove",
+  products: AnalyticsProduct[],
+) {
   try {
     if (!products.length || !metrika()) return;
-    window.dataLayer?.push({ ecommerce: { currencyCode: "RUB", [event]: { products } } });
-  } catch { /* optional */ }
+    window.dataLayer?.push({
+      ecommerce: { currencyCode: "RUB", [event]: { products } },
+    });
+  } catch {
+    /* optional */
+  }
 }
 
 function recordOnce(key: string, send: () => void) {
   if (!metrika() || recordedOrders.has(key)) return false;
-  try { if (window.localStorage.getItem(key)) return false; } catch { /* memory fallback */ }
+  try {
+    if (window.localStorage.getItem(key)) return false;
+  } catch {
+    /* memory fallback */
+  }
   send();
   recordedOrders.add(key);
-  try { window.localStorage.setItem(key, "1"); } catch { /* memory fallback */ }
+  try {
+    window.localStorage.setItem(key, "1");
+  } catch {
+    /* memory fallback */
+  }
   return true;
 }
 
@@ -100,25 +143,52 @@ function recordOnce(key: string, send: () => void) {
 export function trackCreatedOrder(order: AnalyticsOrder): Promise<void> {
   return new Promise((resolve) => {
     const timeout = setTimeout(resolve, 800);
-    const done = () => { clearTimeout(timeout); resolve(); };
+    const done = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
     try {
       const sent = recordOnce(`stariva:analytics:created:${order.id}`, () => {
-        window.dataLayer?.push({ ecommerce: { currencyCode: "RUB", purchase: {
-          actionField: { id: order.id, revenue: order.revenue }, products: order.products,
-        } } });
-        window.ym?.(COUNTER_ID, "reachGoal", "order_created", { order_id: order.id, order_price: order.revenue, currency: "RUB" }, done);
+        window.dataLayer?.push({
+          ecommerce: {
+            currencyCode: "RUB",
+            purchase: {
+              actionField: { id: order.id, revenue: order.revenue },
+              products: order.products,
+            },
+          },
+        });
+        window.ym?.(
+          COUNTER_ID,
+          "reachGoal",
+          "order_created",
+          { order_id: order.id, order_price: order.revenue, currency: "RUB" },
+          done,
+        );
       });
       if (!sent) done();
-    } catch { done(); }
+    } catch {
+      done();
+    }
   });
 }
 
 /** paid comes from the authenticated server response, never payment=success. */
-export function trackPaidOrder(orderId: string, amountKopecks: number, paid: boolean) {
+export function trackPaidOrder(
+  orderId: string,
+  amountKopecks: number,
+  paid: boolean,
+) {
   if (!paid) return;
   try {
     recordOnce(`stariva:analytics:paid:${orderId}`, () => {
-      reachGoal("order_paid", { order_id: orderId, order_price: amountKopecks / 100, currency: "RUB" });
+      reachGoal("order_paid", {
+        order_id: orderId,
+        order_price: amountKopecks / 100,
+        currency: "RUB",
+      });
     });
-  } catch { /* optional */ }
+  } catch {
+    /* optional */
+  }
 }

@@ -29,7 +29,15 @@ export function AddToCartButton({
           image: product.images[0] ?? "",
           price: Math.round(product.price * 100),
         });
-        trackProductEvent("add", [{ id: product.slug, name: product.name, price: product.price, quantity: 1, category: product.category }]);
+        trackProductEvent("add", [
+          {
+            id: product.slug,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+            category: product.category,
+          },
+        ]);
         reachGoal("add_to_cart", { product_id: product.slug });
         setAdded(true);
         setTimeout(() => setAdded(false), 1500);

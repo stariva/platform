@@ -168,7 +168,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <>
-      <ProductAnalytics product={{ id: product.slug, name: product.name, price: product.price, category: product.category }} />
+      <ProductAnalytics
+        product={{
+          id: product.slug,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+        }}
+      />
       <Header variant="solid" />
       <BreadcrumbJsonLd
         items={[

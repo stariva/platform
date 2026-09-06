@@ -82,7 +82,9 @@ export default function CheckoutPage() {
   const checkoutTracked = useRef(false);
   useEffect(() => {
     if (!items.length || checkoutTracked.current) return;
-    reachGoal("begin_checkout", { items_count: items.reduce((sum, item) => sum + item.quantity, 0) });
+    reachGoal("begin_checkout", {
+      items_count: items.reduce((sum, item) => sum + item.quantity, 0),
+    });
     checkoutTracked.current = true;
   }, [items]);
 
@@ -251,9 +253,9 @@ export default function CheckoutPage() {
 
           {/* Order summary */}
           <p className="text-taupe text-sm leading-relaxed mb-6">
-            Заказ оформляется на Stariva, оплата — через ЮKassa.
-            Получение — в доступном пункте выдачи Ozon. Стоимость доставки
-            рассчитаем после выбора пункта и покажем до оплаты.
+            Заказ оформляется на Stariva, оплата — через ЮKassa. Получение — в
+            доступном пункте выдачи Ozon. Стоимость доставки рассчитаем после
+            выбора пункта и покажем до оплаты.
           </p>
           <div className="bg-white border border-espresso/10 rounded-2xl p-5 mb-8 space-y-3">
             {items.map((item) => (
