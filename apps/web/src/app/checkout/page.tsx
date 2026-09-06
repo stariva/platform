@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { useCart } from "@/lib/cart/cart-context";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
+import { useCart } from "@/lib/cart/cart-context";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
@@ -40,6 +40,22 @@ const contactFormSchema = z.object({
     .email("Некорректный email")
     .optional()
     .or(z.literal("")),
+});
+
+const checkoutCreateResponseSchema = z.object({
+  confirmationUrl: z.url({ protocol: /^https?$/ }),
+  analytics: z.object({
+    id: z.string().min(1),
+    revenue: z.number().nonnegative(),
+    products: z.array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        price: z.number().nonnegative(),
+        quantity: z.number().int().positive(),
+      }),
+    ),
+  }),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
@@ -200,15 +216,24 @@ export default function CheckoutPage() {
           delivery,
         }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.confirmationUrl) {
-        toast.error(data.error ?? "Не удалось создать заказ");
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const error = z.object({ error: z.string() }).safeParse(data);
+        toast.error(
+          error.success ? error.data.error : "Не удалось создать заказ",
+        );
         setSubmitting(false);
         return;
       }
-      if (data.analytics) await trackCreatedOrder(data.analytics);
+      const parsed = checkoutCreateResponseSchema.safeParse(data);
+      if (!parsed.success) {
+        toast.error("Не удалось создать заказ");
+        setSubmitting(false);
+        return;
+      }
+      await trackCreatedOrder(parsed.data.analytics);
       clear();
-      window.location.href = data.confirmationUrl;
+      window.location.href = parsed.data.confirmationUrl;
     } catch {
       toast.error("Не удалось создать заказ. Попробуйте позже.");
       setSubmitting(false);

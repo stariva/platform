@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
-import { Metrika } from "@/components/stariva/metrika";
+import { Suspense } from "react";
 import { ChatWidget } from "@/components/stariva/chat-widget";
 import {
   OrganizationJsonLd,
   WebSiteJsonLd,
 } from "@/components/stariva/json-ld";
+import { Metrika } from "@/components/stariva/metrika";
 import { Toaster } from "@/components/ui/sonner";
 import { baseEnv } from "@/env";
 import { CartProvider } from "@/lib/cart/cart-context";
@@ -124,7 +125,9 @@ export default function RootLayout({
         </CartProvider>
         <Toaster position="top-center" richColors />
         {baseEnv.NODE_ENV === "production" && (
-          <Metrika />
+          <Suspense fallback={null}>
+            <Metrika />
+          </Suspense>
         )}
       </body>
     </html>
