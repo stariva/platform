@@ -1,10 +1,20 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { formatPrice } from "@/lib/products";
 
@@ -29,26 +39,35 @@ interface OrderData {
   postings: { postingNumber: string; status: string }[];
 }
 
+const orderLookupSchema = z.object({
+  phone: z.string().trim().min(1, "Введите телефон"),
+});
+
+type OrderLookupFormValues = z.infer<typeof orderLookupSchema>;
+
 export function OrderStatus({ orderId }: { orderId: string }) {
-  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<OrderData | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const form = useForm<OrderLookupFormValues>({
+    resolver: zodResolver(orderLookupSchema),
+    defaultValues: { phone: "" },
+  });
+
+  async function onSubmit(data: OrderLookupFormValues) {
     setLoading(true);
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone: data.phone }),
       });
-      const data = await res.json();
+      const resData = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Заказ не найден");
+        toast.error(resData.error ?? "Заказ не найден");
         return;
       }
-      setOrder(data);
+      setOrder(resData);
     } catch {
       toast.error("Не удалось загрузить заказ");
     } finally {
@@ -58,31 +77,36 @@ export function OrderStatus({ orderId }: { orderId: string }) {
 
   if (!order) {
     return (
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto"
-      >
-        <p className="text-taupe text-sm">
-          Введите телефон, указанный при оформлении заказа.
-        </p>
-        <div>
-          <Label htmlFor="phone">Телефон</Label>
-          <Input
-            id="phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
-        </div>
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto"
         >
-          {loading ? <Spinner /> : "Показать заказ"}
-        </Button>
-      </form>
+          <p className="text-taupe text-sm">
+            Введите телефон, указанный при оформлении заказа.
+          </p>
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Телефон</FormLabel>
+                <FormControl>
+                  <Input type="tel" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+          >
+            {loading ? <Spinner /> : "Показать заказ"}
+          </Button>
+        </form>
+      </Form>
     );
   }
 
