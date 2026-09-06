@@ -1,12 +1,34 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
+
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+    confirm: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+  })
+  .refine((data) => data.password === data.confirm, {
+    message: "Пароли не совпадают",
+    path: ["confirm"],
+  });
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -14,9 +36,12 @@ export function ResetPasswordForm() {
   const token = searchParams.get("token");
   const error = searchParams.get("error");
 
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const form = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirm: "" },
+  });
 
   if (error || !token) {
     return (
@@ -37,19 +62,10 @@ export function ResetPasswordForm() {
     );
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (password.length < 8) {
-      toast.error("Пароль должен быть не короче 8 символов");
-      return;
-    }
-    if (password !== confirm) {
-      toast.error("Пароли не совпадают");
-      return;
-    }
+  async function onSubmit(data: ResetPasswordFormValues) {
     setLoading(true);
     const { error: resetError } = await authClient.resetPassword({
-      newPassword: password,
+      newPassword: data.password,
       token: token as string,
     });
     setLoading(false);
@@ -63,38 +79,50 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="password">Новый пароль</Label>
-        <PasswordInput
-          id="password"
-          autoComplete="new-password"
-          placeholder="Минимум 8 символов"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Новый пароль</FormLabel>
+              <FormControl>
+                <PasswordInput
+                  autoComplete="new-password"
+                  placeholder="Минимум 8 символов"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="confirm">Повторите пароль</Label>
-        <PasswordInput
-          id="confirm"
-          autoComplete="new-password"
-          placeholder="••••••••"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-          minLength={8}
+        <FormField
+          control={form.control}
+          name="confirm"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Повторите пароль</FormLabel>
+              <FormControl>
+                <PasswordInput
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <Button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
-      >
-        {loading ? "Сохраняем…" : "Сохранить пароль"}
-      </Button>
-    </form>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+        >
+          {loading ? "Сохраняем…" : "Сохранить пароль"}
+        </Button>
+      </form>
+    </Form>
   );
 }

@@ -1,35 +1,50 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { signUp } from "@/lib/auth/client";
+
+const signUpSchema = z.object({
+  name: z.string().trim().min(1, "Введите имя"),
+  email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
+  password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+});
+
+type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export function SignUpForm() {
   const searchParams = useSearchParams();
   const callbackURL = searchParams.get("callbackURL") || "/account";
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (password.length < 8) {
-      toast.error("Пароль должен быть не короче 8 символов");
-      return;
-    }
+  const form = useForm<SignUpFormValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { name: "", email: "", password: "" },
+  });
+
+  async function onSubmit(data: SignUpFormValues) {
     setLoading(true);
     const { error } = await signUp.email({
-      name,
-      email,
-      password,
+      name: data.name,
+      email: data.email,
+      password: data.password,
       callbackURL,
     });
     setLoading(false);
@@ -41,11 +56,11 @@ export function SignUpForm() {
       );
       return;
     }
-    setSent(true);
+    setSentEmail(data.email);
     toast.success("Письмо для подтверждения отправлено");
   }
 
-  if (sent) {
+  if (sentEmail) {
     return (
       <div className="text-center space-y-3 py-2">
         <div className="mx-auto w-12 h-12 rounded-full bg-sage/20 flex items-center justify-center">
@@ -76,70 +91,89 @@ export function SignUpForm() {
         </div>
         <p className="text-espresso font-medium">Проверьте почту</p>
         <p className="text-taupe text-sm leading-relaxed">
-          Мы отправили письмо на <span className="text-espresso">{email}</span>.
-          Перейдите по ссылке в письме, чтобы подтвердить email и войти в
-          кабинет.
+          Мы отправили письмо на{" "}
+          <span className="text-espresso">{sentEmail}</span>. Перейдите по
+          ссылке в письме, чтобы подтвердить email и войти в кабинет.
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="name">Имя</Label>
-        <Input
-          id="name"
-          type="text"
-          autoComplete="name"
-          placeholder="Как к вам обращаться"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Имя</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Как к вам обращаться"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="password">Пароль</Label>
-        <PasswordInput
-          id="password"
-          autoComplete="new-password"
-          placeholder="Минимум 8 символов"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Пароль</FormLabel>
+              <FormControl>
+                <PasswordInput
+                  autoComplete="new-password"
+                  placeholder="Минимум 8 символов"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <Button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
-      >
-        {loading ? "Создаём аккаунт…" : "Зарегистрироваться"}
-      </Button>
-      <p className="text-xs text-taupe leading-relaxed text-center">
-        Регистрируясь, вы соглашаетесь с{" "}
-        <a href="/offer" className="text-terracotta hover:underline">
-          условиями оферты
-        </a>{" "}
-        и{" "}
-        <a href="/privacy-policy" className="text-terracotta hover:underline">
-          политикой конфиденциальности
-        </a>
-        .
-      </p>
-    </form>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+        >
+          {loading ? "Создаём аккаунт…" : "Зарегистрироваться"}
+        </Button>
+        <p className="text-xs text-taupe leading-relaxed text-center">
+          Регистрируясь, вы соглашаетесь с{" "}
+          <a href="/offer" className="text-terracotta hover:underline">
+            условиями оферты
+          </a>{" "}
+          и{" "}
+          <a href="/privacy-policy" className="text-terracotta hover:underline">
+            политикой конфиденциальности
+          </a>
+          .
+        </p>
+      </form>
+    </Form>
   );
 }
