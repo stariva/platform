@@ -1,14 +1,24 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useCart } from "@/lib/cart/cart-context";
 import type {
@@ -20,14 +30,30 @@ import { formatPrice } from "@/lib/products";
 
 type Step = "contact" | "delivery" | "review";
 
+const contactFormSchema = z.object({
+  name: z.string().trim().min(1, "Введите имя").max(120),
+  phone: z.string().trim().min(5, "Введите телефон").max(20),
+  email: z
+    .string()
+    .trim()
+    .email("Некорректный email")
+    .optional()
+    .or(z.literal("")),
+});
+
+type ContactFormValues = z.infer<typeof contactFormSchema>;
+
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
 
   const [step, setStep] = useState<Step>("contact");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [contact, setContact] = useState<ContactFormValues | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
+
+  const contactForm = useForm<ContactFormValues>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: { name: "", phone: "", email: "" },
+  });
 
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[] | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string>("");
@@ -57,32 +83,27 @@ export default function CheckoutPage() {
     );
   }
 
-  async function handleContactSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !phone.trim()) {
-      toast.error("Заполните имя и телефон");
-      return;
-    }
-
+  async function handleContactSubmit(data: ContactFormValues) {
     setCheckingPhone(true);
     try {
       const res = await fetch("/api/checkout/delivery-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone: data.phone }),
       });
-      const data = await res.json();
+      const resData = await res.json();
       if (!res.ok) {
         toast.error(
-          data.error ??
+          resData.error ??
             "Доставка Ozon пока недоступна — напишите нам в Telegram @Olga_Stariva",
         );
         return;
       }
-      if (!data.available) {
-        toast.error(data.reason ?? "Доставка недоступна для этого телефона");
+      if (!resData.available) {
+        toast.error(resData.reason ?? "Доставка недоступна для этого телефона");
         return;
       }
+      setContact(data);
       setStep("delivery");
       void loadPickupPoints();
     } catch {
@@ -125,7 +146,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contactPhone: phone,
+          contactPhone: contact?.phone,
           items: items.map((i) => ({
             productSlug: i.productSlug,
             quantity: i.quantity,
@@ -160,9 +181,9 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contactName: name,
-          contactPhone: phone,
-          contactEmail: email || undefined,
+          contactName: contact?.name,
+          contactPhone: contact?.phone,
+          contactEmail: contact?.email || undefined,
           items: items.map((item) => ({
             productSlug: item.productSlug,
             quantity: item.quantity,
@@ -224,50 +245,66 @@ export default function CheckoutPage() {
           </div>
 
           {step === "contact" && (
-            <form
-              onSubmit={handleContactSubmit}
-              className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4"
-            >
-              <h2 className="font-serif text-xl text-espresso mb-2">
-                Контактные данные
-              </h2>
-              <div>
-                <Label htmlFor="name">Имя</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Телефон</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+7 999 123-45-67"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email (необязательно)</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={checkingPhone}
-                className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+            <Form {...contactForm}>
+              <form
+                onSubmit={contactForm.handleSubmit(handleContactSubmit)}
+                className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4"
               >
-                {checkingPhone ? <Spinner /> : "Далее"}
-              </Button>
-            </form>
+                <h2 className="font-serif text-xl text-espresso mb-2">
+                  Контактные данные
+                </h2>
+                <FormField
+                  control={contactForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={contactForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Телефон</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="tel"
+                          placeholder="+7 999 123-45-67"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={contactForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email (необязательно)</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  disabled={checkingPhone}
+                  className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+                >
+                  {checkingPhone ? <Spinner /> : "Далее"}
+                </Button>
+              </form>
+            </Form>
           )}
 
           {step === "delivery" && (
