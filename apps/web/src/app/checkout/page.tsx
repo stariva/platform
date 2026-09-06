@@ -260,7 +260,7 @@ export default function CheckoutPage() {
                     <FormItem>
                       <FormLabel>Имя</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input disabled={checkingPhone} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -276,6 +276,7 @@ export default function CheckoutPage() {
                         <Input
                           type="tel"
                           placeholder="+7 999 123-45-67"
+                          disabled={checkingPhone}
                           {...field}
                         />
                       </FormControl>
@@ -290,7 +291,11 @@ export default function CheckoutPage() {
                     <FormItem>
                       <FormLabel>Email (необязательно)</FormLabel>
                       <FormControl>
-                        <Input type="email" {...field} />
+                        <Input
+                          type="email"
+                          disabled={checkingPhone}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
