@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
 import type {
   DeliveryCheckoutResponse,
@@ -39,6 +40,22 @@ const contactFormSchema = z.object({
     .email("Некорректный email")
     .optional()
     .or(z.literal("")),
+});
+
+const checkoutCreateResponseSchema = z.object({
+  confirmationUrl: z.url({ protocol: /^https?$/ }),
+  analytics: z.object({
+    id: z.string().min(1),
+    revenue: z.number().nonnegative(),
+    products: z.array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        price: z.number().nonnegative(),
+        quantity: z.number().int().positive(),
+      }),
+    ),
+  }),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
@@ -62,6 +79,12 @@ export default function CheckoutPage() {
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (!items.length || checkoutTracked.current) return;
+    reachGoal("begin_checkout", { items_count: items.reduce((sum, item) => sum + item.quantity, 0) });
+    checkoutTracked.current = true;
+  }, [items]);
 
   if (items.length === 0) {
     return (
@@ -105,6 +128,7 @@ export default function CheckoutPage() {
       }
       setContact(data);
       setStep("delivery");
+      reachGoal("checkout_contact_complete");
       void loadPickupPoints();
     } catch {
       toast.error("Не удалось проверить телефон. Попробуйте ещё раз.");
@@ -161,6 +185,7 @@ export default function CheckoutPage() {
       }
       setQuote(data);
       setStep("review");
+      reachGoal("checkout_delivery_complete");
     } catch {
       toast.error("Не удалось рассчитать доставку");
     } finally {
@@ -191,14 +216,24 @@ export default function CheckoutPage() {
           delivery,
         }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.confirmationUrl) {
-        toast.error(data.error ?? "Не удалось создать заказ");
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const error = z.object({ error: z.string() }).safeParse(data);
+        toast.error(
+          error.success ? error.data.error : "Не удалось создать заказ",
+        );
         setSubmitting(false);
         return;
       }
+      const parsed = checkoutCreateResponseSchema.safeParse(data);
+      if (!parsed.success) {
+        toast.error("Не удалось создать заказ");
+        setSubmitting(false);
+        return;
+      }
+      await trackCreatedOrder(parsed.data.analytics);
       clear();
-      window.location.href = data.confirmationUrl;
+      window.location.href = parsed.data.confirmationUrl;
     } catch {
       toast.error("Не удалось создать заказ. Попробуйте позже.");
       setSubmitting(false);
@@ -215,6 +250,11 @@ export default function CheckoutPage() {
           </h1>
 
           {/* Order summary */}
+          <p className="text-taupe text-sm leading-relaxed mb-6">
+            Заказ оформляется на Stariva, оплата — через ЮKassa.
+            Получение — в доступном пункте выдачи Ozon. Стоимость доставки
+            рассчитаем после выбора пункта и покажем до оплаты.
+          </p>
           <div className="bg-white border border-espresso/10 rounded-2xl p-5 mb-8 space-y-3">
             {items.map((item) => (
               <div key={item.productSlug} className="flex items-center gap-3">

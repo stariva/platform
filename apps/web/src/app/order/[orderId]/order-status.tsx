@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { trackPaidOrder } from "@/lib/analytics";
 import { formatPrice } from "@/lib/products";
 
 const statusLabels: Record<string, string> = {
@@ -29,15 +30,29 @@ const statusLabels: Record<string, string> = {
   delivered: "Доставлен",
 };
 
-interface OrderData {
-  status: string;
-  amountTotal: number;
-  amountDelivery: number;
-  createdAt: string;
-  deliveryMethod: string;
-  items: { name: string; quantity: number; price: number }[];
-  postings: { postingNumber: string; status: string }[];
-}
+const orderResponseSchema = z.object({
+  paid: z.boolean(),
+  status: z.string(),
+  amountTotal: z.number().int().nonnegative(),
+  amountDelivery: z.number().int().nonnegative(),
+  createdAt: z.string(),
+  deliveryMethod: z.string(),
+  items: z.array(
+    z.object({
+      name: z.string(),
+      quantity: z.number().int().positive(),
+      price: z.number().int().nonnegative(),
+    }),
+  ),
+  postings: z.array(
+    z.object({
+      postingNumber: z.string(),
+      status: z.string(),
+    }),
+  ),
+});
+
+type OrderData = z.infer<typeof orderResponseSchema>;
 
 const orderLookupSchema = z.object({
   phone: z.string().trim().min(1, "Введите телефон"),
@@ -62,12 +77,19 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: data.phone }),
       });
-      const resData = await res.json();
+      const resData: unknown = await res.json();
       if (!res.ok) {
-        toast.error(resData.error ?? "Заказ не найден");
+        const error = z.object({ error: z.string() }).safeParse(resData);
+        toast.error(error.success ? error.data.error : "Заказ не найден");
         return;
       }
-      setOrder(resData);
+      const parsed = orderResponseSchema.safeParse(resData);
+      if (!parsed.success) {
+        toast.error("Не удалось загрузить заказ");
+        return;
+      }
+      setOrder(parsed.data);
+      trackPaidOrder(orderId, parsed.data.amountTotal, parsed.data.paid);
     } catch {
       toast.error("Не удалось загрузить заказ");
     } finally {

@@ -95,7 +95,7 @@ export async function Reviews({ limit = 3, skus, heading }: ReviewsProps) {
               {isLive ? "Отзывы с Ozon" : "Отзывы"}
             </div>
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-espresso leading-[1.05] tracking-tight text-balance max-w-3xl">
-              {heading ?? (
+              {(isLive ? heading : "Отзывы о мастерской") ?? (
                 <>
                   Что говорят <span className="italic">мои покупатели</span>
                 </>

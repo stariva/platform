@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -112,7 +113,7 @@ export async function generateMetadata({
   const product = await getProductBySlug(slug);
   const category = getCategoryBySlug(categorySlug);
 
-  if (!product || !category) return {};
+  if (!product || !category || product.category !== categorySlug) return {};
 
   const title = `${product.name} — купить в интернет-магазине`;
   const description = product.shortDescription
@@ -167,6 +168,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <>
+      <ProductAnalytics product={{ id: product.slug, name: product.name, price: product.price, category: product.category }} />
       <Header variant="solid" />
       <BreadcrumbJsonLd
         items={[
