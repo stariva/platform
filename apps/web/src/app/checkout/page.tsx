@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useCart } from "@/lib/cart/cart-context";
+import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
@@ -62,6 +63,12 @@ export default function CheckoutPage() {
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (!items.length || checkoutTracked.current) return;
+    reachGoal("begin_checkout", { items_count: items.reduce((sum, item) => sum + item.quantity, 0) });
+    checkoutTracked.current = true;
+  }, [items]);
 
   if (items.length === 0) {
     return (
@@ -105,6 +112,7 @@ export default function CheckoutPage() {
       }
       setContact(data);
       setStep("delivery");
+      reachGoal("checkout_contact_complete");
       void loadPickupPoints();
     } catch {
       toast.error("Не удалось проверить телефон. Попробуйте ещё раз.");
@@ -161,6 +169,7 @@ export default function CheckoutPage() {
       }
       setQuote(data);
       setStep("review");
+      reachGoal("checkout_delivery_complete");
     } catch {
       toast.error("Не удалось рассчитать доставку");
     } finally {
@@ -197,6 +206,7 @@ export default function CheckoutPage() {
         setSubmitting(false);
         return;
       }
+      if (data.analytics) await trackCreatedOrder(data.analytics);
       clear();
       window.location.href = data.confirmationUrl;
     } catch {
@@ -215,6 +225,11 @@ export default function CheckoutPage() {
           </h1>
 
           {/* Order summary */}
+          <p className="text-taupe text-sm leading-relaxed mb-6">
+            Заказ оформляется на Stariva, оплата — через ЮKassa.
+            Получение — в доступном пункте выдачи Ozon. Стоимость доставки
+            рассчитаем после выбора пункта и покажем до оплаты.
+          </p>
           <div className="bg-white border border-espresso/10 rounded-2xl p-5 mb-8 space-y-3">
             {items.map((item) => (
               <div key={item.productSlug} className="flex items-center gap-3">

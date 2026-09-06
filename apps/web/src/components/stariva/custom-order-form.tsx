@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { reachGoal } from "@/lib/analytics";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -146,6 +147,7 @@ export function CustomOrderForm() {
       }
 
       toast.success("Заявка отправлена! Свяжемся с вами в рабочее время.");
+      reachGoal("custom_order_submitted");
       form.reset({ name: "", contact: "", description: "", budget: "" });
       setPhoto(null);
       setAiEstimate(null);

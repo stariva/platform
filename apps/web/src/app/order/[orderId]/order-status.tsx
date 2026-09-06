@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { formatPrice } from "@/lib/products";
+import { trackPaidOrder } from "@/lib/analytics";
 
 const statusLabels: Record<string, string> = {
   pending: "Ожидает оплаты",
@@ -30,6 +31,7 @@ const statusLabels: Record<string, string> = {
 };
 
 interface OrderData {
+  paid: boolean;
   status: string;
   amountTotal: number;
   amountDelivery: number;
@@ -68,6 +70,7 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         return;
       }
       setOrder(resData);
+      trackPaidOrder(orderId, resData.amountTotal, resData.paid === true);
     } catch {
       toast.error("Не удалось загрузить заказ");
     } finally {

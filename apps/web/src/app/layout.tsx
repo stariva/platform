@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
-import Script from "next/script";
+import { Metrika } from "@/components/stariva/metrika";
 import { ChatWidget } from "@/components/stariva/chat-widget";
 import {
   OrganizationJsonLd,
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     template: "%s — Stariva",
   },
   description:
-    "Эксклюзивные абажуры, платья и декор из макраме. Ручное плетение из натурального хлопка с 2018 года. Купить на Ozon.",
+    "Абажуры, одежда и декор из макраме ручной работы. Выберите изделие в каталоге Stariva и оформите заказ на сайте.",
   keywords: [
     "макраме",
     "абажур из макраме",
@@ -124,21 +124,7 @@ export default function RootLayout({
         </CartProvider>
         <Toaster position="top-center" richColors />
         {baseEnv.NODE_ENV === "production" && (
-          <>
-            <Script id="yandex-metrika" strategy="afterInteractive">
-              {`(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window, document,'script','https://mc.yandex.ru/metrika/tag.js', 'ym');ym(96190087, 'init', {webvisor:true, clickmap:true, referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});`}
-            </Script>
-            <noscript>
-              <div>
-                {/* biome-ignore lint/performance/noImgElement: Yandex Metrika noscript pixel, next/image cannot be used inside noscript */}
-                <img
-                  src="https://mc.yandex.ru/watch/96190087"
-                  style={{ position: "absolute", left: "-9999px" }}
-                  alt=""
-                />
-              </div>
-            </noscript>
-          </>
+          <Metrika />
         )}
       </body>
     </html>
