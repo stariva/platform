@@ -111,7 +111,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ confirmationUrl, orderId: order.id });
+    return NextResponse.json({ confirmationUrl, orderId: order.id,
+      analytics: {
+        id: order.id,
+        revenue: order.amountTotal / 100,
+        products: items.map((item) => ({ id: item.productSlug, name: item.name, price: item.price / 100, quantity: item.quantity })),
+      },
+    });
   } catch (error) {
     console.error("[checkout/create] Ошибка создания платежа:", error);
     return NextResponse.json(
