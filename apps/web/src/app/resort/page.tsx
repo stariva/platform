@@ -12,8 +12,6 @@ import { ResortHero } from "./_components/resort-hero";
 import { ResortProcess } from "./_components/resort-process";
 import { ResortScenarios } from "./_components/resort-scenarios";
 
-
-
 export const metadata: Metadata = {
   title: "Макраме для баз отдыха и глэмпингов — Stariva",
   description:

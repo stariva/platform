@@ -28,8 +28,6 @@ import {
 } from "@/lib/workshops-data";
 import { WorkshopPurchase } from "./workshop-purchase";
 
-
-
 export async function generateStaticParams() {
   return workshops.map((w) => ({ slug: w.slug }));
 }

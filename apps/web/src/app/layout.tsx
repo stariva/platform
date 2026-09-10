@@ -28,8 +28,6 @@ const inter = Inter({
   display: "swap",
 });
 
-
-
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {

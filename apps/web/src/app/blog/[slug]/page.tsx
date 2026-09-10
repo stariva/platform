@@ -9,8 +9,6 @@ import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
 import { blogPosts, formatDate, getPostBySlug } from "@/lib/blog-data";
 
-
-
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
 }

@@ -16,8 +16,6 @@ import {
   workshops,
 } from "@/lib/workshops-data";
 
-
-
 export const metadata: Metadata = {
   title: "Мастер-классы по макраме онлайн — видеокурсы Stariva",
   description:

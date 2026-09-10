@@ -1,8 +1,6 @@
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { NextResponse } from "next/server";
 
-
-
 const products = [
   {
     name: "Макраме-панно",

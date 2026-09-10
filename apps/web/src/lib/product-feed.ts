@@ -3,14 +3,16 @@ import { categories } from "./products";
 import { SITE_URL } from "./site-url";
 
 export function xmlEscape(value: string | number): string {
-  return String(value)
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: XML 1.0 forbids these characters in seller data
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+  return (
+    String(value)
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: XML 1.0 forbids these characters in seller data
+      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;")
+  );
 }
 
 export function productFeed(products: Product[], now = new Date()) {

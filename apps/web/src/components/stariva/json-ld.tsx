@@ -4,8 +4,6 @@ import { SITE_URL as BASE_URL } from "@/lib/site-url";
  * Renders schema.org markup as <script type="application/ld+json"> tags.
  */
 
-
-
 // ─── Organization / LocalBusiness ────────────────────────────────────────────
 
 export function OrganizationJsonLd() {

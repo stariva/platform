@@ -8,8 +8,6 @@ import { BreadcrumbJsonLd, PersonJsonLd } from "@/components/stariva/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-
-
 export const metadata: Metadata = {
   title: "О бренде Stariva — мастерская ручного макраме",
   description:

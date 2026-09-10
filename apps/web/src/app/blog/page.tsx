@@ -8,8 +8,6 @@ import { ItemListJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate } from "@/lib/blog-data";
 import { NewsletterForm } from "./newsletter-form";
 
-
-
 export const metadata: Metadata = {
   title: "Блог о макраме — советы, история, вдохновение",
   description:

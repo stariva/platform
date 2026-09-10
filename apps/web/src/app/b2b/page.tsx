@@ -8,8 +8,6 @@ import { PhoneIcon, TelegramIcon } from "@/components/stariva/icons";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
 
-
-
 export const metadata: Metadata = {
   title: "Декор для кафе и ресторанов — корпоративные заказы Stariva",
   description:

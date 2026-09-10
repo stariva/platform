@@ -18,8 +18,6 @@ import { formatPrice } from "@/lib/products";
 // данных Ozon на 1 час обеспечивает revalidate у fetch() в api-client.ts.
 export const dynamic = "force-dynamic";
 
-
-
 export const metadata: Metadata = {
   title: "Каталог изделий из макраме — купить ручной работы",
   description:
