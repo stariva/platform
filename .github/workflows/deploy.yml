@@ -3,11 +3,8 @@ name: Deploy
 # Runs after CI succeeds on main (or manually). Builds the @stariva/web image,
 # pushes it to GHCR, then rolls it out on the k3s cluster over SSH.
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  push:
     branches: [main]
-  workflow_dispatch:
 
 concurrency:
   group: deploy-stariva
@@ -15,7 +12,6 @@ concurrency:
 
 jobs:
   build-and-push:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
