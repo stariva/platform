@@ -35,10 +35,12 @@ export function Process() {
             </h2>
           </div>
           <p className="lg:col-span-5 lg:col-start-8 text-espresso/75 leading-[1.75] text-pretty self-end">
-            Срок изготовления —{" "}
-            <span className="text-espresso font-medium">7–14 дней</span>. Слежу
-            за каждым этапом лично и сообщаю вам обо всём, что происходит с
-            заказом. Без шаблонов и автоответов.
+            Срок изготовления{" "}
+            <span className="text-espresso font-medium">
+              согласуем до заказа
+            </span>
+            . Слежу за каждым этапом лично и сообщаю вам обо всём, что
+            происходит с заказом. Без шаблонов и автоответов.
           </p>
         </div>
 

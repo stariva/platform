@@ -1,7 +1,5 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
-
-
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -22,6 +20,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,
-    host: BASE_URL,
+    host: new URL(BASE_URL).hostname,
   };
 }

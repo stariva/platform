@@ -26,7 +26,13 @@ type MagicLinkFormValues = z.infer<typeof magicLinkSchema>;
 
 export function MagicLinkForm() {
   const searchParams = useSearchParams();
-  const callbackURL = searchParams.get("callbackURL") || "/account";
+  const requestedCallback = searchParams.get("callbackURL") || "/account";
+  const callbackURL =
+    requestedCallback.startsWith("/") &&
+    !requestedCallback.startsWith("//") &&
+    !requestedCallback.includes("\\")
+      ? requestedCallback.split("?")[0]
+      : "/account";
 
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
@@ -41,6 +47,7 @@ export function MagicLinkForm() {
     const { error } = await signIn.magicLink({
       email: data.email,
       callbackURL,
+      errorCallbackURL: "/magic-link",
     });
     setLoading(false);
 
@@ -66,6 +73,15 @@ export function MagicLinkForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {searchParams.has("error") && (
+          <p
+            role="alert"
+            className="rounded-lg bg-sand p-4 text-sm text-espresso"
+          >
+            Ссылка для входа недействительна или срок её действия истёк.
+            Запросите новую ссылку и откройте последнее письмо.
+          </p>
+        )}
         <FormField
           control={form.control}
           name="email"

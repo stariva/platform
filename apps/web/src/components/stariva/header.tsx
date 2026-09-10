@@ -18,6 +18,13 @@ import { CartTrigger } from "./cart-trigger";
 
 const catalogNav = [
   {
+    label: "Абажуры",
+    href: "/abazhury",
+    desc: "Модели ручного плетения для дома и кафе",
+    image: "/images/catalog/category-interior.jpg",
+    items: ["Размеры", "Комплектация", "Выбор модели"],
+  },
+  {
     label: "Одежда",
     href: "/catalog/clothes",
     desc: "Платья, топы и накидки из натурального хлопка ручного плетения",

@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,12 +13,11 @@ import { Reviews } from "@/components/stariva/reviews";
 import { Button } from "@/components/ui/button";
 import { getFeaturedProducts } from "@/lib/ozon-service";
 import { formatPrice } from "@/lib/products";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 // Билд-образ не имеет боевых Ozon-креденшелов (см. Dockerfile), поэтому
 // статический пререндер на билде всегда пустой — рендерим динамически.
 export const dynamic = "force-dynamic";
-
-
 
 export const metadata: Metadata = {
   alternates: { canonical: BASE_URL },
@@ -121,6 +119,17 @@ export default async function Page() {
 
       {/* ── Hero: three-direction switcher ── */}
       <Hero />
+      <nav
+        aria-label="Популярные товары"
+        className="flex flex-wrap justify-center gap-6 px-5 py-6 bg-sand text-espresso"
+      >
+        <Link href="/abazhury" className="underline">
+          Абажуры макраме — модели и размеры
+        </Link>
+        <Link href="/catalog/clothes" className="underline">
+          Одежда макраме — выбрать изделие
+        </Link>
+      </nav>
 
       {/* ── Marquee strip ── */}
       <Marquee />

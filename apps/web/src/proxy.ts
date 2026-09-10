@@ -9,6 +9,18 @@ import { type NextRequest, NextResponse } from "next/server";
  * requireSession(). Это рекомендованный подход better-auth для Next.js.
  */
 export function proxy(request: NextRequest) {
+  if (
+    ["INVALID_TOKEN", "EXPIRED_TOKEN"].includes(
+      request.nextUrl.searchParams.get("error") ?? "",
+    ) &&
+    request.nextUrl.pathname !== "/magic-link"
+  ) {
+    const recovery = new URL("/magic-link", request.url);
+    recovery.searchParams.set("error", "INVALID_TOKEN");
+    return NextResponse.redirect(recovery);
+  }
+  if (!request.nextUrl.pathname.startsWith("/account"))
+    return NextResponse.next();
   const sessionCookie = getSessionCookie(request);
 
   if (!sessionCookie) {
@@ -24,5 +36,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/account/:path*"],
+  matcher: ["/account/:path*", "/", "/a", "/sign-in"],
 };

@@ -1,7 +1,6 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ProductAnalytics } from "@/components/stariva/product-analytics";
+import { BuyingGuide } from "@/components/stariva/buying-guide";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -10,9 +9,11 @@ import {
   ProductJsonLd,
 } from "@/components/stariva/json-ld";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
+import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Reviews } from "@/components/stariva/reviews";
 import { getProductBySlug, getProductsByCategory } from "@/lib/ozon-service";
 import { getCategoryBySlug } from "@/lib/products";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ProductDetails } from "./product-details";
 
 // ─── FAQ per category (mirrors product-details.tsx) ──────────────────────────
@@ -91,8 +92,6 @@ const categoryFaqJsonLd: Record<string, FaqJsonLdEntry> & {
 
 export const revalidate = 3600;
 
-
-
 interface ProductPageProps {
   params: Promise<{ category: string; slug: string }>;
 }
@@ -117,8 +116,8 @@ export async function generateMetadata({
 
   const title = `${product.name} — купить в интернет-магазине`;
   const description = product.shortDescription
-    ? `${product.shortDescription} Ручная работа из натурального хлопка. Купить на Ozon.`
-    : `${product.name} — изделие ручного макраме из натурального хлопка. Купить на Ozon.`;
+    ? `${product.shortDescription} Заказ на сайте Stariva. Размеры, фотографии и условия доставки.`
+    : `${product.name} — ручная работа. Размеры, фотографии и заказ на сайте Stariva.`;
   const url = `/catalog/${categorySlug}/${slug}`;
   const image = product.images[0] ?? "/images/about/hero-founder.jpg";
   const isExternal = image.startsWith("http");
@@ -208,6 +207,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         categorySlug={categorySlug}
         relatedProducts={relatedProducts}
       />
+      <BuyingGuide product={product} />
       <Reviews
         limit={3}
         skus={product.ozonId ? [product.ozonId] : undefined}

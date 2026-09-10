@@ -1,16 +1,15 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
 import { blogPosts } from "@/lib/blog-data";
 import { categories, getProducts } from "@/lib/ozon-service";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { workshops } from "@/lib/workshops-data";
-
-
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Статические страницы ──────────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
+    { url: `${BASE_URL}/abazhury`, changeFrequency: "weekly", priority: 0.9 },
     {
       url: BASE_URL,
       lastModified: new Date(),

@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,13 +7,12 @@ import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { categories, getProductsByCategory } from "@/lib/ozon-service";
 import { getCategoryBySlug } from "@/lib/products";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import CategoryFilters from "./category-filters";
 
 // Билд-образ не имеет боевых Ozon-креденшелов (см. Dockerfile), поэтому
 // статический пререндер на билде всегда пустой — рендерим динамически.
 export const dynamic = "force-dynamic";
-
-
 
 interface CategoryPageProps {
   params: Promise<{ category: string }>;
@@ -32,7 +30,7 @@ export async function generateMetadata({
   if (!category) return {};
 
   const title = `${category.name} из макраме — купить ручной работы`;
-  const description = `${category.description} Ручная работа из натурального хлопка. Купить на Ozon с доставкой по России.`;
+  const description = `${category.description}. Фотографии, размеры и цены. Оформите заказ на сайте Stariva.`;
   const url = `/catalog/${categorySlug}`;
 
   return {
@@ -158,6 +156,31 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           category={category}
           categorySlug={categorySlug}
         />
+        {categorySlug === "interior" && (
+          <p className="max-w-5xl mx-auto px-5 pb-10">
+            <Link href="/abazhury" className="underline text-terracotta">
+              Абажуры макраме: все модели и помощь с выбором
+            </Link>
+          </p>
+        )}
+        {categorySlug === "clothes" && (
+          <section className="max-w-5xl mx-auto px-5 pb-12 space-y-4 text-espresso">
+            <h2 className="font-serif text-3xl">Как выбрать одежду макраме</h2>
+            <p>
+              Сравните фотографии и мерки изделия со своей одеждой. Для топа
+              важен обхват груди, для юбки — талии и бёдер, для туники — длина.
+              Материал проверяйте в карточке конкретной модели.
+            </p>
+            <p>
+              Если нужной мерки нет,{" "}
+              <Link href="/#order" className="underline">
+                уточните размер у мастерской
+              </Link>{" "}
+              перед оплатой. Заказ оформляется на сайте, стоимость доставки
+              рассчитывается на этапе оформления.
+            </p>
+          </section>
+        )}
 
         {/* ── Other Categories ── */}
         <section className="pb-24 px-5 lg:px-12">
