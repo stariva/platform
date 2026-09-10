@@ -12,7 +12,7 @@ const OAUTH_TOKEN_URL = "https://xapi.ozon.ru/oauth/token";
 
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
-  expires_in: z.number().int().positive(),
+  expires_in: z.coerce.number().int().positive(),
   token_type: z.string().min(1),
 });
 
