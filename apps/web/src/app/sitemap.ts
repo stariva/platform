@@ -1,10 +1,10 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
 import { blogPosts } from "@/lib/blog-data";
 import { categories, getProducts } from "@/lib/ozon-service";
 import { workshops } from "@/lib/workshops-data";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export const revalidate = 3600;
 

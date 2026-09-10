@@ -1,3 +1,4 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,8 +19,7 @@ import { formatPrice } from "@/lib/products";
 // статический пререндер на билде всегда пустой — рендерим динамически.
 export const dynamic = "force-dynamic";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export const metadata: Metadata = {
   alternates: { canonical: BASE_URL },

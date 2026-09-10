@@ -1,7 +1,7 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export default function robots(): MetadataRoute.Robots {
   return {

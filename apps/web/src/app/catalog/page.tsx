@@ -1,3 +1,4 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,8 +18,7 @@ import { formatPrice } from "@/lib/products";
 // данных Ozon на 1 час обеспечивает revalidate у fetch() в api-client.ts.
 export const dynamic = "force-dynamic";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export const metadata: Metadata = {
   title: "Каталог изделий из макраме — купить ручной работы",

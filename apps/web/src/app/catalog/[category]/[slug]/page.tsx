@@ -1,3 +1,4 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductAnalytics } from "@/components/stariva/product-analytics";
@@ -90,8 +91,7 @@ const categoryFaqJsonLd: Record<string, FaqJsonLdEntry> & {
 
 export const revalidate = 3600;
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 interface ProductPageProps {
   params: Promise<{ category: string; slug: string }>;

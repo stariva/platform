@@ -1,3 +1,4 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,8 +8,7 @@ import { ItemListJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate } from "@/lib/blog-data";
 import { NewsletterForm } from "./newsletter-form";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export const metadata: Metadata = {
   title: "Блог о макраме — советы, история, вдохновение",

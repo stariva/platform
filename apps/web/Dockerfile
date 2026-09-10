@@ -17,6 +17,7 @@ COPY --from=pruner /repo/out/json/ .
 RUN bun install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
 COPY .env.example .env
+ENV NEXT_PUBLIC_SITE_URL=https://stariva.ru
 RUN bun run build --filter=@stariva/web
 
 # 3. Minimal runtime image, just the Next.js standalone output
@@ -28,6 +29,7 @@ COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/.next/static ./apps/web
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/public ./apps/web/public
 USER nextjs
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_SITE_URL=https://stariva.ru
 ENV PORT=3000
 EXPOSE 3000
 CMD ["bun", "apps/web/server.js"]

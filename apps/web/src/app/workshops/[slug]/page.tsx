@@ -1,3 +1,4 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,8 +28,7 @@ import {
 } from "@/lib/workshops-data";
 import { WorkshopPurchase } from "./workshop-purchase";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export async function generateStaticParams() {
   return workshops.map((w) => ({ slug: w.slug }));

@@ -1,3 +1,4 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Suspense } from "react";
@@ -27,8 +28,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

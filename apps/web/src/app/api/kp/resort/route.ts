@@ -1,7 +1,7 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { NextResponse } from "next/server";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 const products = [
   {

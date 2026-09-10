@@ -1,3 +1,4 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
@@ -11,8 +12,7 @@ import { ResortHero } from "./_components/resort-hero";
 import { ResortProcess } from "./_components/resort-process";
 import { ResortScenarios } from "./_components/resort-scenarios";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 export const metadata: Metadata = {
   title: "Макраме для баз отдыха и глэмпингов — Stariva",

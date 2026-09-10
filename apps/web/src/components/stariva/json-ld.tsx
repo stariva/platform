@@ -1,10 +1,10 @@
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 /**
  * JSON-LD structured data components for SEO.
  * Renders schema.org markup as <script type="application/ld+json"> tags.
  */
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://stariva.ru";
+
 
 // ─── Organization / LocalBusiness ────────────────────────────────────────────
 
