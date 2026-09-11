@@ -31,6 +31,9 @@ const pickupPointListSchema = z.object({
   points: z.array(
     z.object({
       map_point_id: positiveInteger,
+      name: z.string().min(1).optional(),
+      address: z.string().min(1).optional(),
+      work_schedule: z.string().min(1).optional(),
       coordinate: z.object({ lat: z.number(), long: z.number() }),
     }),
   ),
@@ -149,10 +152,12 @@ export async function listPickupPoints(): Promise<PickupPoint[]> {
   );
   return data.points.map((point) => ({
     id: String(point.map_point_id),
-    name: `Пункт Ozon ${point.map_point_id}`,
-    address: `${point.coordinate.lat}, ${point.coordinate.long}`,
+    name: point.name ?? `Пункт Ozon ${point.map_point_id}`,
+    address:
+      point.address ?? `${point.coordinate.lat}, ${point.coordinate.long}`,
     latitude: point.coordinate.lat,
     longitude: point.coordinate.long,
+    workSchedule: point.work_schedule,
   }));
 }
 

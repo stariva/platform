@@ -75,6 +75,17 @@ export default function CheckoutPage() {
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[] | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string>("");
   const [loadingPoints, setLoadingPoints] = useState(false);
+  const [pointSearch, setPointSearch] = useState("");
+
+  const MAX_VISIBLE_POINTS = 100;
+  const filteredPickupPoints = pointSearch
+    ? (pickupPoints ?? []).filter((p) =>
+        `${p.name} ${p.address}`
+          .toLowerCase()
+          .includes(pointSearch.toLowerCase()),
+      )
+    : (pickupPoints ?? []);
+  const visiblePickupPoints = filteredPickupPoints.slice(0, MAX_VISIBLE_POINTS);
 
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -362,18 +373,37 @@ export default function CheckoutPage() {
               {loadingPoints ? (
                 <Spinner className="text-taupe" />
               ) : (
-                <select
-                  value={selectedPointId}
-                  onChange={(e) => setSelectedPointId(e.target.value)}
-                  className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
-                >
-                  <option value="">Выберите пункт выдачи</option>
-                  {pickupPoints?.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — {p.address}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <Input
+                    type="text"
+                    placeholder="Начните вводить адрес или город"
+                    value={pointSearch}
+                    onChange={(e) => setPointSearch(e.target.value)}
+                    className="mb-2"
+                  />
+                  <select
+                    value={selectedPointId}
+                    onChange={(e) => setSelectedPointId(e.target.value)}
+                    className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
+                  >
+                    <option value="">Выберите пункт выдачи</option>
+                    {visiblePickupPoints.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — {p.address}
+                      </option>
+                    ))}
+                  </select>
+                  {pointSearch && visiblePickupPoints.length === 0 && (
+                    <p className="text-taupe text-xs">Ничего не найдено</p>
+                  )}
+                  {!pointSearch &&
+                    (pickupPoints?.length ?? 0) > visiblePickupPoints.length && (
+                      <p className="text-taupe text-xs">
+                        Показаны первые {visiblePickupPoints.length} из{" "}
+                        {pickupPoints?.length} — уточните адрес для поиска
+                      </p>
+                    )}
+                </>
               )}
 
               <Button
