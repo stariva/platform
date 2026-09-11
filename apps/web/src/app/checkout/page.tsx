@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -28,6 +29,21 @@ import type {
   PickupPoint,
 } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
+
+const PickupPointMap = dynamic(
+  () =>
+    import("@/components/checkout/pickup-point-map").then(
+      (m) => m.PickupPointMap,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-80 w-full flex items-center justify-center rounded-lg border border-espresso/15">
+        <Spinner className="text-taupe" />
+      </div>
+    ),
+  },
+);
 
 type Step = "contact" | "delivery" | "review";
 
@@ -381,10 +397,15 @@ export default function CheckoutPage() {
                     onChange={(e) => setPointSearch(e.target.value)}
                     className="mb-2"
                   />
+                  <PickupPointMap
+                    points={visiblePickupPoints}
+                    selectedPointId={selectedPointId}
+                    onSelect={setSelectedPointId}
+                  />
                   <select
                     value={selectedPointId}
                     onChange={(e) => setSelectedPointId(e.target.value)}
-                    className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
+                    className="w-full mt-2 rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
                   >
                     <option value="">Выберите пункт выдачи</option>
                     {visiblePickupPoints.map((p) => (
