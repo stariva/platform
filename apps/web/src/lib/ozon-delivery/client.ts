@@ -114,6 +114,14 @@ function deliveryPayload(delivery: DeliverySelection) {
   };
 }
 
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (!/^\d{10,15}$/.test(digits)) {
+    throw new Error("ozon_delivery_invalid_phone");
+  }
+  return digits;
+}
+
 function rublesToKopecks(value: string): number {
   const kopecks = Math.round(Number(value) * 100);
   if (!Number.isSafeInteger(kopecks) || kopecks < 0) {
@@ -127,7 +135,7 @@ export async function checkDeliveryAvailable(
 ): Promise<DeliveryCheckResponse> {
   const data = await ozonDeliveryFetch(
     "/v1/delivery/check",
-    { client_phone: phone },
+    { client_phone: normalizePhone(phone) },
     deliveryCheckSchema,
   );
   return { available: data.is_possible };
@@ -154,7 +162,7 @@ export async function checkout(
   const data = await ozonDeliveryFetch(
     "/v2/delivery/checkout",
     {
-      buyer_phone: request.buyerPhone,
+      buyer_phone: normalizePhone(request.buyerPhone),
       delivery_schema: "MIX",
       delivery_type: deliveryPayload(request.delivery),
       items: request.items,
@@ -238,6 +246,7 @@ export async function createOzonDeliveryOrder(
   }
 
   const recipient = splitName(request.recipient.name);
+  const recipientPhone = normalizePhone(request.recipient.phone);
   const prices = new Map(request.items.map((item) => [item.sku, item.price]));
   const schemas = new Set(request.checkout.splits.map((s) => s.deliverySchema));
   const data = await ozonDeliveryFetch(
@@ -246,12 +255,12 @@ export async function createOzonDeliveryOrder(
       buyer: {
         first_name: recipient.firstName,
         last_name: recipient.lastName,
-        phone: request.recipient.phone,
+        phone: recipientPhone,
       },
       recipient: {
         recipient_first_name: recipient.firstName,
         recipient_last_name: recipient.lastName,
-        recipient_phone: request.recipient.phone,
+        recipient_phone: recipientPhone,
       },
       delivery: deliveryPayload(request.delivery),
       delivery_schema: schemas.size === 1 ? [...schemas][0] : "MIX",
