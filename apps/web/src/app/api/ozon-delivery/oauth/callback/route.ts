@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { env } from "@/env";
+import { persistOzonDeliveryRefreshToken } from "@/lib/ozon-delivery/auth";
 
 export const runtime = "nodejs";
 
@@ -86,9 +87,12 @@ export async function GET(request: NextRequest) {
     );
   }
   const data = parsedToken.data;
+  await persistOzonDeliveryRefreshToken(data.refresh_token);
   const response = NextResponse.json({
     message:
-      "Скопируйте refresh_token в OZON_DELIVERY_REFRESH_TOKEN и перезапустите приложение. Больше эта страница не понадобится.",
+      "refresh_token сохранён в базе и уже используется приложением. " +
+      "OZON_DELIVERY_REFRESH_TOKEN в env можно оставить как есть — он нужен только как " +
+      "первоначальный seed на случай пустой БД. Больше эта страница не понадобится.",
     refresh_token: data.refresh_token,
     scope: data.scope,
   });

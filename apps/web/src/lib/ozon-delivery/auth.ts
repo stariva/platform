@@ -1,3 +1,5 @@
+import { db, ozonDeliveryToken } from "@stariva/db";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "@/env";
 
@@ -7,11 +9,18 @@ import { env } from "@/env";
  * (см. /api/ozon-delivery/oauth/callback), после чего access_token
  * обновляется автоматически по refresh_token при каждом запросе к API.
  * https://docs.ozon.ru/api/applications/#section/Poluchit-OAuth-token
+ *
+ * Ozon может выдавать новый refresh_token при каждом обновлении access_token
+ * и инвалидировать старый (обычная ротация OAuth). Поэтому актуальный
+ * refresh_token хранится в БД (таблица ozon_delivery_token) — значение из
+ * env используется только как первоначальный seed, если в БД ещё пусто.
  */
 const OAUTH_TOKEN_URL = "https://xapi.ozon.ru/oauth/token";
+const TOKEN_ROW_ID = "current";
 
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
+  refresh_token: z.string().min(1).optional(),
   expires_in: z.coerce.number().int().positive(),
   token_type: z.string().min(1),
 });
@@ -19,6 +28,10 @@ const tokenResponseSchema = z.object({
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 let refreshPromise: Promise<string> | null = null;
 
+// Дешёвая синхронная проверка для роутов — специально не ходит в БД.
+// OZON_DELIVERY_REFRESH_TOKEN нужно оставлять заданным навсегда (даже
+// после того, как БД начнёт хранить актуальный, уже отротированный
+// токен) — иначе этот guard будет считать интеграцию невключённой.
 export function isOzonDeliveryConfigured(): boolean {
   return (
     !!env.OZON_DELIVERY_CLIENT_ID &&
@@ -27,8 +40,42 @@ export function isOzonDeliveryConfigured(): boolean {
   );
 }
 
+async function getCurrentRefreshToken(): Promise<string | undefined> {
+  try {
+    const [row] = await db
+      .select({ refreshToken: ozonDeliveryToken.refreshToken })
+      .from(ozonDeliveryToken)
+      .where(eq(ozonDeliveryToken.id, TOKEN_ROW_ID))
+      .limit(1);
+    if (row?.refreshToken) return row.refreshToken;
+  } catch (error) {
+    console.error(
+      "[ozon-delivery] Не удалось прочитать refresh_token из БД:",
+      error,
+    );
+  }
+  return env.OZON_DELIVERY_REFRESH_TOKEN;
+}
+
+export async function persistOzonDeliveryRefreshToken(
+  refreshToken: string,
+): Promise<void> {
+  await db
+    .insert(ozonDeliveryToken)
+    .values({ id: TOKEN_ROW_ID, refreshToken, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: ozonDeliveryToken.id,
+      set: { refreshToken, updatedAt: new Date() },
+    });
+}
+
 async function refreshAccessToken(): Promise<string> {
   if (!isOzonDeliveryConfigured()) {
+    throw new Error("ozon_delivery_not_configured");
+  }
+
+  const refreshToken = await getCurrentRefreshToken();
+  if (!refreshToken) {
     throw new Error("ozon_delivery_not_configured");
   }
 
@@ -43,7 +90,7 @@ async function refreshAccessToken(): Promise<string> {
         grant_type: "refresh_token",
         client_id: env.OZON_DELIVERY_CLIENT_ID,
         client_secret: env.OZON_DELIVERY_CLIENT_SECRET,
-        refresh_token: env.OZON_DELIVERY_REFRESH_TOKEN,
+        refresh_token: refreshToken,
       }),
     });
   } catch (error) {
@@ -63,6 +110,18 @@ async function refreshAccessToken(): Promise<string> {
   // Обновляем чуть раньше истечения срока, чтобы не ловить 401 в середине запроса.
   const expiresAt = Date.now() + (data.expires_in - 60) * 1000;
   cachedToken = { accessToken: data.access_token, expiresAt };
+
+  if (data.refresh_token && data.refresh_token !== refreshToken) {
+    try {
+      await persistOzonDeliveryRefreshToken(data.refresh_token);
+    } catch (error) {
+      console.error(
+        "[ozon-delivery] Не удалось сохранить новый refresh_token — следующий рефреш может упасть с invalid_refresh_token:",
+        error,
+      );
+    }
+  }
+
   return data.access_token;
 }
 
