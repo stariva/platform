@@ -87,12 +87,19 @@ export async function GET(request: NextRequest) {
     );
   }
   const data = parsedToken.data;
-  await persistOzonDeliveryRefreshToken(data.refresh_token);
+  try {
+    await persistOzonDeliveryRefreshToken(data.refresh_token);
+  } catch (error) {
+    console.error(
+      "[ozon-delivery/oauth/callback] Не удалось сохранить refresh_token в БД:",
+      error,
+    );
+  }
   const response = NextResponse.json({
     message:
-      "refresh_token сохранён в базе и уже используется приложением. " +
-      "OZON_DELIVERY_REFRESH_TOKEN в env можно оставить как есть — он нужен только как " +
-      "первоначальный seed на случай пустой БД. Больше эта страница не понадобится.",
+      "refresh_token получен. Сохраните его в OZON_DELIVERY_REFRESH_TOKEN и оставляйте " +
+      "эту переменную заданной: isOzonDeliveryConfigured() требует её, даже если " +
+      "актуальный токен хранится в БД.",
     refresh_token: data.refresh_token,
     scope: data.scope,
   });
