@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { env } from "@/env";
+import { persistOzonDeliveryRefreshToken } from "@/lib/ozon-delivery/auth";
 
 export const runtime = "nodejs";
 
@@ -86,9 +87,19 @@ export async function GET(request: NextRequest) {
     );
   }
   const data = parsedToken.data;
+  try {
+    await persistOzonDeliveryRefreshToken(data.refresh_token);
+  } catch (error) {
+    console.error(
+      "[ozon-delivery/oauth/callback] Не удалось сохранить refresh_token в БД:",
+      error,
+    );
+  }
   const response = NextResponse.json({
     message:
-      "Скопируйте refresh_token в OZON_DELIVERY_REFRESH_TOKEN и перезапустите приложение. Больше эта страница не понадобится.",
+      "refresh_token получен. Сохраните его в OZON_DELIVERY_REFRESH_TOKEN и оставляйте " +
+      "эту переменную заданной: isOzonDeliveryConfigured() требует её, даже если " +
+      "актуальный токен хранится в БД.",
     refresh_token: data.refresh_token,
     scope: data.scope,
   });
