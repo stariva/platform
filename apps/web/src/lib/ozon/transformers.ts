@@ -13,6 +13,8 @@ export interface OzonProductInfoV3 {
   primary_image: string | string[];
   price: string;
   old_price: string;
+  /** Цена с учётом акций продавца — максимально близка к цене, которую видит покупатель на витрине Ozon (не включает акции/скидки, которые финансирует сам Ozon). */
+  marketing_seller_price?: string;
   currency_code: string;
   sku?: number;
   fbs_sku?: number;
@@ -39,6 +41,7 @@ export const ozonProductInfoV3Schema = z.looseObject({
   primary_image: z.union([z.string(), z.array(z.string())]).default(""),
   price: z.string(),
   old_price: z.string().default(""),
+  marketing_seller_price: z.string().optional(),
   currency_code: z.string(),
   sku: validSku,
   fbs_sku: validSku,
@@ -150,8 +153,25 @@ export function transformOzonProduct(
   const { category, subcategory } = mapOfferIdToCategory(
     ozonProduct.offer_id || "",
   );
-  const price = parseFloat(ozonProduct.price) || 0;
-  const oldPrice = parseFloat(ozonProduct.old_price) || undefined;
+  // Ozon больше не отдаёт через API конечную цену витрины (marketing_price
+  // убрали в ноябре 2025). Ближайшее доступное приближение — цена с учётом
+  // акций продавца (marketing_seller_price): если она ниже базовой price,
+  // показываем её как цену, а базовую price — как зачёркнутую.
+  const basePrice = parseFloat(ozonProduct.price) || 0;
+  const sellerDiscountPrice =
+    parseFloat(ozonProduct.marketing_seller_price ?? "") || undefined;
+  const price =
+    sellerDiscountPrice &&
+    sellerDiscountPrice > 0 &&
+    sellerDiscountPrice < basePrice
+      ? sellerDiscountPrice
+      : basePrice;
+
+  const oldPriceCandidate = Math.max(
+    parseFloat(ozonProduct.old_price) || 0,
+    basePrice,
+  );
+  const oldPrice = oldPriceCandidate > price ? oldPriceCandidate : undefined;
 
   // Товары всегда доступны для заказа независимо от статуса/остатков в Озоне.
   const inStock = true;
@@ -224,7 +244,7 @@ export function transformOzonProduct(
     description,
     shortDescription,
     price,
-    oldPrice: oldPrice && oldPrice > price ? oldPrice : undefined,
+    oldPrice,
     currency: ozonProduct.currency_code || "RUB",
     images,
     category,
