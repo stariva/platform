@@ -32,6 +32,18 @@ const validSku = z
   .optional()
   .catch(undefined);
 
+const validNonNegativePrice = z.string().refine(
+  (value) => {
+    const numericValue = Number(value);
+    return (
+      value.trim().length > 0 &&
+      Number.isFinite(numericValue) &&
+      numericValue >= 0
+    );
+  },
+  { message: "Expected a finite non-negative number" },
+);
+
 export const ozonProductInfoV3Schema = z.looseObject({
   id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   offer_id: z.string(),
@@ -41,7 +53,7 @@ export const ozonProductInfoV3Schema = z.looseObject({
   primary_image: z.union([z.string(), z.array(z.string())]).default(""),
   price: z.string(),
   old_price: z.string().default(""),
-  marketing_seller_price: z.string().optional(),
+  marketing_seller_price: validNonNegativePrice.optional(),
   currency_code: z.string(),
   sku: validSku,
   fbs_sku: validSku,
