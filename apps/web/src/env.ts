@@ -58,6 +58,10 @@ export const env = createEnv({
   client: {
     // Базовый публичный URL сайта (для ссылок и редиректов после оплаты)
     NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+
+    // Яндекс.Карты JS API — карта пунктов выдачи Ozon в чекауте.
+    // Ключ: https://developer.tech.yandex.ru → JavaScript API и HTTP Геокодер
+    NEXT_PUBLIC_YANDEX_MAPS_API_KEY: z.string().min(1).optional(),
   },
 
   /**
@@ -84,6 +88,7 @@ export const env = createEnv({
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,
     YOOKASSA_SECRET_KEY: process.env.YOOKASSA_SECRET_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    NEXT_PUBLIC_YANDEX_MAPS_API_KEY: process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY,
   },
 
   skipValidation:
