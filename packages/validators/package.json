@@ -20,11 +20,11 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "zod": "4.4.3"
+    "zod": "4.6.4"
   },
   "devDependencies": {
     "@stariva/tsconfig": "workspace:*",
-    "@types/bun": "1.4.1",
+    "@types/bun": "1.4.2",
     "typescript": "7.0.2"
   }
 }

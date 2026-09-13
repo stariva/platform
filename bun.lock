@@ -42,7 +42,7 @@
         "react-dom": "19.2.8",
         "recharts": "^3.10.1",
         "superjson": "2.2.6",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@stariva/tailwind-config": "workspace:*",
@@ -123,7 +123,7 @@
         "sonner": "^2.0.8",
         "tailwind-merge": "^3.6.0",
         "vaul": "^1.1.2",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@stariva/tailwind-config": "workspace:*",
@@ -148,7 +148,7 @@
         "@stariva/validators": "workspace:*",
         "better-auth": "1.7.4",
         "superjson": "2.2.6",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
@@ -162,7 +162,7 @@
         "@stariva/config": "workspace:*",
         "@stariva/db": "workspace:*",
         "better-auth": "1.7.4",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@better-auth/cli": "1.4.21",
@@ -176,7 +176,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@t3-oss/env-core": "0.13.11",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
@@ -194,11 +194,11 @@
         "drizzle-orm": "0.45.2",
         "drizzle-zod": "0.8.3",
         "pg": "^8.23.0",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
-        "@types/bun": "1.4.1",
+        "@types/bun": "1.4.2",
         "@types/node": "26.3.0",
         "@types/pg": "^8.23.1",
         "@types/ws": "^8.18.1",
@@ -222,7 +222,7 @@
         "sharp": "^0.35.3",
         "tailwindcss": "4.3.3",
         "tailwindcss-animate": "1.0.7",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@react-email/preview-server": "5.2.10",
@@ -293,17 +293,17 @@
         "@types/react": "19.2.18",
         "react": "19.2.8",
         "typescript": "7.0.2",
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
     },
     "packages/validators": {
       "name": "@stariva/validators",
       "dependencies": {
-        "zod": "4.4.3",
+        "zod": "4.6.4",
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
-        "@types/bun": "1.4.1",
+        "@types/bun": "1.4.2",
         "typescript": "7.0.2",
       },
     },
@@ -1168,7 +1168,7 @@
 
     "@turbo/windows-arm64": ["@turbo/windows-arm64@2.10.12", "", { "os": "win32", "cpu": "arm64" }, "sha512-0i0mVUa4kKk+/B3RwEwPMf9CB+T7ul56hn5FFHNA4VUNTOoLBEd6aNf3FaKfCatDNZ6cicCEf6if9QUTVyzzcA=="],
 
-    "@types/bun": ["@types/bun@1.4.1", "", { "dependencies": { "bun-types": "1.4.1" } }, "sha512-0AVGiTXGajf1rgKom3N+c5L7CBxuoyyv1i44M0nX4UDK0G/fnRAMiri93nHuVPIb429KKtAgj7HatVmmOjeQLA=="],
+    "@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
 
     "@types/cookie": ["@types/cookie@0.4.1", "", {}, "sha512-XW/Aa8APYr6jSVVA1y/DEIZX0/GMKLEVekNG727R8cs56ahETkRAy/3DR7+fJyh7oUgGwNQaRfXCun0+KbWY7Q=="],
 
@@ -1370,7 +1370,7 @@
 
     "bufferutil": ["bufferutil@4.1.0", "", { "dependencies": { "node-gyp-build": "^4.3.0" } }, "sha512-ZMANVnAixE6AWWnPzlW2KpUrxhm9woycYvPOo67jWHyFowASTEd9s+QN1EIMsSDtwhIxN4sWE1jotpuDUIgyIw=="],
 
-    "bun-types": ["bun-types@1.4.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-loKuVrAFZKfEv+JvWkHRS9GW5IqLuLRjVXN9p+vZvBN86O5hf/pBZQ5hSoyipsrMmWObZBDvWnlmKvjKTM0PdA=="],
+    "bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
 
     "bundle-name": ["bundle-name@4.1.0", "", { "dependencies": { "run-applescript": "^7.0.0" } }, "sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q=="],
 
@@ -2178,7 +2178,7 @@
 
     "yuku-parser": ["yuku-parser@0.8.3", "", { "dependencies": { "@yuku-toolchain/types": "^0.8.3", "yuku-ast": "^0.8.3" }, "optionalDependencies": { "@yuku-parser/binding-android-arm64": "0.8.3", "@yuku-parser/binding-darwin-arm64": "0.8.3", "@yuku-parser/binding-darwin-x64": "0.8.3", "@yuku-parser/binding-freebsd-x64": "0.8.3", "@yuku-parser/binding-linux-arm-gnu": "0.8.3", "@yuku-parser/binding-linux-arm-musl": "0.8.3", "@yuku-parser/binding-linux-arm64-gnu": "0.8.3", "@yuku-parser/binding-linux-arm64-musl": "0.8.3", "@yuku-parser/binding-linux-x64-gnu": "0.8.3", "@yuku-parser/binding-linux-x64-musl": "0.8.3", "@yuku-parser/binding-win32-arm64": "0.8.3", "@yuku-parser/binding-win32-x64": "0.8.3" } }, "sha512-KPQcpF9aj77ywlJBIkQWCQ9DObdxnCA8AJdUOmA5CZZx042Xt4+dvbQmPJfWxF3E+KG5dVAZ2fBKuDJ8VsKWgA=="],
 
-    "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
+    "zod": ["zod@4.6.4", "", {}, "sha512-AXSD6hvGdvRjajG/l1cC+d6IrhH+sjmPKtYeQdJIK8MFJl3LyClzS+o/YsVC+zQZPupAaeH5skwwm8YqYH7BqA=="],
 
     "zod-error": ["zod-error@1.5.0", "", { "dependencies": { "zod": "^3.20.2" } }, "sha512-zzopKZ/skI9iXpqCEPj+iLCKl9b88E43ehcU+sbRoHuwGd9F1IDVGQ70TyO6kmfiRL1g4IXkjsXK+g1gLYl4WQ=="],
 
