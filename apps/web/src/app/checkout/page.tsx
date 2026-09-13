@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
+import { groupPickupPointsByCity, sortCities } from "@/lib/ozon-delivery/city";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
@@ -92,15 +93,34 @@ export default function CheckoutPage() {
   const [selectedPointId, setSelectedPointId] = useState<string>("");
   const [loadingPoints, setLoadingPoints] = useState(false);
   const [pointSearch, setPointSearch] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+
+  const citiesByPoint = useMemo(
+    () => groupPickupPointsByCity(pickupPoints ?? []),
+    [pickupPoints],
+  );
+  const cities = useMemo(
+    () => sortCities([...citiesByPoint.keys()]),
+    [citiesByPoint],
+  );
+  const pointsInSelectedCity = selectedCity
+    ? (citiesByPoint.get(selectedCity) ?? [])
+    : [];
+
+  function handleChangeCity() {
+    setSelectedCity("");
+    setPointSearch("");
+    setSelectedPointId("");
+  }
 
   const MAX_VISIBLE_POINTS = 100;
   const filteredPickupPoints = pointSearch
-    ? (pickupPoints ?? []).filter((p) =>
+    ? pointsInSelectedCity.filter((p) =>
         `${p.name} ${p.address}`
           .toLowerCase()
           .includes(pointSearch.toLowerCase()),
       )
-    : (pickupPoints ?? []);
+    : pointsInSelectedCity;
   const visiblePickupPoints = filteredPickupPoints.slice(0, MAX_VISIBLE_POINTS);
 
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
@@ -388,11 +408,51 @@ export default function CheckoutPage() {
               </h2>
               {loadingPoints ? (
                 <Spinner className="text-taupe" />
+              ) : !selectedCity ? (
+                <>
+                  <label
+                    htmlFor="checkout-city"
+                    className="block text-sm text-espresso"
+                  >
+                    В каком городе забрать заказ?
+                  </label>
+                  <select
+                    id="checkout-city"
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
+                  >
+                    <option value="">Выберите город</option>
+                    {cities.map((city) => (
+                      <option key={city} value={city}>
+                        {city} ({citiesByPoint.get(city)?.length ?? 0})
+                      </option>
+                    ))}
+                  </select>
+                  {cities.length === 0 && (
+                    <p className="text-taupe text-xs">
+                      Нет доступных пунктов выдачи
+                    </p>
+                  )}
+                </>
               ) : (
                 <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-espresso">
+                      Город:{" "}
+                      <span className="font-medium">{selectedCity}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleChangeCity}
+                      className="text-terracotta text-sm underline"
+                    >
+                      Сменить город
+                    </button>
+                  </div>
                   <Input
                     type="text"
-                    placeholder="Начните вводить адрес или город"
+                    placeholder="Начните вводить адрес или название пункта"
                     value={pointSearch}
                     onChange={(e) => setPointSearch(e.target.value)}
                     className="mb-2"
@@ -418,10 +478,11 @@ export default function CheckoutPage() {
                     <p className="text-taupe text-xs">Ничего не найдено</p>
                   )}
                   {!pointSearch &&
-                    (pickupPoints?.length ?? 0) > visiblePickupPoints.length && (
+                    pointsInSelectedCity.length > visiblePickupPoints.length && (
                       <p className="text-taupe text-xs">
                         Показаны первые {visiblePickupPoints.length} из{" "}
-                        {pickupPoints?.length} — уточните адрес для поиска
+                        {pointsInSelectedCity.length} — уточните адрес для
+                        поиска
                       </p>
                     )}
                 </>
