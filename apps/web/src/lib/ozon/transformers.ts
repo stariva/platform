@@ -15,6 +15,8 @@ export interface OzonProductInfoV3 {
   old_price: string;
   /** Цена с учётом акций продавца — максимально близка к цене, которую видит покупатель на витрине Ozon (не включает акции/скидки, которые финансирует сам Ozon). */
   marketing_seller_price?: string;
+  /** Минимальная цена товара, задаваемая продавцом (порог для автоучастия в акциях Ozon). */
+  min_price?: string;
   currency_code: string;
   sku?: number;
   fbs_sku?: number;
@@ -54,6 +56,7 @@ export const ozonProductInfoV3Schema = z.looseObject({
   price: z.string(),
   old_price: z.string().default(""),
   marketing_seller_price: validNonNegativePrice.optional(),
+  min_price: validNonNegativePrice.optional(),
   currency_code: z.string(),
   sku: validSku,
   fbs_sku: validSku,
@@ -165,19 +168,21 @@ export function transformOzonProduct(
   const { category, subcategory } = mapOfferIdToCategory(
     ozonProduct.offer_id || "",
   );
-  // Ozon больше не отдаёт через API конечную цену витрины (marketing_price
-  // убрали в ноябре 2025). Ближайшее доступное приближение — цена с учётом
-  // акций продавца (marketing_seller_price): если она ниже базовой price,
-  // показываем её как цену, а базовую price — как зачёркнутую.
+  // По требованию: основная цена продажи — min_price (минимальная цена,
+  // заданная продавцом). Если min_price не задана, откатываемся к
+  // marketing_seller_price, затем к базовой price.
   const basePrice = parseFloat(ozonProduct.price) || 0;
   const sellerDiscountPrice =
     parseFloat(ozonProduct.marketing_seller_price ?? "") || undefined;
+  const minPrice = parseFloat(ozonProduct.min_price ?? "") || undefined;
   const price =
-    sellerDiscountPrice &&
-    sellerDiscountPrice > 0 &&
-    sellerDiscountPrice < basePrice
-      ? sellerDiscountPrice
-      : basePrice;
+    minPrice && minPrice > 0
+      ? minPrice
+      : sellerDiscountPrice &&
+          sellerDiscountPrice > 0 &&
+          sellerDiscountPrice < basePrice
+        ? sellerDiscountPrice
+        : basePrice;
 
   const oldPriceCandidate = Math.max(
     parseFloat(ozonProduct.old_price) || 0,
