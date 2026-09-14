@@ -27,7 +27,7 @@
     "@stariva/validators": "workspace:*",
     "better-auth": "1.7.4",
     "superjson": "2.2.6",
-    "zod": "4.6.4"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@stariva/tsconfig": "workspace:*",

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -23,7 +23,6 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
-import { groupPickupPointsByCity, sortCities } from "@/lib/ozon-delivery/city";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
@@ -89,26 +88,19 @@ export default function CheckoutPage() {
     defaultValues: { name: "", phone: "", email: "" },
   });
 
+  const [cities, setCities] = useState<{ name: string; count: number }[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[] | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string>("");
   const [loadingPoints, setLoadingPoints] = useState(false);
   const [pointSearch, setPointSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
 
-  const citiesByPoint = useMemo(
-    () => groupPickupPointsByCity(pickupPoints ?? []),
-    [pickupPoints],
-  );
-  const cities = useMemo(
-    () => sortCities([...citiesByPoint.keys()]),
-    [citiesByPoint],
-  );
-  const pointsInSelectedCity = selectedCity
-    ? (citiesByPoint.get(selectedCity) ?? [])
-    : [];
+  const pointsInSelectedCity = pickupPoints ?? [];
 
   function handleChangeCity() {
     setSelectedCity("");
+    setPickupPoints(null);
     setPointSearch("");
     setSelectedPointId("");
   }
@@ -178,7 +170,7 @@ export default function CheckoutPage() {
       setContact(data);
       setStep("delivery");
       reachGoal("checkout_contact_complete");
-      void loadPickupPoints();
+      void loadCities();
     } catch {
       toast.error("Не удалось проверить телефон. Попробуйте ещё раз.");
     } finally {
@@ -186,10 +178,29 @@ export default function CheckoutPage() {
     }
   }
 
-  async function loadPickupPoints() {
+  async function loadCities() {
+    setLoadingCities(true);
+    try {
+      const res = await fetch("/api/checkout/pickup-points/cities");
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(data?.error ?? "Не удалось загрузить список городов");
+        return;
+      }
+      setCities(data.cities);
+    } catch {
+      toast.error("Не удалось загрузить список городов");
+    } finally {
+      setLoadingCities(false);
+    }
+  }
+
+  async function loadPickupPoints(city: string) {
     setLoadingPoints(true);
     try {
-      const res = await fetch("/api/checkout/pickup-points");
+      const res = await fetch(
+        `/api/checkout/pickup-points?city=${encodeURIComponent(city)}`,
+      );
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         toast.error(data?.error ?? "Не удалось загрузить пункты выдачи");
@@ -201,6 +212,13 @@ export default function CheckoutPage() {
     } finally {
       setLoadingPoints(false);
     }
+  }
+
+  function handleSelectCity(city: string) {
+    setSelectedCity(city);
+    setSelectedPointId("");
+    setPointSearch("");
+    if (city) void loadPickupPoints(city);
   }
 
   async function handleGetQuote() {
@@ -406,35 +424,37 @@ export default function CheckoutPage() {
               <h2 className="font-serif text-xl text-espresso mb-2">
                 Способ доставки
               </h2>
-              {loadingPoints ? (
-                <Spinner className="text-taupe" />
-              ) : !selectedCity ? (
-                <>
-                  <label
-                    htmlFor="checkout-city"
-                    className="block text-sm text-espresso"
-                  >
-                    В каком городе забрать заказ?
-                  </label>
-                  <select
-                    id="checkout-city"
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
-                  >
-                    <option value="">Выберите город</option>
-                    {cities.map((city) => (
-                      <option key={city} value={city}>
-                        {city} ({citiesByPoint.get(city)?.length ?? 0})
-                      </option>
-                    ))}
-                  </select>
-                  {cities.length === 0 && (
-                    <p className="text-taupe text-xs">
-                      Нет доступных пунктов выдачи
-                    </p>
-                  )}
-                </>
+              {!selectedCity ? (
+                loadingCities ? (
+                  <Spinner className="text-taupe" />
+                ) : (
+                  <>
+                    <label
+                      htmlFor="checkout-city"
+                      className="block text-sm text-espresso"
+                    >
+                      В каком городе забрать заказ?
+                    </label>
+                    <select
+                      id="checkout-city"
+                      value={selectedCity}
+                      onChange={(e) => handleSelectCity(e.target.value)}
+                      className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
+                    >
+                      <option value="">Выберите город</option>
+                      {cities.map((city) => (
+                        <option key={city.name} value={city.name}>
+                          {city.name} ({city.count})
+                        </option>
+                      ))}
+                    </select>
+                    {cities.length === 0 && (
+                      <p className="text-taupe text-xs">
+                        Нет доступных пунктов выдачи
+                      </p>
+                    )}
+                  </>
+                )
               ) : (
                 <>
                   <div className="flex items-center justify-between">
@@ -450,41 +470,48 @@ export default function CheckoutPage() {
                       Сменить город
                     </button>
                   </div>
-                  <Input
-                    type="text"
-                    placeholder="Начните вводить адрес или название пункта"
-                    value={pointSearch}
-                    onChange={(e) => setPointSearch(e.target.value)}
-                    className="mb-2"
-                  />
-                  <PickupPointMap
-                    points={visiblePickupPoints}
-                    selectedPointId={selectedPointId}
-                    onSelect={setSelectedPointId}
-                  />
-                  <select
-                    value={selectedPointId}
-                    onChange={(e) => setSelectedPointId(e.target.value)}
-                    className="w-full mt-2 rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
-                  >
-                    <option value="">Выберите пункт выдачи</option>
-                    {visiblePickupPoints.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} — {p.address}
-                      </option>
-                    ))}
-                  </select>
-                  {pointSearch && visiblePickupPoints.length === 0 && (
-                    <p className="text-taupe text-xs">Ничего не найдено</p>
+                  {loadingPoints ? (
+                    <Spinner className="text-taupe" />
+                  ) : (
+                    <>
+                      <Input
+                        type="text"
+                        placeholder="Начните вводить адрес или название пункта"
+                        value={pointSearch}
+                        onChange={(e) => setPointSearch(e.target.value)}
+                        className="mb-2"
+                      />
+                      <PickupPointMap
+                        points={visiblePickupPoints}
+                        selectedPointId={selectedPointId}
+                        onSelect={setSelectedPointId}
+                      />
+                      <select
+                        value={selectedPointId}
+                        onChange={(e) => setSelectedPointId(e.target.value)}
+                        className="w-full mt-2 rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
+                      >
+                        <option value="">Выберите пункт выдачи</option>
+                        {visiblePickupPoints.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} — {p.address}
+                          </option>
+                        ))}
+                      </select>
+                      {pointSearch && visiblePickupPoints.length === 0 && (
+                        <p className="text-taupe text-xs">Ничего не найдено</p>
+                      )}
+                      {!pointSearch &&
+                        pointsInSelectedCity.length >
+                          visiblePickupPoints.length && (
+                          <p className="text-taupe text-xs">
+                            Показаны первые {visiblePickupPoints.length} из{" "}
+                            {pointsInSelectedCity.length} — уточните адрес для
+                            поиска
+                          </p>
+                        )}
+                    </>
                   )}
-                  {!pointSearch &&
-                    pointsInSelectedCity.length > visiblePickupPoints.length && (
-                      <p className="text-taupe text-xs">
-                        Показаны первые {visiblePickupPoints.length} из{" "}
-                        {pointsInSelectedCity.length} — уточните адрес для
-                        поиска
-                      </p>
-                    )}
                 </>
               )}
 

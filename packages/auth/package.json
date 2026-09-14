@@ -19,7 +19,7 @@
     "@stariva/config": "workspace:*",
     "@stariva/db": "workspace:*",
     "better-auth": "1.7.4",
-    "zod": "4.6.4"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@better-auth/cli": "1.4.21",

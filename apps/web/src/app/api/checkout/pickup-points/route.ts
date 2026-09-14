@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
-import { listPickupPoints } from "@/lib/ozon-delivery/client";
+import { extractCity } from "@/lib/ozon-delivery/city";
+import { getCachedPickupPoints } from "@/lib/ozon-delivery/pickup-points-cache";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!isOzonDeliveryConfigured()) {
     return NextResponse.json(
       { error: "Доставка Ozon временно недоступна" },
@@ -12,10 +13,16 @@ export async function GET() {
     );
   }
 
+  const city = new URL(request.url).searchParams.get("city");
+  if (!city) {
+    return NextResponse.json({ error: "Не указан город" }, { status: 400 });
+  }
+
   try {
-    const points = await listPickupPoints();
+    const points = await getCachedPickupPoints();
+    const pointsInCity = points.filter((p) => extractCity(p.address) === city);
     return NextResponse.json(
-      { points },
+      { points: pointsInCity },
       { headers: { "Cache-Control": "private, max-age=300" } },
     );
   } catch (error) {
