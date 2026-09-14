@@ -459,8 +459,7 @@ export default function CheckoutPage() {
                 <>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-espresso">
-                      Город:{" "}
-                      <span className="font-medium">{selectedCity}</span>
+                      Город: <span className="font-medium">{selectedCity}</span>
                     </p>
                     <button
                       type="button"

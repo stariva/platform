@@ -105,9 +105,7 @@ export function PickupPointMap({
         [point.latitude, point.longitude],
         { balloonContentBody: balloonContent(point) },
         {
-          preset: selected
-            ? "islands#circleIcon"
-            : "islands#dotIcon",
+          preset: selected ? "islands#circleIcon" : "islands#dotIcon",
           iconColor: selected ? "#b5622a" : "#8a7a6a",
         },
       );
@@ -121,7 +119,8 @@ export function PickupPointMap({
       map.setCenter([first.latitude, first.longitude], 14);
     } else if (points.length > 1) {
       const bounds = clusterer.getBounds();
-      if (bounds) map.setBounds(bounds, { checkZoomRange: true, zoomMargin: [32] });
+      if (bounds)
+        map.setBounds(bounds, { checkZoomRange: true, zoomMargin: [32] });
     }
   }, [points, selectedPointId]);
 

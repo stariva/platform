@@ -88,7 +88,8 @@ export const env = createEnv({
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,
     YOOKASSA_SECRET_KEY: process.env.YOOKASSA_SECRET_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-    NEXT_PUBLIC_YANDEX_MAPS_API_KEY: process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY,
+    NEXT_PUBLIC_YANDEX_MAPS_API_KEY:
+      process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY,
   },
 
   skipValidation:
