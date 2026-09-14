@@ -49,6 +49,11 @@ export const env = createEnv({
     // shopId и секретный ключ из личного кабинета ЮKassa
     YOOKASSA_SHOP_ID: z.string().min(1).optional(),
     YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
+
+    // DaData Suggestions API — автоподсказка города в чекауте (поиск
+    // пунктов выдачи Ozon рядом с городом покупателя).
+    // Ключ: https://dadata.ru/api/suggest/address/
+    DADATA_API_KEY: z.string().min(1).optional(),
   },
 
   /**
@@ -87,6 +92,7 @@ export const env = createEnv({
     ORDER_EMAIL_FROM: process.env.ORDER_EMAIL_FROM,
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,
     YOOKASSA_SECRET_KEY: process.env.YOOKASSA_SECRET_KEY,
+    DADATA_API_KEY: process.env.DADATA_API_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     NEXT_PUBLIC_YANDEX_MAPS_API_KEY:
       process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY,

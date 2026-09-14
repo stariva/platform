@@ -12,6 +12,7 @@ import { z } from "zod";
 
 const cartItemSchema = z.object({
   productSlug: z.string().min(1),
+  category: z.string().min(1).optional(),
   ozonSku: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   name: z.string().min(1),
   image: z.string(),

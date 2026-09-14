@@ -222,28 +222,6 @@ function ProductCard({
               </span>
             )}
           </div>
-          {product.ozonUrl && (
-            <span className="label-caps text-[9px] text-[#005BFF] flex items-center gap-1 opacity-60">
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M12 7c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5Z"
-                  fill="currentColor"
-                />
-              </svg>
-              Ozon
-            </span>
-          )}
         </div>
       </Link>
     </motion.div>

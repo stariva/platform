@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { ColorSwatches } from "@/components/stariva/color-indicator";
-import { OzonIcon } from "@/components/stariva/icons";
 import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
 import {
   Breadcrumb,
@@ -588,12 +587,6 @@ export function ProductDetails({
                         <span className="font-serif text-lg text-espresso">
                           {formatPrice(p.price)}
                         </span>
-                        {p.ozonUrl && (
-                          <span className="label-caps text-[9px] text-[#005BFF] flex items-center gap-1">
-                            <OzonIcon className="w-3 h-3" />
-                            Ozon
-                          </span>
-                        )}
                       </div>
                     </div>
                   </Link>

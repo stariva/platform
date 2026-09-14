@@ -47,6 +47,12 @@ const PickupPointMap = dynamic(
 
 type Step = "contact" | "delivery" | "review";
 
+interface CitySuggestion {
+  value: string;
+  lat: number;
+  lon: number;
+}
+
 const contactFormSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(120),
   phone: z.string().trim().min(5, "Введите телефон").max(20),
@@ -88,31 +94,61 @@ export default function CheckoutPage() {
     defaultValues: { name: "", phone: "", email: "" },
   });
 
-  const [cities, setCities] = useState<{ name: string; count: number }[]>([]);
-  const [loadingCities, setLoadingCities] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
+  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(
+    null,
+  );
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[] | null>(null);
+  const [pointsExpanded, setPointsExpanded] = useState(false);
   const [selectedPointId, setSelectedPointId] = useState<string>("");
   const [loadingPoints, setLoadingPoints] = useState(false);
   const [pointSearch, setPointSearch] = useState("");
-  const [selectedCity, setSelectedCity] = useState("");
 
-  const pointsInSelectedCity = pickupPoints ?? [];
+  const nearbyPoints = pickupPoints ?? [];
+
+  useEffect(() => {
+    if (!citySearch || selectedCity) {
+      setCitySuggestions([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/checkout/city-suggest?query=${encodeURIComponent(citySearch)}`,
+          { signal: controller.signal },
+        );
+        const data = await res.json().catch(() => null);
+        if (res.ok) setCitySuggestions(data.suggestions ?? []);
+      } catch {
+        // AbortError или сетевая ошибка — просто не показываем подсказки
+      }
+    }, 300);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [citySearch, selectedCity]);
 
   function handleChangeCity() {
-    setSelectedCity("");
+    setSelectedCity(null);
+    setCitySearch("");
+    setCitySuggestions([]);
     setPickupPoints(null);
+    setPointsExpanded(false);
     setPointSearch("");
     setSelectedPointId("");
   }
 
   const MAX_VISIBLE_POINTS = 100;
   const filteredPickupPoints = pointSearch
-    ? pointsInSelectedCity.filter((p) =>
+    ? nearbyPoints.filter((p) =>
         `${p.name} ${p.address}`
           .toLowerCase()
           .includes(pointSearch.toLowerCase()),
       )
-    : pointsInSelectedCity;
+    : nearbyPoints;
   const visiblePickupPoints = filteredPickupPoints.slice(0, MAX_VISIBLE_POINTS);
 
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
@@ -170,7 +206,6 @@ export default function CheckoutPage() {
       setContact(data);
       setStep("delivery");
       reachGoal("checkout_contact_complete");
-      void loadCities();
     } catch {
       toast.error("Не удалось проверить телефон. Попробуйте ещё раз.");
     } finally {
@@ -178,28 +213,11 @@ export default function CheckoutPage() {
     }
   }
 
-  async function loadCities() {
-    setLoadingCities(true);
-    try {
-      const res = await fetch("/api/checkout/pickup-points/cities");
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        toast.error(data?.error ?? "Не удалось загрузить список городов");
-        return;
-      }
-      setCities(data.cities);
-    } catch {
-      toast.error("Не удалось загрузить список городов");
-    } finally {
-      setLoadingCities(false);
-    }
-  }
-
-  async function loadPickupPoints(city: string) {
+  async function loadPickupPoints(lat: number, lon: number) {
     setLoadingPoints(true);
     try {
       const res = await fetch(
-        `/api/checkout/pickup-points?city=${encodeURIComponent(city)}`,
+        `/api/checkout/pickup-points?lat=${lat}&lon=${lon}`,
       );
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -207,6 +225,7 @@ export default function CheckoutPage() {
         return;
       }
       setPickupPoints(data.points);
+      setPointsExpanded(Boolean(data.expanded));
     } catch {
       toast.error("Не удалось загрузить пункты выдачи");
     } finally {
@@ -214,11 +233,13 @@ export default function CheckoutPage() {
     }
   }
 
-  function handleSelectCity(city: string) {
-    setSelectedCity(city);
+  function handleSelectCitySuggestion(suggestion: CitySuggestion) {
+    setSelectedCity(suggestion);
+    setCitySearch(suggestion.value);
+    setCitySuggestions([]);
     setSelectedPointId("");
     setPointSearch("");
-    if (city) void loadPickupPoints(city);
+    void loadPickupPoints(suggestion.lat, suggestion.lon);
   }
 
   async function handleGetQuote() {
@@ -425,41 +446,48 @@ export default function CheckoutPage() {
                 Способ доставки
               </h2>
               {!selectedCity ? (
-                loadingCities ? (
-                  <Spinner className="text-taupe" />
-                ) : (
-                  <>
-                    <label
-                      htmlFor="checkout-city"
-                      className="block text-sm text-espresso"
-                    >
-                      В каком городе забрать заказ?
-                    </label>
-                    <select
-                      id="checkout-city"
-                      value={selectedCity}
-                      onChange={(e) => handleSelectCity(e.target.value)}
-                      className="w-full rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
-                    >
-                      <option value="">Выберите город</option>
-                      {cities.map((city) => (
-                        <option key={city.name} value={city.name}>
-                          {city.name} ({city.count})
-                        </option>
+                <div className="relative">
+                  <label
+                    htmlFor="checkout-city"
+                    className="block text-sm text-espresso mb-1"
+                  >
+                    В каком городе забрать заказ?
+                  </label>
+                  <Input
+                    id="checkout-city"
+                    type="text"
+                    placeholder="Начните вводить город"
+                    value={citySearch}
+                    onChange={(e) => setCitySearch(e.target.value)}
+                    onBlur={() =>
+                      setTimeout(() => setCitySuggestions([]), 150)
+                    }
+                    autoComplete="off"
+                  />
+                  {citySuggestions.length > 0 && (
+                    <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-lg border border-espresso/15 bg-white shadow-md">
+                      {citySuggestions.map((suggestion) => (
+                        <li key={suggestion.value}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSelectCitySuggestion(suggestion)
+                            }
+                            className="w-full px-3 py-2 text-left text-sm text-espresso hover:bg-parchment/60"
+                          >
+                            {suggestion.value}
+                          </button>
+                        </li>
                       ))}
-                    </select>
-                    {cities.length === 0 && (
-                      <p className="text-taupe text-xs">
-                        Нет доступных пунктов выдачи
-                      </p>
-                    )}
-                  </>
-                )
+                    </ul>
+                  )}
+                </div>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-espresso">
-                      Город: <span className="font-medium">{selectedCity}</span>
+                      Город:{" "}
+                      <span className="font-medium">{selectedCity.value}</span>
                     </p>
                     <button
                       type="button"
@@ -471,8 +499,19 @@ export default function CheckoutPage() {
                   </div>
                   {loadingPoints ? (
                     <Spinner className="text-taupe" />
+                  ) : nearbyPoints.length === 0 ? (
+                    <p className="text-taupe text-xs">
+                      Пунктов выдачи Ozon рядом не нашлось — попробуйте
+                      выбрать другой город
+                    </p>
                   ) : (
                     <>
+                      {pointsExpanded && (
+                        <p className="text-taupe text-xs">
+                          Рядом мало пунктов — показаны ближайшие из более
+                          широкого круга
+                        </p>
+                      )}
                       <Input
                         type="text"
                         placeholder="Начните вводить адрес или название пункта"
@@ -501,12 +540,10 @@ export default function CheckoutPage() {
                         <p className="text-taupe text-xs">Ничего не найдено</p>
                       )}
                       {!pointSearch &&
-                        pointsInSelectedCity.length >
-                          visiblePickupPoints.length && (
+                        nearbyPoints.length > visiblePickupPoints.length && (
                           <p className="text-taupe text-xs">
                             Показаны первые {visiblePickupPoints.length} из{" "}
-                            {pointsInSelectedCity.length} — уточните адрес для
-                            поиска
+                            {nearbyPoints.length} — уточните адрес для поиска
                           </p>
                         )}
                     </>

@@ -33,64 +33,83 @@ export default function CartPage() {
           ) : (
             <>
               <div className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
-                {items.map((item) => (
-                  <div key={item.productSlug} className="flex gap-4 p-5">
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-sand flex-shrink-0">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div>
-                        <p className="text-espresso font-medium truncate">
-                          {item.name}
-                        </p>
-                        <p className="text-taupe text-sm mt-0.5">
-                          {formatPrice(item.price / 100)}
-                        </p>
+                {items.map((item) => {
+                  const productHref = item.category
+                    ? `/catalog/${item.category}/${item.productSlug}`
+                    : undefined;
+                  return (
+                    <div key={item.productSlug} className="flex gap-4 p-5">
+                      <Link
+                        href={productHref ?? "#"}
+                        aria-disabled={!productHref}
+                        onClick={(e) => {
+                          if (!productHref) e.preventDefault();
+                        }}
+                        className="relative w-20 h-20 rounded-lg overflow-hidden bg-sand flex-shrink-0"
+                      >
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          sizes="80px"
+                        />
+                      </Link>
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <Link
+                            href={productHref ?? "#"}
+                            aria-disabled={!productHref}
+                            onClick={(e) => {
+                              if (!productHref) e.preventDefault();
+                            }}
+                            className="text-espresso font-medium truncate block hover:text-terracotta transition-colors"
+                          >
+                            {item.name}
+                          </Link>
+                          <p className="text-taupe text-sm mt-0.5">
+                            {formatPrice(item.price / 100)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 mt-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setQty(item.productSlug, item.quantity - 1)
+                            }
+                            className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
+                            aria-label={`Уменьшить количество товара ${item.name}`}
+                          >
+                            −
+                          </button>
+                          <span className="text-sm text-espresso w-5 text-center">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setQty(item.productSlug, item.quantity + 1)
+                            }
+                            className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
+                            aria-label={`Увеличить количество товара ${item.name}`}
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => remove(item.productSlug)}
+                            className="ml-auto text-taupe text-sm hover:text-terracotta transition-colors"
+                          >
+                            Удалить
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 mt-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setQty(item.productSlug, item.quantity - 1)
-                          }
-                          className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
-                          aria-label={`Уменьшить количество товара ${item.name}`}
-                        >
-                          −
-                        </button>
-                        <span className="text-sm text-espresso w-5 text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setQty(item.productSlug, item.quantity + 1)
-                          }
-                          className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
-                          aria-label={`Увеличить количество товара ${item.name}`}
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => remove(item.productSlug)}
-                          className="ml-auto text-taupe text-sm hover:text-terracotta transition-colors"
-                        >
-                          Удалить
-                        </button>
-                      </div>
+                      <span className="text-espresso font-medium flex-shrink-0">
+                        {formatPrice((item.price * item.quantity) / 100)}
+                      </span>
                     </div>
-                    <span className="text-espresso font-medium flex-shrink-0">
-                      {formatPrice((item.price * item.quantity) / 100)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="bg-white border border-espresso/10 rounded-2xl p-6 mt-6 flex items-center justify-between">
