@@ -46,6 +46,14 @@ const validNonNegativePrice = z.string().refine(
   { message: "Expected a finite non-negative number" },
 );
 
+// Ozon отправляет "" (пустую строку), а не отсутствие поля, когда у товара
+// не задана min_price/marketing_seller_price — приводим пустую строку к
+// undefined до валидации, иначе один такой товар роняет парсинг всего ответа.
+const optionalNonNegativePrice = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  validNonNegativePrice.optional(),
+);
+
 export const ozonProductInfoV3Schema = z.looseObject({
   id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   offer_id: z.string(),
@@ -55,8 +63,8 @@ export const ozonProductInfoV3Schema = z.looseObject({
   primary_image: z.union([z.string(), z.array(z.string())]).default(""),
   price: z.string(),
   old_price: z.string().default(""),
-  marketing_seller_price: validNonNegativePrice.optional(),
-  min_price: validNonNegativePrice.optional(),
+  marketing_seller_price: optionalNonNegativePrice,
+  min_price: optionalNonNegativePrice,
   currency_code: z.string(),
   sku: validSku,
   fbs_sku: validSku,

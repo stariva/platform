@@ -26,7 +26,7 @@ test("marketing seller price must be a complete finite non-negative number", () 
     );
   }
 
-  for (const value of ["", "  ", "1invalid", "Infinity", "NaN", "-1"]) {
+  for (const value of ["1invalid", "Infinity", "NaN", "-1"]) {
     assert.equal(
       ozonProductInfoV3Schema.safeParse({
         ...product,
@@ -35,6 +35,21 @@ test("marketing seller price must be a complete finite non-negative number", () 
       false,
       value,
     );
+  }
+});
+
+test("empty-string min_price/marketing_seller_price is treated as absent (Ozon sends '' instead of omitting the field)", () => {
+  for (const field of ["min_price", "marketing_seller_price"] as const) {
+    for (const value of ["", "  "]) {
+      const result = ozonProductInfoV3Schema.safeParse({
+        ...product,
+        [field]: value,
+      });
+      assert.equal(result.success, true, `${field}=${JSON.stringify(value)}`);
+      if (result.success) {
+        assert.equal(result.data[field], undefined);
+      }
+    }
   }
 });
 
