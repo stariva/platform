@@ -24,7 +24,6 @@ export function AddToCartButton({
       onClick={() => {
         add({
           productSlug: product.slug,
-          category: product.category,
           ozonSku: product.ozonSku as number,
           name: product.name,
           image: product.images[0] ?? "",

@@ -34,17 +34,11 @@ export default function CartPage() {
             <>
               <div className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
                 {items.map((item) => {
-                  const productHref = item.category
-                    ? `/catalog/${item.category}/${item.productSlug}`
-                    : undefined;
+                  const productHref = `/catalog/product/${item.productSlug}`;
                   return (
                     <div key={item.productSlug} className="flex gap-4 p-5">
                       <Link
-                        href={productHref ?? "#"}
-                        aria-disabled={!productHref}
-                        onClick={(e) => {
-                          if (!productHref) e.preventDefault();
-                        }}
+                        href={productHref}
                         className="relative w-20 h-20 rounded-lg overflow-hidden bg-sand flex-shrink-0"
                       >
                         <Image
@@ -58,11 +52,7 @@ export default function CartPage() {
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
                           <Link
-                            href={productHref ?? "#"}
-                            aria-disabled={!productHref}
-                            onClick={(e) => {
-                              if (!productHref) e.preventDefault();
-                            }}
+                            href={productHref}
                             className="text-espresso font-medium truncate block hover:text-terracotta transition-colors"
                           >
                             {item.name}
