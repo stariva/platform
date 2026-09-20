@@ -114,7 +114,9 @@ export async function generateMetadata({
 
   if (!product || !category || product.category !== categorySlug) return {};
 
-  const title = `${product.name} — купить в интернет-магазине`;
+  const title = product.color
+    ? `${product.name}, цвет: ${product.color} — купить в интернет-магазине`
+    : `${product.name} — купить в интернет-магазине`;
   const description = product.shortDescription
     ? `${product.shortDescription} Заказ на сайте Stariva. Размеры, фотографии и условия доставки.`
     : `${product.name} — ручная работа. Размеры, фотографии и заказ на сайте Stariva.`;
