@@ -187,6 +187,14 @@ const requestSchema = z.object({
   comment: z.string().trim().max(1500).optional(),
 });
 
+const measurementSchema = z
+  .string()
+  .trim()
+  .regex(/^\d+(?:[.,]\d+)?$/, "Введите положительное число")
+  .refine((value) => Number(value.replace(",", ".")) > 0, {
+    message: "Введите положительное число",
+  });
+
 type RequestValues = z.infer<typeof requestSchema>;
 
 function MadeToOrderDialog({
@@ -207,8 +215,13 @@ function MadeToOrderDialog({
   color: string;
 }) {
   const [measures, setMeasures] = useState<Record<string, string>>({});
+  const [measurementErrors, setMeasurementErrors] = useState<
+    Record<string, string>
+  >({});
   const [submitting, setSubmitting] = useState(false);
   const customSize = size === CUSTOM_SIZE;
+  const requestSize =
+    customSize && product.category !== "clothes" ? "Свой размер" : size;
 
   const form = useForm<RequestValues>({
     resolver: zodResolver(requestSchema),
@@ -216,9 +229,27 @@ function MadeToOrderDialog({
   });
 
   async function onSubmit(data: RequestValues) {
-    const filled = config.measurements
-      .filter((m) => measures[m.id]?.trim())
-      .map((m) => `${m.label}: ${measures[m.id]?.trim()} см`);
+    const errors: Record<string, string> = {};
+    const filled: string[] = [];
+
+    if (customSize) {
+      for (const measurement of config.measurements) {
+        const value = measures[measurement.id]?.trim();
+        if (!value) continue;
+
+        const result = measurementSchema.safeParse(value);
+        if (!result.success) {
+          errors[measurement.id] =
+            result.error.issues[0]?.message ?? "Введите положительное число";
+          continue;
+        }
+
+        filled.push(`${measurement.label}: ${result.data} см`);
+      }
+    }
+
+    setMeasurementErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     if (customSize && filled.length === 0 && !data.comment) {
       toast.error(
@@ -230,7 +261,7 @@ function MadeToOrderDialog({
     const description = [
       `Изделие: ${product.name}`,
       `Ссылка: ${productUrl}`,
-      `Размер: ${size}`,
+      `Размер: ${requestSize}`,
       customSize && filled.length ? `Мерки:\n${filled.join("\n")}` : null,
       `Цвет: ${color}`,
       data.comment ? `Комментарий: ${data.comment}` : null,
@@ -245,7 +276,7 @@ function MadeToOrderDialog({
       fd.append("contact", data.contact);
       fd.append("description", description);
       fd.append("productType", config.productType);
-      fd.append("size", size);
+      fd.append("size", requestSize);
       fd.append("color", color);
 
       const res = await fetch("/api/custom-order", {
@@ -262,6 +293,7 @@ function MadeToOrderDialog({
       reachGoal("made_to_order_submitted", { category: product.category });
       form.reset();
       setMeasures({});
+      setMeasurementErrors({});
       onOpenChange(false);
     } catch {
       toast.error(
@@ -280,8 +312,8 @@ function MadeToOrderDialog({
             {config.cta}
           </DialogTitle>
           <DialogDescription className="text-taupe">
-            {product.name} · размер: {size} · цвет: {color}. Мастер проверит
-            мерки, согласует детали и точную цену до начала работы.
+            {product.name} · размер: {requestSize} · цвет: {color}. Мастер
+            проверит мерки, согласует детали и точную цену до начала работы.
           </DialogDescription>
         </DialogHeader>
 
@@ -309,13 +341,43 @@ function MadeToOrderDialog({
                         placeholder="см"
                         title={m.hint}
                         value={measures[m.id] ?? ""}
-                        onChange={(e) =>
+                        aria-describedby={
+                          measurementErrors[m.id]
+                            ? `mto-${m.id}-error`
+                            : undefined
+                        }
+                        aria-invalid={Boolean(measurementErrors[m.id])}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           setMeasures((prev) => ({
                             ...prev,
-                            [m.id]: e.target.value,
-                          }))
-                        }
+                            [m.id]: value,
+                          }));
+
+                          const result = measurementSchema.safeParse(value);
+                          setMeasurementErrors((prev) => {
+                            const { [m.id]: _error, ...remainingErrors } = prev;
+                            if (!value.trim() || result.success) {
+                              return remainingErrors;
+                            }
+
+                            return {
+                              ...remainingErrors,
+                              [m.id]:
+                                result.error.issues[0]?.message ??
+                                "Введите положительное число",
+                            };
+                          });
+                        }}
                       />
+                      {measurementErrors[m.id] && (
+                        <p
+                          id={`mto-${m.id}-error`}
+                          className="text-[12px] text-destructive"
+                        >
+                          {measurementErrors[m.id]}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
