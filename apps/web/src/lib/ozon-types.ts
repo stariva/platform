@@ -178,6 +178,13 @@ export interface Category {
   name: string;
   description: string;
   image: string;
+  hero: {
+    image: string;
+    alt: string;
+    width: number;
+    height: number;
+    objectPosition: string;
+  };
   subcategories: Subcategory[];
 }
 

@@ -57,7 +57,17 @@ export function WorkshopPurchase({
         setOwned(true);
         return;
       }
-      if (!res.ok || !data.confirmationUrl) {
+      if (!res.ok) {
+        toast.error(data.error || "Не удалось перейти к оплате");
+        setBuying(false);
+        return;
+      }
+      // Бесплатный мастер-класс — доступ уже выдан, ведём сразу в кабинет
+      if (data.free) {
+        window.location.href = `/account/workshops/${slug}`;
+        return;
+      }
+      if (!data.confirmationUrl) {
         toast.error(data.error || "Не удалось перейти к оплате");
         setBuying(false);
         return;
@@ -113,9 +123,17 @@ export function WorkshopPurchase({
       onClick={handleBuy}
       disabled={buying}
       className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6 rounded-2xl mb-3 text-base"
-      aria-label={`Купить мастер-класс ${title}`}
+      aria-label={
+        price === 0
+          ? `Смотреть бесплатно: ${title}`
+          : `Купить мастер-класс ${title}`
+      }
     >
-      {buying ? "Переходим к оплате…" : `Купить за ${formatPrice(price)}`}
+      {buying
+        ? "Открываем доступ…"
+        : price === 0
+          ? "Смотреть бесплатно"
+          : `Купить за ${formatPrice(price)}`}
     </Button>
   );
 }

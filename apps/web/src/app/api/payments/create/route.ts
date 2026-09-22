@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
-import { hasAccess } from "@/lib/account/access";
+import { grantAccess, hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { attachPaymentId, createOrder } from "@/lib/payments/orders";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
@@ -25,13 +25,6 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
-  }
-
-  if (!isYooKassaConfigured()) {
-    return NextResponse.json(
-      { error: "Приём платежей временно недоступен" },
-      { status: 503 },
-    );
   }
 
   const json = await request.json().catch(() => null);
@@ -59,6 +52,20 @@ export async function POST(request: NextRequest) {
   }
 
   const amountKopecks = workshopPriceKopecks(workshop);
+
+  // Бесплатный мастер-класс — выдаём доступ сразу, без похода в ЮKassa
+  if (amountKopecks === 0) {
+    await grantAccess(userId, workshop.slug);
+    return NextResponse.json({ free: true });
+  }
+
+  if (!isYooKassaConfigured()) {
+    return NextResponse.json(
+      { error: "Приём платежей временно недоступен" },
+      { status: 503 },
+    );
+  }
+
   const orderId = await createOrder({
     userId,
     workshopSlug: workshop.slug,

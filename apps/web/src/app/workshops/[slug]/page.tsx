@@ -42,7 +42,13 @@ export async function generateMetadata({
   if (!workshop) return {};
 
   const title = `${workshop.title} — мастер-класс по макраме`;
-  const description = `${workshop.description} Уровень: ${levelLabels[workshop.level]}. ${workshop.lessonsCount} уроков, ${workshop.duration}. Купить на Ozon.`;
+  const callToAction =
+    workshop.price === 0
+      ? "Бесплатно на сайте Stariva."
+      : workshop.ozonUrl
+        ? "Купить на Ozon."
+        : "Купить на сайте Stariva.";
+  const description = `${workshop.description} Уровень: ${levelLabels[workshop.level]}. ${workshop.lessonsCount} уроков, ${workshop.duration}. ${callToAction}`;
   const url = `/workshops/${slug}`;
   const image = `${BASE_URL}${workshop.cover}`;
 
@@ -96,9 +102,12 @@ export default async function WorkshopDetailPage({
       answer: `Для курса понадобятся: ${workshop.materials.join(", ")}. Полный список с рекомендациями по покупке есть в первом уроке.`,
     },
     {
-      question: "Где купить курс?",
+      question:
+        workshop.price === 0 ? "Это точно бесплатно?" : "Где купить курс?",
       answer:
-        "Курс можно купить прямо на сайте: нажмите «Купить», оплатите онлайн через YooKassa, и доступ к видеоурокам сразу появится в вашем личном кабинете.",
+        workshop.price === 0
+          ? "Да, этот мастер-класс бесплатный. Войдите или зарегистрируйтесь на сайте — доступ к видео появится сразу, без оплаты."
+          : "Курс можно купить прямо на сайте: нажмите «Купить», оплатите онлайн через YooKassa, и доступ к видеоурокам сразу появится в вашем личном кабинете.",
     },
   ];
 
@@ -198,43 +207,51 @@ export default async function WorkshopDetailPage({
                 className="object-cover"
                 priority
               />
-              {/* Locked overlay */}
-              <div className="absolute inset-0 bg-espresso/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-parchment/95 flex items-center justify-center shadow-lg">
-                  <svg
-                    width="28"
-                    height="28"
-                    viewBox="0 0 28 28"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <rect
-                      x="5"
-                      y="13"
-                      width="18"
-                      height="13"
-                      rx="3"
-                      stroke="#2c241b"
-                      strokeWidth="1.6"
-                    />
-                    <path
-                      d="M9 13V10a5 5 0 0 1 10 0v3"
-                      stroke="#2c241b"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="14" cy="19.5" r="2" fill="#2c241b" />
-                  </svg>
+              {/* Locked overlay (платные курсы) */}
+              {workshop.price > 0 ? (
+                <div className="absolute inset-0 bg-espresso/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-parchment/95 flex items-center justify-center shadow-lg">
+                    <svg
+                      width="28"
+                      height="28"
+                      viewBox="0 0 28 28"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="5"
+                        y="13"
+                        width="18"
+                        height="13"
+                        rx="3"
+                        stroke="#2c241b"
+                        strokeWidth="1.6"
+                      />
+                      <path
+                        d="M9 13V10a5 5 0 0 1 10 0v3"
+                        stroke="#2c241b"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                      <circle cx="14" cy="19.5" r="2" fill="#2c241b" />
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-parchment font-serif text-xl mb-1">
+                      Контент защищён
+                    </p>
+                    <p className="text-parchment/70 text-sm">
+                      Приобретите курс, чтобы смотреть все уроки
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-parchment font-serif text-xl mb-1">
-                    Контент защищён
-                  </p>
-                  <p className="text-parchment/70 text-sm">
-                    Приобретите курс, чтобы смотреть все уроки
-                  </p>
+              ) : (
+                <div className="absolute top-4 left-4">
+                  <span className="px-3 py-1 rounded-full bg-terracotta text-parchment text-xs label-caps">
+                    Бесплатно
+                  </span>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Description */}
@@ -379,6 +396,21 @@ export default async function WorkshopDetailPage({
                 ))}
               </ul>
             </section>
+
+            {/* Единственный отзыв к этому мастер-классу (без общей ленты Ozon) */}
+            {workshop.testimonial && (
+              <section className="mb-10">
+                <h2 className="font-serif text-2xl mb-5">Отзыв</h2>
+                <blockquote className="bg-sand rounded-2xl border border-espresso/6 p-6">
+                  <p className="font-serif italic text-lg text-espresso leading-relaxed mb-4 text-pretty">
+                    &laquo;{workshop.testimonial.text}&raquo;
+                  </p>
+                  <footer className="text-sm text-taupe">
+                    {workshop.testimonial.author}
+                  </footer>
+                </blockquote>
+              </section>
+            )}
 
             {/* FAQ */}
             <section className="mt-12">

@@ -48,6 +48,8 @@ export interface Workshop {
   materialFiles?: WorkshopMaterialFile[];
   ozonUrl?: string;
   featured?: boolean;
+  /** Один отзыв для страницы курса (вместо общей ленты отзывов с Ozon). */
+  testimonial?: { text: string; author: string };
 }
 
 export const categoryLabels: Record<WorkshopCategory, string> = {
@@ -301,6 +303,45 @@ export const workshops: Workshop[] = [
     ],
     ozonUrl: "https://www.ozon.ru/",
   },
+  {
+    slug: "poyas-makrame-serdce",
+    title: "Пояс макраме «Сердце»",
+    subtitle: "Бесплатный мастер-класс: плетёный пояс с узором-сердцем",
+    category: "clothing",
+    level: "beginner",
+    price: 0,
+    // TODO: уточнить после ffprobe реальной длительности видео и обновить тут и в lessons ниже
+    duration: "45 мин",
+    lessonsCount: 1,
+    cover: "/images/workshops/cover-poyas-serdce.jpg",
+    previewImage: "/images/workshops/preview-poyas-serdce.jpg",
+    featured: true,
+    description:
+      "Бесплатный мастер-класс для знакомства с макраме: сплетите изящный пояс с узором-сердцем в одном видеоуроке. Идеальный первый проект, чтобы попробовать технику перед покупкой полного курса.",
+    whatYouLearn: [
+      "Базовые узлы макраме для пояса",
+      "Плетение узора-сердца",
+      "Равномерное натяжение нити",
+      "Финишная обработка концов и завязки",
+    ],
+    materials: [
+      "Хлопковый шнур 3 мм — 15 м",
+      "Кольцо или пряжка для пояса",
+      "Ножницы",
+      "Расчёска для бахромы",
+    ],
+    lessons: [
+      {
+        title: "Плетение пояса «Сердце»",
+        duration: "45 мин",
+        free: true,
+      },
+    ],
+    testimonial: {
+      text: "ПЛЕЙСХОЛДЕР — заменить на реальный отзыв клиентки после публикации мастер-класса.",
+      author: "Имя, город",
+    },
+  },
 ];
 
 export function getWorkshopBySlug(slug: string): Workshop | undefined {
@@ -316,6 +357,7 @@ export function getFeaturedWorkshops(): Workshop[] {
 }
 
 export function formatPrice(price: number): string {
+  if (price === 0) return "Бесплатно";
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
     currency: "RUB",

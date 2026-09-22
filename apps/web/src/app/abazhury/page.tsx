@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
@@ -9,6 +10,14 @@ import { SITE_URL } from "@/lib/site-url";
 import CategoryFilters from "../catalog/[category]/category-filters";
 
 export const dynamic = "force-dynamic";
+
+const heroImage = {
+  src: "/images/catalog/hero-lampshades-editorial.webp",
+  alt: "Купольный абажур из хлопкового макраме в интерьере при дневном свете",
+  width: 2172,
+  height: 724,
+};
+
 export const metadata: Metadata = {
   title: "Абажуры макраме ручной работы — выбрать и купить",
   description:
@@ -19,6 +28,18 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/abazhury`,
     description:
       "Ручное плетение для вашего интерьера. Модели, размеры и цены в каталоге.",
+    images: [
+      {
+        url: `${SITE_URL}${heroImage.src}`,
+        width: heroImage.width,
+        height: heroImage.height,
+        alt: heroImage.alt,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [`${SITE_URL}${heroImage.src}`],
   },
 };
 
@@ -46,21 +67,37 @@ export default async function LampshadesPage() {
           image: p.images[0],
         }))}
       />
-      <main className="bg-parchment text-espresso pt-32">
-        <section className="max-w-5xl mx-auto px-5 lg:px-12 pb-10">
-          <Link
-            href="/catalog/interior"
-            className="text-sm text-taupe underline"
-          >
-            Весь декор интерьера
-          </Link>
-          <h1 className="font-serif text-5xl lg:text-7xl mt-6 mb-6">
-            Абажуры макраме
-          </h1>
-          <p className="text-lg max-w-2xl leading-relaxed">
-            Плетёные абажуры ручной работы для дома и кафе. Сравните фотографии,
-            размеры и цены, чтобы выбрать модель для своего пространства.
-          </p>
+      <main className="bg-parchment text-espresso pt-[60px] lg:pt-[68px]">
+        <section className="relative overflow-hidden bg-espresso">
+          <div className="absolute inset-0">
+            <Image
+              src={heroImage.src}
+              alt={heroImage.alt}
+              fill
+              priority
+              unoptimized
+              sizes="100vw"
+              className="object-cover object-[69%_center]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-espresso/80 via-espresso/45 to-espresso/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-espresso/55 via-transparent to-transparent" />
+          </div>
+          <div className="relative z-10 max-w-[1440px] mx-auto px-5 lg:px-12 pt-20 pb-16 lg:pt-24 lg:pb-20">
+            <Link
+              href="/catalog/interior"
+              className="text-sm text-white/70 underline underline-offset-4 hover:text-white transition-colors"
+            >
+              Весь декор интерьера
+            </Link>
+            <h1 className="font-serif text-5xl lg:text-7xl text-white leading-[1.0] tracking-tight mt-6 mb-6">
+              Абажуры макраме
+            </h1>
+            <p className="text-lg text-white/80 max-w-xl leading-relaxed">
+              Плетёные абажуры ручной работы для дома и кафе. Сравните
+              фотографии, размеры и цены, чтобы выбрать модель для своего
+              пространства.
+            </p>
+          </div>
         </section>
         <CategoryFilters
           products={products}

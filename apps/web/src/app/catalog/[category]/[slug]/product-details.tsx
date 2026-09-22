@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
-import { ColorSwatches } from "@/components/stariva/color-indicator";
 import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
 import {
   Breadcrumb,
@@ -16,7 +15,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { parseMultipleColors } from "@/lib/colors";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 
@@ -94,7 +92,6 @@ export function ProductDetails({
   relatedProducts,
 }: ProductDetailsProps) {
   const [activeImage, setActiveImage] = useState(0);
-  const productColors = parseMultipleColors(product.color);
   const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior;
 
   return (
@@ -297,19 +294,6 @@ export function ProductDetails({
 
               {/* Features */}
               <div className="grid grid-cols-2 gap-3 mb-8">
-                {product.color && productColors.length > 0 && (
-                  <div className="flex flex-col items-center justify-center text-center p-4 bg-sand rounded-xl border border-espresso/6 col-span-2">
-                    <span className="label-caps text-[9px] text-taupe/60 mb-3">
-                      Цвет
-                    </span>
-                    <div className="flex flex-col items-center gap-2">
-                      <ColorSwatches colors={productColors} size="lg" />
-                      <span className="label-caps text-[11px] text-espresso leading-snug mt-1">
-                        {product.color}
-                      </span>
-                    </div>
-                  </div>
-                )}
                 {product.sizes && product.sizes.length > 0 && (
                   <div className="flex flex-col items-center text-center p-4 bg-sand rounded-xl border border-espresso/6 col-span-2">
                     <span className="label-caps text-[9px] text-taupe/60 mb-2">

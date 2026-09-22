@@ -44,10 +44,10 @@ export async function generateMetadata({
       url: `${BASE_URL}${url}`,
       images: [
         {
-          url: `${BASE_URL}${category.image}`,
-          width: 1200,
-          height: 800,
-          alt: category.name,
+          url: `${BASE_URL}${category.hero.image}`,
+          width: category.hero.width,
+          height: category.hero.height,
+          alt: category.hero.alt,
         },
       ],
     },
@@ -55,7 +55,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: [`${BASE_URL}${category.image}`],
+      images: [`${BASE_URL}${category.hero.image}`],
     },
   };
 }
@@ -91,20 +91,24 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             : `${BASE_URL}${p.images[0]}`,
         }))}
       />
-      <main className="min-h-screen bg-parchment">
+      <main className="min-h-screen bg-parchment pt-[60px] lg:pt-[68px]">
         {/* ── Category Hero ── */}
         <section className="relative overflow-hidden bg-espresso">
           <div className="absolute inset-0">
             <Image
-              src={category.image}
-              alt={category.name}
+              src={category.hero.image}
+              alt={category.hero.alt}
               fill
-              className="object-cover opacity-40"
+              className="object-cover"
+              style={{ objectPosition: category.hero.objectPosition }}
               priority
               sizes="100vw"
+              unoptimized
             />
+            <div className="absolute inset-0 bg-gradient-to-r from-espresso/80 via-espresso/45 to-espresso/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-espresso/55 via-transparent to-transparent" />
           </div>
-          <div className="relative z-10 max-w-[1440px] mx-auto px-5 lg:px-12 pt-32 pb-16 lg:pt-40 lg:pb-20">
+          <div className="relative z-10 max-w-[1440px] mx-auto px-5 lg:px-12 pt-20 pb-16 lg:pt-24 lg:pb-20">
             {/* Breadcrumb */}
             <nav
               className="flex items-center gap-2 text-sm text-white/50 mb-8"
@@ -131,7 +135,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                 <h1 className="font-serif text-5xl lg:text-7xl text-white leading-[1.0] tracking-tight">
                   {category.name}
                 </h1>
-                <p className="text-white/60 mt-4 max-w-md text-base leading-relaxed">
+                <p className="text-white/80 mt-4 max-w-md text-base leading-relaxed">
                   {category.description}
                 </p>
               </div>
@@ -140,7 +144,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                 {category.subcategories.map((sub) => (
                   <span
                     key={sub.slug}
-                    className="px-4 py-2 rounded-full border border-white/20 text-white/60 label-caps text-[11px]"
+                    className="px-4 py-2 rounded-full border border-white/30 bg-espresso/35 backdrop-blur-sm text-white/85 label-caps text-[11px]"
                   >
                     {sub.name}
                   </span>
