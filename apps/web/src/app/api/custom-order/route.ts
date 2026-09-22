@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
-import { describeSelection, formatRub } from "@/lib/custom-order/pricing";
+import { formatRub } from "@/lib/custom-order/pricing";
 
 export const runtime = "nodejs";
 
@@ -24,12 +24,15 @@ function buildMessage(
   data: z.infer<typeof fieldsSchema>,
   hasPhoto: boolean,
 ): string {
-  const selection = describeSelection({
-    productType: data.productType,
-    size: data.size,
-    color: data.color,
-    complexity: data.complexity,
-  });
+  // Клиенты присылают подписи («Одежда», «По меркам»), а не id калькулятора
+  const selection = [
+    data.productType ? `Тип: ${data.productType}` : null,
+    data.size ? `Размер: ${data.size}` : null,
+    data.color ? `Цвет: ${data.color}` : null,
+    data.complexity ? `Сложность: ${data.complexity}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   const lines = [
     "🧶 <b>Новая заявка на индивидуальный заказ</b>",
