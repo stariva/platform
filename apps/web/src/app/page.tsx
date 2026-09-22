@@ -6,7 +6,6 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Hero } from "@/components/stariva/hero";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
-import { Marquee } from "@/components/stariva/marquee";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { Process } from "@/components/stariva/process";
 import { Reviews } from "@/components/stariva/reviews";
@@ -130,9 +129,6 @@ export default async function Page() {
           Одежда макраме — выбрать изделие
         </Link>
       </nav>
-
-      {/* ── Marquee strip ── */}
-      <Marquee />
 
       {/* ── Three directions ── */}
       <section className="py-24 lg:py-32">
