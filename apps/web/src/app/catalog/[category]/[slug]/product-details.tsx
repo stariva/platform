@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
+import { MadeToOrder } from "@/components/stariva/made-to-order";
 import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
 import {
   Breadcrumb,
@@ -15,6 +16,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { getMadeToOrder } from "@/lib/made-to-order";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 
@@ -50,7 +52,7 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
   clothes: [
     {
       q: "Как подобрать размер?",
-      a: "В описании каждого изделия указаны доступные размеры. Если сомневаетесь — напишите нам в Telegram, поможем подобрать по вашим меркам или сошьём на заказ.",
+      a: "Каждую вещь плетём под заказ: выберите стандартный размер или нажмите «Заказать по своим меркам» и укажите рост, обхват груди, талии и бёдер. Мастер проверит мерки и согласует детали до начала работы.",
     },
     {
       q: "Как стирать одежду из макраме?",
@@ -61,8 +63,8 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
       a: "Изделия из натурального хлопка можно носить на пляже и у бассейна. После контакта с морской водой или хлором прополощите в пресной воде и высушите.",
     },
     {
-      q: "Возможен ли индивидуальный заказ?",
-      a: "Да, мы создаём изделия по вашим меркам и пожеланиям. Свяжитесь с нами в Telegram или по телефону для обсуждения деталей.",
+      q: "Можно ли выбрать другой цвет?",
+      a: "Да. Любую модель сплетём в другом цвете шнура — выберите оттенок в карточке товара, точный цвет согласуем перед плетением. Изготовление занимает 7–21 день.",
     },
   ],
   bags: [
@@ -93,6 +95,8 @@ export function ProductDetails({
 }: ProductDetailsProps) {
   const [activeImage, setActiveImage] = useState(0);
   const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior;
+  const madeToOrder = getMadeToOrder(categorySlug);
+  const productUrl = `https://stariva.ru/catalog/${categorySlug}/${product.slug}`;
 
   return (
     <main className="min-h-screen bg-parchment">
@@ -292,27 +296,15 @@ export function ProductDetails({
                 {product.shortDescription}
               </p>
 
-              {/* Features */}
-              <div className="grid grid-cols-2 gap-3 mb-8">
-                {product.sizes && product.sizes.length > 0 && (
-                  <div className="flex flex-col items-center text-center p-4 bg-sand rounded-xl border border-espresso/6 col-span-2">
-                    <span className="label-caps text-[9px] text-taupe/60 mb-2">
-                      Размеры
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 justify-center">
-                      {product.sizes.map((s) => (
-                        <span
-                          key={s}
-                          className="px-2.5 py-1 rounded-full bg-espresso/8 text-espresso label-caps text-[10px]"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {product.dimensions && (
-                  <div className="flex flex-col items-center text-center p-4 bg-sand rounded-xl border border-espresso/6">
+              {madeToOrder ? (
+                <MadeToOrder
+                  product={product}
+                  config={madeToOrder}
+                  productUrl={productUrl}
+                />
+              ) : (
+                product.dimensions && (
+                  <div className="flex flex-col items-center text-center p-4 bg-sand rounded-xl border border-espresso/6 mb-8">
                     <span className="label-caps text-[9px] text-taupe/60 mb-1">
                       Размеры
                     </span>
@@ -320,8 +312,8 @@ export function ProductDetails({
                       {product.dimensions}
                     </span>
                   </div>
-                )}
-              </div>
+                )
+              )}
 
               {/* CTA Buttons */}
               <div className="space-y-3 mt-auto">

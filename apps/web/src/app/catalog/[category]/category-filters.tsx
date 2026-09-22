@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getMadeToOrder } from "@/lib/made-to-order";
 import type { Category, Product, ProductSubcategory } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 
@@ -156,6 +157,8 @@ function ProductCard({
   index: number;
   categorySlug: string;
 }) {
+  const madeToOrder = getMadeToOrder(categorySlug);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -223,6 +226,11 @@ function ProductCard({
             )}
           </div>
         </div>
+        {madeToOrder && (
+          <p className="mt-1.5 label-caps text-[9px] text-terracotta/90">
+            {madeToOrder.badge}
+          </p>
+        )}
       </Link>
     </motion.div>
   );
