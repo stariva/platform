@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,6 +6,7 @@ import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, PersonJsonLd } from "@/components/stariva/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "О бренде Stariva — мастерская ручного макраме",
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/about`,
     images: [
       {
-        url: `${BASE_URL}/images/about/hero-founder.jpg`,
-        width: 1200,
-        height: 800,
+        url: `${BASE_URL}/images/about/hero-founder-editorial.webp`,
+        width: 1672,
+        height: 941,
         alt: "Ольга Карпычева — мастер Stariva",
       },
     ],
@@ -110,21 +110,22 @@ export default function AboutPage() {
         {/* Full-bleed image */}
         <div className="absolute inset-0">
           <Image
-            src="/images/about/hero-founder.jpg"
+            src="/images/about/hero-founder-editorial.webp"
             alt="Ольга Карпычева в мастерской"
             fill
             priority
-            className="object-cover object-center"
+            unoptimized
+            className="object-cover object-[70%_center] lg:object-center"
             sizes="100vw"
           />
           {/* Bottom-up gradient for text legibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-espresso/80 via-espresso/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-espresso/90 via-espresso/45 to-transparent lg:from-espresso/80 lg:via-espresso/20" />
           {/* Top thin gradient to blend with header */}
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-espresso/30 to-transparent" />
         </div>
 
         {/* Content pinned to bottom */}
-        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-14 pb-16 lg:pb-24 pt-[100px]">
+        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-14 pb-16 lg:pb-24 pt-[400px] sm:pt-[480px] lg:pt-[100px]">
           <div className="max-w-3xl">
             <p className="label-caps text-linen/70 mb-5 tracking-widest">
               О бренде
@@ -187,7 +188,7 @@ export default function AboutPage() {
       {/* ── Atelier image full-bleed ── */}
       <section className="relative aspect-[16/7] overflow-hidden">
         <Image
-          src="/images/about/atelier-wide.jpg"
+          src="/images/about/atelier-wide-editorial.webp"
           alt="Мастерская Stariva"
           fill
           className="object-cover object-center"
@@ -248,7 +249,7 @@ export default function AboutPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="relative aspect-[3/4] rounded-xl overflow-hidden col-span-1">
                 <Image
-                  src="/images/about/hands-knotting.jpg"
+                  src="/images/about/hands-knotting-editorial.webp"
                   alt="Руки мастерицы, завязывающей узлы макраме"
                   fill
                   className="object-cover"
@@ -257,7 +258,7 @@ export default function AboutPage() {
               </div>
               <div className="relative aspect-[3/4] rounded-xl overflow-hidden col-span-1 mt-12">
                 <Image
-                  src="/images/about/cotton-spools.jpg"
+                  src="/images/about/cotton-spools-editorial.webp"
                   alt="Катушки натурального хлопкового шнура"
                   fill
                   className="object-cover"
@@ -355,7 +356,7 @@ export default function AboutPage() {
       {/* ── Finished pieces full-bleed ── */}
       <section className="relative aspect-[16/7] overflow-hidden">
         <Image
-          src="/images/about/finished-pieces.jpg"
+          src="/images/about/finished-pieces-editorial.webp"
           alt="Изделия Stariva — абажур, панно, платье"
           fill
           className="object-cover object-center"
