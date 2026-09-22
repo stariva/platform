@@ -6,6 +6,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  ConsentCheckbox,
+  PD_CONSENT_ERROR,
+  PersonalDataConsentLabel,
+} from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -20,6 +25,8 @@ import { signIn } from "@/lib/auth/client";
 
 const magicLinkSchema = z.object({
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
+  // Ссылка может создать новый аккаунт, поэтому согласие нужно и здесь.
+  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
 type MagicLinkFormValues = z.infer<typeof magicLinkSchema>;
@@ -39,7 +46,7 @@ export function MagicLinkForm() {
 
   const form = useForm<MagicLinkFormValues>({
     resolver: zodResolver(magicLinkSchema),
-    defaultValues: { email: "" },
+    defaultValues: { email: "", personalDataConsent: false },
   });
 
   async function onSubmit(data: MagicLinkFormValues) {
@@ -98,6 +105,19 @@ export function MagicLinkForm() {
               </FormControl>
               <FormMessage />
             </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="personalDataConsent"
+          render={({ field, fieldState }) => (
+            <ConsentCheckbox
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              error={fieldState.error?.message}
+            >
+              <PersonalDataConsentLabel />
+            </ConsentCheckbox>
           )}
         />
         <Button

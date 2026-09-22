@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth/client";
@@ -119,7 +120,8 @@ export function WorkshopPurchase({
 
   // Покупка
   return (
-    <Button
+    <>
+      <Button
       onClick={handleBuy}
       disabled={buying}
       className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6 rounded-2xl mb-3 text-base"
@@ -134,6 +136,8 @@ export function WorkshopPurchase({
         : price === 0
           ? "Смотреть бесплатно"
           : `Купить за ${formatPrice(price)}`}
-    </Button>
+      </Button>
+      {price > 0 ? <OfferAcceptanceNote className="mb-3" /> : null}
+    </>
   );
 }

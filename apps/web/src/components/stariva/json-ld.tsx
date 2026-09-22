@@ -426,7 +426,7 @@ export function PersonJsonLd() {
     "@type": "Person",
     "@id": `${BASE_URL}/#founder`,
     name: "Ольга Карпычева",
-    alternateName: "Olga Kapycheva",
+    alternateName: "Olga Karpycheva",
     jobTitle: "Мастер макраме",
     description:
       "Мастер ручного макраме из Подмосковья. Создаёт абажуры, одежду и декор из натурального хлопка с 2018 года.",

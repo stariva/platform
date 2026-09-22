@@ -13,23 +13,24 @@ export function ResortCtaDownload() {
             className="font-serif text-near-black leading-tight mb-6"
             style={{ fontSize: "clamp(28px, 4vw, 52px)" }}
           >
-            Скачайте готовое КП
+            Готовое КП
             <br />
             для вашего руководства
           </h2>
           <p className="text-dark-grey leading-relaxed mb-10 text-[15px] max-w-lg mx-auto">
-            PDF с ценами, фотографиями изделий, сроками и условиями работы.
-            Готов к отправке в WhatsApp, Telegram или по email — один клик.
+            Цены, фотографии, сроки и условия работы на одной странице.
+            Сохраните в PDF одной кнопкой и отправьте в WhatsApp, Telegram или по email.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="/api/kp/resort"
-              download="stariva-kp-bazy-otdykha.pdf"
+              target="_blank"
+              rel="noopener"
               className="inline-flex items-center justify-center gap-3 bg-terracotta text-parchment px-8 py-4 rounded-full label-caps-md text-[12px] hover:bg-terracotta-dark transition-colors"
             >
               <DownloadIcon />
-              Скачать КП (PDF)
+              Открыть КП
             </a>
             <a
               href="https://t.me/Olga_Stariva"

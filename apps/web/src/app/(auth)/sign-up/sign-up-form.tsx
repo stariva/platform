@@ -6,6 +6,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  ConsentCheckbox,
+  PD_CONSENT_ERROR,
+  PersonalDataConsentLabel,
+} from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,6 +28,7 @@ const signUpSchema = z.object({
   name: z.string().trim().min(1, "Введите имя"),
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
   password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -36,7 +42,12 @@ export function SignUpForm() {
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      personalDataConsent: false,
+    },
   });
 
   async function onSubmit(data: SignUpFormValues) {
@@ -155,6 +166,19 @@ export function SignUpForm() {
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="personalDataConsent"
+          render={({ field, fieldState }) => (
+            <ConsentCheckbox
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              error={fieldState.error?.message}
+            >
+              <PersonalDataConsentLabel />
+            </ConsentCheckbox>
+          )}
+        />
         <Button
           type="submit"
           disabled={loading}
@@ -163,13 +187,9 @@ export function SignUpForm() {
           {loading ? "Создаём аккаунт…" : "Зарегистрироваться"}
         </Button>
         <p className="text-xs text-taupe leading-relaxed text-center">
-          Регистрируясь, вы соглашаетесь с{" "}
+          Регистрируясь, вы принимаете условия{" "}
           <a href="/offer" className="text-terracotta hover:underline">
-            условиями оферты
-          </a>{" "}
-          и{" "}
-          <a href="/privacy-policy" className="text-terracotta hover:underline">
-            политикой конфиденциальности
+            публичной оферты
           </a>
           .
         </p>

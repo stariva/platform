@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { resolveCatalogItems } from "@/lib/commerce/catalog";
 import { attachPaymentId, createProductOrder } from "@/lib/commerce/orders";
 import { checkout, isOzonDeliveryConfigured } from "@/lib/ozon-delivery/client";
+import { LEGAL_VERSION } from "@/lib/legal";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 
 export const runtime = "nodejs";
@@ -28,6 +29,9 @@ const bodySchema = z.object({
     .min(1)
     .max(100),
   delivery: deliverySchema,
+  // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ) и акцепт оферты.
+  personalDataConsent: z.literal(true),
+  offerAccepted: z.literal(true),
 });
 
 function siteUrl(request: NextRequest): string {
@@ -97,7 +101,13 @@ export async function POST(request: NextRequest) {
       amountKopecks: order.amountTotal,
       description: `Заказ Stariva №${order.id.slice(0, 8)}`,
       returnUrl: `${siteUrl(request)}/order/${order.id}?payment=success`,
-      metadata: { orderId: order.id, kind: "product" },
+      metadata: {
+        orderId: order.id,
+        kind: "product",
+        // Фиксация согласия и акцепта: редакция документов на момент заказа.
+        pdConsent: LEGAL_VERSION,
+        offerAccepted: LEGAL_VERSION,
+      },
       idempotenceKey: order.id,
     });
 
