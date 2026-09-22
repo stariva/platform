@@ -12,9 +12,10 @@ const directions = [
     label: "Одежда",
     sublabel: "Платья · Топы · Накидки",
     href: "/catalog/clothes",
-    image: "/images/home/hero-clothes.png",
-    objectPosition: "center 20%",
-    accent: "#b85c38",
+    image: "/images/home/hero-clothes-editorial.webp",
+    imageAlt: "Платье из хлопкового макраме в естественном свете дворика",
+    objectPosition: "64% 20%",
+    accent: "#edbea2",
     tag: "Летняя коллекция 2026",
     headline: ["Одежда,", "сотканная", "вручную"],
     desc: "Платья и топы из натурального хлопка — каждое изделие уникально и создаётся под вас.",
@@ -25,9 +26,10 @@ const directions = [
     label: "Интерьер",
     sublabel: "Абажуры · Вигвамы · Мобили",
     href: "/catalog/interior",
-    image: "/images/home/hero-interior.png",
-    objectPosition: "center center",
-    accent: "#7a6e5f",
+    image: "/images/home/hero-interior-editorial.webp",
+    imageAlt: "Плетёный хлопковый абажур в интерьере с мягким дневным светом",
+    objectPosition: "71% center",
+    accent: "#e0d5c5",
     tag: "Для вашего дома",
     headline: ["Свет и тепло", "в каждом", "углу"],
     desc: "Абажуры ручного плетения — превращают свет в тёплую атмосферу, а пространство — в уют.",
@@ -38,9 +40,10 @@ const directions = [
     label: "Декор",
     sublabel: "Панно · Плейсменты · Кашпо",
     href: "/catalog/interior",
-    image: "/images/home/hero-decor.png",
-    objectPosition: "center center",
-    accent: "#8c7b6b",
+    image: "/images/home/hero-decor-editorial.webp",
+    imageAlt: "Панно макраме над деревянной скамьёй у окна",
+    objectPosition: "72% center",
+    accent: "#e4cebb",
     tag: "Детали, которые важны",
     headline: ["Декор, который", "расскажет", "вашу историю"],
     desc: "Панно, плейсменты и кашпо из хлопка — детали, которые завершают образ любого интерьера.",
@@ -65,7 +68,7 @@ export function Hero() {
 
   return (
     <section className="relative h-[100dvh] min-h-[640px] max-h-[1080px] overflow-hidden bg-espresso">
-      {/* Background images — all preloaded, cross-fade */}
+      {/* WebP exports preserve cotton detail without recompressing the photos. */}
       {directions.map((dir, i) => (
         <motion.div
           key={dir.id}
@@ -76,13 +79,12 @@ export function Hero() {
         >
           <Image
             src={dir.image}
-            alt={dir.label}
+            alt={dir.imageAlt}
             fill
             className="object-cover"
             style={{ objectPosition: dir.objectPosition }}
             priority={i === 0}
             sizes="100vw"
-            quality={100}
             unoptimized
           />
         </motion.div>
