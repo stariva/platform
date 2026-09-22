@@ -90,12 +90,12 @@ export function Hero() {
         </motion.div>
       ))}
 
-      {/* Overlay: only bottom gradient + subtle top vignette, no heavy dark */}
+      {/* A stronger mobile gradient keeps text legible over detailed textiles. */}
       <div className="absolute inset-0 z-[1] pointer-events-none">
         {/* top vignette */}
         <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-espresso/40 to-transparent" />
         {/* bottom gradient for text legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-espresso/75 via-espresso/20 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[85%] lg:h-[60%] bg-gradient-to-t from-espresso/90 via-espresso/55 via-70% to-transparent lg:from-espresso/75 lg:via-espresso/20 lg:via-50%" />
       </div>
 
       {/* Content */}
