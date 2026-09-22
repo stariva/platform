@@ -350,11 +350,12 @@ export default async function Page() {
             {/* Left: image */}
             <div className="relative aspect-[4/3] lg:aspect-auto lg:min-h-[480px] overflow-hidden">
               <Image
-                src="/images/workshops/hero-workshops.jpg"
+                src="/images/workshops/hero-workshops-editorial.webp"
                 alt="Мастер-классы по макраме"
                 fill
-                className="object-cover"
+                className="object-cover object-[72%_center]"
                 sizes="(max-width: 1024px) 100vw, 50vw"
+                unoptimized
               />
               <div className="absolute inset-0 bg-espresso/20" />
             </div>

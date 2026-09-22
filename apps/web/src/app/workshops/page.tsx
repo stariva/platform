@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -6,6 +5,7 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Badge } from "@/components/ui/badge";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import {
   categoryLabels,
   formatPrice,
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/workshops`,
     images: [
       {
-        url: `${BASE_URL}/images/workshops/hero-workshops.jpg`,
-        width: 1200,
-        height: 630,
+        url: `${BASE_URL}/images/workshops/hero-workshops-editorial.webp`,
+        width: 2172,
+        height: 724,
         alt: "Мастер-классы по макраме Stariva",
       },
     ],
@@ -162,7 +162,7 @@ export default function WorkshopsPage() {
   const _rest = workshops.filter((w) => !w.featured);
 
   return (
-    <div className="min-h-screen bg-parchment text-espresso">
+    <div className="min-h-screen bg-parchment text-espresso pt-[60px] lg:pt-[68px]">
       <Header variant="solid" />
       <BreadcrumbJsonLd
         items={[
@@ -181,16 +181,18 @@ export default function WorkshopsPage() {
       />
 
       {/* Hero */}
-      <section className="relative h-[420px] md:h-[500px] overflow-hidden">
+      <section className="relative h-[520px] md:h-[500px] overflow-hidden">
         <Image
-          src="/images/workshops/hero-workshops.jpg"
-          alt="Мастер-классы Stariva"
+          src="/images/workshops/hero-workshops-editorial.webp"
+          alt="Мастерица завязывает узлы макраме за деревянным столом у окна"
           fill
           priority
+          unoptimized
           sizes="100vw"
-          className="object-cover"
+          className="object-cover object-[72%_center]"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-espresso/70 via-espresso/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-espresso/70 via-espresso/10 to-transparent md:from-espresso/30 md:via-transparent" />
         <div className="absolute inset-0 flex flex-col justify-end pb-14 md:pb-20 px-6 md:px-12 lg:px-20 max-w-5xl">
           <p className="label-caps text-linen/70 mb-4 tracking-widest">
             Видео-курсы
