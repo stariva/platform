@@ -8,6 +8,12 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  ConsentCheckbox,
+  OfferAcceptanceNote,
+  PD_CONSENT_ERROR,
+  PersonalDataConsentLabel,
+} from "@/components/stariva/consent-checkbox";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
@@ -62,6 +68,7 @@ const contactFormSchema = z.object({
     .email("Некорректный email")
     .optional()
     .or(z.literal("")),
+  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
 const checkoutCreateResponseSchema = z.object({
@@ -91,7 +98,12 @@ export default function CheckoutPage() {
 
   const contactForm = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
-    defaultValues: { name: "", phone: "", email: "" },
+    defaultValues: {
+      name: "",
+      phone: "",
+      email: "",
+      personalDataConsent: false,
+    },
   });
 
   const [citySearch, setCitySearch] = useState("");
@@ -262,6 +274,8 @@ export default function CheckoutPage() {
             quantity: i.quantity,
           })),
           delivery,
+          personalDataConsent: contact?.personalDataConsent === true,
+          offerAccepted: true,
         }),
       });
       const data = await res.json();
@@ -300,6 +314,8 @@ export default function CheckoutPage() {
             quantity: item.quantity,
           })),
           delivery,
+          personalDataConsent: contact?.personalDataConsent === true,
+          offerAccepted: true,
         }),
       });
       const data: unknown = await res.json();
@@ -425,6 +441,19 @@ export default function CheckoutPage() {
                       </FormControl>
                       <FormMessage />
                     </FormItem>
+                  )}
+                />
+                <FormField
+                  control={contactForm.control}
+                  name="personalDataConsent"
+                  render={({ field, fieldState }) => (
+                    <ConsentCheckbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      error={fieldState.error?.message}
+                    >
+                      <PersonalDataConsentLabel />
+                    </ConsentCheckbox>
                   )}
                 />
                 <Button
@@ -581,6 +610,7 @@ export default function CheckoutPage() {
               >
                 {submitting ? <Spinner /> : "Оплатить"}
               </Button>
+              <OfferAcceptanceNote action="Оплатить" />
             </div>
           )}
         </div>

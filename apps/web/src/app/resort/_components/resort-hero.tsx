@@ -52,11 +52,12 @@ export function ResortHero() {
           <div className="flex flex-wrap gap-4">
             <a
               href="/api/kp/resort"
-              download="stariva-kp-bazy-otdykha.pdf"
+              target="_blank"
+              rel="noopener"
               className="inline-flex items-center gap-3 bg-terracotta text-parchment px-7 py-3.5 rounded-full label-caps-md hover:bg-terracotta-dark transition-colors"
             >
               <DownloadIcon />
-              Скачать КП (PDF)
+              Открыть КП
             </a>
             <a
               href="https://t.me/Olga_Stariva"

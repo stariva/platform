@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Suspense } from "react";
 import { ChatWidget } from "@/components/stariva/chat-widget";
+import { CookieBanner } from "@/components/stariva/cookie-banner";
 import {
   OrganizationJsonLd,
   WebSiteJsonLd,
@@ -122,6 +123,7 @@ export default function RootLayout({
           <ChatWidget />
         </CartProvider>
         <Toaster position="top-center" richColors />
+        <CookieBanner />
         {baseEnv.NODE_ENV === "production" && (
           <Suspense fallback={null}>
             <Metrika />

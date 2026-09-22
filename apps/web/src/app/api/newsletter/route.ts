@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,13 @@ const bodySchema = z.object({
   email: z.string().email("Укажите корректный email").max(200),
   // Откуда пришла подписка — блог, футер, поп-ап и т.д.
   source: z.string().max(60).optional(),
+  // Согласие на обработку ПДн (152-ФЗ) и на получение рекламы (ст. 18 38-ФЗ).
+  personalDataConsent: z.literal(true, {
+    error: "Нужно согласие на обработку персональных данных",
+  }),
+  marketingConsent: z.literal(true, {
+    error: "Нужно согласие на получение рассылки",
+  }),
 });
 
 function escapeHtml(text: string): string {
@@ -29,6 +37,7 @@ async function sendToTelegram(email: string, source?: string): Promise<void> {
     "",
     `<b>Email:</b> ${escapeHtml(email)}`,
     source ? `<b>Источник:</b> ${escapeHtml(source)}` : "",
+    `<i>Согласия на обработку ПДн и рассылку получены, редакция ${LEGAL_VERSION}, ${new Date().toISOString()}</i>`,
   ].filter((l) => l !== "");
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

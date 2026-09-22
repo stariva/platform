@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
 import { formatRub } from "@/lib/custom-order/pricing";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,10 @@ const fieldsSchema = z.object({
   budget: z.string().max(100).optional(),
   estimateMin: z.coerce.number().optional(),
   estimateMax: z.coerce.number().optional(),
+  // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ).
+  personalDataConsent: z.literal("true", {
+    error: "Нужно согласие на обработку персональных данных",
+  }),
 });
 
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8 МБ — лимит Telegram sendPhoto
@@ -47,6 +52,8 @@ function buildMessage(
     "",
     "<b>Описание:</b>",
     escapeHtml(data.description),
+    "",
+    `<i>Согласие на обработку ПДн дано, редакция ${LEGAL_VERSION}, ${new Date().toISOString()}</i>`,
     hasPhoto ? "" : "",
   ];
 
@@ -164,6 +171,7 @@ export async function POST(request: NextRequest) {
       "budget",
       "estimateMin",
       "estimateMax",
+      "personalDataConsent",
     ].map((key) => [key, formData.get(key) ?? undefined]),
   );
 

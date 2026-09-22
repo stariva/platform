@@ -735,7 +735,15 @@ export function ChatWidget() {
                 )}
               </div>
               <p className="text-taupe text-[10.5px] text-center mt-2 leading-tight">
-                Консультирую только по изделиям и услугам Stariva
+                Отвечает ИИ-помощник, только по изделиям и услугам Stariva. Не
+                указывайте в чате телефон, адрес и другие личные данные.{" "}
+                <a
+                  href="/privacy-policy"
+                  target="_blank"
+                  className="underline underline-offset-2 hover:text-espresso"
+                >
+                  Политика конфиденциальности
+                </a>
               </p>
             </form>
           </motion.div>

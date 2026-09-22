@@ -1,3 +1,5 @@
+import { SELLER } from "@/lib/legal";
+import { CookieSettingsLink } from "./cookie-banner";
 import {
   AvitoIcon,
   LivemasterIcon,
@@ -188,7 +190,9 @@ export function Footer() {
         {/* Legal */}
         <div className="mt-16 pt-8 border-t border-parchment/15">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 text-[11px] leading-relaxed text-parchment/55">
-            <div>СЗ Карпычева О. А. ИНН: 502480197143</div>
+            <div>
+              {SELLER.shortName}, ИНН {SELLER.inn} — самозанятый (НПД)
+            </div>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               <a
                 href="/privacy-policy"
@@ -205,6 +209,7 @@ export function Footer() {
               >
                 Согласие на обработку персональных данных
               </a>
+              <CookieSettingsLink className="hover:text-linen transition-colors text-left" />
             </div>
           </div>
           <div className="mt-4 text-[11px] text-parchment/40">
