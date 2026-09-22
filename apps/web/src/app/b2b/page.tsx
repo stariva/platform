@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,6 +6,7 @@ import { Header } from "@/components/stariva/header";
 import { PhoneIcon, TelegramIcon } from "@/components/stariva/icons";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Декор для кафе и ресторанов — корпоративные заказы Stariva",
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/b2b`,
     images: [
       {
-        url: `${BASE_URL}/images/b2b/hero-cafe.png`,
-        width: 1200,
-        height: 630,
+        url: `${BASE_URL}/images/b2b/hero-cafe-editorial.webp`,
+        width: 1672,
+        height: 941,
         alt: "Макраме-декор для кафе — Stariva",
       },
     ],
@@ -68,7 +68,9 @@ const advantages = [
 const useCases = [
   {
     label: "Кафе и кофейни",
-    image: "/images/b2b/hero-cafe.png",
+    image: "/images/b2b/hero-cafe-editorial.webp",
+    alt: "Хлопковые абажуры макраме над столиками светлой кофейни",
+    objectPosition: "65% center",
     items: [
       "Абажуры над барной стойкой",
       "Панно как фоновый декор",
@@ -78,7 +80,9 @@ const useCases = [
   },
   {
     label: "Рестораны",
-    image: "/images/b2b/project-restaurant.png",
+    image: "/images/b2b/project-restaurant-editorial.webp",
+    alt: "Плетёная перегородка макраме рядом с сервированным столом ресторана",
+    objectPosition: "60% center",
     items: [
       "Декоративные перегородки",
       "Крупноформатные панно",
@@ -88,7 +92,9 @@ const useCases = [
   },
   {
     label: "Отели и лобби",
-    image: "/images/b2b/project-hotel.png",
+    image: "/images/b2b/project-hotel-editorial.webp",
+    alt: "Панно из натурального хлопка за деревянной стойкой отеля",
+    objectPosition: "center 45%",
     items: [
       "Арт-объекты для холла",
       "Декор номеров и сьютов",
@@ -98,7 +104,9 @@ const useCases = [
   },
   {
     label: "Офисы и коворкинги",
-    image: "/images/b2b/project-office.png",
+    image: "/images/b2b/project-office-editorial.webp",
+    alt: "Светлый офис с рабочими столами и подвесными перегородками макраме",
+    objectPosition: "center center",
     items: [
       "Акустические панели",
       "Зонирование open-space",
@@ -167,7 +175,7 @@ const faqItems = [
 
 export default function B2BPage() {
   return (
-    <div className="bg-parchment text-espresso">
+    <div className="bg-parchment text-espresso pt-[60px] lg:pt-[68px]">
       <Header variant="solid" />
       <BreadcrumbJsonLd
         items={[
@@ -177,20 +185,22 @@ export default function B2BPage() {
       />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[88vh] flex items-end overflow-hidden">
-        <div className="absolute inset-0">
+      <section className="relative min-h-[88vh] flex items-end overflow-hidden bg-espresso">
+        <div className="absolute inset-x-0 top-0 h-[480px] md:h-full">
           <Image
-            src="/images/b2b/hero-cafe.png"
-            alt="Макраме-декор в кафе"
+            src="/images/b2b/hero-cafe-editorial.webp"
+            alt="Абажуры ручного плетения в кафе с деревянной мебелью и дневным светом из окна"
             fill
             priority
-            className="object-cover object-center"
+            unoptimized
+            className="object-cover object-[66%_center] lg:object-center"
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-espresso/85 via-espresso/30 to-espresso/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-espresso via-espresso/15 to-transparent md:from-espresso/90 md:via-espresso/40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-espresso/20 to-transparent md:from-espresso/55 md:via-espresso/10" />
         </div>
 
-        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-14 pb-16 lg:pb-24 pt-[100px]">
+        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-14 pb-16 lg:pb-24 pt-[280px] md:pt-[100px]">
           <div className="max-w-3xl">
             <p className="label-caps text-linen/60 mb-5 tracking-widest">
               Для бизнеса
@@ -283,12 +293,14 @@ export default function B2BPage() {
                 key={uc.label}
                 className="group rounded-2xl overflow-hidden border border-espresso/8 hover:border-espresso/20 transition-all duration-300 hover:shadow-[0_8px_40px_rgba(22,21,19,0.08)]"
               >
-                <div className="relative h-52 overflow-hidden bg-sand">
+                <div className="relative aspect-[16/10] overflow-hidden bg-sand">
                   <Image
                     src={uc.image}
-                    alt={uc.label}
+                    alt={uc.alt}
                     fill
+                    unoptimized
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    style={{ objectPosition: uc.objectPosition }}
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-espresso/50 to-transparent" />
