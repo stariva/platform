@@ -50,7 +50,8 @@ const validNonNegativePrice = z.string().refine(
 // не задана min_price/marketing_seller_price — приводим пустую строку к
 // undefined до валидации, иначе один такой товар роняет парсинг всего ответа.
 const optionalNonNegativePrice = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
   validNonNegativePrice.optional(),
 );
 

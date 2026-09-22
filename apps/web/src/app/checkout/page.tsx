@@ -96,9 +96,7 @@ export default function CheckoutPage() {
 
   const [citySearch, setCitySearch] = useState("");
   const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
-  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(
-    null,
-  );
+  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(null);
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[] | null>(null);
   const [pointsExpanded, setPointsExpanded] = useState(false);
   const [selectedPointId, setSelectedPointId] = useState<string>("");
@@ -459,9 +457,7 @@ export default function CheckoutPage() {
                     placeholder="Начните вводить город"
                     value={citySearch}
                     onChange={(e) => setCitySearch(e.target.value)}
-                    onBlur={() =>
-                      setTimeout(() => setCitySuggestions([]), 150)
-                    }
+                    onBlur={() => setTimeout(() => setCitySuggestions([]), 150)}
                     autoComplete="off"
                   />
                   {citySuggestions.length > 0 && (
@@ -501,8 +497,8 @@ export default function CheckoutPage() {
                     <Spinner className="text-taupe" />
                   ) : nearbyPoints.length === 0 ? (
                     <p className="text-taupe text-xs">
-                      Пунктов выдачи Ozon рядом не нашлось — попробуйте
-                      выбрать другой город
+                      Пунктов выдачи Ozon рядом не нашлось — попробуйте выбрать
+                      другой город
                     </p>
                   ) : (
                     <>
