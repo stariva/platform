@@ -10,8 +10,6 @@ export function initAuth<
   baseUrl: string;
   productionUrl: string;
   secret: string | undefined;
-  googleClientId?: string;
-  googleClientSecret?: string;
   sendEmail?: (data: {
     email: string;
     otp?: string;
@@ -134,16 +132,8 @@ export function initAuth<
       }),
       ...(options.extraPlugins ?? []),
     ],
-    socialProviders:
-      options.googleClientId && options.googleClientSecret
-        ? {
-            google: {
-              clientId: options.googleClientId,
-              clientSecret: options.googleClientSecret,
-              redirectURI: `${options.productionUrl}/api/auth/callback/google`,
-            },
-          }
-        : {},
+    // Вход через иностранные сервисы (Google и т. п.) не используется:
+    // 149-ФЗ ограничивает способы авторизации пользователей российских сайтов.
     onAPIError: {
       onError(error, ctx) {
         console.error("BETTER AUTH API ERROR", error, ctx);

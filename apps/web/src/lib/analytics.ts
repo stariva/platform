@@ -1,3 +1,5 @@
+import { hasAnalyticsConsent } from "@/lib/cookie-consent";
+
 /** Product data only: never pass buyer contact details to analytics. */
 export const COUNTER_ID = 96190087;
 
@@ -54,7 +56,8 @@ function metrika() {
   if (
     typeof window === "undefined" ||
     process.env.NODE_ENV !== "production" ||
-    !isAnalyticsHost(window.location.hostname)
+    !isAnalyticsHost(window.location.hostname) ||
+    !hasAnalyticsConsent()
   )
     return;
   try {

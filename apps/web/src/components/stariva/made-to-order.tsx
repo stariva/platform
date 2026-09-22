@@ -5,6 +5,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  ConsentCheckbox,
+  PD_CONSENT_ERROR,
+  PersonalDataConsentLabel,
+} from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -185,6 +190,7 @@ const requestSchema = z.object({
   name: z.string().trim().min(1, "Укажите ваше имя"),
   contact: z.string().trim().min(3, "Укажите Telegram, телефон или email"),
   comment: z.string().trim().max(1500).optional(),
+  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
 const measurementSchema = z
@@ -225,7 +231,12 @@ function MadeToOrderDialog({
 
   const form = useForm<RequestValues>({
     resolver: zodResolver(requestSchema),
-    defaultValues: { name: "", contact: "", comment: "" },
+    defaultValues: {
+      name: "",
+      contact: "",
+      comment: "",
+      personalDataConsent: false,
+    },
   });
 
   async function onSubmit(data: RequestValues) {
@@ -278,6 +289,7 @@ function MadeToOrderDialog({
       fd.append("productType", config.productType);
       fd.append("size", requestSize);
       fd.append("color", color);
+      fd.append("personalDataConsent", String(data.personalDataConsent));
 
       const res = await fetch("/api/custom-order", {
         method: "POST",
@@ -435,6 +447,19 @@ function MadeToOrderDialog({
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="personalDataConsent"
+              render={({ field, fieldState }) => (
+                <ConsentCheckbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  error={fieldState.error?.message}
+                >
+                  <PersonalDataConsentLabel />
+                </ConsentCheckbox>
+              )}
+            />
             <Button
               type="submit"
               disabled={submitting}

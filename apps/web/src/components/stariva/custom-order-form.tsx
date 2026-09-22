@@ -7,6 +7,11 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { reachGoal } from "@/lib/analytics";
 import { z } from "zod";
+import {
+  ConsentCheckbox,
+  PD_CONSENT_ERROR,
+  PersonalDataConsentLabel,
+} from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -51,6 +56,7 @@ const customOrderSchema = z.object({
     .min(3, "Укажите контакт для связи (Telegram, телефон или email)"),
   description: z.string().trim().min(5, "Опишите, что вы хотите заказать"),
   budget: z.string().trim().optional(),
+  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
 type CustomOrderFormValues = z.infer<typeof customOrderSchema>;
@@ -68,7 +74,13 @@ export function CustomOrderForm() {
 
   const form = useForm<CustomOrderFormValues>({
     resolver: zodResolver(customOrderSchema),
-    defaultValues: { name: "", contact: "", description: "", budget: "" },
+    defaultValues: {
+      name: "",
+      contact: "",
+      description: "",
+      budget: "",
+      personalDataConsent: false,
+    },
   });
 
   const estimate = calculatePrice(selection);
@@ -115,6 +127,7 @@ export function CustomOrderForm() {
       fd.append("name", data.name);
       fd.append("contact", data.contact);
       fd.append("description", data.description);
+      fd.append("personalDataConsent", String(data.personalDataConsent));
       if (data.budget) fd.append("budget", data.budget);
       if (selection.productType)
         fd.append(
@@ -148,7 +161,13 @@ export function CustomOrderForm() {
 
       toast.success("Заявка отправлена! Свяжемся с вами в рабочее время.");
       reachGoal("custom_order_submitted");
-      form.reset({ name: "", contact: "", description: "", budget: "" });
+      form.reset({
+        name: "",
+        contact: "",
+        description: "",
+        budget: "",
+        personalDataConsent: false,
+      });
       setPhoto(null);
       setAiEstimate(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -320,6 +339,19 @@ export function CustomOrderForm() {
             ) : null}
           </div>
 
+          <FormField
+            control={form.control}
+            name="personalDataConsent"
+            render={({ field, fieldState }) => (
+              <ConsentCheckbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                error={fieldState.error?.message}
+              >
+                <PersonalDataConsentLabel />
+              </ConsentCheckbox>
+            )}
+          />
           <Button
             type="submit"
             disabled={submitting}
@@ -327,10 +359,6 @@ export function CustomOrderForm() {
           >
             {submitting ? "Отправляем…" : "Отправить заявку"}
           </Button>
-          <p className="text-taupe text-[11px] leading-relaxed text-center">
-            Нажимая «Отправить», вы соглашаетесь на обработку персональных
-            данных.
-          </p>
         </form>
       </Form>
     </div>

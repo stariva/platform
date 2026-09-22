@@ -36,8 +36,6 @@ export const auth = initAuth({
   baseUrl,
   productionUrl,
   secret: env.AUTH_SECRET,
-  googleClientId: env.AUTH_GOOGLE_ID,
-  googleClientSecret: env.AUTH_GOOGLE_SECRET,
   requireEmailVerification: true,
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 дней
