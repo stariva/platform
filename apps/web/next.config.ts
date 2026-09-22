@@ -78,6 +78,13 @@ const config: NextConfig = {
         destination: "/catalog/interior/:slug*",
         permanent: true,
       },
+      // Blogger collaboration links. Not permanent: campaigns end and slugs get reused.
+      {
+        source: "/chrisfleur",
+        destination:
+          "/?utm_source=chrisfleur&utm_medium=social&utm_campaign=blogger_chrisfleur",
+        permanent: false,
+      },
     ];
   },
   async headers() {
