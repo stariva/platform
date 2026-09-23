@@ -126,9 +126,9 @@ export function CustomOrderForm() {
       const signature = JSON.stringify(
         [...fd.entries()].map(([key, value]) => [
           key,
-          value instanceof File
-            ? [value.name, value.size, value.lastModified]
-            : value,
+          typeof value === "string"
+            ? value
+            : [value.name, value.size, value.lastModified],
         ]),
       );
       if (request.current?.signature !== signature)
