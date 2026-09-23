@@ -1,14 +1,26 @@
+import type { ComponentType, SVGProps } from "react";
 import { SELLER } from "@/lib/legal";
 import { CookieSettingsLink } from "./cookie-banner";
 import {
+  ArrowRight,
   AvitoIcon,
   LivemasterIcon,
+  MailIcon,
+  MaxIcon,
   OzonIcon,
   PhoneIcon,
   PinterestIcon,
   TelegramIcon,
   VkIcon,
+  WhatsappIcon,
+  YoutubeIcon,
 } from "./icons";
+
+type ExternalLink = {
+  label: string;
+  href: string;
+  Icon: ComponentType<SVGProps<SVGSVGElement>>;
+};
 
 const catalog = [
   { label: "Абажуры из макраме", href: "/catalog/interior" },
@@ -24,72 +36,120 @@ const info = [
   { label: "Контакты", href: "/#order" },
 ];
 
+const messengers: ExternalLink[] = [
+  { label: "Telegram", href: "https://t.me/Olga_Stariva", Icon: TelegramIcon },
+  { label: "WhatsApp", href: "https://wa.me/79778722546", Icon: WhatsappIcon },
+  {
+    label: "MAX",
+    href: "https://max.ru/u/f9LHodD0cOKBrgW8OBs1SDxy3mN7vPE34uus8lQhO22DEoOybjJE57AQMIg",
+    Icon: MaxIcon,
+  },
+];
+
+const socials: ExternalLink[] = [
+  { label: "ВКонтакте", href: "https://vk.com/stariva_macrame", Icon: VkIcon },
+  { label: "YouTube", href: "https://www.youtube.com/@olga.stariva", Icon: YoutubeIcon },
+  { label: "Pinterest", href: "https://pinterest.com/stariva", Icon: PinterestIcon },
+];
+
+const marketplaces: ExternalLink[] = [
+  {
+    label: "Ozon",
+    href: "https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/",
+    Icon: OzonIcon,
+  },
+  {
+    label: "Авито",
+    href: "https://www.avito.ru/brands/i3320470/all?sellerId=5c2374e4adcfe4219ff7e1702a15d27f",
+    Icon: AvitoIcon,
+  },
+  {
+    label: "Ярмарка Мастеров",
+    href: "https://www.livemaster.ru/olga-meu",
+    Icon: LivemasterIcon,
+  },
+];
+
+function PillLink({
+  link: { label, href, Icon },
+  external,
+}: {
+  link: ExternalLink;
+  external?: boolean;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-parchment/15 px-3 sm:px-4 py-2.5 text-[13px] sm:text-sm text-parchment/85 hover:border-parchment/40 hover:bg-parchment/5 hover:text-parchment transition-colors"
+    >
+      <Icon className="w-4 h-4 text-linen shrink-0" />
+      {label}
+      {external && (
+        <ArrowRight className="w-3.5 h-3.5 -rotate-45 text-parchment/40 group-hover:text-parchment transition-colors" />
+      )}
+    </a>
+  );
+}
+
+function LinkGroup({
+  title,
+  links,
+  external,
+}: {
+  title: string;
+  links: ExternalLink[];
+  external?: boolean;
+}) {
+  return (
+    <div>
+      <div className="label-caps text-parchment/50 mb-4">{title}</div>
+      <div className="flex flex-wrap gap-2 sm:gap-2.5">
+        {links.map((link) => (
+          <PillLink key={link.label} link={link} external={external} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Footer() {
   return (
     <footer className="bg-espresso text-parchment">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 pt-20 lg:pt-28 pb-10">
-        <div className="grid grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-12">
-          {/* Brand */}
-          <div className="col-span-2 lg:col-span-4">
+        <div className="grid grid-cols-2 lg:grid-cols-12 gap-x-10 gap-y-12 lg:gap-12">
+          {/* Brand + contacts */}
+          <div className="col-span-2 lg:col-span-5">
             <div className="font-serif text-5xl lg:text-6xl tracking-tight mb-3">
               Stariva
             </div>
-            <div className="label-caps text-parchment/60 mb-8">
+            <div className="label-caps text-parchment/60 mb-10">
               Ручное плетение с 2018
             </div>
 
             <a
               href="tel:+79778722546"
-              className="flex items-center gap-3 text-2xl font-serif text-parchment hover:text-linen transition-colors"
+              className="inline-flex items-center gap-3 text-2xl lg:text-3xl font-serif text-parchment hover:text-linen transition-colors"
             >
               <PhoneIcon className="w-5 h-5 text-linen" />
               +7 977 872 25 46
             </a>
-
-            <a
-              href="https://t.me/Olga_Stariva"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 flex items-center gap-3 text-parchment/80 hover:text-linen transition-colors"
-            >
-              <TelegramIcon className="w-5 h-5 text-linen" />
-              <span className="label-caps">Telegram</span>
-            </a>
-
             <a
               href="mailto:info@stariva.ru"
-              className="mt-3 flex items-center gap-3 text-parchment/80 hover:text-linen transition-colors"
+              className="mt-3 flex w-fit items-center gap-3 text-parchment/80 hover:text-linen transition-colors"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-                className="text-linen shrink-0"
-              >
-                <rect
-                  x="3"
-                  y="5"
-                  width="18"
-                  height="14"
-                  rx="2"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                />
-                <path
-                  d="M3 8l9 6 9-6"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <MailIcon className="w-5 h-5 text-linen shrink-0" />
               <span className="label-caps">info@stariva.ru</span>
             </a>
+
+            <div className="mt-8">
+              <LinkGroup title="Написать мастеру" links={messengers} />
+            </div>
           </div>
 
           {/* Catalog */}
-          <div className="lg:col-span-2 lg:col-start-6">
+          <div className="lg:col-span-3 lg:col-start-7">
             <div className="label-caps text-parchment/50 mb-5">Каталог</div>
             <ul className="space-y-3">
               {catalog.map((c) => (
@@ -121,74 +181,20 @@ export function Footer() {
               ))}
             </ul>
           </div>
+        </div>
 
-          {/* Socials */}
-          <div className="lg:col-span-3">
-            <div className="label-caps text-parchment/50 mb-5">
-              Я в соцсетях
-            </div>
-            <ul className="space-y-3">
-              <li>
-                <a
-                  href="https://www.livemaster.ru/olga-meu"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
-                >
-                  <LivemasterIcon className="w-4 h-4" />
-                  Ярмарка Мастеров
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://pinterest.com/stariva"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
-                >
-                  <PinterestIcon className="w-4 h-4" />
-                  Pinterest
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
-                >
-                  <OzonIcon className="w-4 h-4" />
-                  Ozon
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://www.avito.ru/brands/i3320470/all?sellerId=5c2374e4adcfe4219ff7e1702a15d27f"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
-                >
-                  <AvitoIcon className="w-4 h-4" />
-                  Авито
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://vk.com/stariva_macrame"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
-                >
-                  <VkIcon className="w-4 h-4" />
-                  ВКонтакте
-                </a>
-              </li>
-            </ul>
+        {/* Socials + marketplaces */}
+        <div className="mt-16 pt-10 border-t border-parchment/15 grid lg:grid-cols-12 gap-10 lg:gap-12">
+          <div className="lg:col-span-5">
+            <LinkGroup title="Соцсети" links={socials} />
+          </div>
+          <div className="lg:col-span-6 lg:col-start-7">
+            <LinkGroup title="Купить на маркетплейсах" links={marketplaces} external />
           </div>
         </div>
 
         {/* Legal */}
-        <div className="mt-16 pt-8 border-t border-parchment/15">
+        <div className="mt-12 pt-8 border-t border-parchment/15">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 text-[11px] leading-relaxed text-parchment/55">
             <div>
               {SELLER.shortName}, ИНН {SELLER.inn} — самозанятый (НПД)
