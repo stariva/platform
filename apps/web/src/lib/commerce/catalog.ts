@@ -32,6 +32,7 @@ export async function resolveCatalogItems(
     if (!product) throw new Error(`catalog_product_unavailable:${productSlug}`);
     const price = Math.round(product.price * 100);
     if (
+      !product.inStock ||
       product.currency !== "RUB" ||
       !Number.isSafeInteger(product.ozonSku) ||
       (product.ozonSku ?? 0) <= 0 ||

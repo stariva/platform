@@ -87,6 +87,19 @@ export type ExtractedAttributes = {
   description?: string;
 };
 
+/**
+ * Разбирает список артикулов (offer_id) из env: через запятую, точку с запятой
+ * или перевод строки. Пробелы по краям игнорируются.
+ */
+export function parseOfferIdList(raw: string | undefined): Set<string> {
+  return new Set(
+    (raw ?? "")
+      .split(/[,;\n]/)
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
+}
+
 export function slugify(text: string): string {
   return slugifyLib(text, {
     lowercase: true,
@@ -173,6 +186,8 @@ export function extractAttributes(
 export function transformOzonProduct(
   ozonProduct: OzonProductInfoV3,
   attrs?: ExtractedAttributes,
+  /** Артикулы, которые есть в наличии у нас и продаются на сайте сразу. */
+  inStockOfferIds: ReadonlySet<string> = new Set(),
 ): Product {
   const { category, subcategory } = mapOfferIdToCategory(
     ozonProduct.offer_id || "",
@@ -199,8 +214,9 @@ export function transformOzonProduct(
   );
   const oldPrice = oldPriceCandidate > price ? oldPriceCandidate : undefined;
 
-  // Товары всегда доступны для заказа независимо от статуса/остатков в Озоне.
-  const inStock = true;
+  // Наличие на сайте не зависит от статуса/остатков на Ozon: сразу купить
+  // можно только товары из нашего списка, остальные — под заказ через мастера.
+  const inStock = inStockOfferIds.has(ozonProduct.offer_id.trim());
 
   // primary_image в v3 — массив строк; ставим первой, затем остальные из images[]
   const primaryImage = Array.isArray(ozonProduct.primary_image)
@@ -276,6 +292,7 @@ export function transformOzonProduct(
     category,
     subcategory,
     ozonId: ozonProduct.id,
+    offerId: ozonProduct.offer_id,
     ozonSku:
       ozonProduct.fbs_sku ||
       ozonProduct.fbo_sku ||

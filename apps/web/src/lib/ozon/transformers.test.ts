@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ozonProductInfoV3Schema, transformOzonProduct } from "./transformers";
+import {
+  ozonProductInfoV3Schema,
+  parseOfferIdList,
+  transformOzonProduct,
+} from "./transformers";
 
 const product = {
   id: 1,
@@ -87,4 +91,23 @@ test("falls back to base price when neither min_price nor marketing_seller_price
 
   assert.equal(result.price, 67000);
   assert.equal(result.oldPrice, 70000);
+});
+
+test("parseOfferIdList splits by comma, semicolon and newline and trims", () => {
+  assert.deepEqual(
+    [...parseOfferIdList(" TOY-01, PLT-MACR-010;Lustra - 01\n\n ,")],
+    ["TOY-01", "PLT-MACR-010", "Lustra - 01"],
+  );
+  assert.equal(parseOfferIdList(undefined).size, 0);
+});
+
+test("product is in stock only when its offer_id is in the site stock list", () => {
+  const list = parseOfferIdList("offer-1");
+  assert.equal(transformOzonProduct(product, undefined, list).inStock, true);
+  assert.equal(
+    transformOzonProduct({ ...product, offer_id: "offer-2" }, undefined, list)
+      .inStock,
+    false,
+  );
+  assert.equal(transformOzonProduct(product).inStock, false);
 });
