@@ -48,8 +48,16 @@ const messengers: ExternalLink[] = [
 
 const socials: ExternalLink[] = [
   { label: "ВКонтакте", href: "https://vk.com/stariva_macrame", Icon: VkIcon },
-  { label: "YouTube", href: "https://www.youtube.com/@olga.stariva", Icon: YoutubeIcon },
-  { label: "Pinterest", href: "https://pinterest.com/stariva", Icon: PinterestIcon },
+  {
+    label: "YouTube",
+    href: "https://www.youtube.com/@olga.stariva",
+    Icon: YoutubeIcon,
+  },
+  {
+    label: "Pinterest",
+    href: "https://pinterest.com/stariva",
+    Icon: PinterestIcon,
+  },
 ];
 
 const marketplaces: ExternalLink[] = [
@@ -189,7 +197,11 @@ export function Footer() {
             <LinkGroup title="Соцсети" links={socials} />
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
-            <LinkGroup title="Купить на маркетплейсах" links={marketplaces} external />
+            <LinkGroup
+              title="Купить на маркетплейсах"
+              links={marketplaces}
+              external
+            />
           </div>
         </div>
 
