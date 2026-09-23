@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { reachGoal } from "@/lib/analytics";
+import { appendCampaign } from "@/lib/campaign-attribution";
 import {
   COLOR_SWATCHES,
   CUSTOM_SIZE,
@@ -225,6 +226,7 @@ function MadeToOrderDialog({
     Record<string, string>
   >({});
   const [submitting, setSubmitting] = useState(false);
+  const submission = useRef<{ signature: string; id: string } | null>(null);
   const customSize = size === CUSTOM_SIZE;
   const requestSize =
     customSize && product.category !== "clothes" ? "Свой размер" : size;
@@ -290,18 +292,29 @@ function MadeToOrderDialog({
       fd.append("size", requestSize);
       fd.append("color", color);
       fd.append("personalDataConsent", String(data.personalDataConsent));
+      appendCampaign(fd);
+      const signature = JSON.stringify([...fd.entries()]);
+      if (submission.current?.signature !== signature)
+        submission.current = { signature, id: crypto.randomUUID() };
+      fd.append("requestId", submission.current.id);
 
       const res = await fetch("/api/custom-order", {
         method: "POST",
         body: fd,
       });
       const resData = await res.json().catch(() => null);
-      if (!res.ok) {
+      if (!res.ok || !resData?.ok || !resData?.requestId) {
+        if (res.status === 409) submission.current = null;
         toast.error(resData?.error ?? "Не удалось отправить заявку");
         return;
       }
 
-      toast.success("Заявка отправлена! Мастер свяжется с вами для уточнения.");
+      toast.success("Заявка принята! Мастер свяжется с вами в рабочее время.");
+      submission.current = null;
+      reachGoal("custom_order_submitted", {
+        location: "product",
+        category: product.category,
+      });
       reachGoal("made_to_order_submitted", { category: product.category });
       form.reset();
       setMeasures({});

@@ -22,6 +22,16 @@ export let langfuseSpanProcessor: { forceFlush(): Promise<void> } | undefined;
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Persistent k3s server; database leases coordinate replicas/restarts.
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.NEXT_PHASE !== "phase-production-build"
+    ) {
+      const { startOrderRetryWorker } = await import(
+        "@/lib/custom-order/inbox"
+      );
+      startOrderRetryWorker();
+    }
     const { registerTelemetry } = await import("ai");
     const { LegacyOpenTelemetry } = await import("@ai-sdk/otel");
     const { LangfuseSpanProcessor } = await import("@langfuse/otel");

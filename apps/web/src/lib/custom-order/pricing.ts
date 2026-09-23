@@ -118,7 +118,10 @@ export function calculatePrice(
   const product = PRODUCT_TYPES.find((p) => p.id === selection.productType);
   if (!product) return null;
 
-  const size = SIZES.find((s) => s.id === selection.size)?.value ?? 1;
+  const size =
+    selection.productType === "clothes"
+      ? 1
+      : (SIZES.find((s) => s.id === selection.size)?.value ?? 1);
   const colorAdd = COLORS.find((c) => c.id === selection.color)?.value ?? 0;
   const complexity =
     COMPLEXITIES.find((c) => c.id === selection.complexity)?.value ?? 1;

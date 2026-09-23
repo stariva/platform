@@ -1,29 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "motion/react";
 import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { reachGoal } from "@/lib/analytics";
 import { z } from "zod";
-import {
-  ConsentCheckbox,
-  PD_CONSENT_ERROR,
-  PersonalDataConsentLabel,
-} from "@/components/stariva/consent-checkbox";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { reachGoal } from "@/lib/analytics";
+import { appendCampaign } from "@/lib/campaign-attribution";
 import {
   COLORS,
   COMPLEXITIES,
@@ -32,335 +14,453 @@ import {
   type PriceSelection,
   SIZES,
 } from "@/lib/custom-order/pricing";
+import { validatePhoto } from "@/lib/custom-order/schema";
+import {
+  ConsentCheckbox,
+  PD_CONSENT_ERROR,
+  PersonalDataConsentLabel,
+} from "./consent-checkbox";
 import { PriceCalculator } from "./price-calculator";
 
-interface AiEstimate {
-  designSummary: string;
-  suggestions: string[];
-  estimatedMin: number;
-  estimatedMax: number;
-  productionDays: string;
-  note: string;
-}
-
-const labelOf = (
-  list: ReadonlyArray<{ id: string; label: string }>,
-  id?: string,
-) => list.find((x) => x.id === id)?.label;
-
-const customOrderSchema = z.object({
-  name: z.string().trim().min(1, "Укажите ваше имя"),
+const schema = z.object({
   contact: z
     .string()
     .trim()
-    .min(3, "Укажите контакт для связи (Telegram, телефон или email)"),
-  description: z.string().trim().min(5, "Опишите, что вы хотите заказать"),
-  budget: z.string().trim().optional(),
-  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
+    .min(3, "Укажите Telegram, телефон или email")
+    .max(200),
+  description: z
+    .string()
+    .trim()
+    .min(5, "Коротко опишите, что хотите заказать")
+    .max(3000),
+  name: z.string().trim().max(120),
+  measurements: z.string().trim().max(500),
+  budget: z.string().trim().max(100),
+  measurementHelp: z.boolean(),
+  personalDataConsent: z.boolean().refine(Boolean, PD_CONSENT_ERROR),
 });
-
-type CustomOrderFormValues = z.infer<typeof customOrderSchema>;
+type Values = z.infer<typeof schema>;
+const defaults: Values = {
+  contact: "",
+  description: "",
+  name: "",
+  measurements: "",
+  budget: "",
+  measurementHelp: false,
+  personalDataConsent: false,
+};
+const fieldClass =
+  "mt-2 block w-full rounded-xl border border-espresso/20 bg-parchment px-4 py-3 text-base text-espresso placeholder:text-taupe/80 focus:outline-none focus:ring-2 focus:ring-terracotta/40 disabled:opacity-60";
+const hints: Record<string, string> = {
+  lampshade: "Диаметр и высота абажура в см; если знаете — тип крепления.",
+  clothes:
+    "Рост, обхват груди, талии и бёдер, желаемая длина в см. Можно прислать позже.",
+  bag: "Ширина, высота, глубина и длина ручек или ремня в см.",
+  panel: "Ширина и высота панно в см, с бахромой или без неё.",
+  tipi: "Ширина основания, высота и место установки в см.",
+  "plant-hanger": "Диаметр горшка и желаемая длина подвеса в см.",
+  placemat: "Диаметр или ширина × длина в см, количество изделий.",
+};
 
 export function CustomOrderForm() {
-  const formId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const id = useId();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const request = useRef<{ signature: string; id: string } | null>(null);
+  const started = useRef(false);
+  const locked = useRef(false);
   const [selection, setSelection] = useState<Partial<PriceSelection>>({});
   const [photo, setPhoto] = useState<File | null>(null);
-
+  const [photoError, setPhotoError] = useState("");
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiEstimate, setAiEstimate] = useState<AiEstimate | null>(null);
-
-  const form = useForm<CustomOrderFormValues>({
-    resolver: zodResolver(customOrderSchema),
-    defaultValues: {
-      name: "",
-      contact: "",
-      description: "",
-      budget: "",
-      personalDataConsent: false,
-    },
+  const [aiText, setAiText] = useState("");
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: defaults,
   });
-
   const estimate = calculatePrice(selection);
-
-  async function handleAskAi() {
-    const description = form.getValues("description");
-    if (description.trim().length < 3) {
-      toast.error("Сначала опишите, что вы хотите заказать");
-      return;
+  const nameOf = (options: { id: string; label: string }[], value?: string) =>
+    options.find((item) => item.id === value)?.label ?? "";
+  const start = () => {
+    if (!started.current) {
+      reachGoal("custom_order_started", { location: "homepage" });
+      started.current = true;
     }
-    setAiLoading(true);
-    setAiEstimate(null);
-    try {
-      const res = await fetch("/api/ai/estimate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description,
-          budget: form.getValues("budget") || undefined,
-          ...selection,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(
-          data?.code === "not_configured"
-            ? "AI-помощник пока не подключён"
-            : (data?.error ?? "Не удалось получить ответ AI"),
-        );
-        return;
-      }
-      setAiEstimate(data as AiEstimate);
-    } catch {
-      toast.error("Ошибка соединения с AI-помощником");
-    } finally {
-      setAiLoading(false);
-    }
-  }
-
-  async function onSubmit(data: CustomOrderFormValues) {
+  };
+  async function submit(values: Values) {
+    if (locked.current || photoError) return;
+    locked.current = true;
     setSubmitting(true);
+    setError("");
     try {
       const fd = new FormData();
-      fd.append("name", data.name);
-      fd.append("contact", data.contact);
-      fd.append("description", data.description);
-      fd.append("personalDataConsent", String(data.personalDataConsent));
-      if (data.budget) fd.append("budget", data.budget);
-      if (selection.productType)
-        fd.append(
-          "productType",
-          labelOf(PRODUCT_TYPES, selection.productType) ?? "",
-        );
-      if (selection.size)
-        fd.append("size", labelOf(SIZES, selection.size) ?? "");
-      if (selection.color)
-        fd.append("color", labelOf(COLORS, selection.color) ?? "");
-      if (selection.complexity)
-        fd.append(
-          "complexity",
-          labelOf(COMPLEXITIES, selection.complexity) ?? "",
-        );
+      for (const [key, value] of Object.entries(values))
+        fd.append(key, String(value));
+      fd.append(
+        "website",
+        String(
+          document.getElementById(`${id}-website`) instanceof HTMLInputElement
+            ? (document.getElementById(`${id}-website`) as HTMLInputElement)
+                .value
+            : "",
+        ),
+      );
+      for (const [key, value] of Object.entries({
+        productType: nameOf(PRODUCT_TYPES, selection.productType),
+        size:
+          selection.productType === "clothes"
+            ? "По меркам"
+            : nameOf(SIZES, selection.size),
+        color: nameOf(COLORS, selection.color),
+        complexity: nameOf(COMPLEXITIES, selection.complexity),
+      }))
+        if (value) fd.append(key, value);
       if (estimate) {
         fd.append("estimateMin", String(estimate.min));
         fd.append("estimateMax", String(estimate.max));
       }
       if (photo) fd.append("photo", photo);
-
-      const res = await fetch("/api/custom-order", {
+      appendCampaign(fd);
+      const signature = JSON.stringify(
+        [...fd.entries()].map(([key, value]) => [
+          key,
+          value instanceof File
+            ? [value.name, value.size, value.lastModified]
+            : value,
+        ]),
+      );
+      if (request.current?.signature !== signature)
+        request.current = { signature, id: crypto.randomUUID() };
+      fd.append("requestId", request.current.id);
+      const response = await fetch("/api/custom-order", {
         method: "POST",
         body: fd,
       });
-      const resData = await res.json();
-      if (!res.ok) {
-        toast.error(resData?.error ?? "Не удалось отправить заявку");
+      const data = await response.json();
+      if (!response.ok || !data.ok || !data.requestId) {
+        if (response.status === 409) request.current = null;
+        setError(
+          data.error ??
+            "Не удалось принять заявку. Попробуйте ещё раз или напишите мастеру.",
+        );
+        reachGoal("custom_order_error", { reason: "server" });
         return;
       }
-
-      toast.success("Заявка отправлена! Свяжемся с вами в рабочее время.");
-      reachGoal("custom_order_submitted");
-      form.reset({
-        name: "",
-        contact: "",
-        description: "",
-        budget: "",
-        personalDataConsent: false,
-      });
+      setSuccess(data.requestId);
+      reachGoal("custom_order_submitted", { location: "homepage" });
+      form.reset(defaults);
       setPhoto(null);
-      setAiEstimate(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelection({});
+      if (fileInput.current) fileInput.current.value = "";
     } catch {
-      toast.error(
-        "Ошибка соединения. Попробуйте ещё раз или напишите в Telegram.",
+      setError(
+        "Не удалось подтвердить приём заявки. Данные сохранены в форме — повторите отправку или напишите в Telegram.",
       );
+      reachGoal("custom_order_error", { reason: "network" });
     } finally {
+      locked.current = false;
       setSubmitting(false);
     }
   }
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-espresso/10 border border-espresso/10 rounded-sm overflow-hidden">
-      {/* ── Калькулятор ── */}
-      <div className="bg-parchment p-7 lg:p-9">
-        <div className="label-caps text-terracotta text-[12px] mb-5">
-          Калькулятор стоимости
-        </div>
-        <PriceCalculator selection={selection} onChange={setSelection} />
-      </div>
-
-      {/* ── Форма заявки ── */}
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="bg-parchment p-7 lg:p-9 flex flex-col gap-5"
+  async function askAi() {
+    const description = form.getValues("description");
+    if (description.length < 5) {
+      setAiText("Сначала опишите вашу идею в форме выше.");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const response = await fetch("/api/ai/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description, ...selection }),
+      });
+      const data = await response.json();
+      setAiText(
+        response.ok
+          ? `${data.designSummary}\n${(data.suggestions ?? []).join("\n")}`
+          : "Помощник сейчас недоступен. Отправьте заявку — Ольга поможет с выбором.",
+      );
+    } catch {
+      setAiText(
+        "Помощник сейчас недоступен. Вы можете отправить заявку мастеру.",
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  }
+  if (success)
+    return (
+      <div
+        role="status"
+        className="rounded-2xl border border-espresso/10 bg-parchment p-6 lg:p-8"
+      >
+        <p className="label-caps text-terracotta">Заявка принята</p>
+        <h3 className="mt-3 font-serif text-3xl text-espresso">
+          Спасибо за вашу идею!
+        </h3>
+        <p className="mt-4 text-espresso/75 leading-relaxed">
+          Мы сохранили заявку. Мастер свяжется с вами по указанному контакту в
+          рабочее время: пн–сб, 10:00–20:00 МСК.
+        </p>
+        <p className="mt-4 text-xs text-taupe break-all">
+          Номер заявки: {success}
+        </p>
+        <a
+          href="https://t.me/Olga_Stariva"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-block text-terracotta underline underline-offset-4"
         >
-          <div className="label-caps text-terracotta text-[12px]">
-            Заявка на заказ
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Имя</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Как к вам обращаться"
-                      autoComplete="name"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="contact"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telegram / телефон / email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="@username или +7…" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Что хотите заказать</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Опишите изделие: назначение, стиль, особые пожелания…"
-                    rows={4}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="budget"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Бюджет (необязательно)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="например, до 5000 ₽" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="space-y-1.5">
-              <Label htmlFor={`${formId}-photo`}>Фото-вдохновение</Label>
-              <Input
-                ref={fileInputRef}
-                id={`${formId}-photo`}
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-                className="file:text-espresso/70 file:mr-3 cursor-pointer"
-              />
-            </div>
-          </div>
-
-          {/* AI-помощник */}
-          <div className="rounded-sm border border-espresso/12 bg-sand/60 p-4">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <p className="text-espresso text-sm font-medium">
-                  AI-помощник по заказу
-                </p>
-                <p className="text-taupe text-[12px] leading-relaxed mt-0.5 max-w-xs">
-                  Подберёт идеи дизайна и уточнит примерную стоимость по вашему
-                  описанию.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAskAi}
-                disabled={aiLoading}
-                className="rounded-full border-espresso/25 text-espresso hover:bg-espresso hover:text-parchment shrink-0"
-              >
-                {aiLoading ? "Думаю…" : "Спросить AI"}
-              </Button>
-            </div>
-
-            {aiEstimate ? (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 pt-4 border-t border-espresso/10 space-y-3"
-              >
-                <p className="text-espresso/85 text-sm leading-relaxed">
-                  {aiEstimate.designSummary}
-                </p>
-                <ul className="space-y-1.5">
-                  {aiEstimate.suggestions.map((s) => (
-                    <li
-                      key={s}
-                      className="flex gap-2 text-espresso/70 text-[13px] leading-snug"
-                    >
-                      <span className="mt-1.5 w-1 h-1 rounded-full bg-terracotta shrink-0" />
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] pt-1">
-                  <span className="text-espresso">
-                    <span className="text-taupe">Оценка AI: </span>~
-                    {aiEstimate.estimatedMin.toLocaleString("ru-RU")}–
-                    {aiEstimate.estimatedMax.toLocaleString("ru-RU")} ₽
-                  </span>
-                  <span className="text-espresso">
-                    <span className="text-taupe">Срок: </span>
-                    {aiEstimate.productionDays}
-                  </span>
-                </div>
-                <p className="text-taupe text-[11px] leading-relaxed">
-                  {aiEstimate.note}
-                </p>
-              </motion.div>
-            ) : null}
-          </div>
-
-          <FormField
-            control={form.control}
-            name="personalDataConsent"
-            render={({ field, fieldState }) => (
-              <ConsentCheckbox
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                error={fieldState.error?.message}
-              >
-                <PersonalDataConsentLabel />
-              </ConsentCheckbox>
-            )}
-          />
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="mt-1 rounded-full bg-terracotta text-parchment hover:bg-espresso h-12 label-caps-md"
+          Добавить детали в Telegram
+        </a>
+        <button
+          type="button"
+          onClick={() => {
+            setSuccess("");
+            request.current = null;
+            started.current = false;
+            setAiText("");
+          }}
+          className="mt-5 block text-sm underline underline-offset-4"
+        >
+          Обсудить ещё одно изделие
+        </button>
+      </div>
+    );
+  return (
+    <div className="rounded-2xl border border-espresso/10 bg-parchment p-5 sm:p-7 lg:p-8">
+      <form
+        onSubmit={form.handleSubmit(submit)}
+        onFocusCapture={start}
+        noValidate
+      >
+        <fieldset disabled={submitting} className="space-y-5">
+          <legend className="font-serif text-2xl text-espresso mb-5">
+            Получить расчёт от мастера
+          </legend>
+          <label htmlFor={`${id}-type`} className="block text-sm text-espresso">
+            Что будем создавать?
+            <select
+              id={`${id}-type`}
+              value={selection.productType ?? ""}
+              onChange={(e) =>
+                setSelection({
+                  ...selection,
+                  productType: e.target.value,
+                  size: undefined,
+                })
+              }
+              className={fieldClass}
+            >
+              <option value="">Пока выбираю</option>
+              {PRODUCT_TYPES.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label
+            htmlFor={`${id}-description`}
+            className="block text-sm text-espresso"
           >
-            {submitting ? "Отправляем…" : "Отправить заявку"}
-          </Button>
-        </form>
-      </Form>
+            Ваша идея
+            <textarea
+              id={`${id}-description`}
+              {...form.register("description")}
+              maxLength={3000}
+              rows={3}
+              placeholder="Например: абажур для спальни, молочный цвет. Нужна помощь с размером."
+              className={fieldClass}
+              aria-invalid={!!form.formState.errors.description}
+              aria-describedby={`${id}-description-error`}
+            />
+            <span
+              id={`${id}-description-error`}
+              className="text-red-700 text-sm"
+            >
+              {form.formState.errors.description?.message}
+            </span>
+          </label>
+          <label
+            htmlFor={`${id}-contact`}
+            className="block text-sm text-espresso"
+          >
+            Куда ответить: Telegram, телефон или email
+            <input
+              id={`${id}-contact`}
+              {...form.register("contact")}
+              maxLength={200}
+              placeholder="@username, +7… или email"
+              className={fieldClass}
+              aria-invalid={!!form.formState.errors.contact}
+              aria-describedby={`${id}-contact-error`}
+            />
+            <span id={`${id}-contact-error`} className="text-red-700 text-sm">
+              {form.formState.errors.contact?.message}
+            </span>
+          </label>
+          <details className="rounded-xl border border-espresso/15 px-4 py-3">
+            <summary className="cursor-pointer text-sm text-espresso py-1">
+              Размеры, фото и пожелания{" "}
+              <span className="text-taupe">· необязательно</span>
+            </summary>
+            <div className="pt-4 space-y-4">
+              <label htmlFor={`${id}-measurements`} className="block text-sm">
+                Размеры или мерки, см
+                <textarea
+                  id={`${id}-measurements`}
+                  {...form.register("measurements")}
+                  rows={2}
+                  maxLength={500}
+                  placeholder={
+                    hints[selection.productType ?? ""] ??
+                    "Укажите желаемые размеры. Если пока не знаете — поможем."
+                  }
+                  className={fieldClass}
+                />
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  {...form.register("measurementHelp")}
+                  className="size-4 accent-terracotta"
+                />
+                Не знаю размеры — нужна помощь
+              </label>
+              <label htmlFor={`${id}-photo`} className="block text-sm">
+                Фото изделия или места, где оно будет
+                <input
+                  ref={fileInput}
+                  id={`${id}-photo`}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className={`${fieldClass} file:mr-3 file:text-sm`}
+                  onChange={(e) => {
+                    const selected = e.target.files?.[0] ?? null;
+                    const problem = selected ? validatePhoto(selected) : null;
+                    setPhotoError(problem ?? "");
+                    setPhoto(problem ? null : selected);
+                    if (problem) e.target.value = "";
+                  }}
+                />
+                <span className="mt-1 block text-xs text-taupe">
+                  JPG, PNG или WebP, до 8 МБ
+                </span>
+                {photoError && (
+                  <span role="alert" className="text-sm text-red-700">
+                    {photoError}
+                  </span>
+                )}
+              </label>
+              {(photo || photoError) && <button type="button" className="text-sm underline underline-offset-4" onClick={() => { setPhoto(null); setPhotoError(""); if (fileInput.current) fileInput.current.value = ""; }}>Продолжить без фото</button>}
+              <label htmlFor={`${id}-name`} className="block text-sm">
+                Как к вам обращаться
+                <input
+                  id={`${id}-name`}
+                  {...form.register("name")}
+                  maxLength={120}
+                  autoComplete="name"
+                  className={fieldClass}
+                />
+              </label>
+              <label htmlFor={`${id}-budget`} className="block text-sm">
+                Бюджет
+                <input
+                  id={`${id}-budget`}
+                  {...form.register("budget")}
+                  maxLength={100}
+                  placeholder="Например, до 10 000 ₽"
+                  className={fieldClass}
+                />
+              </label>
+            </div>
+          </details>
+          <div hidden aria-hidden="true">
+            <label htmlFor={`${id}-website`}>Website</label>
+            <input
+              id={`${id}-website`}
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
+          <ConsentCheckbox
+            checked={form.watch("personalDataConsent")}
+            onCheckedChange={(value) =>
+              form.setValue("personalDataConsent", value === true, {
+                shouldValidate: true,
+              })
+            }
+            error={form.formState.errors.personalDataConsent?.message}
+          >
+            <PersonalDataConsentLabel />
+          </ConsentCheckbox>
+          {error && (
+            <p
+              role="alert"
+              className="rounded-xl bg-red-50 p-4 text-sm text-red-800"
+            >
+              {error}{" "}
+              <a href="https://t.me/Olga_Stariva" className="underline">
+                Написать в Telegram
+              </a>
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={submitting || !!photoError}
+            className="w-full min-h-12 rounded-full bg-terracotta px-5 py-3 text-parchment text-sm font-medium transition-colors hover:bg-espresso disabled:opacity-60"
+          >
+            {submitting ? "Сохраняем заявку…" : "Получить расчёт"}
+          </button>
+          <p className="text-xs leading-relaxed text-taupe">
+            Заявка без оплаты. Стоимость, срок и доставку согласуем лично.
+            Источник перехода с рекламы может быть передан вместе с заявкой.
+          </p>
+        </fieldset>
+      </form>
+      <details
+        className="mt-6 border-t border-espresso/10 pt-4"
+        onToggle={(e) => {
+          if (e.currentTarget.open) reachGoal("custom_order_calculator_open");
+        }}
+      >
+        <summary className="cursor-pointer text-sm text-espresso py-2">
+          Хочу сначала прикинуть стоимость
+        </summary>
+        <div className="pt-4">
+          <PriceCalculator selection={selection} onChange={setSelection} />
+        </div>
+      </details>
+      <details className="mt-2 border-t border-espresso/10 pt-3">
+        <summary className="cursor-pointer text-sm text-taupe py-2">
+          Помощь с идеей · AI-помощник
+        </summary>
+        <p className="mt-3 text-sm text-taupe">
+          Необязательный помощник. Окончательные параметры и цену подтверждает
+          мастер.
+        </p>
+        <button
+          type="button"
+          disabled={aiLoading}
+          onClick={askAi}
+          className="mt-3 rounded-full border border-espresso/20 px-5 py-3 text-sm"
+        >
+          {aiLoading ? "Подбираем идеи…" : "Предложить идеи"}
+        </button>
+        {aiText && (
+          <p
+            role="status"
+            className="mt-3 whitespace-pre-line text-sm text-espresso/75"
+          >
+            {aiText}
+          </p>
+        )}
+      </details>
     </div>
   );
 }

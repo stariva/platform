@@ -25,6 +25,7 @@ async function fetchProductIdsByVisibility(
   apiKey: string,
 ): Promise<number[] | null> {
   const res = await fetch(`${OZON_API_URL}/v3/product/list`, {
+    signal: AbortSignal.timeout(6000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -73,6 +74,7 @@ async function fetchProductDetails(
   apiKey: string,
 ): Promise<OzonProductInfoV3[] | null> {
   const res = await fetch(`${OZON_API_URL}/v3/product/info/list`, {
+    signal: AbortSignal.timeout(6000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -121,6 +123,7 @@ async function fetchProductAttributesByVisibility(
   }[]
 > {
   const res = await fetch(`${OZON_API_URL}/v4/product/info/attributes`, {
+    signal: AbortSignal.timeout(6000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -213,6 +216,7 @@ export async function fetchOzonReviews(
     }
 
     const res = await fetch(`${OZON_API_URL}/v1/review/list`, {
+      signal: AbortSignal.timeout(6000),
       method: "POST",
       headers: {
         "Content-Type": "application/json",

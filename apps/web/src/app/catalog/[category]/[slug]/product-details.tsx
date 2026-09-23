@@ -174,7 +174,7 @@ export function ProductDetails({
                 )}
               </div>
               {product.images.length > 1 && (
-                <div className="-m-1 flex gap-3 overflow-x-auto p-1 pb-2">
+                <div className="-m-1 flex gap-3 overflow-x-auto scroll-p-1 p-1 pb-2">
                   {product.images.map((img, i) => (
                     <Button
                       // biome-ignore lint/suspicious/noArrayIndexKey: image thumbnails are positional, index is the correct key
@@ -185,7 +185,7 @@ export function ProductDetails({
                       aria-label={`Показать фото ${i + 1} из ${product.images.length}`}
                       aria-pressed={activeImage === i}
                       onClick={() => setActiveImage(i)}
-                      className={`size-20 shrink-0 rounded-lg border-2 bg-sand p-1 transition-colors duration-150 active:scale-[0.97] focus-visible:border-espresso focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 focus-visible:ring-offset-parchment focus-visible:transition-none motion-reduce:transition-none motion-reduce:active:scale-100 ${
+                      className={`size-20 shrink-0 scroll-m-1 rounded-lg border-2 bg-sand p-1 transition-colors duration-150 active:scale-[0.97] focus-visible:border-espresso focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 focus-visible:ring-offset-parchment focus-visible:transition-none motion-reduce:transition-none motion-reduce:active:scale-100 ${
                         activeImage === i
                           ? "border-espresso"
                           : "border-espresso/20 hover:border-espresso/50"

@@ -66,6 +66,8 @@ function AverageRating({ reviews }: { reviews: Review[] }) {
 }
 
 interface ReviewsProps {
+  /** Homepage must not present unverified fallback stories as customer evidence. */
+  verifiedOnly?: boolean;
   /** Limit how many live Ozon reviews to display */
   limit?: number;
   /** Show only reviews for specific SKUs (for product page) */
@@ -74,9 +76,15 @@ interface ReviewsProps {
   heading?: string;
 }
 
-export async function Reviews({ limit = 3, skus, heading }: ReviewsProps) {
+export async function Reviews({
+  limit = 3,
+  skus,
+  heading,
+  verifiedOnly = false,
+}: ReviewsProps) {
   // Fetch live reviews; fall back to static on any failure
   const liveReviews = await getReviews(skus);
+  if (verifiedOnly && !liveReviews.length) return null;
   const reviews: Review[] =
     liveReviews.length > 0
       ? liveReviews.slice(0, limit)
@@ -114,7 +122,7 @@ export async function Reviews({ limit = 3, skus, heading }: ReviewsProps) {
             className="inline-flex items-center gap-2 label-caps-md text-espresso underline underline-offset-[6px] decoration-espresso/25 hover:decoration-terracotta hover:text-terracotta transition-colors"
           >
             <TelegramIcon className="w-4 h-4" />
-            Все отзывы — в моём Telegram-канале
+            Обсудить заказ с мастером
           </Link>
         </div>
 
@@ -130,7 +138,7 @@ export async function Reviews({ limit = 3, skus, heading }: ReviewsProps) {
           <p className="mt-8 text-center label-caps text-taupe">
             Отзывы автоматически загружаются с&nbsp;
             <a
-              href="https://www.ozon.ru"
+              href="https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/"
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-4 hover:text-terracotta transition-colors"
