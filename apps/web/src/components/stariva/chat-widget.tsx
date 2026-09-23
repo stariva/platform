@@ -740,6 +740,7 @@ export function ChatWidget() {
                 <a
                   href="/privacy-policy"
                   target="_blank"
+                  rel="noopener"
                   className="underline underline-offset-2 hover:text-espresso"
                 >
                   Политика конфиденциальности
