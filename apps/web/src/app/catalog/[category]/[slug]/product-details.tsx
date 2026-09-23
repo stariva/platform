@@ -239,8 +239,8 @@ export function ProductDetails({
 
               {product.inStock && (
                 <p className="inline-flex items-center gap-2 label-caps text-[10px] text-sage mb-4">
-                  <span className="size-1.5 rounded-full bg-sage" />
-                  В наличии · отправим сразу после оплаты
+                  <span className="size-1.5 rounded-full bg-sage" />В наличии ·
+                  отправим сразу после оплаты
                 </p>
               )}
 

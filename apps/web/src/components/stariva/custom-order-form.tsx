@@ -356,7 +356,19 @@ export function CustomOrderForm() {
                   </span>
                 )}
               </label>
-              {(photo || photoError) && <button type="button" className="text-sm underline underline-offset-4" onClick={() => { setPhoto(null); setPhotoError(""); if (fileInput.current) fileInput.current.value = ""; }}>Продолжить без фото</button>}
+              {(photo || photoError) && (
+                <button
+                  type="button"
+                  className="text-sm underline underline-offset-4"
+                  onClick={() => {
+                    setPhoto(null);
+                    setPhotoError("");
+                    if (fileInput.current) fileInput.current.value = "";
+                  }}
+                >
+                  Продолжить без фото
+                </button>
+              )}
               <label htmlFor={`${id}-name`} className="block text-sm">
                 Как к вам обращаться
                 <input

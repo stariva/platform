@@ -66,11 +66,17 @@ export async function saveRequest(data: OrderRequest, photo: File | null) {
 }
 async function notify(item: Notification) {
   return deliverNotification(item, {
-    telegramToken: env.TELEGRAM_BOT_TOKEN, telegramChatId: env.TELEGRAM_CHAT_ID,
-    emailKey: baseEnv.RESEND_API_KEY, emailFrom: env.ORDER_EMAIL_FROM, emailTo: env.ORDER_EMAIL_TO,
+    telegramToken: env.TELEGRAM_BOT_TOKEN,
+    telegramChatId: env.TELEGRAM_CHAT_ID,
+    emailKey: baseEnv.RESEND_API_KEY,
+    emailFrom: env.ORDER_EMAIL_FROM,
+    emailTo: env.ORDER_EMAIL_TO,
   });
 }
-export async function dispatchRequest(id: string, deliver: (item: Notification) => Promise<boolean> = notify) {
+export async function dispatchRequest(
+  id: string,
+  deliver: (item: Notification) => Promise<boolean> = notify,
+) {
   const now = new Date();
   const [item] = await db
     .update(customOrderRequests)

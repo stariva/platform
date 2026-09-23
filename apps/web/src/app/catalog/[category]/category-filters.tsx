@@ -227,9 +227,7 @@ function ProductCard({
           </div>
         </div>
         {product.inStock ? (
-          <p className="mt-1.5 label-caps text-[9px] text-sage">
-            В наличии
-          </p>
+          <p className="mt-1.5 label-caps text-[9px] text-sage">В наличии</p>
         ) : (
           madeToOrder && (
             <p className="mt-1.5 label-caps text-[9px] text-terracotta/90">
