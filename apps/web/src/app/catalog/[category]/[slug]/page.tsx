@@ -173,12 +173,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const url = `/catalog/${categorySlug}/${slug}`;
 
+  const skus = product.ozonSku ? [product.ozonSku] : undefined;
+  const productReviews =
+    product.ozonOfferId || skus
+      ? await getReviews({ offerId: product.ozonOfferId, skus })
+      : [];
   const rating = product.ozonOfferId
-    ? getRatingSummary(product.ozonOfferId)
+    ? await getRatingSummary(product.ozonOfferId, skus)
     : null;
-  const productReviews = rating
-    ? await getReviews({ offerId: product.ozonOfferId })
-    : [];
 
   return (
     <>

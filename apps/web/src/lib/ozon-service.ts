@@ -1,5 +1,5 @@
 import { logger } from "@stariva/config";
-import { OZON_RATINGS, OZON_REVIEWS } from "@/data/ozon-reviews";
+import { OZON_REVIEWS } from "@/data/ozon-reviews";
 import { fetchFromOzon, fetchOzonReviews } from "./ozon/api-client";
 import type { Product, Review } from "./ozon-types";
 import { categories } from "./products";
@@ -65,7 +65,7 @@ export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
   const { offerId, skus } = filter;
   const isProductPage = Boolean(offerId || skus?.length);
 
-  const live = (await fetchOzonReviews(100)) ?? [];
+  const live = (await fetchOzonReviews(100, skus)) ?? [];
   const liveMatched = isProductPage
     ? live.filter(
         (r) => r.productSku !== undefined && skus?.includes(r.productSku),
@@ -113,18 +113,15 @@ export interface RatingSummary {
   count: number;
 }
 
-/** Рейтинг по всем оценкам Ozon (включая оценки без текста). */
-export function getRatingSummary(offerId?: string): RatingSummary | null {
-  const single = offerId ? OZON_RATINGS[offerId] : undefined;
-  const entries = offerId
-    ? single
-      ? [single]
-      : []
-    : Object.values(OZON_RATINGS);
-  const count = entries.reduce((n, e) => n + e.count, 0);
-  if (count === 0) return null;
-  const sum = entries.reduce((n, e) => n + e.sum, 0);
-  return { average: sum / count, count };
+/** Рейтинг по отзывам Ozon из того же набора, что показывается на сайте. */
+export async function getRatingSummary(
+  offerId?: string,
+  skus?: number[],
+): Promise<RatingSummary | null> {
+  const reviews = await getReviews({ offerId, skus });
+  if (reviews.length === 0) return null;
+  const sum = reviews.reduce((total, review) => total + review.rating, 0);
+  return { average: sum / reviews.length, count: reviews.length };
 }
 
 export { categories } from "./products";

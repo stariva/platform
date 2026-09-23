@@ -236,7 +236,7 @@ export function ProductJsonLd({
     schema.aggregateRating = {
       "@type": "AggregateRating",
       ratingValue: rating.average.toFixed(1),
-      reviewCount: rating.count,
+      ratingCount: rating.count,
       bestRating: "5",
       worstRating: "1",
     };

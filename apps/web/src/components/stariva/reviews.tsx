@@ -62,8 +62,10 @@ export async function Reviews({
   if (reviews.length === 0) return null;
 
   const summary = showProductReviews
-    ? getRatingSummary(offerId)
-    : getRatingSummary();
+    ? offerId
+      ? await getRatingSummary(offerId, skus)
+      : null
+    : await getRatingSummary();
 
   // Ссылки на товары для общих блоков отзывов
   const productHrefs = new Map<string, string>();
