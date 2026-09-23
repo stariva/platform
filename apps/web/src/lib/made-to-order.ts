@@ -32,7 +32,7 @@ export interface MadeToOrderConfig {
 }
 
 /** Срок изготовления изделий на заказ — совпадает с FAQ. */
-export const MADE_TO_ORDER_DAYS = "7–21 день";
+export const MADE_TO_ORDER_DAYS = "2–4 дня";
 
 export const CUSTOM_SIZE = "По меркам";
 export const PHOTO_COLOR = "Как на фото";

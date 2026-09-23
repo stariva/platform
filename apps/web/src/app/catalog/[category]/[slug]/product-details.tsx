@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { MadeToOrder } from "@/components/stariva/made-to-order";
-import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -46,7 +45,7 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
     },
     {
       q: "Как долго ждать заказ?",
-      a: "Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ изготавливаются 7–21 день в зависимости от сложности. Доставка по России через Ozon.",
+      a: "Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ изготавливаются 2–4 дня в зависимости от сложности. Доставка по России через Ozon.",
     },
   ],
   clothes: [
@@ -64,7 +63,7 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
     },
     {
       q: "Можно ли выбрать другой цвет?",
-      a: "Да. Любую модель сплетём в другом цвете шнура — выберите оттенок в карточке товара, точный цвет согласуем перед плетением. Изготовление занимает 7–21 день.",
+      a: "Да. Любую модель сплетём в другом цвете шнура — выберите оттенок в карточке товара, точный цвет согласуем перед плетением. Изготовление занимает 2–4 дня.",
     },
   ],
   bags: [
@@ -356,19 +355,6 @@ export function ProductDetails({
                     Позвонить
                   </a>
                 </Button>
-
-                {/* Pinterest Save */}
-                <PinterestSaveButton
-                  url={`${typeof window !== "undefined" ? window.location.origin : "https://stariva.ru"}/catalog/${categorySlug}/${product.slug}`}
-                  imageUrl={
-                    product.images[0]?.startsWith("http")
-                      ? product.images[0]
-                      : `https://stariva.ru${product.images[0]}`
-                  }
-                  description={`${product.name} — ${product.shortDescription || "изделие ручного макраме из натурального хлопка"} | Stariva`}
-                  variant="button"
-                  className="w-full justify-center"
-                />
 
                 {/* Delivery info */}
                 <div className="flex items-center justify-center gap-4 pt-1">

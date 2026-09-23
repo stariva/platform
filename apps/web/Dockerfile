@@ -18,6 +18,8 @@ RUN bun install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
 COPY .env.example .env
 ENV NEXT_PUBLIC_SITE_URL=https://stariva.ru
+ENV APP_URL=https://stariva.ru
+ENV NEXT_PUBLIC_APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=814c36f0-1a32-47af-b51d-8f197d5f2981
 RUN bun run build --filter=@stariva/web
 
@@ -31,6 +33,8 @@ COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/public ./apps/web/publi
 USER nextjs
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_SITE_URL=https://stariva.ru
+ENV APP_URL=https://stariva.ru
+ENV NEXT_PUBLIC_APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=814c36f0-1a32-47af-b51d-8f197d5f2981
 ENV PORT=3000
 EXPOSE 3000

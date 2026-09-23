@@ -155,7 +155,7 @@ export default async function CatalogPage() {
             </h1>
             <p className="text-taupe text-lg max-w-2xl mx-auto">
               Каждое изделие создаётся вручную из натурального хлопка. Срок
-              изготовления — от 7 до 21 дня в зависимости от сложности.
+              изготовления — от 2 до 4 дней в зависимости от сложности.
             </p>
           </div>
         </section>

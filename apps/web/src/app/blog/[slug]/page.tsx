@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/stariva/json-ld";
-import { PinterestSaveButton } from "@/components/stariva/pinterest-save-button";
 import { blogPosts, formatDate, getPostBySlug } from "@/lib/blog-data";
 
 interface BlogPostPageProps {
@@ -236,16 +235,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           {/* CTA Section */}
           <div className="max-w-2xl mx-auto mt-16 pt-12 border-t border-espresso/10">
-            {/* Pinterest Save */}
-            <div className="flex justify-center mb-8">
-              <PinterestSaveButton
-                url={`${BASE_URL}${url}`}
-                imageUrl={`${BASE_URL}${post.coverImage}`}
-                description={`${post.title} — ${post.excerpt} | Stariva`}
-                variant="button"
-              />
-            </div>
-
             {/* CTA to catalog */}
             <div className="p-6 bg-espresso rounded-xl text-parchment text-center">
               <p className="font-serif text-xl mb-2">Понравилась статья?</p>
