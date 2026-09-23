@@ -310,8 +310,7 @@ export const workshops: Workshop[] = [
     category: "clothing",
     level: "beginner",
     price: 0,
-    // TODO: уточнить после ffprobe реальной длительности видео и обновить тут и в lessons ниже
-    duration: "45 мин",
+    duration: "16 мин",
     lessonsCount: 1,
     cover: "/images/workshops/cover-poyas-serdce.jpg",
     previewImage: "/images/workshops/preview-poyas-serdce.jpg",
@@ -333,7 +332,7 @@ export const workshops: Workshop[] = [
     lessons: [
       {
         title: "Плетение пояса «Сердце»",
-        duration: "45 мин",
+        duration: "16 мин",
         free: true,
       },
     ],

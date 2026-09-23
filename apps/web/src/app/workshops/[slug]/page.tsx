@@ -464,34 +464,36 @@ export default async function WorkshopDetailPage({
                     sizes="380px"
                     className="object-cover"
                   />
-                  <div className="absolute inset-0 bg-espresso/30 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-parchment/90 flex items-center justify-center">
-                      <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 22 22"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <rect
-                          x="3"
-                          y="10"
-                          width="16"
-                          height="11"
-                          rx="2"
-                          stroke="#2c241b"
-                          strokeWidth="1.4"
-                        />
-                        <path
-                          d="M7 10V8a4 4 0 0 1 8 0v2"
-                          stroke="#2c241b"
-                          strokeWidth="1.4"
-                          strokeLinecap="round"
-                        />
-                        <circle cx="11" cy="15.5" r="1.5" fill="#2c241b" />
-                      </svg>
+                  {workshop.price > 0 && (
+                    <div className="absolute inset-0 bg-espresso/30 flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-full bg-parchment/90 flex items-center justify-center">
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 22 22"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <rect
+                            x="3"
+                            y="10"
+                            width="16"
+                            height="11"
+                            rx="2"
+                            stroke="#2c241b"
+                            strokeWidth="1.4"
+                          />
+                          <path
+                            d="M7 10V8a4 4 0 0 1 8 0v2"
+                            stroke="#2c241b"
+                            strokeWidth="1.4"
+                            strokeLinecap="round"
+                          />
+                          <circle cx="11" cy="15.5" r="1.5" fill="#2c241b" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="p-6">
