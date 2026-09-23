@@ -19,7 +19,8 @@ export function ResortCtaDownload() {
           </h2>
           <p className="text-dark-grey leading-relaxed mb-10 text-[15px] max-w-lg mx-auto">
             Цены, фотографии, сроки и условия работы на одной странице.
-            Сохраните в PDF одной кнопкой и отправьте в WhatsApp, Telegram или по email.
+            Сохраните в PDF одной кнопкой и отправьте в WhatsApp, Telegram или
+            по email.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

@@ -122,20 +122,20 @@ export function WorkshopPurchase({
   return (
     <>
       <Button
-      onClick={handleBuy}
-      disabled={buying}
-      className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6 rounded-2xl mb-3 text-base"
-      aria-label={
-        price === 0
-          ? `Смотреть бесплатно: ${title}`
-          : `Купить мастер-класс ${title}`
-      }
-    >
-      {buying
-        ? "Открываем доступ…"
-        : price === 0
-          ? "Смотреть бесплатно"
-          : `Купить за ${formatPrice(price)}`}
+        onClick={handleBuy}
+        disabled={buying}
+        className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6 rounded-2xl mb-3 text-base"
+        aria-label={
+          price === 0
+            ? `Смотреть бесплатно: ${title}`
+            : `Купить мастер-класс ${title}`
+        }
+      >
+        {buying
+          ? "Открываем доступ…"
+          : price === 0
+            ? "Смотреть бесплатно"
+            : `Купить за ${formatPrice(price)}`}
       </Button>
       {price > 0 ? <OfferAcceptanceNote className="mb-3" /> : null}
     </>
