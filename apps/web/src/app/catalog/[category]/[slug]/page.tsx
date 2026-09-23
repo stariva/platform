@@ -11,7 +11,12 @@ import {
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Reviews } from "@/components/stariva/reviews";
-import { getProductBySlug, getProductsByCategory } from "@/lib/ozon-service";
+import {
+  getProductBySlug,
+  getProductsByCategory,
+  getRatingSummary,
+  getReviews,
+} from "@/lib/ozon-service";
 import { getCategoryBySlug } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ProductDetails } from "./product-details";
@@ -167,6 +172,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const url = `/catalog/${categorySlug}/${slug}`;
 
+  const rating = product.ozonOfferId
+    ? getRatingSummary(product.ozonOfferId)
+    : null;
+  const productReviews = rating
+    ? await getReviews({ offerId: product.ozonOfferId })
+    : [];
+
   return (
     <>
       <ProductAnalytics
@@ -199,6 +211,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
         url={url}
         category={category.name}
         material={product.material}
+        rating={rating}
+        reviews={productReviews}
       />
       <FAQJsonLd
         items={categoryFaqJsonLd[categorySlug] ?? categoryFaqJsonLd.interior}
@@ -208,11 +222,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
         category={category}
         categorySlug={categorySlug}
         relatedProducts={relatedProducts}
+        rating={rating}
       />
       <BuyingGuide product={product} />
       <Reviews
-        limit={3}
-        skus={product.ozonId ? [product.ozonId] : undefined}
+        offerId={product.ozonOfferId}
+        skus={product.ozonSku ? [product.ozonSku] : undefined}
         heading="Отзывы о товаре"
       />
       <Footer />

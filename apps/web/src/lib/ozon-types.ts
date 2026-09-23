@@ -108,6 +108,9 @@ export interface Review {
   date: string; // ISO-8601
   reviewerName: string;
   productSku?: number;
+  /** Артикул продавца (offer_id) — по нему отзыв привязывается к товару */
+  productOfferId?: string;
+  productTitle?: string;
   photos: string[];
   source: "ozon" | "static";
 }
@@ -161,6 +164,8 @@ export interface Product {
   category: ProductCategory;
   subcategory: ProductSubcategory;
   ozonId?: number;
+  /** Артикул продавца на Ozon (offer_id) */
+  ozonOfferId?: string;
   /** fbs_sku/fbo_sku (или общий sku) — нужен для Ozon Доставка (checkout/order/create) */
   ozonSku?: number;
   ozonUrl?: string;

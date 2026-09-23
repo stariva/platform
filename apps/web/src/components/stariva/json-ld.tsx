@@ -177,6 +177,13 @@ interface ProductJsonLdProps {
   category: string;
   material?: string;
   brand?: string;
+  rating?: { average: number; count: number } | null;
+  reviews?: {
+    reviewerName: string;
+    date: string;
+    text: string;
+    rating: number;
+  }[];
 }
 
 export function ProductJsonLd({
@@ -191,6 +198,8 @@ export function ProductJsonLd({
   category,
   material,
   brand = "Stariva",
+  rating,
+  reviews,
 }: ProductJsonLdProps) {
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -220,6 +229,30 @@ export function ProductJsonLd({
 
   if (material) {
     schema.material = material;
+  }
+
+  if (rating && rating.count > 0) {
+    schema.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: rating.average.toFixed(1),
+      reviewCount: rating.count,
+      bestRating: "5",
+      worstRating: "1",
+    };
+  }
+
+  if (reviews && reviews.length > 0) {
+    schema.review = reviews.slice(0, 10).map((r) => ({
+      "@type": "Review",
+      author: { "@type": "Person", name: r.reviewerName },
+      datePublished: r.date.split("T")[0],
+      reviewBody: r.text,
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: r.rating,
+        bestRating: 5,
+      },
+    }));
   }
 
   if (oldPrice) {

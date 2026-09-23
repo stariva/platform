@@ -276,6 +276,7 @@ export function transformOzonProduct(
     category,
     subcategory,
     ozonId: ozonProduct.id,
+    ozonOfferId: ozonProduct.offer_id || undefined,
     ozonSku:
       ozonProduct.fbs_sku ||
       ozonProduct.fbo_sku ||

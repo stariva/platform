@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { MadeToOrder } from "@/components/stariva/made-to-order";
+import { Stars } from "@/components/stariva/review-card";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,12 +19,14 @@ import { Button } from "@/components/ui/button";
 import { getMadeToOrder } from "@/lib/made-to-order";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
+import { formatRating, pluralRatings } from "@/lib/ratings";
 
 interface ProductDetailsProps {
   product: Product;
   category: Category;
   categorySlug: string;
   relatedProducts: Product[];
+  rating?: { average: number; count: number } | null;
 }
 
 // ─── FAQ data per category ────────────────────────────────────────────────────
@@ -91,6 +94,7 @@ export function ProductDetails({
   category,
   categorySlug,
   relatedProducts,
+  rating,
 }: ProductDetailsProps) {
   const [activeImage, setActiveImage] = useState(0);
   const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior;
@@ -219,6 +223,21 @@ export function ProductDetails({
               <h1 className="font-serif text-3xl md:text-4xl text-espresso mb-4">
                 {product.name}
               </h1>
+
+              {rating && (
+                <a
+                  href="#reviews"
+                  className="group inline-flex items-center gap-2 self-start mb-4 text-sm"
+                >
+                  <Stars rating={rating.average} />
+                  <span className="text-espresso font-medium tabular-nums">
+                    {formatRating(rating.average)}
+                  </span>
+                  <span className="text-taupe underline underline-offset-4 decoration-taupe/40 group-hover:text-terracotta group-hover:decoration-terracotta transition-colors">
+                    {rating.count} {pluralRatings(rating.count)} на Ozon
+                  </span>
+                </a>
+              )}
 
               <div className="flex items-baseline gap-3 mb-2">
                 <span className="font-serif text-3xl text-espresso">

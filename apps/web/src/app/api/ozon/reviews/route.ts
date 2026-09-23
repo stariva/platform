@@ -10,7 +10,9 @@ export async function GET(request: Request) {
     ? skusParam.split(",").map(Number).filter(Boolean)
     : undefined;
 
-  const reviews = await getReviews(skus);
+  const offerId = searchParams.get("offerId") ?? undefined;
+
+  const reviews = await getReviews({ offerId, skus });
 
   return NextResponse.json({ reviews, total: reviews.length });
 }
