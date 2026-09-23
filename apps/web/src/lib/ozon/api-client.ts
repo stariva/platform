@@ -6,6 +6,7 @@ import type { ExtractedAttributes, OzonProductInfoV3 } from "./transformers";
 import {
   extractAttributes,
   ozonProductInfoV3Schema,
+  parseOfferIdList,
   transformOzonProduct,
 } from "./transformers";
 
@@ -275,8 +276,9 @@ export async function fetchFromOzon(): Promise<Product[] | null> {
 
     const attrsMap = await fetchProductAttributes(productIds, clientId, apiKey);
 
+    const inStockOfferIds = parseOfferIdList(env.SITE_IN_STOCK_OFFER_IDS);
     const products = items.map((item) =>
-      transformOzonProduct(item, attrsMap.get(item.id)),
+      transformOzonProduct(item, attrsMap.get(item.id), inStockOfferIds),
     );
     return products;
   } catch (error) {

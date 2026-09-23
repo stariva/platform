@@ -105,6 +105,13 @@ function ProductCard({ product }: { product: Product; index?: number }) {
           </span>
         )}
       </div>
+      <p
+        className={`mt-1.5 label-caps text-[9px] ${
+          product.inStock ? "text-sage" : "text-terracotta/90"
+        }`}
+      >
+        {product.inStock ? "В наличии" : "Под заказ"}
+      </p>
     </Link>
   );
 }
