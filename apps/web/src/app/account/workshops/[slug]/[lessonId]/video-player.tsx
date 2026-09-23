@@ -31,12 +31,15 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 interface VideoPlayerProps {
   slug: string;
   lessonId: string;
   /** Сохранённая позиция (секунды) для продолжения с места. */
   initialPosition: number;
+  /** Был ли урок уже отмечен как пройденный. */
+  initialCompleted?: boolean;
   lessonTitle: string;
   /** Подпись над названием, например «Урок 2 из 8». */
   lessonLabel: string;
@@ -69,10 +72,19 @@ const DEFAULT_PREFS: PlayerPrefs = {
   autoNext: true,
 };
 
+const playerPrefsSchema = z.object({
+  volume: z.number().min(0).max(1),
+  muted: z.boolean(),
+  rate: z.number().refine((rate) => SPEEDS.includes(rate)),
+  autoNext: z.boolean(),
+});
+
 function readPrefs(): PlayerPrefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    return raw ? { ...DEFAULT_PREFS, ...JSON.parse(raw) } : DEFAULT_PREFS;
+    if (!raw) return DEFAULT_PREFS;
+    const result = playerPrefsSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : DEFAULT_PREFS;
   } catch {
     return DEFAULT_PREFS;
   }
@@ -130,6 +142,7 @@ export function VideoPlayer({
   slug,
   lessonId,
   initialPosition,
+  initialCompleted = false,
   lessonTitle,
   lessonLabel,
   nextLesson,
@@ -145,6 +158,7 @@ export function VideoPlayer({
   const [reloadToken, setReloadToken] = useState(0);
   const retriesRef = useRef(0);
   const pendingSeekRef = useRef<number | null>(initialPosition || null);
+  const initialResumePendingRef = useRef(true);
   const resumePlayRef = useRef(false);
 
   // Состояние воспроизведения
@@ -177,7 +191,9 @@ export function VideoPlayer({
   const hideTimerRef = useRef<number | undefined>(undefined);
   const flashIdRef = useRef(0);
   const lastSavedRef = useRef(0);
-  const completedRef = useRef(false);
+  const currentTimeRef = useRef(initialPosition);
+  const durationRef = useRef(0);
+  const completedRef = useRef(initialCompleted);
   const pointerTypeRef = useRef<string>("mouse");
   const lastTapRef = useRef(0);
   const tapTimerRef = useRef<number | undefined>(undefined);
@@ -255,10 +271,11 @@ export function VideoPlayer({
   );
 
   const saveNow = useCallback(() => {
-    const video = videoRef.current;
-    if (video?.duration && !completedRef.current) {
-      lastSavedRef.current = video.currentTime;
-      saveProgress(video.currentTime, video.duration);
+    const position = currentTimeRef.current;
+    const videoDuration = durationRef.current;
+    if (videoDuration && !completedRef.current) {
+      lastSavedRef.current = position;
+      saveProgress(position, videoDuration);
     }
   }, [saveProgress]);
 
@@ -295,6 +312,7 @@ export function VideoPlayer({
     const video = videoRef.current;
     if (!video?.duration) return;
     video.currentTime = clamp(time, 0, video.duration);
+    currentTimeRef.current = video.currentTime;
     setCurrentTime(video.currentTime);
   }, []);
 
@@ -630,12 +648,16 @@ export function VideoPlayer({
     video.muted = prefs.muted;
     video.playbackRate = prefs.rate;
     setDuration(video.duration);
+    currentTimeRef.current = video.currentTime;
+    durationRef.current = video.duration;
 
     const seek = pendingSeekRef.current;
     pendingSeekRef.current = null;
-    const isInitialResume = retriesRef.current === 0 && seek !== null;
+    const isInitialResume = initialResumePendingRef.current;
+    initialResumePendingRef.current = false;
     if (seek !== null && seek > 0 && seek < video.duration - 5) {
       video.currentTime = seek;
+      currentTimeRef.current = seek;
       setCurrentTime(seek);
       if (isInitialResume && seek > 15) setResumeNotice(seek);
     }
@@ -657,6 +679,8 @@ export function VideoPlayer({
     const video = videoRef.current;
     if (!video?.duration) return;
     const now = video.currentTime;
+    currentTimeRef.current = now;
+    durationRef.current = video.duration;
     if (!scrubbing) setCurrentTime(now);
     // Троттлинг сохранения: не чаще раза в 10 секунд
     if (Math.abs(now - lastSavedRef.current) >= 10) {
@@ -818,7 +842,11 @@ export function VideoPlayer({
           disablePictureInPicture={!pipSupported}
           onContextMenu={(e) => e.preventDefault()}
           onLoadedMetadata={onLoadedMetadata}
-          onDurationChange={() => setDuration(videoRef.current?.duration || 0)}
+          onDurationChange={() => {
+            const videoDuration = videoRef.current?.duration || 0;
+            durationRef.current = videoDuration;
+            setDuration(videoDuration);
+          }}
           onTimeUpdate={onTimeUpdate}
           onProgress={onProgress}
           onPlay={() => {
@@ -829,11 +857,19 @@ export function VideoPlayer({
             setResumeNotice(null);
           }}
           onPause={() => {
+            const video = videoRef.current;
+            if (video) {
+              currentTimeRef.current = video.currentTime;
+              durationRef.current = video.duration;
+            }
             setPlaying(false);
             saveNow();
           }}
           onWaiting={() => setWaiting(true)}
-          onPlaying={() => setWaiting(false)}
+          onPlaying={() => {
+            retriesRef.current = 0;
+            setWaiting(false);
+          }}
           onCanPlay={() => setWaiting(false)}
           onSeeked={onProgress}
           onEnded={onEnded}

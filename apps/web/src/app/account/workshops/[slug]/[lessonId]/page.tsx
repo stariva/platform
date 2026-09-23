@@ -33,7 +33,8 @@ export default async function LessonPlayerPage({
   const next = index < lessons.length - 1 ? lessons[index + 1] : null;
 
   const progress = await getCourseProgressMap(session.user.id, slug);
-  const initialPosition = progress.get(lessonId)?.positionSeconds ?? 0;
+  const lessonProgress = progress.get(lessonId);
+  const initialPosition = lessonProgress?.positionSeconds ?? 0;
 
   return (
     <div>
@@ -51,6 +52,7 @@ export default async function LessonPlayerPage({
             slug={slug}
             lessonId={lesson.id}
             initialPosition={initialPosition}
+            initialCompleted={lessonProgress?.completed ?? false}
             lessonTitle={lesson.title}
             lessonLabel={`Урок ${index + 1} из ${lessons.length}`}
             nextLesson={next ? { id: next.id, title: next.title } : null}
