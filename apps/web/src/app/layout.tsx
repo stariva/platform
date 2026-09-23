@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Suspense } from "react";
@@ -12,6 +11,7 @@ import { Metrika } from "@/components/stariva/metrika";
 import { Toaster } from "@/components/ui/sonner";
 import { baseEnv } from "@/env";
 import { CartProvider } from "@/lib/cart/cart-context";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -84,15 +84,18 @@ export const metadata: Metadata = {
   alternates: {
     canonical: BASE_URL,
   },
+  manifest: "/site.webmanifest",
   icons: {
     icon: [
       {
         url: "/favicon.ico",
-        sizes: "any",
+        type: "image/x-icon",
+        sizes: "16x16 32x32 48x48",
       },
       {
         url: "/favicon.svg",
         type: "image/svg+xml",
+        sizes: "any",
       },
       {
         url: "/favicon-96x96.png",
@@ -100,7 +103,11 @@ export const metadata: Metadata = {
         sizes: "96x96",
       },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: {
+      url: "/apple-touch-icon.png",
+      type: "image/png",
+      sizes: "180x180",
+    },
   },
 };
 
