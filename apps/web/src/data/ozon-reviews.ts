@@ -236,6 +236,7 @@ const SNAPSHOT: SnapshotReview[] = [
   },
 ];
 
+/** Buyer-visible Ozon reviews captured from the seller dashboard. */
 export const OZON_REVIEWS: Review[] = SNAPSHOT.map((r) => ({
   ...r,
   source: "ozon",

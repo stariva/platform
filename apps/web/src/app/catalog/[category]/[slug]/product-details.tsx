@@ -89,6 +89,7 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
   ],
 };
 
+/** Displays product details and links the rating to the reviews section. */
 export function ProductDetails({
   product,
   category,

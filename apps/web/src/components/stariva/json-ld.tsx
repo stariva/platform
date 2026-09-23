@@ -186,6 +186,7 @@ interface ProductJsonLdProps {
   }[];
 }
 
+/** Emits product structured data, including available Ozon ratings and reviews. */
 export function ProductJsonLd({
   name,
   description,

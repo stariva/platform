@@ -20,6 +20,7 @@ function formatDate(iso: string) {
   });
 }
 
+/** Renders an accessible five-star representation of a numeric rating. */
 export function Stars({
   rating,
   className = "w-3.5 h-3.5",
@@ -87,6 +88,7 @@ interface ReviewCardProps {
   productHref?: string;
 }
 
+/** Displays an Ozon review with expandable text and a photo lightbox. */
 export function ReviewCard({ review, index, productHref }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [photoIndex, setPhotoIndex] = useState<number | null>(null);

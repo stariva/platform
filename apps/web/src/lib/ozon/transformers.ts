@@ -170,6 +170,7 @@ export function extractAttributes(
   return result;
 }
 
+/** Maps Ozon product data and attributes to the storefront product model. */
 export function transformOzonProduct(
   ozonProduct: OzonProductInfoV3,
   attrs?: ExtractedAttributes,

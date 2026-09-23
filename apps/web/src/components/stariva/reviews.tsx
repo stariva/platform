@@ -9,6 +9,7 @@ import { formatRating, pluralRatings } from "@/lib/ratings";
 import { TelegramIcon } from "./icons";
 import { ReviewCard, Stars } from "./review-card";
 
+/** Displays the average rating and total number of Ozon ratings. */
 function RatingPanel({ summary }: { summary: RatingSummary }) {
   return (
     <div className="flex items-center gap-4 lg:gap-5">
@@ -36,6 +37,7 @@ interface ReviewsProps {
   heading?: string;
 }
 
+/** Shows product reviews when available, otherwise store-wide reviews. */
 export async function Reviews({
   limit = 6,
   offerId,

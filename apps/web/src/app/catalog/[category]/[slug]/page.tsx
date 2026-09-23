@@ -156,6 +156,7 @@ export async function generateMetadata({
   };
 }
 
+/** Renders a product with its rating, reviews, and related products. */
 export default async function ProductPage({ params }: ProductPageProps) {
   const { category: categorySlug, slug } = await params;
   const product = await getProductBySlug(slug);
