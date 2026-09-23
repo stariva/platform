@@ -11,7 +11,12 @@ import {
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Reviews } from "@/components/stariva/reviews";
-import { getProductBySlug, getProductsByCategory } from "@/lib/ozon-service";
+import {
+  getProductBySlug,
+  getProductsByCategory,
+  getRatingSummary,
+  getReviews,
+} from "@/lib/ozon-service";
 import { getCategoryBySlug } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ProductDetails } from "./product-details";
@@ -151,6 +156,7 @@ export async function generateMetadata({
   };
 }
 
+/** Renders a product with its rating, reviews, and related products. */
 export default async function ProductPage({ params }: ProductPageProps) {
   const { category: categorySlug, slug } = await params;
   const product = await getProductBySlug(slug);
@@ -166,6 +172,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
     .slice(0, 3);
 
   const url = `/catalog/${categorySlug}/${slug}`;
+
+  const skus = product.ozonSku ? [product.ozonSku] : undefined;
+  const productReviews =
+    product.ozonOfferId || skus
+      ? await getReviews({ offerId: product.ozonOfferId, skus })
+      : [];
+  const rating = product.ozonOfferId
+    ? await getRatingSummary(product.ozonOfferId, skus)
+    : null;
 
   return (
     <>
@@ -199,6 +214,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
         url={url}
         category={category.name}
         material={product.material}
+        rating={rating}
+        reviews={productReviews}
       />
       <FAQJsonLd
         items={categoryFaqJsonLd[categorySlug] ?? categoryFaqJsonLd.interior}
@@ -208,11 +225,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
         category={category}
         categorySlug={categorySlug}
         relatedProducts={relatedProducts}
+        rating={rating}
       />
       <BuyingGuide product={product} />
       <Reviews
-        limit={3}
-        skus={product.ozonId ? [product.ozonId] : undefined}
+        offerId={product.ozonOfferId}
+        skus={product.ozonSku ? [product.ozonSku] : undefined}
         heading="Отзывы о товаре"
       />
       <Footer />
