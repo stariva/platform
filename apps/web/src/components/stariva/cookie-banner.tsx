@@ -52,32 +52,30 @@ export function CookieBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Настройки cookie"
-      className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-xl rounded-2xl border border-espresso/10 bg-parchment p-5 text-espresso shadow-lg sm:bottom-5"
+      className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-xl rounded-2xl border border-espresso/10 bg-parchment p-3 sm:p-4 text-espresso shadow-lg"
     >
       <p className="text-[13px] leading-relaxed text-espresso/80">
-        Сайт использует необходимые cookie для работы корзины и входа в кабинет.
-        С вашего согласия я также подключу Яндекс.Метрику, чтобы понимать, как
-        улучшить сайт. Подробнее — в{" "}
+        Cookie — для работы сайта. Яндекс.Метрика — только с вашего согласия.{" "}
         <Link
           href="/privacy-policy#cookies"
           className="text-terracotta underline-offset-2 hover:underline"
         >
-          политике конфиденциальности
+          Подробнее
         </Link>
         .
       </p>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => choose("denied")}
-          className="rounded-full border border-espresso/20 px-5 py-2.5 text-[13px] text-espresso hover:border-espresso/50 transition-colors"
+          className="rounded-full border border-espresso/20 px-3 py-2.5 min-h-11 text-[12px] text-espresso hover:border-espresso/50 transition-colors"
         >
           Только необходимые
         </button>
         <button
           type="button"
           onClick={() => choose("granted")}
-          className="rounded-full bg-espresso px-5 py-2.5 text-[13px] text-parchment hover:bg-terracotta transition-colors"
+          className="rounded-full bg-espresso px-3 py-2.5 min-h-11 text-[12px] text-parchment hover:bg-terracotta transition-colors"
         >
           Разрешить аналитику
         </button>

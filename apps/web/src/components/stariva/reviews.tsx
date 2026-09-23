@@ -27,6 +27,8 @@ function RatingPanel({ summary }: { summary: RatingSummary }) {
 }
 
 interface ReviewsProps {
+  /** Homepage must not present unverified fallback stories as customer evidence. */
+  verifiedOnly?: boolean;
   /** How many reviews to show */
   limit?: number;
   /** Product page: show reviews for this Ozon offer_id */
@@ -43,6 +45,7 @@ export async function Reviews({
   offerId,
   skus,
   heading,
+  verifiedOnly = false,
 }: ReviewsProps) {
   const isProductPage = Boolean(offerId || skus?.length);
   const productReviews = isProductPage
@@ -52,7 +55,9 @@ export async function Reviews({
   const showProductReviews = productReviews.length > 0;
   const reviews = (
     showProductReviews ? productReviews : await getReviews()
-  ).slice(0, limit);
+  )
+    .filter((review) => !verifiedOnly || review.source === "ozon")
+    .slice(0, limit);
 
   if (reviews.length === 0) return null;
 
@@ -108,7 +113,7 @@ export async function Reviews({
               className="inline-flex items-center gap-2 label-caps-md text-espresso underline underline-offset-[6px] decoration-espresso/25 hover:decoration-terracotta hover:text-terracotta transition-colors"
             >
               <TelegramIcon className="w-4 h-4" />
-              Больше отзывов — в моём Telegram-канале
+              Обсудить заказ с мастером
             </Link>
           </div>
         </div>
@@ -132,7 +137,7 @@ export async function Reviews({
         <p className="mt-4 text-center label-caps text-taupe">
           Отзывы покупателей с&nbsp;
           <a
-            href="https://www.ozon.ru"
+            href="https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/"
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-4 hover:text-terracotta transition-colors"

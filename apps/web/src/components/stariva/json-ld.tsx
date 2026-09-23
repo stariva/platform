@@ -220,7 +220,7 @@ export function ProductJsonLd({
       priceCurrency: currency,
       availability: inStock
         ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock",
+        : "https://schema.org/MadeToOrder",
       seller: {
         "@id": `${BASE_URL}/#organization`,
       },

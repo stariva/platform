@@ -565,7 +565,7 @@ export function ChatWidget() {
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.96 }}
         className={cn(
-          "fixed bottom-5 right-5 lg:bottom-7 lg:right-7 z-60",
+          "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-7 lg:right-7 z-60",
           "flex items-center justify-center w-14 h-14 rounded-full",
           "bg-espresso text-parchment shadow-[0_12px_40px_rgba(22,21,19,0.28)]",
           "transition-colors duration-300 hover:bg-terracotta",

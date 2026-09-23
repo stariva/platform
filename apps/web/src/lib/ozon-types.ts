@@ -166,9 +166,12 @@ export interface Product {
   ozonId?: number;
   /** Артикул продавца на Ozon (offer_id) */
   ozonOfferId?: string;
+  /** Артикул продавца в Ozon (offer_id). */
+  offerId?: string;
   /** fbs_sku/fbo_sku (или общий sku) — нужен для Ozon Доставка (checkout/order/create) */
   ozonSku?: number;
   ozonUrl?: string;
+  /** Есть в наличии у нас — можно купить на сайте сразу. Иначе — под заказ через мастера. */
   inStock: boolean;
   material: string;
   dimensions?: string;

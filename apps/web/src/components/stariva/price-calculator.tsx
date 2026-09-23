@@ -91,12 +91,19 @@ export function PriceCalculator({ selection, onChange }: PriceCalculatorProps) {
         selectedId={selection.productType}
         onSelect={(id) => update({ productType: id })}
       />
-      <OptionGroup
-        label="Размер"
-        options={SIZES.map(toOption)}
-        selectedId={selection.size}
-        onSelect={(id) => update({ size: id })}
-      />
+      {selection.productType === "clothes" ? (
+        <p className="text-sm text-taupe">
+          Одежду создаём по меркам. Укажите их в заявке или попросите мастера
+          помочь. Точная цена зависит от модели и длины.
+        </p>
+      ) : (
+        <OptionGroup
+          label="Размер изделия (для примерной оценки)"
+          options={SIZES.map(toOption)}
+          selectedId={selection.size}
+          onSelect={(id) => update({ size: id })}
+        />
+      )}
       <OptionGroup
         label="Цвет"
         options={COLORS.map(toOption)}

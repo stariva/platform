@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { CustomOrder } from "@/components/stariva/custom-order";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
@@ -9,482 +10,265 @@ import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { Process } from "@/components/stariva/process";
 import { Reviews } from "@/components/stariva/reviews";
-import { Button } from "@/components/ui/button";
-import { getFeaturedProducts } from "@/lib/ozon-service";
+import { homePortfolio } from "@/lib/home-portfolio";
+import { getProducts } from "@/lib/ozon-service";
+import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL } from "@/lib/site-url";
 
-// Билд-образ не имеет боевых Ozon-креденшелов (см. Dockerfile), поэтому
-// статический пререндер на билде всегда пустой — рендерим динамически.
 export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
-  alternates: { canonical: BASE_URL },
+  title: "Макраме по вашим размерам — индивидуальный заказ | Stariva",
+  description:
+    "Абажуры, одежда, сумки и декор ручной работы по вашим размерам. Обсудите идею с мастером, получите помощь с замерами и расчёт стоимости.",
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    title: "Stariva — макраме по вашим размерам",
+    description:
+      "Расскажите о вашей идее — мастер поможет с замерами и рассчитает стоимость.",
+    url: SITE_URL,
+    images: [{ url: homePortfolio[0].image, alt: homePortfolio[0].name }],
+  },
 };
-
-// ─── Homepage FAQ ─────────────────────────────────────────────────────────────
 const homeFaq = [
   {
-    question: "Где купить изделия Stariva?",
+    question: "Можно заказать по своим размерам или фото?",
     answer:
-      "Все изделия Stariva продаются на маркетплейсе Ozon с доставкой по всей России. Также можно оформить индивидуальный заказ напрямую через Telegram или по телефону.",
+      "Да. Пришлите фото, размеры или описание идеи. Мастер обсудит с вами конструкцию, материал и цвет, после чего согласует стоимость и срок.",
   },
   {
-    question: "Из чего сделаны изделия Stariva?",
+    question: "Я не знаю, как снять мерки. Что делать?",
     answer:
-      "Все изделия создаются из натурального хлопкового шнура без синтетических добавок и химических красителей. Хлопок экологичен, безопасен для дома и приятен на ощупь.",
+      "Выберите в заявке «Не знаю размеры — нужна помощь» или просто опишите задачу. Для абажура обычно нужны диаметр и высота, для одежды — мерки и желаемая длина. Мастер подскажет, что измерить для вашего изделия.",
   },
   {
-    question: "Можно ли заказать изделие по индивидуальным размерам?",
+    question: "Сколько стоит индивидуальный заказ?",
     answer:
-      "Да, мы принимаем индивидуальные заказы. Напишите в Telegram @Olga_Stariva или позвоните по номеру +7 977 872 25 46 — обсудим ваши пожелания и рассчитаем стоимость.",
+      "Цена зависит от модели, размера, материала и сложности плетения. Калькулятор даёт ориентир, а точную стоимость мастер подтверждает после обсуждения. Отправить заявку можно без оплаты.",
   },
   {
-    question: "Сколько времени занимает изготовление?",
+    question: "Когда будет готово изделие?",
     answer:
-      "Готовые изделия отправляем в течение 1–3 дней. Изделия на индивидуальный заказ изготавливаются 2–4 дня в зависимости от сложности и размера.",
+      "Срок изготовления согласуем до оплаты: он зависит от размера, сложности и загрузки мастерской. Срок доставки обсудим отдельно. Если изделие нужно к определённой дате, укажите её в заявке.",
   },
   {
-    question: "Как ухаживать за изделиями из макраме?",
+    question: "Как проходит оплата и доставка?",
     answer:
-      "Раз в неделю удаляйте пыль мягкой щёткой или феном на холодном режиме. При необходимости замочите в тёплой воде с мягким мылом на 15–20 минут, прополощите и сушите горизонтально. Не выжимайте.",
+      "Сначала согласуем параметры, цену, срок изготовления и доставку. После этого мастер сообщит способ оплаты. Доставка по России и самовывоз по договорённости — условия уточним до оплаты. Подробности доступны в договоре оферты.",
   },
   {
-    question: "Есть ли мастер-классы по макраме?",
+    question: "Из чего сделаны изделия?",
     answer:
-      "Да! Мы предлагаем видео-мастер-классы по созданию абажуров, одежды и декора интерьера. Доступ навсегда, HD-видео, смотрите в своём темпе. Купить на Ozon.",
+      "Материал зависит от модели: используем хлопковый и другие виды шнура. Состав указан в карточке изделия. Для индивидуального заказа материал, фактуру и оттенок согласуем с вами заранее.",
   },
 ];
 
-// ─── Three-direction sections ────────────────────────────────────────────────
-
-const directions = [
-  {
-    id: "clothes",
-    index: "01",
-    label: "Одежда",
-    desc: "Платья, топы и накидки из натурального хлопка — каждое изделие создаётся вручную для вас.",
-    href: "/catalog/clothes",
-    accent: "text-terracotta",
-    accentBg: "bg-terracotta",
-    image: "/images/catalog/dress-boho-1.jpg",
-    items: [
-      "Платья макраме",
-      "Топы и блузы",
-      "Пляжные накидки",
-      "Индивидуальный заказ",
-    ],
-  },
-  {
-    id: "bags",
-    index: "02",
-    label: "Сумки",
-    desc: "Авоськи, сумки и корзины из хлопкового шнура — практичные и стильные аксессуары на каждый день.",
-    href: "/catalog/bags",
-    accent: "text-sage",
-    accentBg: "bg-sage",
-    image: "/images/catalog/category-decor.jpg",
-    items: [
-      "Сумки-тоут",
-      "Авоськи",
-      "Корзины для хранения",
-      "На заказ по размеру",
-    ],
-  },
-  {
-    id: "interior",
-    index: "03",
-    label: "Декор интерьера",
-    desc: "Абажуры, панно, плейсменты и вигвамы — детали, которые создают уют и рассказывают вашу историю.",
-    href: "/catalog/interior",
-    accent: "text-taupe",
-    accentBg: "bg-taupe",
-    image: "/images/catalog/lampshade-dome.jpg",
-    items: [
-      "Абажуры подвесные",
-      "Настенные панно",
-      "Плейсменты и подставки",
-      "Детские вигвамы",
-    ],
-  },
-];
-
-export default async function Page() {
-  const featuredProducts = await getFeaturedProducts();
+function Examples({ products = [] }: { products?: Product[] }) {
   return (
-    <main className="bg-parchment text-espresso">
+    <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+      {homePortfolio.map((item) => {
+        const product = products.find((p) => item.href.endsWith(`/${p.slug}`));
+        return (
+          <article
+            key={item.href}
+            className="overflow-hidden rounded-2xl border border-espresso/10 bg-parchment"
+          >
+            <Link
+              href={item.href}
+              className="block relative aspect-[4/3] md:aspect-[4/5] overflow-hidden"
+            >
+              <Image
+                src={item.image}
+                alt={item.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="object-cover"
+              />
+            </Link>
+            <div className="p-5 lg:p-6">
+              <h3 className="font-serif text-2xl text-espresso">
+                {item.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-espresso/75">
+                {item.details}
+              </p>
+              <div className="mt-4 min-h-14 text-sm text-taupe">
+                {product ? (
+                  <>
+                    <p className="text-espresso font-medium">
+                      Модель в каталоге —{" "}
+                      {formatPrice(product.price, product.currency)}
+                    </p>
+                    <p className="mt-1 text-xs">
+                      Ваш размер рассчитаем отдельно.
+                    </p>
+                  </>
+                ) : (
+                  <p>Актуальная цена и параметры — в карточке изделия.</p>
+                )}
+              </div>
+              <Link
+                href={item.href}
+                className="inline-block mt-3 text-sm text-espresso underline underline-offset-4"
+              >
+                Рассмотреть модель ↗
+              </Link>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+async function LiveExamples() {
+  return <Examples products={await getProducts()} />;
+}
+
+export default function Page() {
+  return (
+    <main className="bg-parchment text-espresso pb-20 lg:pb-0">
       <BreadcrumbJsonLd items={[{ name: "Главная", href: "/" }]} />
-      <Header variant="transparent" />
-
-      {/* ── Hero: three-direction switcher ── */}
+      <Header variant="solid" />
       <Hero />
-      <nav
-        aria-label="Популярные товары"
-        className="flex flex-wrap justify-center gap-6 px-5 py-6 bg-sand text-espresso"
-      >
-        <Link href="/abazhury" className="underline">
-          Абажуры макраме — модели и размеры
-        </Link>
-        <Link href="/catalog/clothes" className="underline">
-          Одежда макраме — выбрать изделие
-        </Link>
-      </nav>
-
-      {/* ── Three directions ── */}
-      <section className="py-24 lg:py-32">
-        <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
-          <div className="flex items-end justify-between mb-14 lg:mb-20">
+      <CustomOrder />
+      <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
+          <p className="label-caps text-terracotta mb-4">Изделия мастерской</p>
+          <div className="flex flex-wrap justify-between items-end gap-5 mb-8">
             <div>
-              <span className="label-caps text-terracotta mb-3 block">
-                Направления
-              </span>
-              <h2 className="font-serif text-4xl lg:text-6xl text-espresso leading-[1.05] text-balance">
-                Три мира
+              <h2 className="font-serif text-4xl lg:text-5xl leading-tight">
+                Начните с того,
                 <br />
-                <em className="not-italic text-taupe">одного бренда</em>
+                <span className="italic">что вам близко</span>
               </h2>
+              <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
+                Модели из каталога Stariva. Выберите основу — размер, цвет и
+                детали обсудим для вашего заказа.
+              </p>
             </div>
             <Link
               href="/catalog"
-              className="hidden lg:inline-flex items-center gap-2 label-caps-md text-espresso/60 hover:text-terracotta transition-colors"
+              className="py-2 text-sm underline underline-offset-4"
             >
-              Весь каталог
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M2 7h10M8 3l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              Весь каталог ↗
             </Link>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-espresso/8 border border-espresso/8 rounded-xl overflow-hidden">
-            {directions.map((dir) => (
-              <Link
-                key={dir.id}
-                href={dir.href}
-                className="group relative bg-parchment flex flex-col hover:bg-sand transition-colors duration-300"
-              >
-                {/* Image */}
-                <div className="relative aspect-[4/5] overflow-hidden">
-                  <Image
-                    src={dir.image}
-                    alt={dir.label}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 1024px) 100vw, 33vw"
-                  />
-                  {/* Index badge */}
-                  <div className="absolute top-5 left-5">
-                    <span className="label-caps text-white/70 text-[10px]">
-                      {dir.index}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Text */}
-                <div className="p-6 lg:p-8 flex-1 flex flex-col">
-                  <h3 className="font-serif text-3xl lg:text-4xl text-espresso mb-3 group-hover:text-terracotta transition-colors">
-                    {dir.label}
-                  </h3>
-                  <p className="text-taupe text-sm leading-relaxed mb-6 flex-1">
-                    {dir.desc}
-                  </p>
-                  <ul className="space-y-1.5 mb-6">
-                    {dir.items.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-center gap-2 text-espresso/60 text-[12px]"
-                      >
-                        <span
-                          className={`w-1 h-1 rounded-full flex-shrink-0 ${dir.accentBg}`}
-                        />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                  <div
-                    className={`inline-flex items-center gap-2 label-caps-md ${dir.accent} transition-all`}
-                  >
-                    Смотреть
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      aria-hidden="true"
-                      className="transition-transform group-hover:translate-x-1"
-                    >
-                      <path
-                        d="M2 6h8M7 3l3 3-3 3"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
+          <Suspense fallback={<Examples />}>
+            <LiveExamples />
+          </Suspense>
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-sand p-5 lg:p-6">
+            <p className="text-sm text-espresso/80">
+              Есть своя идея? Пришлите фото или расскажите о ней.
+            </p>
+            <Link
+              href="#order"
+              data-location="examples"
+              className="rounded-full bg-espresso text-parchment px-6 py-3 text-sm"
+            >
+              Обсудить мой заказ ↗
+            </Link>
+          </div>
+        </div>
+      </section>
+      <Process />
+      <section className="bg-sand py-12 lg:py-16">
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid md:grid-cols-2 gap-6 lg:gap-16">
+          <div>
+            <p className="label-caps text-terracotta mb-3">Ваш мастер</p>
+            <h2 className="font-serif text-3xl lg:text-4xl">Ольга Карпычева</h2>
+          </div>
+          <div>
+            <p className="text-espresso/75 leading-relaxed">
+              За Stariva стоит мастер, с которым можно обсудить вашу идею
+              напрямую. Ольга поможет выбрать размер, материал и детали, чтобы
+              изделие подходило именно вам.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-5 text-sm">
+              <Link href="/about" className="underline underline-offset-4">
+                История мастерской
               </Link>
+              <a
+                href="https://t.me/Olga_Stariva"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-4"
+              >
+                Написать Ольге ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      <Suspense fallback={null}>
+        <Reviews verifiedOnly />
+      </Suspense>
+      <FAQJsonLd items={homeFaq} />
+      <section className="py-14 lg:py-20">
+        <div className="max-w-3xl mx-auto px-5">
+          <h2 className="font-serif text-3xl lg:text-4xl mb-8">
+            До первого заказа
+          </h2>
+          <div className="space-y-3">
+            {homeFaq.map((item) => (
+              <details
+                key={item.question}
+                className="rounded-xl border border-espresso/15"
+              >
+                <summary className="cursor-pointer px-5 py-5 text-base text-espresso">
+                  {item.question}
+                </summary>
+                <p className="px-5 pb-5 text-sm leading-relaxed text-espresso/75">
+                  {item.answer}
+                </p>
+              </details>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── Featured picks ── */}
-      <section className="pb-24 lg:pb-32 bg-sand">
-        <div className="max-w-[1440px] mx-auto px-5 lg:px-12 pt-16 lg:pt-24">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <span className="label-caps text-terracotta mb-3 block">
-                Выбор редакции
-              </span>
-              <h2 className="font-serif text-4xl lg:text-5xl text-espresso leading-[1.05]">
-                Хиты сезона
-              </h2>
-            </div>
-            <Link
-              href="/catalog"
-              className="hidden lg:inline-flex items-center gap-2 label-caps-md text-espresso/60 hover:text-terracotta transition-colors"
-            >
-              Все товары
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M2 7h10M8 3l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+          <p className="mt-5 text-sm text-taupe">
+            Подробные условия — в{" "}
+            <Link href="/offer" className="underline underline-offset-4">
+              договоре оферты
             </Link>
-          </div>
-
-          {featuredProducts.length > 0 ? (
-            /* Grid: 2 cols on mobile, 3 on md */
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-5 lg:gap-6">
-              {featuredProducts.slice(0, 6).map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/catalog/${p.category}/${p.slug}`}
-                  className="group"
-                >
-                  <div className="relative aspect-[3/4] rounded-lg overflow-hidden mb-3 bg-parchment">
-                    <Image
-                      src={p.images[0] ?? "/placeholder.jpg"}
-                      alt={p.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <span className="label-caps bg-parchment/90 text-espresso px-2.5 py-1 rounded-full text-[10px]">
-                        {p.category === "clothes"
-                          ? "Одежда"
-                          : p.category === "bags"
-                            ? "Сумки"
-                            : "Декор интерьера"}
-                      </span>
-                    </div>
-                  </div>
-                  <h4 className="font-serif text-espresso text-lg leading-snug group-hover:text-terracotta transition-colors line-clamp-2">
-                    {p.name}
-                  </h4>
-                  <p className="text-taupe text-sm mt-1">
-                    {formatPrice(p.price, p.currency)}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 text-taupe">
-              <p className="font-serif text-xl mb-4">Товары загружаются…</p>
-              <p className="text-sm">
-                Загляните в{" "}
-                <Link
-                  href="/catalog"
-                  className="underline hover:text-terracotta"
-                >
-                  каталог
-                </Link>{" "}
-                или зайдите позже.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-10 text-center lg:hidden">
-            <Button
-              asChild
-              variant="outline"
-              className="inline-flex items-center gap-2 label-caps-md text-espresso border-espresso/20 px-6 py-3 h-auto rounded-full hover:bg-espresso hover:text-parchment transition-colors"
+            .
+          </p>
+          <Link
+            href="#order"
+            data-location="faq"
+            className="inline-block mt-7 rounded-full bg-terracotta text-parchment px-7 py-4 text-sm"
+          >
+            Получить расчёт от мастера ↗
+          </Link>
+        </div>
+      </section>
+      <section className="border-t border-espresso/10 py-10 lg:py-14">
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid sm:grid-cols-3 gap-6">
+          {[
+            {
+              href: "/catalog",
+              title: "Весь каталог",
+              text: "Одежда, абажуры, сумки и декор.",
+            },
+            {
+              href: "/workshops",
+              title: "Научиться плести",
+              text: "Видео-мастер-классы в вашем темпе.",
+            },
+            {
+              href: "/b2b",
+              title: "Для бизнеса",
+              text: "Изделия для кафе, отелей и других пространств.",
+            },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-xl border border-espresso/10 p-5 hover:bg-sand transition-colors"
             >
-              <Link href="/catalog">Все товары</Link>
-            </Button>
-          </div>
+              <h2 className="font-serif text-2xl">{item.title} ↗</h2>
+              <p className="mt-2 text-sm text-taupe">{item.text}</p>
+            </Link>
+          ))}
         </div>
       </section>
-
-      {/* ── Workshops promo ── */}
-      <section className="py-24 lg:py-32">
-        <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-espresso/8">
-            {/* Left: image */}
-            <div className="relative aspect-[4/3] lg:aspect-auto lg:min-h-[480px] overflow-hidden">
-              <Image
-                src="/images/workshops/hero-workshops-editorial.webp"
-                alt="Мастер-классы по макраме"
-                fill
-                className="object-cover object-[72%_center]"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                unoptimized
-              />
-              <div className="absolute inset-0 bg-espresso/20" />
-            </div>
-
-            {/* Right: text */}
-            <div className="bg-sand flex flex-col justify-center px-8 md:px-12 lg:px-16 py-12 lg:py-16">
-              <span className="label-caps text-terracotta mb-5 block tracking-widest">
-                Обучение
-              </span>
-              <h2 className="font-serif text-4xl lg:text-5xl text-espresso mb-6 leading-[1.1] text-balance">
-                Научитесь плести
-                <br />
-                <em className="not-italic text-taupe">самостоятельно</em>
-              </h2>
-              <p className="text-espresso/70 text-base leading-[1.8] mb-8 max-w-md">
-                Видео-мастер-классы с пошаговыми инструкциями: от базовых узлов
-                до готового абажура, платья или панно. Доступ навсегда, смотрите
-                в своём темпе.
-              </p>
-              <ul className="space-y-2.5 mb-10">
-                {[
-                  "6 курсов по трём направлениям",
-                  "HD-видео с подробными комментариями",
-                  "Список материалов для каждого курса",
-                  "Поддержка мастера",
-                ].map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-3 text-espresso/80 text-sm"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      aria-hidden="true"
-                      className="text-terracotta flex-shrink-0"
-                    >
-                      <path
-                        d="M3 8.5l3 3 7-7"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                asChild
-                className="self-start inline-flex items-center gap-3 px-7 py-4 h-auto rounded-full bg-espresso text-parchment label-caps-md hover:bg-terracotta transition-colors"
-              >
-                <Link href="/workshops">
-                  Смотреть мастер-классы
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M2 7h10M8 3l4 4-4 4"
-                      stroke="currentColor"
-                      strokeWidth="1.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Process, Reviews, Order ── */}
-      <Process />
-      <Reviews />
-      <CustomOrder />
-
-      {/* ── FAQ ── */}
-      <FAQJsonLd items={homeFaq} />
-      <section className="py-20 lg:py-28 bg-parchment">
-        <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-12">
-              <span className="label-caps text-terracotta mb-3 block">
-                Вопросы и ответы
-              </span>
-              <h2 className="font-serif text-3xl lg:text-4xl text-espresso">
-                Часто спрашивают
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {homeFaq.map((item) => (
-                <details
-                  key={item.question}
-                  className="group border border-espresso/10 rounded-xl overflow-hidden"
-                >
-                  <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none text-espresso hover:bg-sand transition-colors">
-                    <span className="font-serif text-[17px] leading-snug">
-                      {item.question}
-                    </span>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      aria-hidden="true"
-                      className="flex-shrink-0 transition-transform duration-200 group-open:rotate-180 text-terracotta"
-                    >
-                      <path
-                        d="M3 6l5 5 5-5"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </summary>
-                  <div className="px-6 pb-5 pt-2 text-taupe text-[15px] leading-[1.8] border-t border-espresso/8">
-                    {item.answer}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       <Footer />
       <MobileStickyBar />
     </main>

@@ -9,6 +9,11 @@ export const env = createEnv({
   server: {
     OZON_API_KEY: z.string().min(1).optional(),
     OZON_CLIENT_ID: z.string().min(1).optional(),
+    // Артикулы Ozon (offer_id) через запятую — товары, которые есть в наличии
+    // у нас и продаются на сайте сразу (корзина + оплата), независимо от того,
+    // продаётся ли товар на самом Ozon. Остальные — только индивидуальный
+    // заказ через мастера.
+    SITE_IN_STOCK_OFFER_IDS: z.string().optional(),
 
     // Ozon Доставка — приватное приложение (OAuth), отдельно от классического
     // Seller API выше. Нужен для продажи со своего сайта с доставкой Ozon.
@@ -76,6 +81,7 @@ export const env = createEnv({
   runtimeEnv: {
     OZON_API_KEY: process.env.OZON_API_KEY,
     OZON_CLIENT_ID: process.env.OZON_CLIENT_ID,
+    SITE_IN_STOCK_OFFER_IDS: process.env.SITE_IN_STOCK_OFFER_IDS,
     OZON_DELIVERY_CLIENT_ID: process.env.OZON_DELIVERY_CLIENT_ID,
     OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
     OZON_DELIVERY_REFRESH_TOKEN: process.env.OZON_DELIVERY_REFRESH_TOKEN,
