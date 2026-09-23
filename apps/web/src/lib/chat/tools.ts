@@ -15,6 +15,7 @@ import {
   PRODUCT_TYPES,
   SIZES,
 } from "@/lib/custom-order/pricing";
+import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { getProducts } from "@/lib/ozon-service";
 import {
   categoryLabels,
@@ -226,14 +227,7 @@ export const chatTools = {
       const complexityLabel =
         COMPLEXITIES.find((c) => c.id === complexity)?.label ?? complexity;
 
-      const isBig = size === "l" || size === "xl";
-      const isHard = complexity === "intricate";
-      const productionDays =
-        isBig && isHard
-          ? "18–21 день"
-          : isBig || isHard
-            ? "12–18 дней"
-            : "7–14 дней";
+      const productionDays = MADE_TO_ORDER_DAYS;
 
       return {
         productLabel,
