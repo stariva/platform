@@ -18,6 +18,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
+  "media-src 'self' blob: https://storage.yandexcloud.net",
   "connect-src 'self' https:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
