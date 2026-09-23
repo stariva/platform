@@ -130,13 +130,13 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://vk.com/stariva_macrame"
+                  href="https://www.livemaster.ru/olga-meu"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
                 >
-                  <VkIcon className="w-4 h-4" />
-                  ВКонтакте
+                  <LivemasterIcon className="w-4 h-4" />
+                  Ярмарка Мастеров
                 </a>
               </li>
               <li>
@@ -148,17 +148,6 @@ export function Footer() {
                 >
                   <PinterestIcon className="w-4 h-4" />
                   Pinterest
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://www.livemaster.ru/olga-meu"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
-                >
-                  <LivemasterIcon className="w-4 h-4" />
-                  Ярмарка Мастеров
                 </a>
               </li>
               <li>
@@ -181,6 +170,17 @@ export function Footer() {
                 >
                   <AvitoIcon className="w-4 h-4" />
                   Авито
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://vk.com/stariva_macrame"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-parchment/85 hover:text-linen transition-colors"
+                >
+                  <VkIcon className="w-4 h-4" />
+                  ВКонтакте
                 </a>
               </li>
             </ul>
