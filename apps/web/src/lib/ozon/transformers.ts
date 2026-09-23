@@ -87,19 +87,6 @@ export type ExtractedAttributes = {
   description?: string;
 };
 
-/**
- * Разбирает список артикулов (offer_id) из env: через запятую, точку с запятой
- * или перевод строки. Пробелы по краям игнорируются.
- */
-export function parseOfferIdList(raw: string | undefined): Set<string> {
-  return new Set(
-    (raw ?? "")
-      .split(/[,;\n]/)
-      .map((id) => id.trim())
-      .filter(Boolean),
-  );
-}
-
 export function slugify(text: string): string {
   return slugifyLib(text, {
     lowercase: true,
@@ -186,8 +173,6 @@ export function extractAttributes(
 export function transformOzonProduct(
   ozonProduct: OzonProductInfoV3,
   attrs?: ExtractedAttributes,
-  /** Артикулы, которые есть в наличии у нас и продаются на сайте сразу. */
-  inStockOfferIds: ReadonlySet<string> = new Set(),
 ): Product {
   const { category, subcategory } = mapOfferIdToCategory(
     ozonProduct.offer_id || "",
@@ -214,9 +199,12 @@ export function transformOzonProduct(
   );
   const oldPrice = oldPriceCandidate > price ? oldPriceCandidate : undefined;
 
-  // Наличие на сайте не зависит от статуса/остатков на Ozon: сразу купить
-  // можно только товары из нашего списка, остальные — под заказ через мастера.
-  const inStock = inStockOfferIds.has(ozonProduct.offer_id.trim());
+  // Наличие на сайте совпадает с наличием на Ozon: есть свободный остаток
+  // (present − reserved) хотя бы на одном складе — товар можно купить сразу,
+  // иначе — только индивидуальный заказ через мастера.
+  const inStock = (ozonProduct.stocks?.stocks ?? []).some(
+    (stock) => stock.present - stock.reserved > 0,
+  );
 
   // primary_image в v3 — массив строк; ставим первой, затем остальные из images[]
   const primaryImage = Array.isArray(ozonProduct.primary_image)

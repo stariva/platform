@@ -166,7 +166,7 @@ export interface Product {
   /** fbs_sku/fbo_sku (или общий sku) — нужен для Ozon Доставка (checkout/order/create) */
   ozonSku?: number;
   ozonUrl?: string;
-  /** Есть в наличии у нас — можно купить на сайте сразу. Иначе — под заказ через мастера. */
+  /** Есть свободный остаток на Ozon — можно купить на сайте сразу. Иначе — под заказ через мастера. */
   inStock: boolean;
   material: string;
   dimensions?: string;
