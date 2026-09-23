@@ -47,14 +47,19 @@ export default async function LessonPlayerPage({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
         <div className="min-w-0">
           <VideoPlayer
+            key={lesson.id}
             slug={slug}
             lessonId={lesson.id}
             initialPosition={initialPosition}
+            lessonTitle={lesson.title}
+            lessonLabel={`Урок ${index + 1} из ${lessons.length}`}
+            nextLesson={next ? { id: next.id, title: next.title } : null}
+            courseHref={`/account/workshops/${slug}`}
           />
 
           <div className="mt-4">
             <p className="label-caps text-[10px] text-taupe mb-1">
-              Урок {index + 1} из {lessons.length}
+              Урок {index + 1} из {lessons.length} · {lesson.duration}
             </p>
             <h1 className="font-serif text-2xl text-espresso">
               {lesson.title}
