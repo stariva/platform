@@ -231,6 +231,13 @@ export function ProductDetails({
                 )}
               </div>
 
+              {product.inStock && (
+                <p className="inline-flex items-center gap-2 label-caps text-[10px] text-sage mb-4">
+                  <span className="size-1.5 rounded-full bg-sage" />
+                  В наличии · отправим сразу после оплаты
+                </p>
+              )}
+
               {/* Trust signals */}
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
@@ -295,7 +302,7 @@ export function ProductDetails({
                 {product.shortDescription}
               </p>
 
-              {madeToOrder ? (
+              {madeToOrder && !product.inStock ? (
                 <MadeToOrder
                   product={product}
                   config={madeToOrder}
@@ -327,7 +334,7 @@ export function ProductDetails({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Узнать наличие
+                      Написать мастеру
                     </a>
                   </Button>
                 )}

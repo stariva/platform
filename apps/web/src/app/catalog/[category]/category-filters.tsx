@@ -226,10 +226,16 @@ function ProductCard({
             )}
           </div>
         </div>
-        {madeToOrder && (
-          <p className="mt-1.5 label-caps text-[9px] text-terracotta/90">
-            {madeToOrder.badge}
+        {product.inStock ? (
+          <p className="mt-1.5 label-caps text-[9px] text-sage">
+            В наличии
           </p>
+        ) : (
+          madeToOrder && (
+            <p className="mt-1.5 label-caps text-[9px] text-terracotta/90">
+              {madeToOrder.badge}
+            </p>
+          )
         )}
       </Link>
     </motion.div>
