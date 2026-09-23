@@ -170,6 +170,7 @@ export function extractAttributes(
   return result;
 }
 
+/** Maps Ozon product data and attributes to the storefront product model. */
 export function transformOzonProduct(
   ozonProduct: OzonProductInfoV3,
   attrs?: ExtractedAttributes,
@@ -280,6 +281,7 @@ export function transformOzonProduct(
     category,
     subcategory,
     ozonId: ozonProduct.id,
+    ozonOfferId: ozonProduct.offer_id || undefined,
     offerId: ozonProduct.offer_id,
     ozonSku:
       ozonProduct.fbs_sku ||
