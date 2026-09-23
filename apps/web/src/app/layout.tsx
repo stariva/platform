@@ -9,7 +9,6 @@ import {
 } from "@/components/stariva/json-ld";
 import { Metrika } from "@/components/stariva/metrika";
 import { Toaster } from "@/components/ui/sonner";
-import { baseEnv } from "@/env";
 import { CartProvider } from "@/lib/cart/cart-context";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import "./globals.css";
@@ -131,11 +130,9 @@ export default function RootLayout({
         </CartProvider>
         <Toaster position="top-center" richColors />
         <CookieBanner />
-        {baseEnv.NODE_ENV === "production" && (
-          <Suspense fallback={null}>
-            <Metrika />
-          </Suspense>
-        )}
+        <Suspense fallback={null}>
+          <Metrika />
+        </Suspense>
       </body>
     </html>
   );

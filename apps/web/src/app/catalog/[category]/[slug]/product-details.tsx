@@ -145,6 +145,7 @@ export function ProductDetails({
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
+              className="min-w-0"
             >
               <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-sand mb-4">
                 <Image
@@ -173,28 +174,33 @@ export function ProductDetails({
                 )}
               </div>
               {product.images.length > 1 && (
-                <div className="flex gap-3 overflow-x-auto pb-2">
+                <div className="-m-1 flex gap-3 overflow-x-auto scroll-p-1 p-1 pb-2">
                   {product.images.map((img, i) => (
                     <Button
                       // biome-ignore lint/suspicious/noArrayIndexKey: image thumbnails are positional, index is the correct key
                       key={i}
                       variant="ghost"
                       size="icon"
+                      type="button"
+                      aria-label={`Показать фото ${i + 1} из ${product.images.length}`}
+                      aria-pressed={activeImage === i}
                       onClick={() => setActiveImage(i)}
-                      className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 p-0 transition-all ${
+                      className={`size-20 shrink-0 scroll-m-1 rounded-lg border-2 bg-sand p-1 transition-colors duration-150 active:scale-[0.97] focus-visible:border-espresso focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 focus-visible:ring-offset-parchment focus-visible:transition-none motion-reduce:transition-none motion-reduce:active:scale-100 ${
                         activeImage === i
-                          ? "ring-2 ring-terracotta"
-                          : "opacity-60 hover:opacity-100"
+                          ? "border-espresso"
+                          : "border-espresso/20 hover:border-espresso/50"
                       }`}
                     >
-                      <Image
-                        src={img}
-                        alt={`${product.name} - фото ${i + 1}`}
-                        fill
-                        className="object-contain"
-                        sizes="80px"
-                        unoptimized={img.startsWith("http")}
-                      />
+                      <span className="relative block size-full overflow-hidden rounded-sm">
+                        <Image
+                          src={img}
+                          alt=""
+                          fill
+                          className="object-contain"
+                          sizes="68px"
+                          unoptimized={img.startsWith("http")}
+                        />
+                      </span>
                     </Button>
                   ))}
                 </div>
@@ -233,8 +239,8 @@ export function ProductDetails({
 
               {product.inStock && (
                 <p className="inline-flex items-center gap-2 label-caps text-[10px] text-sage mb-4">
-                  <span className="size-1.5 rounded-full bg-sage" />
-                  В наличии · отправим сразу после оплаты
+                  <span className="size-1.5 rounded-full bg-sage" />В наличии ·
+                  отправим сразу после оплаты
                 </p>
               )}
 
