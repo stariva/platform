@@ -18,16 +18,23 @@ import { SITE_URL } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Макраме по вашим размерам — индивидуальный заказ | Stariva",
+  title: "Одежда макраме по вашим меркам — ручная работа | Stariva",
   description:
-    "Абажуры, одежда, сумки и декор ручной работы по вашим размерам. Обсудите идею с мастером, получите помощь с замерами и расчёт стоимости.",
+    "Платья, топы и туники макраме ручной работы по вашим меркам. Выберите образ — обсудим цвет, плетение, стоимость и срок с мастером Stariva.",
   alternates: { canonical: SITE_URL },
   openGraph: {
-    title: "Stariva — макраме по вашим размерам",
+    title: "Stariva — сплетено для вас",
     description:
-      "Расскажите о вашей идее — мастер поможет с замерами и рассчитает стоимость.",
+      "Одежда макраме по вашим меркам. Вы выбираете образ — мы плетём вручную.",
     url: SITE_URL,
-    images: [{ url: homePortfolio[0].image, alt: homePortfolio[0].name }],
+    images: [
+      {
+        url: "/images/home/hero-fashion-v2.webp",
+        width: 1536,
+        height: 1024,
+        alt: "Stariva — одежда макраме по вашим меркам",
+      },
+    ],
   },
 };
 const homeFaq = [

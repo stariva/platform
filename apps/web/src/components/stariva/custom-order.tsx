@@ -9,14 +9,14 @@ export function CustomOrder() {
         <div>
           <p className="label-caps text-terracotta mb-4">Обсудим вашу идею</p>
           <h2 className="font-serif text-4xl lg:text-5xl text-espresso leading-[1.08] text-balance">
-            Ваш размер.
+            Ваш образ.
             <br />
-            <span className="italic">Ваше изделие.</span>
+            <span className="italic">Ваши мерки.</span>
           </h2>
           <p className="mt-5 text-espresso/75 leading-relaxed max-w-md">
-            Расскажите, что хотите заказать. Ольга уточнит детали, поможет с
-            замерами и предложит стоимость. Оплата — после согласования
-            параметров, цены и срока.
+            Платье для отпуска, топ на каждый день или туника для особенного
+            случая — расскажите о своём образе. Ольга поможет с мерками, выбором
+            цвета и плетения. Стоимость и срок обсудим до оплаты.
           </p>
           <p className="mt-4 text-sm text-taupe">
             Отвечаем в рабочее время: пн–сб, 10:00–20:00 МСК.

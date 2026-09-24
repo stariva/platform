@@ -4,6 +4,14 @@
  */
 export const homePortfolio = [
   {
+    title: "Одежда по вашим меркам",
+    name: "Туника из хлопкового шнура",
+    image: "https://ir.ozone.ru/s3/multimedia-1-a/10606179790.jpg",
+    href: "/catalog/clothes/stariva-makrame-tunika-iz-khlopkovogo-shnura-ruchnoy-raboty-4312",
+    source: "https://www.ozon.ru/product/3755978564",
+    details: "Подберём длину и посадку. Поможем снять мерки и выбрать цвет.",
+  },
+  {
     title: "Абажур для вашего пространства",
     name: "Абажур макраме ручной работы",
     image: "https://ir.ozone.ru/s3/multimedia-1-7/10180737439.jpg",
@@ -11,14 +19,6 @@ export const homePortfolio = [
     source: "https://www.ozon.ru/product/3534728835",
     details:
       "Обсудим диаметр, высоту, оттенок и крепление. Патрон и провод в эту модель не входят.",
-  },
-  {
-    title: "Одежда по вашим меркам",
-    name: "Туника из хлопкового шнура",
-    image: "https://ir.ozone.ru/s3/multimedia-1-a/10606179790.jpg",
-    href: "/catalog/clothes/stariva-makrame-tunika-iz-khlopkovogo-shnura-ruchnoy-raboty-4312",
-    source: "https://www.ozon.ru/product/3755978564",
-    details: "Подберём длину и посадку. Поможем снять мерки и выбрать цвет.",
   },
   {
     title: "Сумка под ваш ритм",

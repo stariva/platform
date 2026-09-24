@@ -1,0 +1,9 @@
+# Fashion hero — 24 September 2026
+
+Generated with the built-in imagegen tool. This is an editorial campaign visual, not documentary photography of an existing catalogue item or customer.
+
+Assets: `apps/web/public/images/home/hero-fashion-v2.png` (original), `apps/web/public/images/home/hero-fashion-v2.webp` (WebP quality 90 export, 1536 × 1024). The source image was preserved. Responsive framing is done in CSS, with no visual retouching.
+
+## Final prompt
+
+Use case: photorealistic-natural. Asset type: premium fashion website hero photograph for Stariva handmade macrame clothing. Create a beautiful, sophisticated luxury resort fashion editorial with TWO beautiful adult women aged around 28 and 35, distinct natural faces, one brunette with loose dark hair and one with dark blonde hair, relaxed confident poses, looking natural and alive. Both wear exceptionally crafted cotton MACRAME clothing: ivory sleeveless knotted long dress with elegant diamond knots and soft fringe, and a warm sand macrame tunic dress with defined waist. Opaque tonal slips under the openwork. The clothes and dimensional knotted texture are the heroes. Sunlit Mediterranean limestone courtyard, sculptural pale plaster wall, soft olive shadow, understated expensive fashion campaign. Wide landscape image, 3:2 composition. Models close together in RIGHT 60 percent of frame, heads safely below top 10 percent, framed full length almost to ankles; LEFT 40 percent is clean softly shaded warm ivory plaster negative space for dark website typography. Natural warm directional daylight, authentic skin pores, subtle film grain, extremely detailed cotton cord knots, restrained cream, sand and olive palette, professional editorial photography, 50mm lens feel. Attractive elegant women, candid asymmetrical posture, hands anatomically natural. No rendered text, no logos, no watermark, no border, no collage. Not a screenshot. Highest available resolution.

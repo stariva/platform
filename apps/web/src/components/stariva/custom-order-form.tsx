@@ -68,7 +68,9 @@ export function CustomOrderForm() {
   const request = useRef<{ signature: string; id: string } | null>(null);
   const started = useRef(false);
   const locked = useRef(false);
-  const [selection, setSelection] = useState<Partial<PriceSelection>>({});
+  const [selection, setSelection] = useState<Partial<PriceSelection>>({
+    productType: "clothes",
+  });
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
   const [error, setError] = useState("");
@@ -123,14 +125,10 @@ export function CustomOrderForm() {
       }
       if (photo) fd.append("photo", photo);
       appendCampaign(fd);
-      const signature = JSON.stringify(
-        [...fd.entries()].map(([key, value]) => [
-          key,
-          typeof value === "string"
-            ? value
-            : [value.name, value.size, value.lastModified],
-        ]),
-      );
+      const signature = JSON.stringify({
+        fields: [...fd.entries()].filter(([key]) => key !== "photo"),
+        photo: photo ? [photo.name, photo.size, photo.lastModified] : null,
+      });
       if (request.current?.signature !== signature)
         request.current = { signature, id: crypto.randomUUID() };
       fd.append("requestId", request.current.id);
@@ -273,7 +271,11 @@ export function CustomOrderForm() {
               {...form.register("description")}
               maxLength={3000}
               rows={3}
-              placeholder="Например: абажур для спальни, молочный цвет. Нужна помощь с размером."
+              placeholder={
+                selection.productType === "clothes"
+                  ? "Например: молочная туника для отпуска, длина до колена. Нужна помощь с мерками."
+                  : "Расскажите об изделии: цвет, размер и детали, которые вам нравятся."
+              }
               className={fieldClass}
               aria-invalid={!!form.formState.errors.description}
               aria-describedby={`${id}-description-error`}
