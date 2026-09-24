@@ -11,7 +11,6 @@ import {
   COMPLEXITIES,
   calculatePrice,
   PRODUCT_TYPES,
-  type PriceSelection,
   SIZES,
 } from "@/lib/custom-order/pricing";
 import { validatePhoto } from "@/lib/custom-order/schema";
@@ -20,6 +19,7 @@ import {
   PD_CONSENT_ERROR,
   PersonalDataConsentLabel,
 } from "./consent-checkbox";
+import { useHomeOrder } from "./home-order-context";
 import { PriceCalculator } from "./price-calculator";
 
 const schema = z.object({
@@ -68,9 +68,7 @@ export function CustomOrderForm() {
   const request = useRef<{ signature: string; id: string } | null>(null);
   const started = useRef(false);
   const locked = useRef(false);
-  const [selection, setSelection] = useState<Partial<PriceSelection>>({
-    productType: "clothes",
-  });
+  const { selection, setSelection } = useHomeOrder();
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
   const [error, setError] = useState("");

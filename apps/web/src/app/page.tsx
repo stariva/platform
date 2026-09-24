@@ -6,6 +6,7 @@ import { CustomOrder } from "@/components/stariva/custom-order";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Hero } from "@/components/stariva/hero";
+import { HomeOrderProvider } from "@/components/stariva/home-order-context";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { Process } from "@/components/stariva/process";
@@ -136,8 +137,10 @@ export default function Page() {
     <main className="bg-parchment text-espresso pb-20 lg:pb-0">
       <BreadcrumbJsonLd items={[{ name: "Главная", href: "/" }]} />
       <Header variant="solid" />
-      <Hero />
-      <CustomOrder />
+      <HomeOrderProvider>
+        <Hero />
+        <CustomOrder />
+      </HomeOrderProvider>
       <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
           <p className="label-caps text-terracotta mb-4">Изделия мастерской</p>

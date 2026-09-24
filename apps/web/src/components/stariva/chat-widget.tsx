@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, isToolUIPart } from "ai";
 import { AnimatePresence, motion } from "motion/react";
+import { usePathname } from "next/navigation";
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -480,7 +481,21 @@ function MessageView({ message }: { message: MessageLike }) {
 // ─── Виджет ───────────────────────────────────────────────────────────────
 
 export function ChatWidget() {
+  const pathname = usePathname();
+  const [heroVisible, setHeroVisible] = useState(false);
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const hero = pathname === "/" ? document.getElementById("intro") : null;
+    if (!hero) {
+      setHeroVisible(false);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      setHeroVisible(entry?.isIntersecting ?? false);
+    });
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, [pathname]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -569,6 +584,7 @@ export function ChatWidget() {
           "flex items-center justify-center w-14 h-14 rounded-full",
           "bg-espresso text-parchment shadow-[0_12px_40px_rgba(22,21,19,0.28)]",
           "transition-colors duration-300 hover:bg-terracotta",
+          heroVisible && !open && "hidden lg:flex",
         )}
       >
         <AnimatePresence mode="wait" initial={false}>
