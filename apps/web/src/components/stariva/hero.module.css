@@ -54,7 +54,7 @@
   .photo[data-fashion="true"] { left: 0; }
   .image { object-position: center center; }
   .shade { display: block; position: absolute; inset: 0; background: linear-gradient(90deg, #16151366, transparent 70%); transition: opacity 500ms ease; }
-  .hero[data-tone="light"] .shade { opacity: 0; }
+  .hero[data-tone="light"] .shade { opacity: 1; background: linear-gradient(90deg, #f3eadbd9 0%, #f3eadb8c 30%, #f3eadb00 58%); }
   .counter { right: 5%; bottom: 44px; }
   .copy { display: grid; align-content: center; height: 100%; min-height: 680px; padding: 44px 5% 124px; }
   .panel { width: 44%; }
