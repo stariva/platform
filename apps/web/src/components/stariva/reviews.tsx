@@ -53,9 +53,7 @@ export async function Reviews({
     : [];
   // Нет отзывов на этот товар — показываем лучшие отзывы магазина
   const showProductReviews = productReviews.length > 0;
-  const reviews = (
-    showProductReviews ? productReviews : await getReviews()
-  )
+  const reviews = (showProductReviews ? productReviews : await getReviews())
     .filter((review) => !verifiedOnly || review.source === "ozon")
     .slice(0, limit);
 
