@@ -52,7 +52,7 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 export interface ReviewFilter {
   /** Артикул товара (offer_id) — отзывы из снимка кабинета продавца */
   offerId?: string;
-  /** SKU товара — отзывы из Seller API (когда он доступен по подписке) */
+  /** SKU товара — фильтр живых отзывов из Seller API (когда он доступен по подписке) */
   skus?: number[];
 }
 
@@ -65,7 +65,7 @@ export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
   const { offerId, skus } = filter;
   const isProductPage = Boolean(offerId || skus?.length);
 
-  const live = (await fetchOzonReviews(100, skus)) ?? [];
+  const live = (await fetchOzonReviews(100)) ?? [];
   const liveMatched = isProductPage
     ? live.filter(
         (r) => r.productSku !== undefined && skus?.includes(r.productSku),

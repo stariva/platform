@@ -192,12 +192,11 @@ function transformOzonReview(raw: OzonReview): Review {
 /**
  * Fetches published reviews from Ozon Seller API.
  * Returns null if credentials are missing or the request fails.
- * Revalidates every 4 hours (ISR).
+ * Revalidates every 4 hours (ISR). Тело запроса одинаковое для всех страниц,
+ * чтобы в data cache была одна запись на весь сайт — фильтр по товару делает
+ * вызывающий код, иначе каждая карточка товара ходит в Ozon отдельно.
  */
-export async function fetchOzonReviews(
-  limit = 20,
-  skus?: number[],
-): Promise<Review[] | null> {
+export async function fetchOzonReviews(limit = 20): Promise<Review[] | null> {
   const clientId = env.OZON_CLIENT_ID;
   const apiKey = env.OZON_API_KEY;
 
@@ -206,14 +205,11 @@ export async function fetchOzonReviews(
   }
 
   try {
-    const body: Record<string, unknown> = {
+    const body = {
       limit,
       sort_by: "created_at",
       sort_dir: "DESC",
     };
-    if (skus && skus.length > 0) {
-      body.skus = skus;
-    }
 
     const res = await fetch(`${OZON_API_URL}/v1/review/list`, {
       signal: AbortSignal.timeout(6000),
