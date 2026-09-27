@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { env } from "@/env";
 import type { PickupPoint } from "@/lib/ozon-delivery/types";
 
@@ -55,6 +55,9 @@ export function PickupPointMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<ymaps.Map | null>(null);
   const clustererRef = useRef<ymaps.Clusterer | null>(null);
+  // Карта создаётся асинхронно (после загрузки скрипта), а точки обычно
+  // приходят раньше — этот флаг перезапускает отрисовку точек, когда карта готова.
+  const [mapReady, setMapReady] = useState(false);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
@@ -81,6 +84,7 @@ export function PickupPointMap({
       map.geoObjects.add(clusterer as unknown as ymaps.IGeoObject);
       mapRef.current = map;
       clustererRef.current = clusterer;
+      setMapReady(true);
     });
 
     return () => {
@@ -88,6 +92,7 @@ export function PickupPointMap({
       mapRef.current?.destroy();
       mapRef.current = null;
       clustererRef.current = null;
+      setMapReady(false);
     };
   }, [apiKey]);
 
@@ -95,7 +100,7 @@ export function PickupPointMap({
     const map = mapRef.current;
     const clusterer = clustererRef.current;
     const ymapsApi = window.ymaps;
-    if (!map || !clusterer || !ymapsApi) return;
+    if (!mapReady || !map || !clusterer || !ymapsApi) return;
 
     clusterer.removeAll();
 
@@ -122,7 +127,7 @@ export function PickupPointMap({
       if (bounds)
         map.setBounds(bounds, { checkZoomRange: true, zoomMargin: [32] });
     }
-  }, [points, selectedPointId]);
+  }, [points, selectedPointId, mapReady]);
 
   if (!apiKey) {
     return (

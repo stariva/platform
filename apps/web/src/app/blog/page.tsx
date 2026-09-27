@@ -6,7 +6,6 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ItemListJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate } from "@/lib/blog-data";
-import { NewsletterForm } from "./newsletter-form";
 
 export const metadata: Metadata = {
   title: "Блог о макраме — советы, история, вдохновение",
@@ -159,20 +158,6 @@ export default function BlogPage() {
                 </Link>
               </article>
             ))}
-          </div>
-        </section>
-
-        {/* Newsletter CTA */}
-        <section className="max-w-[1400px] mx-auto px-6 lg:px-10 mt-20 lg:mt-32">
-          <div className="bg-sand rounded-2xl p-8 lg:p-12 text-center">
-            <h2 className="font-serif text-2xl lg:text-3xl text-espresso mb-4">
-              Подпишитесь на мои истории
-            </h2>
-            <p className="text-taupe max-w-lg mx-auto mb-8">
-              Раз в месяц присылаю новые статьи, вдохновение и закулисье
-              мастерской. Без спама, только тёплые письма.
-            </p>
-            <NewsletterForm />
           </div>
         </section>
       </main>
