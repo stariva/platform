@@ -5,7 +5,6 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { getProductsByCategory } from "@/lib/ozon-service";
-import { categories } from "@/lib/products";
 import { SITE_URL } from "@/lib/site-url";
 import CategoryFilters from "../catalog/[category]/category-filters";
 
@@ -47,8 +46,6 @@ export default async function LampshadesPage() {
   const products = (await getProductsByCategory("interior")).filter(
     (p) => p.subcategory === "lampshades",
   );
-  const interior = categories.find((c) => c.slug === "interior");
-  if (!interior) throw new Error("Interior category is required");
   return (
     <>
       <Header variant="solid" />
@@ -99,11 +96,7 @@ export default async function LampshadesPage() {
             </p>
           </div>
         </section>
-        <CategoryFilters
-          products={products}
-          category={{ ...interior, name: "Абажуры", subcategories: [] }}
-          categorySlug="interior"
-        />
+        <CategoryFilters products={products} filters={[]} />
         <section className="max-w-5xl mx-auto px-5 lg:px-12 pb-20 space-y-8">
           <h2 className="font-serif text-3xl">Что проверить перед заказом</h2>
           <div className="grid md:grid-cols-3 gap-8 leading-relaxed">

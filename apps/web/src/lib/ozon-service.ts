@@ -1,5 +1,6 @@
 import { logger } from "@stariva/config";
 import { OZON_REVIEWS } from "@/data/ozon-reviews";
+import { isPurchasable } from "./in-stock";
 import { fetchFromOzon, fetchOzonReviews } from "./ozon/api-client";
 import type { Product, Review } from "./ozon-types";
 import { categories } from "./products";
@@ -34,6 +35,12 @@ export async function getProductBySlug(
 ): Promise<Product | undefined> {
   const products = await getProducts();
   return products.find((p) => p.slug === slug);
+}
+
+/** Готовые изделия, которые можно сразу купить на сайте. */
+export async function getInStockProducts(): Promise<Product[]> {
+  const products = await getProducts();
+  return products.filter(isPurchasable);
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
