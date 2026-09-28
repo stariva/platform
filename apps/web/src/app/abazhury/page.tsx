@@ -42,6 +42,7 @@ export const metadata: Metadata = {
   },
 };
 
+/** Показывает абажуры из категории интерьера и рекомендации по выбору. */
 export default async function LampshadesPage() {
   const products = (await getProductsByCategory("interior")).filter(
     (p) => p.subcategory === "lampshades",

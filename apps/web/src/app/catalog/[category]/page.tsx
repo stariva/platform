@@ -60,6 +60,7 @@ export async function generateMetadata({
   };
 }
 
+/** Показывает товары категории с фильтрами; для неизвестной категории возвращает 404. */
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { category: categorySlug } = await params;
   const category = getCategoryBySlug(categorySlug);

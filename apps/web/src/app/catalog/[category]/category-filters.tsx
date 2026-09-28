@@ -26,6 +26,10 @@ interface CategoryFiltersProps {
   showAddToCart?: boolean;
 }
 
+/**
+ * Фильтрует товары по категории или подкатегории и сортирует по цене.
+ * По умолчанию использует подкатегории и скрывает кнопки добавления в корзину.
+ */
 export default function CategoryFilters({
   products,
   filters,
@@ -149,6 +153,10 @@ export default function CategoryFilters({
   );
 }
 
+/**
+ * Показывает карточку со ссылкой и сроком изготовления из категории товара.
+ * При showAddToCart добавляет кнопку корзины для доступных к покупке изделий.
+ */
 function ProductCard({
   product,
   index,

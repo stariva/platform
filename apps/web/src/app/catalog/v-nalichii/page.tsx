@@ -37,6 +37,10 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Показывает доступные к покупке изделия с фильтрами по непустым категориям.
+ * При пустом списке предлагает перейти в каталог изделий под заказ.
+ */
 export default async function InStockPage() {
   const products = await getInStockProducts();
   // В таблетках — только категории, где сейчас что-то есть

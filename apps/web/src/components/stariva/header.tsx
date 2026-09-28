@@ -74,6 +74,7 @@ interface HeaderProps {
   variant?: "transparent" | "solid";
 }
 
+/** Показывает адаптивную навигацию, меню аккаунта и корзину с учётом фона шапки. */
 export function Header({ variant = "solid" }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -101,6 +102,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
     setMegaOpen(false);
   }, []);
 
+  /** Определяет активный раздел, исключая якоря и выделяя «В наличии» отдельно. */
   const isActive = (href: string) => {
     if (href.startsWith("/#")) return false;
     // «В наличии» живёт внутри /catalog, но в меню это отдельный пункт

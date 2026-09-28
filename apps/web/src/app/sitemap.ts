@@ -7,6 +7,7 @@ import { workshops } from "@/lib/workshops-data";
 
 export const revalidate = 3600;
 
+/** Собирает sitemap из статических страниц, категорий, товаров, статей и мастер-классов. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Статические страницы ──────────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
