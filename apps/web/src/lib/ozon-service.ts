@@ -5,15 +5,24 @@ import { fetchFromOzon, fetchOzonReviews } from "./ozon/api-client";
 import type { Product, Review } from "./ozon-types";
 import { categories } from "./products";
 
-export async function getProducts(): Promise<Product[]> {
+export interface ProductsResult {
+  products: Product[];
+  status: "available" | "unavailable";
+}
+
+export async function getProductsResult(): Promise<ProductsResult> {
   const ozonProducts = await fetchFromOzon();
 
-  if (ozonProducts && ozonProducts.length > 0) {
-    return ozonProducts;
+  if (ozonProducts !== null) {
+    return { products: ozonProducts, status: "available" };
   }
 
   logger.warn("ozon.products.unavailable");
-  return [];
+  return { products: [], status: "unavailable" };
+}
+
+export async function getProducts(): Promise<Product[]> {
+  return (await getProductsResult()).products;
 }
 
 export async function getProductsByCategory(
@@ -39,8 +48,12 @@ export async function getProductBySlug(
 
 /** Готовые изделия, которые можно сразу купить на сайте. */
 export async function getInStockProducts(): Promise<Product[]> {
-  const products = await getProducts();
-  return products.filter(isPurchasable);
+  return (await getInStockProductsResult()).products;
+}
+
+export async function getInStockProductsResult(): Promise<ProductsResult> {
+  const result = await getProductsResult();
+  return { ...result, products: result.products.filter(isPurchasable) };
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {

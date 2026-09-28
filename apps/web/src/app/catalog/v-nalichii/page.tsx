@@ -6,7 +6,7 @@ import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Button } from "@/components/ui/button";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
-import { categories, getInStockProducts } from "@/lib/ozon-service";
+import { categories, getInStockProductsResult } from "@/lib/ozon-service";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import CategoryFilters from "../[category]/category-filters";
 
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
  * При пустом списке предлагает перейти в каталог изделий под заказ.
  */
 export default async function InStockPage() {
-  const products = await getInStockProducts();
+  const { products, status } = await getInStockProductsResult();
   // В таблетках — только категории, где сейчас что-то есть
   const filters = categories.filter((cat) =>
     products.some((p) => p.category === cat.slug),
@@ -134,11 +134,20 @@ export default async function InStockPage() {
           <section className="py-24 px-5 lg:px-12">
             <div className="max-w-xl mx-auto text-center">
               <p className="font-serif text-3xl text-espresso">
-                Сейчас всё разобрали
+                {status === "available"
+                  ? "Сейчас всё разобрали"
+                  : "Каталог временно недоступен"}
               </p>
               <p className="text-taupe mt-3 leading-relaxed">
-                Готовых изделий пока нет, но любую модель из каталога сплетём
-                под вас за {MADE_TO_ORDER_DAYS} — в нужном размере и цвете.
+                {status === "available" ? (
+                  <>
+                    Готовых изделий пока нет, но любую модель из каталога
+                    сплетём под вас за {MADE_TO_ORDER_DAYS} — в нужном размере и
+                    цвете.
+                  </>
+                ) : (
+                  "Не удалось загрузить изделия в наличии. Попробуйте обновить страницу чуть позже."
+                )}
               </p>
               <Button
                 asChild
