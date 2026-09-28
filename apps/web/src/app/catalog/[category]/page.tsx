@@ -60,6 +60,7 @@ export async function generateMetadata({
   };
 }
 
+/** Показывает товары категории с фильтрами; для неизвестной категории возвращает 404. */
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { category: categorySlug } = await params;
   const category = getCategoryBySlug(categorySlug);
@@ -155,11 +156,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         </section>
 
         {/* ── Products with Filters ── */}
-        <CategoryFilters
-          products={products}
-          category={category}
-          categorySlug={categorySlug}
-        />
+        <CategoryFilters products={products} filters={category.subcategories} />
         {categorySlug === "interior" && (
           <p className="max-w-5xl mx-auto px-5 pb-10">
             <Link href="/abazhury" className="underline text-terracotta">

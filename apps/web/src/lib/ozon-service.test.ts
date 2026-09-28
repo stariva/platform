@@ -1,7 +1,7 @@
 import { mock, test } from "bun:test";
 import assert from "node:assert/strict";
 import { OZON_REVIEWS } from "@/data/ozon-reviews";
-import type { Review } from "./ozon-types";
+import type { Product, Review } from "./ozon-types";
 
 const snapshot = OZON_REVIEWS[0];
 if (!snapshot?.productOfferId) throw new Error("Missing snapshot review");
@@ -12,13 +12,76 @@ const liveReviews: Review[] = [
   { ...snapshot, id: "other-product", productSku: 5678, rating: 2 },
 ];
 const fetchReviews = mock(async (_limit: number) => liveReviews);
+const fetchProducts = mock(async (): Promise<Product[] | null> => null);
 
 mock.module("./ozon/api-client", () => ({
-  fetchFromOzon: async () => null,
+  fetchFromOzon: fetchProducts,
   fetchOzonReviews: fetchReviews,
 }));
 
-const { getReviews, getRatingSummary } = await import("./ozon-service");
+const {
+  getProducts,
+  getProductsResult,
+  getInStockProducts,
+  getInStockProductsResult,
+  getReviews,
+  getRatingSummary,
+} = await import("./ozon-service");
+
+const product: Product = {
+  id: "lamp-1",
+  slug: "lamp-1",
+  name: "Абажур",
+  description: "",
+  shortDescription: "",
+  price: 20000,
+  currency: "RUB",
+  images: [],
+  category: "interior",
+  subcategory: "lampshades",
+  inStock: true,
+  ozonSku: 1234,
+  material: "Хлопок",
+};
+
+test("catalog results distinguish unavailable Ozon from a successful empty catalog", async () => {
+  for (const products of [null, []]) {
+    fetchProducts.mockResolvedValue(products);
+    const expected = {
+      products: [],
+      status: products === null ? "unavailable" : "available",
+    };
+    assert.deepEqual(await getProductsResult(), expected);
+    assert.deepEqual(await getInStockProductsResult(), expected);
+    assert.deepEqual(await getProducts(), []);
+    assert.deepEqual(await getInStockProducts(), []);
+  }
+});
+
+test("in-stock results filter purchasable products and retain catalog availability", async () => {
+  const unavailableProducts = [
+    { ...product, id: "sold-out", inStock: false },
+    { ...product, id: "no-sku", ozonSku: undefined },
+  ];
+  const products = [product, ...unavailableProducts];
+  fetchProducts.mockResolvedValue(products);
+  assert.deepEqual(await getProductsResult(), {
+    products,
+    status: "available",
+  });
+  assert.deepEqual(await getProducts(), products);
+  assert.deepEqual(await getInStockProductsResult(), {
+    products: [product],
+    status: "available",
+  });
+  assert.deepEqual(await getInStockProducts(), [product]);
+
+  fetchProducts.mockResolvedValue(unavailableProducts);
+  assert.deepEqual(await getInStockProductsResult(), {
+    products: [],
+    status: "available",
+  });
+});
 
 test("product reviews filter the shared live request by SKU and deduplicate snapshot IDs", async () => {
   const reviews = await getReviews({

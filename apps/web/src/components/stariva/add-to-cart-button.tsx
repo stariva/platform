@@ -4,8 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
+import { isPurchasable } from "@/lib/in-stock";
 import type { Product } from "@/lib/ozon-types";
 
+/**
+ * Добавляет изделие в корзину, отправляет аналитику и показывает подтверждение.
+ * Возвращает null, если у товара нет свободного остатка или SKU Ozon.
+ */
 export function AddToCartButton({
   product,
   className,
@@ -16,7 +21,7 @@ export function AddToCartButton({
   const { add } = useCart();
   const [added, setAdded] = useState(false);
 
-  if (!product.ozonSku || !product.inStock) return null;
+  if (!isPurchasable(product)) return null;
 
   return (
     <Button

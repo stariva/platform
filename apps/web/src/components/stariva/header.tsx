@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth/client";
+import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS } from "@/lib/in-stock";
 import { CartTrigger } from "./cart-trigger";
 
 const catalogNav = [
@@ -62,6 +63,7 @@ const b2bLinks = [
 
 const nav = [
   { label: "Каталог", href: "/catalog", hasMega: true },
+  { label: "В наличии", href: IN_STOCK_HREF },
   { label: "Мастер-классы", href: "/workshops" },
   { label: "Блог", href: "/blog" },
   { label: "Для бизнеса", href: "/b2b", hasB2b: true },
@@ -72,6 +74,7 @@ interface HeaderProps {
   variant?: "transparent" | "solid";
 }
 
+/** Показывает адаптивную навигацию, меню аккаунта и корзину с учётом фона шапки. */
 export function Header({ variant = "solid" }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,6 +87,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
   const { data: session } = useSession();
 
   const isSolid = variant === "solid" || scrolled;
+  const isInStockPage = pathname === IN_STOCK_HREF;
 
   useEffect(() => {
     if (variant === "solid") return;
@@ -98,8 +102,11 @@ export function Header({ variant = "solid" }: HeaderProps) {
     setMegaOpen(false);
   }, []);
 
+  /** Определяет активный раздел, исключая якоря и выделяя «В наличии» отдельно. */
   const isActive = (href: string) => {
     if (href.startsWith("/#")) return false;
+    // «В наличии» живёт внутри /catalog, но в меню это отдельный пункт
+    if (href === "/catalog" && isInStockPage) return false;
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
@@ -374,7 +381,15 @@ export function Header({ variant = "solid" }: HeaderProps) {
                         {/* Footer row */}
                         <div className="mt-5 pt-4 border-t border-espresso/8 flex items-center justify-between">
                           <span className="text-mid-grey text-[12px]">
-                            Все изделия создаются вручную из натурального хлопка
+                            Все изделия создаются вручную из натурального
+                            хлопка.{" "}
+                            <Link
+                              href={IN_STOCK_HREF}
+                              className="text-near-black underline underline-offset-4 hover:text-terracotta transition-colors"
+                            >
+                              Готовые в наличии
+                            </Link>{" "}
+                            — отправим за {IN_STOCK_SHIP_DAYS}
                           </span>
                           <Link
                             href="/catalog"
@@ -573,6 +588,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
             </div>
             {[
               { label: "Весь каталог", href: "/catalog" },
+              { label: "В наличии", href: IN_STOCK_HREF },
               { label: "Корзина", href: "/cart" },
               { label: "Мастер-классы", href: "/workshops" },
               { label: "Блог", href: "/blog" },

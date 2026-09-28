@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -13,32 +14,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getMadeToOrder } from "@/lib/made-to-order";
-import type { Category, Product, ProductSubcategory } from "@/lib/ozon-types";
+import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 
 interface CategoryFiltersProps {
   products: Product[];
-  category: Category;
-  categorySlug: string;
+  /** Таблетки фильтра: подкатегории внутри категории или категории на общей витрине. */
+  filters: { slug: string; name: string }[];
+  filterBy?: "subcategory" | "category";
+  /** Кнопка «В корзину» прямо в карточке — для витрины готовых изделий. */
+  showAddToCart?: boolean;
 }
 
+/**
+ * Фильтрует товары по категории или подкатегории и сортирует по цене.
+ * По умолчанию использует подкатегории и скрывает кнопки добавления в корзину.
+ */
 export default function CategoryFilters({
   products,
-  category,
-  categorySlug,
+  filters,
+  filterBy = "subcategory",
+  showAddToCart = false,
 }: CategoryFiltersProps) {
-  const [activeSubcategory, setActiveSubcategory] = useState<
-    ProductSubcategory | "all"
-  >("all");
+  const [activeFilter, setActiveFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">(
     "default",
   );
 
   const filteredProducts = useMemo(() => {
     let result =
-      activeSubcategory === "all"
+      activeFilter === "all"
         ? products
-        : products.filter((p) => p.subcategory === activeSubcategory);
+        : products.filter((p) => p[filterBy] === activeFilter);
 
     if (sortBy === "price-asc")
       result = [...result].sort((a, b) => a.price - b.price);
@@ -46,55 +53,53 @@ export default function CategoryFilters({
       result = [...result].sort((a, b) => b.price - a.price);
 
     return result;
-  }, [products, activeSubcategory, sortBy]);
+  }, [products, filterBy, activeFilter, sortBy]);
 
-  const subcategoryCounts = useMemo(() => {
+  const filterCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const sub of category.subcategories) {
-      counts[sub.slug] = products.filter(
-        (p) => p.subcategory === sub.slug,
+    for (const filter of filters) {
+      counts[filter.slug] = products.filter(
+        (p) => p[filterBy] === filter.slug,
       ).length;
     }
     return counts;
-  }, [products, category.subcategories]);
+  }, [products, filters, filterBy]);
 
   return (
     <>
       {/* ── Filters bar ── */}
       <section className="sticky top-[60px] lg:top-[68px] z-30 bg-parchment/96 backdrop-blur-sm border-b border-espresso/8">
         <div className="max-w-[1440px] mx-auto px-5 lg:px-12 py-4 flex items-center justify-between gap-4 flex-wrap">
-          {/* Subcategory pills */}
+          {/* Filter pills */}
           <div className="flex items-center gap-2 flex-wrap">
             <Button
-              onClick={() => setActiveSubcategory("all")}
-              variant={activeSubcategory === "all" ? "default" : "secondary"}
+              onClick={() => setActiveFilter("all")}
+              variant={activeFilter === "all" ? "default" : "secondary"}
               size="sm"
               className={`rounded-full label-caps text-[11px] h-auto py-2 transition-all duration-200 ${
-                activeSubcategory === "all"
+                activeFilter === "all"
                   ? "bg-espresso text-parchment hover:bg-espresso/90"
                   : "bg-sand text-espresso hover:bg-espresso/10"
               }`}
             >
               Все ({products.length})
             </Button>
-            {category.subcategories.map((sub) => (
+            {filters.map((filter) => (
               <Button
-                key={sub.slug}
-                onClick={() => setActiveSubcategory(sub.slug)}
-                variant={
-                  activeSubcategory === sub.slug ? "default" : "secondary"
-                }
+                key={filter.slug}
+                onClick={() => setActiveFilter(filter.slug)}
+                variant={activeFilter === filter.slug ? "default" : "secondary"}
                 size="sm"
                 className={`rounded-full label-caps text-[11px] h-auto py-2 transition-all duration-200 ${
-                  activeSubcategory === sub.slug
+                  activeFilter === filter.slug
                     ? "bg-espresso text-parchment hover:bg-espresso/90"
                     : "bg-sand text-espresso hover:bg-espresso/10"
                 }`}
               >
-                {sub.name}
-                {(subcategoryCounts[sub.slug] ?? 0) > 0 && (
+                {filter.name}
+                {(filterCounts[filter.slug] ?? 0) > 0 && (
                   <span className="ml-1.5 opacity-50">
-                    ({subcategoryCounts[sub.slug]})
+                    ({filterCounts[filter.slug]})
                   </span>
                 )}
               </Button>
@@ -137,7 +142,7 @@ export default function CategoryFilters({
                   key={product.id}
                   product={product}
                   index={i}
-                  categorySlug={categorySlug}
+                  showAddToCart={showAddToCart}
                 />
               ))}
             </div>
@@ -148,25 +153,30 @@ export default function CategoryFilters({
   );
 }
 
+/**
+ * Показывает карточку со ссылкой и сроком изготовления из категории товара.
+ * При showAddToCart добавляет кнопку корзины для доступных к покупке изделий.
+ */
 function ProductCard({
   product,
   index,
-  categorySlug,
+  showAddToCart,
 }: {
   product: Product;
   index: number;
-  categorySlug: string;
+  showAddToCart: boolean;
 }) {
-  const madeToOrder = getMadeToOrder(categorySlug);
+  const madeToOrder = getMadeToOrder(product.category);
 
   return (
     <motion.div
+      className="flex flex-col"
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.04 * Math.min(index, 8) }}
     >
       <Link
-        href={`/catalog/${categorySlug}/${product.slug}`}
+        href={`/catalog/${product.category}/${product.slug}`}
         className="group block"
       >
         {/* Image */}
@@ -236,6 +246,14 @@ function ProductCard({
           )
         )}
       </Link>
+      {showAddToCart && (
+        <div className="mt-auto pt-3">
+          <AddToCartButton
+            product={product}
+            className="w-full h-auto py-2.5 rounded-full bg-espresso hover:bg-terracotta text-parchment label-caps text-[11px] transition-colors"
+          />
+        </div>
+      )}
     </motion.div>
   );
 }

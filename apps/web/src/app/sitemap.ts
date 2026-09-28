@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
 import { blogPosts } from "@/lib/blog-data";
+import { IN_STOCK_HREF } from "@/lib/in-stock";
 import { categories, getProducts } from "@/lib/ozon-service";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { workshops } from "@/lib/workshops-data";
 
 export const revalidate = 3600;
 
+/** Собирает sitemap из статических страниц, категорий, товаров, статей и мастер-классов. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Статические страницы ──────────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
@@ -21,6 +23,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}${IN_STOCK_HREF}`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.85,
     },
     {
       url: `${BASE_URL}/workshops`,
