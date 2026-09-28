@@ -38,4 +38,5 @@ ENV NEXT_PUBLIC_APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=814c36f0-1a32-47af-b51d-8f197d5f2981
 ENV PORT=3000
 EXPOSE 3000
-CMD ["bun", "apps/web/server.js"]
+# --smol: bun чаще запускает GC — без этого RSS держится у лимита пода
+CMD ["bun", "--smol", "apps/web/server.js"]

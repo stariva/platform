@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getOzonDeliveryToken, isOzonDeliveryConfigured } from "./auth";
+import { normalizePointInfo, pointInfoSchema } from "./point-info";
 import type {
   CheckoutSplit,
   CreateOrderRequest,
@@ -9,6 +10,7 @@ import type {
   DeliveryCheckResponse,
   DeliverySelection,
   PickupPoint,
+  PickupPointLocation,
   Posting,
 } from "./types";
 
@@ -27,17 +29,14 @@ const moneySchema = z.object({
 });
 
 const deliveryCheckSchema = z.object({ is_possible: z.boolean() });
-const pickupPointListSchema = z.object({
-  points: z.array(
-    z.object({
-      map_point_id: positiveInteger,
-      name: z.string().min(1).optional(),
-      address: z.string().min(1).optional(),
-      work_schedule: z.string().min(1).optional(),
-      coordinate: z.object({ lat: z.number(), long: z.number() }),
-    }),
-  ),
+// Список пунктов по всей стране — десятки тысяч элементов. Поэлементная
+// zod-схема строила бы полную копию массива и на пике выбивала под по
+// памяти, поэтому здесь проверяем только оболочку, а точки — вручную.
+const pickupPointListSchema = z.object({ points: z.array(z.unknown()) });
+const pointInfoResponseSchema = z.object({
+  points: z.array(pointInfoSchema),
 });
+const POINT_INFO_BATCH_SIZE = 100;
 const checkoutResponseSchema = z.object({
   splits: z.array(
     z.object({
@@ -144,21 +143,76 @@ export async function checkDeliveryAvailable(
   return { available: data.is_possible };
 }
 
-export async function listPickupPoints(): Promise<PickupPoint[]> {
+// Ozon отдаёт здесь только id и координаты — адрес, режим работы и
+// остальное берутся из getPickupPointsInfo.
+export async function listPickupPoints(): Promise<PickupPointLocation[]> {
   const data = await ozonDeliveryFetch(
     "/v1/delivery/point/list",
     {},
     pickupPointListSchema,
   );
-  return data.points.map((point) => ({
-    id: String(point.map_point_id),
-    name: point.name ?? `Пункт Ozon ${point.map_point_id}`,
-    address:
-      point.address ?? `${point.coordinate.lat}, ${point.coordinate.long}`,
-    latitude: point.coordinate.lat,
-    longitude: point.coordinate.long,
-    workSchedule: point.work_schedule,
-  }));
+  const locations: PickupPointLocation[] = [];
+  for (const raw of data.points) {
+    const point = raw as {
+      map_point_id?: unknown;
+      coordinate?: { lat?: unknown; long?: unknown } | null;
+    } | null;
+    const id = point?.map_point_id;
+    const lat = point?.coordinate?.lat;
+    const long = point?.coordinate?.long;
+    if (
+      !Number.isSafeInteger(id) ||
+      (id as number) <= 0 ||
+      typeof lat !== "number" ||
+      typeof long !== "number" ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(long)
+    ) {
+      continue;
+    }
+    locations.push({ id: String(id), latitude: lat, longitude: long });
+  }
+  return locations;
+}
+
+/**
+ * Подробности о пунктах выдачи (не больше 100 id за запрос к Ozon).
+ * В `unavailable` попадают пункты, которые Ozon вернул выключенными
+ * или без адреса — показывать их покупателю нельзя.
+ */
+export async function getPickupPointsInfo(
+  ids: string[],
+  knownLocations?: Map<string, PickupPointLocation>,
+): Promise<{ points: PickupPoint[]; unavailable: string[] }> {
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += POINT_INFO_BATCH_SIZE) {
+    batches.push(ids.slice(i, i + POINT_INFO_BATCH_SIZE));
+  }
+  const responses = await Promise.all(
+    batches.map((batch) =>
+      ozonDeliveryFetch(
+        "/v1/delivery/point/info",
+        { map_point_ids: batch },
+        pointInfoResponseSchema,
+      ),
+    ),
+  );
+
+  const points: PickupPoint[] = [];
+  const found = new Set<string>();
+  for (const info of responses.flatMap((response) => response.points)) {
+    const point =
+      info.enabled === false
+        ? null
+        : normalizePointInfo(
+            info,
+            knownLocations?.get(String(info.delivery_method.map_point_id)),
+          );
+    if (!point) continue;
+    points.push(point);
+    found.add(point.id);
+  }
+  return { points, unavailable: ids.filter((id) => !found.has(id)) };
 }
 
 export async function checkout(
