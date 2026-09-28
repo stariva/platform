@@ -54,20 +54,22 @@ const details = new Map<string, DetailsEntry>();
 export async function getCachedPickupPointsInfo(
   ids: string[],
 ): Promise<{ points: PickupPoint[]; unavailable: string[] }> {
+  const { byId } = await loadLocations();
   const now = Date.now();
-  const missing = ids.filter((id) => {
-    const entry = details.get(id);
-    return !entry || entry.expiresAt <= now;
-  });
+  for (const [id, entry] of details) {
+    if (entry.expiresAt <= now || !byId.has(id)) details.delete(id);
+  }
+  const missing = ids.filter((id) => byId.has(id) && !details.has(id));
 
   if (missing.length > 0) {
-    const { byId } = await loadLocations();
     const fetched = await getPickupPointsInfo(missing, byId);
     const expiresAt = Date.now() + DETAILS_TTL_MS;
     for (const point of fetched.points) {
+      if (!byId.has(point.id)) continue;
       details.set(point.id, { point, expiresAt });
     }
     for (const id of fetched.unavailable) {
+      if (!byId.has(id)) continue;
       details.set(id, { point: null, expiresAt });
     }
   }
@@ -75,7 +77,7 @@ export async function getCachedPickupPointsInfo(
   const points: PickupPoint[] = [];
   const unavailable: string[] = [];
   for (const id of ids) {
-    const point = details.get(id)?.point;
+    const point = byId.has(id) ? details.get(id)?.point : null;
     if (point) points.push(point);
     else unavailable.push(id);
   }

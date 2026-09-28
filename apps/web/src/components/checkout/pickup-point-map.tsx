@@ -72,6 +72,7 @@ export function PickupPointMap({
   const clustererRef = useRef<ymaps.Clusterer | null>(null);
   const placemarksRef = useRef(new Map<string, ymaps.Placemark>());
   const anchorPlacemarkRef = useRef<ymaps.Placemark | null>(null);
+  const lastFittedAnchorRef = useRef<MapAnchor | null>(null);
   // Карта создаётся асинхронно (после загрузки скрипта), а точки обычно
   // приходят раньше — этот флаг перезапускает отрисовку точек, когда карта готова.
   const [mapReady, setMapReady] = useState(false);
@@ -123,6 +124,7 @@ export function PickupPointMap({
         // the runtime API accepts it fine as a geoObjects child.
         map.geoObjects.add(clusterer as unknown as ymaps.IGeoObject);
         mapRef.current = map;
+        lastFittedAnchorRef.current = null;
         clustererRef.current = clusterer;
         setMapReady(true);
       })
@@ -135,6 +137,7 @@ export function PickupPointMap({
       clearTimeout(centerTimer);
       mapRef.current?.destroy();
       mapRef.current = null;
+      lastFittedAnchorRef.current = null;
       clustererRef.current = null;
       anchorPlacemarkRef.current = null;
       placemarksRef.current.clear();
@@ -188,6 +191,9 @@ export function PickupPointMap({
       anchorPlacemarkRef.current = anchorPlacemark;
     }
 
+    // Обновление пунктов не должно сбрасывать выбранный покупателем вид карты.
+    if (lastFittedAnchorRef.current === anchor) return;
+
     // Показываем адрес покупателя и несколько ближайших пунктов вокруг
     const visible = locations.slice(0, INITIAL_VISIBLE_POINTS);
     const lats = [anchor.lat, ...visible.map((p) => p.latitude)];
@@ -203,6 +209,7 @@ export function PickupPointMap({
         { checkZoomRange: true, zoomMargin: [40] },
       );
     }
+    lastFittedAnchorRef.current = anchor;
   }, [locations, anchor, mapReady]);
 
   useEffect(() => {

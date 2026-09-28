@@ -47,6 +47,7 @@ const PickupPointMap = dynamic(
 );
 
 const LIST_PAGE_SIZE = 8;
+const DETAILS_BATCH_SIZE = 50;
 // Если карту увели дальше этого от адреса, список показывает пункты
 // «в этой части карты», а не «рядом с вами».
 const MOVED_AWAY_KM = 1.5;
@@ -248,7 +249,7 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
 
   // Подгружаем адреса пунктов, которые видны в списке или выбраны на карте
   useEffect(() => {
-    const wanted = [...listed, selectedId].filter(
+    const wanted = [...new Set([...listed, selectedId])].filter(
       (id) =>
         id &&
         !details.has(id) &&
@@ -258,27 +259,30 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
     if (wanted.length === 0) return;
     for (const id of wanted) requestedRef.current.add(id);
 
-    void (async () => {
-      try {
-        const res = await fetch(
-          `/api/checkout/pickup-points/details?ids=${wanted.join(",")}`,
-        );
-        if (!res.ok) throw new Error(`details_${res.status}`);
-        const data = (await res.json()) as PickupPointDetailsResponse;
-        setDetails((prev) => {
-          const merged = new Map(prev);
-          for (const point of data.points) merged.set(point.id, point);
-          return merged;
-        });
-        if (data.unavailable.length > 0) {
-          setHidden((prev) => new Set([...prev, ...data.unavailable]));
-          setSelectedId((id) => (data.unavailable.includes(id) ? "" : id));
+    for (let i = 0; i < wanted.length; i += DETAILS_BATCH_SIZE) {
+      const batch = wanted.slice(i, i + DETAILS_BATCH_SIZE);
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/checkout/pickup-points/details?ids=${batch.join(",")}`,
+          );
+          if (!res.ok) throw new Error(`details_${res.status}`);
+          const data = (await res.json()) as PickupPointDetailsResponse;
+          setDetails((prev) => {
+            const merged = new Map(prev);
+            for (const point of data.points) merged.set(point.id, point);
+            return merged;
+          });
+          if (data.unavailable.length > 0) {
+            setHidden((prev) => new Set([...prev, ...data.unavailable]));
+            setSelectedId((id) => (data.unavailable.includes(id) ? "" : id));
+          }
+        } catch {
+          for (const id of batch) requestedRef.current.delete(id);
+          setDetailsFailed(true);
         }
-      } catch {
-        for (const id of wanted) requestedRef.current.delete(id);
-        setDetailsFailed(true);
-      }
-    })();
+      })();
+    }
   }, [listed, selectedId, details, hidden]);
 
   function retryDetails() {
