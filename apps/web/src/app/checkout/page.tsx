@@ -1,13 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PickupPointPicker } from "@/components/checkout/pickup-point-picker";
 import {
   ConsentCheckbox,
   OfferAcceptanceNote,
@@ -29,6 +29,11 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
+import {
+  formatDateRange,
+  localDateKey,
+  pointKindLabel,
+} from "@/lib/ozon-delivery/format";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
@@ -36,28 +41,7 @@ import type {
 } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
 
-const PickupPointMap = dynamic(
-  () =>
-    import("@/components/checkout/pickup-point-map").then(
-      (m) => m.PickupPointMap,
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-80 w-full flex items-center justify-center rounded-lg border border-espresso/15">
-        <Spinner className="text-taupe" />
-      </div>
-    ),
-  },
-);
-
 type Step = "contact" | "delivery" | "review";
-
-interface CitySuggestion {
-  value: string;
-  lat: number;
-  lon: number;
-}
 
 const contactFormSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(120),
@@ -106,60 +90,7 @@ export default function CheckoutPage() {
     },
   });
 
-  const [citySearch, setCitySearch] = useState("");
-  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
-  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(null);
-  const [pickupPoints, setPickupPoints] = useState<PickupPoint[] | null>(null);
-  const [pointsExpanded, setPointsExpanded] = useState(false);
-  const [selectedPointId, setSelectedPointId] = useState<string>("");
-  const [loadingPoints, setLoadingPoints] = useState(false);
-  const [pointSearch, setPointSearch] = useState("");
-
-  const nearbyPoints = pickupPoints ?? [];
-
-  useEffect(() => {
-    if (!citySearch || selectedCity) {
-      setCitySuggestions([]);
-      return;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `/api/checkout/city-suggest?query=${encodeURIComponent(citySearch)}`,
-          { signal: controller.signal },
-        );
-        const data = await res.json().catch(() => null);
-        if (res.ok) setCitySuggestions(data.suggestions ?? []);
-      } catch {
-        // AbortError или сетевая ошибка — просто не показываем подсказки
-      }
-    }, 300);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [citySearch, selectedCity]);
-
-  function handleChangeCity() {
-    setSelectedCity(null);
-    setCitySearch("");
-    setCitySuggestions([]);
-    setPickupPoints(null);
-    setPointsExpanded(false);
-    setPointSearch("");
-    setSelectedPointId("");
-  }
-
-  const MAX_VISIBLE_POINTS = 100;
-  const filteredPickupPoints = pointSearch
-    ? nearbyPoints.filter((p) =>
-        `${p.name} ${p.address}`
-          .toLowerCase()
-          .includes(pointSearch.toLowerCase()),
-      )
-    : nearbyPoints;
-  const visiblePickupPoints = filteredPickupPoints.slice(0, MAX_VISIBLE_POINTS);
+  const [selectedPoint, setSelectedPoint] = useState<PickupPoint | null>(null);
 
   const [quote, setQuote] = useState<DeliveryCheckoutResponse | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -223,38 +154,9 @@ export default function CheckoutPage() {
     }
   }
 
-  async function loadPickupPoints(lat: number, lon: number) {
-    setLoadingPoints(true);
-    try {
-      const res = await fetch(
-        `/api/checkout/pickup-points?lat=${lat}&lon=${lon}`,
-      );
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        toast.error(data?.error ?? "Не удалось загрузить пункты выдачи");
-        return;
-      }
-      setPickupPoints(data.points);
-      setPointsExpanded(Boolean(data.expanded));
-    } catch {
-      toast.error("Не удалось загрузить пункты выдачи");
-    } finally {
-      setLoadingPoints(false);
-    }
-  }
-
-  function handleSelectCitySuggestion(suggestion: CitySuggestion) {
-    setSelectedCity(suggestion);
-    setCitySearch(suggestion.value);
-    setCitySuggestions([]);
-    setSelectedPointId("");
-    setPointSearch("");
-    void loadPickupPoints(suggestion.lat, suggestion.lon);
-  }
-
   async function handleGetQuote() {
-    const delivery: DeliverySelection | null = selectedPointId
-      ? { method: "pickup", pointId: selectedPointId }
+    const delivery: DeliverySelection | null = selectedPoint
+      ? { method: "pickup", pointId: selectedPoint.id }
       : null;
 
     if (!delivery) {
@@ -294,10 +196,10 @@ export default function CheckoutPage() {
   }
 
   async function handleConfirm() {
-    if (!quote) return;
+    if (!quote || !selectedPoint) return;
     const delivery: DeliverySelection = {
       method: "pickup",
-      pointId: selectedPointId,
+      pointId: selectedPoint.id,
     };
 
     setSubmitting(true);
@@ -467,130 +369,68 @@ export default function CheckoutPage() {
             </Form>
           )}
 
-          {step === "delivery" && (
-            <div className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-5">
-              <h2 className="font-serif text-xl text-espresso mb-2">
-                Способ доставки
+          {step !== "contact" && (
+            // Шаг остаётся смонтированным и на подтверждении, чтобы по
+            // «Изменить» вернуться к той же карте, адресу и выбранному пункту
+            <div
+              hidden={step !== "delivery"}
+              className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-5"
+            >
+              <h2 className="font-serif text-xl text-espresso">
+                Пункт выдачи Ozon
               </h2>
-              {!selectedCity ? (
-                <div className="relative">
-                  <label
-                    htmlFor="checkout-city"
-                    className="block text-sm text-espresso mb-1"
-                  >
-                    В каком городе забрать заказ?
-                  </label>
-                  <Input
-                    id="checkout-city"
-                    type="text"
-                    placeholder="Начните вводить город"
-                    value={citySearch}
-                    onChange={(e) => setCitySearch(e.target.value)}
-                    onBlur={() => setTimeout(() => setCitySuggestions([]), 150)}
-                    autoComplete="off"
-                  />
-                  {citySuggestions.length > 0 && (
-                    <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-lg border border-espresso/15 bg-white shadow-md">
-                      {citySuggestions.map((suggestion) => (
-                        <li key={suggestion.value}>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleSelectCitySuggestion(suggestion)
-                            }
-                            className="w-full px-3 py-2 text-left text-sm text-espresso hover:bg-parchment/60"
-                          >
-                            {suggestion.value}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-espresso">
-                      Город:{" "}
-                      <span className="font-medium">{selectedCity.value}</span>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleChangeCity}
-                      className="text-terracotta text-sm underline"
-                    >
-                      Сменить город
-                    </button>
-                  </div>
-                  {loadingPoints ? (
-                    <Spinner className="text-taupe" />
-                  ) : nearbyPoints.length === 0 ? (
-                    <p className="text-taupe text-xs">
-                      Пунктов выдачи Ozon рядом не нашлось — попробуйте выбрать
-                      другой город
-                    </p>
-                  ) : (
-                    <>
-                      {pointsExpanded && (
-                        <p className="text-taupe text-xs">
-                          Рядом мало пунктов — показаны ближайшие из более
-                          широкого круга
-                        </p>
-                      )}
-                      <Input
-                        type="text"
-                        placeholder="Начните вводить адрес или название пункта"
-                        value={pointSearch}
-                        onChange={(e) => setPointSearch(e.target.value)}
-                        className="mb-2"
-                      />
-                      <PickupPointMap
-                        points={visiblePickupPoints}
-                        selectedPointId={selectedPointId}
-                        onSelect={setSelectedPointId}
-                      />
-                      <select
-                        value={selectedPointId}
-                        onChange={(e) => setSelectedPointId(e.target.value)}
-                        className="w-full mt-2 rounded-lg border border-espresso/15 px-3 py-2 text-sm text-espresso"
-                      >
-                        <option value="">Выберите пункт выдачи</option>
-                        {visiblePickupPoints.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} — {p.address}
-                          </option>
-                        ))}
-                      </select>
-                      {pointSearch && visiblePickupPoints.length === 0 && (
-                        <p className="text-taupe text-xs">Ничего не найдено</p>
-                      )}
-                      {!pointSearch &&
-                        nearbyPoints.length > visiblePickupPoints.length && (
-                          <p className="text-taupe text-xs">
-                            Показаны первые {visiblePickupPoints.length} из{" "}
-                            {nearbyPoints.length} — уточните адрес для поиска
-                          </p>
-                        )}
-                    </>
-                  )}
-                </>
-              )}
-
-              <Button
-                onClick={handleGetQuote}
-                disabled={quoting}
-                className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
-              >
-                {quoting ? <Spinner /> : "Рассчитать доставку"}
-              </Button>
+              <PickupPointPicker onChange={setSelectedPoint} />
+              <div className="space-y-2">
+                <Button
+                  onClick={handleGetQuote}
+                  disabled={quoting || !selectedPoint}
+                  className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+                >
+                  {quoting ? <Spinner /> : "Рассчитать доставку"}
+                </Button>
+                {!selectedPoint && (
+                  <p className="text-center text-xs text-taupe">
+                    Выберите пункт на карте или в списке
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
-          {step === "review" && quote && (
+          {step === "review" && quote && selectedPoint && (
             <div className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4">
               <h2 className="font-serif text-xl text-espresso mb-2">
                 Подтверждение заказа
               </h2>
+              <div className="flex items-start justify-between gap-4 rounded-xl bg-sand px-4 py-3">
+                <div className="min-w-0 text-sm">
+                  <p className="text-xs text-taupe">
+                    {pointKindLabel(selectedPoint)} Ozon
+                  </p>
+                  <p className="font-medium text-espresso">
+                    {selectedPoint.title}
+                  </p>
+                  {selectedPoint.locality && (
+                    <p className="text-taupe">{selectedPoint.locality}</p>
+                  )}
+                  {deliveryWindow(quote) && (
+                    <p className="mt-1 text-espresso">
+                      Ожидаемая доставка в пункт: {deliveryWindow(quote)}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuote(null);
+                    setStep("delivery");
+                  }}
+                  disabled={submitting}
+                  className="shrink-0 text-sm text-espresso underline"
+                >
+                  Изменить
+                </button>
+              </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-taupe">Доставка</span>
                 <span className="text-espresso">
@@ -618,4 +458,26 @@ export default function CheckoutPage() {
       <Footer />
     </>
   );
+}
+
+/**
+ * «2 октября – 4 октября» по датам доставки из расчёта Ozon. Если заказ
+ * разбит на несколько отправлений, ориентируемся на самое позднее.
+ */
+function deliveryWindow(quote: DeliveryCheckoutResponse): string | null {
+  const latest = (dates: string[]) =>
+    dates
+      .map((iso) => new Date(iso))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .map(localDateKey)
+      .sort()
+      .at(-1);
+  const from = latest(
+    quote.splits.map((split) => split.deliveryMethod.logisticDateFrom),
+  );
+  const to = latest(
+    quote.splits.map((split) => split.deliveryMethod.logisticDateTo),
+  );
+  if (!from || !to) return null;
+  return formatDateRange(from, to);
 }

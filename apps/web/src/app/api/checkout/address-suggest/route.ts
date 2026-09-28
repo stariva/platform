@@ -14,16 +14,19 @@ const dadataResponseSchema = z.object({
       data: z.object({
         geo_lat: z.string().nullable().optional(),
         geo_lon: z.string().nullable().optional(),
+        street: z.string().nullable().optional(),
       }),
     }),
   ),
 });
 
+// Подсказки от города до дома: покупателю проще найти пункт рядом с
+// домом или работой, чем листать все пункты города.
 export async function GET(request: Request) {
   const apiKey = env.DADATA_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Поиск города временно недоступен" },
+      { error: "Поиск адреса временно недоступен" },
       { status: 503 },
     );
   }
@@ -42,10 +45,10 @@ export async function GET(request: Request) {
         Authorization: `Token ${apiKey}`,
       },
       body: JSON.stringify({
-        query,
-        count: 10,
+        query: query.slice(0, 200),
+        count: 8,
         from_bound: { value: "city" },
-        to_bound: { value: "settlement" },
+        to_bound: { value: "house" },
         locations: [{ country_iso_code: "RU" }],
       }),
     });
@@ -61,6 +64,9 @@ export async function GET(request: Request) {
         value: s.value,
         lat: Number(s.data.geo_lat),
         lon: Number(s.data.geo_lon),
+        // Для улицы или дома расстояние до пункта имеет смысл,
+        // для города координаты — просто его центр
+        precise: Boolean(s.data.street),
       }));
 
     return NextResponse.json(
@@ -68,9 +74,9 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "private, max-age=3600" } },
     );
   } catch (error) {
-    console.error("[checkout/city-suggest] Ошибка:", error);
+    console.error("[checkout/address-suggest] Ошибка:", error);
     return NextResponse.json(
-      { error: "Не удалось найти город" },
+      { error: "Не удалось найти адрес" },
       { status: 502 },
     );
   }
