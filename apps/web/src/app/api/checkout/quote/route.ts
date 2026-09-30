@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { resolveCatalogItems } from "@/lib/commerce/catalog";
+import {
+  CatalogItemsUnavailableError,
+  resolveCatalogItems,
+} from "@/lib/commerce/catalog";
+import { unavailableItemsResponse } from "@/lib/commerce/unavailable-items";
 import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
 import { checkout } from "@/lib/ozon-delivery/client";
 
@@ -51,6 +55,9 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof CatalogItemsUnavailableError) {
+      return unavailableItemsResponse(error);
+    }
     console.error("[checkout/quote] Ошибка:", error);
     return NextResponse.json(
       { error: "Не удалось рассчитать стоимость доставки" },

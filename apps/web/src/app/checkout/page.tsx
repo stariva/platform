@@ -71,10 +71,14 @@ const checkoutCreateResponseSchema = z.object({
   }),
 });
 
+const unavailableItemsResponseSchema = z.object({
+  unavailableProductSlugs: z.array(z.string()).min(1),
+});
+
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
 export default function CheckoutPage() {
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, remove } = useCart();
 
   const [step, setStep] = useState<Step>("contact");
   const [contact, setContact] = useState<ContactFormValues | null>(null);
@@ -154,6 +158,29 @@ export default function CheckoutPage() {
     }
   }
 
+  /**
+   * Корзина живёт в браузере, и товар могут раскупить, пока он в ней лежит.
+   * Сервер отвечает списком таких товаров — убираем их и просим пересчитать
+   * доставку уже без них. Возвращает false, если это другая ошибка.
+   */
+  function dropUnavailableItems(data: unknown): boolean {
+    const parsed = unavailableItemsResponseSchema.safeParse(data);
+    if (!parsed.success) return false;
+    const slugs = new Set(parsed.data.unavailableProductSlugs);
+    const names = items
+      .filter((item) => slugs.has(item.productSlug))
+      .map((item) => `«${item.name}»`);
+    for (const slug of slugs) remove(slug);
+    setQuote(null);
+    setStep("delivery");
+    toast.error(
+      names.length > 1
+        ? `Товаров ${names.join(", ")} уже нет в наличии — мы убрали их из корзины`
+        : `Товара ${names[0] ?? ""} уже нет в наличии — мы убрали его из корзины`,
+    );
+    return true;
+  }
+
   async function handleGetQuote() {
     const delivery: DeliverySelection | null = selectedPoint
       ? { method: "pickup", pointId: selectedPoint.id }
@@ -181,6 +208,7 @@ export default function CheckoutPage() {
         }),
       });
       const data = await res.json();
+      if (res.status === 409 && dropUnavailableItems(data)) return;
       if (!res.ok || !data.available) {
         toast.error(data.error ?? data.reason ?? "Доставка недоступна");
         return;
@@ -221,6 +249,10 @@ export default function CheckoutPage() {
         }),
       });
       const data: unknown = await res.json();
+      if (res.status === 409 && dropUnavailableItems(data)) {
+        setSubmitting(false);
+        return;
+      }
       if (!res.ok) {
         const error = z.object({ error: z.string() }).safeParse(data);
         toast.error(

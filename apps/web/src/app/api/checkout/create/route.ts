@@ -2,10 +2,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
 import { getSession } from "@/lib/auth/session";
-import { resolveCatalogItems } from "@/lib/commerce/catalog";
+import {
+  CatalogItemsUnavailableError,
+  resolveCatalogItems,
+} from "@/lib/commerce/catalog";
 import { attachPaymentId, createProductOrder } from "@/lib/commerce/orders";
-import { checkout, isOzonDeliveryConfigured } from "@/lib/ozon-delivery/client";
+import { unavailableItemsResponse } from "@/lib/commerce/unavailable-items";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { checkout, isOzonDeliveryConfigured } from "@/lib/ozon-delivery/client";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 
 export const runtime = "nodejs";
@@ -70,6 +74,9 @@ export async function POST(request: NextRequest) {
       buyerPhone: data.contactPhone,
     });
   } catch (error) {
+    if (error instanceof CatalogItemsUnavailableError) {
+      return unavailableItemsResponse(error);
+    }
     console.error("[checkout/create] Ошибка проверки заказа:", error);
     return NextResponse.json(
       { error: "Не удалось проверить товары и доставку" },
