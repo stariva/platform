@@ -84,9 +84,10 @@ export const products = pgTable(
     ozonOfferId: text("ozon_offer_id"),
     // fbs_sku — нужен для v2/delivery/checkout и v2/order/create
     ozonSku: bigint("ozon_sku", { mode: "number" }),
-    // Свободный остаток (present − reserved) на момент stockSyncedAt.
-    // Перед оплатой наличие всё равно перепроверяется расчётом доставки Ozon.
+    // Остаток готовых изделий. Ведётся у нас: правится в админке, при оплате
+    // заказа списывается. Ozon нужен только для доставки.
     stockAvailable: integer("stock_available").notNull().default(0),
+    // Не используется: остатки больше не сверяются с Ozon
     stockSyncedAt: timestamp("stock_synced_at", { withTimezone: true }),
 
     // ── Витрина ──

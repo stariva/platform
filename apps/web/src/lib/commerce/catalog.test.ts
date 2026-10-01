@@ -16,7 +16,7 @@ const product: Product = {
   subcategory: "tops",
   ozonSku: 3723160127,
   inStock: true,
-  stockAvailable: 1,
+  stockAvailable: 5,
   madeToOrder: true,
   material: "",
   featured: false,
@@ -65,6 +65,17 @@ test("reports every sold-out or missing item at once", async () => {
 
   assert.ok(error instanceof CatalogItemsUnavailableError);
   assert.deepEqual(error.productSlugs, ["sold-out", "delisted"]);
+});
+
+test("rejects a quantity larger than the remaining stock", async () => {
+  catalog = { products: [product], status: "available" };
+
+  const error = await resolveCatalogItems([
+    { productSlug: product.slug, quantity: 6 },
+  ]).catch((e: unknown) => e);
+
+  assert.ok(error instanceof CatalogItemsUnavailableError);
+  assert.deepEqual(error.productSlugs, [product.slug]);
 });
 
 test("treats a catalog outage as a failure, not as sold-out items", async () => {

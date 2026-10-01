@@ -29,12 +29,12 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { orpc } from "~/orpc/react";
 import { ProductImages } from "./product-images";
+import { StockEditor } from "./stock-editor";
 
 export interface OzonInfo {
   offerId: string | null;
   sku: number | null;
   stockAvailable: number;
-  stockSyncedAt: Date | null;
 }
 
 const selectClass =
@@ -337,20 +337,13 @@ export function ProductForm({
                 />
               </FieldRow>
             </div>
-            {ozon && (
-              <div className="bg-muted/50 rounded-md p-3 text-sm">
-                <div className="font-medium">
-                  Готовых на складе: {ozon.stockAvailable}
-                </div>
-                <div className="text-muted-foreground text-xs">
-                  {ozon.sku
-                    ? `Ozon SKU ${ozon.sku}${ozon.offerId ? ` · артикул ${ozon.offerId}` : ""}`
-                    : "Нет SKU Ozon — продаётся только под заказ"}
-                  {ozon.stockSyncedAt &&
-                    ` · сверено ${new Date(ozon.stockSyncedAt).toLocaleString("ru-RU")}`}
-                  . Остаток меняется в кабинете Ozon.
-                </div>
-              </div>
+            {id && ozon && (
+              <StockEditor
+                id={id}
+                stockAvailable={ozon.stockAvailable}
+                sku={ozon.sku}
+                offerId={ozon.offerId}
+              />
             )}
           </CardContent>
         </Card>

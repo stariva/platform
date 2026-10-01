@@ -27,6 +27,7 @@ export function ProductThumb({ src }: { src: string | null }) {
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: hover-превью только для мыши, действий не несёт
     <div
       onMouseEnter={(e) => show(e.currentTarget)}
       onMouseLeave={() => setPos(null)}

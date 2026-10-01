@@ -12,8 +12,9 @@ export interface ResolvedCatalogItem extends RequestedCatalogItem {
 }
 
 /**
- * Товары из корзины, которые сейчас нельзя купить: закончился свободный
- * остаток на Ozon, товар снят с продажи или у него нет SKU. Корзина хранится
+ * Товары из корзины, которые сейчас нельзя купить: закончился остаток,
+ * в корзине больше, чем осталось, товар снят с продажи или у него нет SKU
+ * для Ozon Доставки. Корзина хранится
  * в браузере, поэтому такое бывает штатно — это не сбой, а повод убрать
  * товары из корзины.
  */
@@ -29,7 +30,7 @@ export async function resolveCatalogItems(
   requestedItems: RequestedCatalogItem[],
 ): Promise<ResolvedCatalogItem[]> {
   const { products, status } = await getProductsResult();
-  // Каталог Ozon недоступен — это сбой, а не отсутствие товаров: иначе
+  // Каталог недоступен — это сбой, а не отсутствие товаров: иначе
   // покупателю пришлось бы очистить всю корзину.
   if (status === "unavailable") throw new Error("catalog_unavailable");
 
@@ -51,6 +52,7 @@ export async function resolveCatalogItems(
     const price = Math.round((product?.price ?? 0) * 100);
     if (
       !product?.inStock ||
+      quantity > (product.stockAvailable ?? 0) ||
       product.currency !== "RUB" ||
       !Number.isSafeInteger(product.ozonSku) ||
       (product.ozonSku ?? 0) <= 0 ||

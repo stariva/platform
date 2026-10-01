@@ -5,7 +5,7 @@ import { z } from "zod";
 import { adminProcedure } from "../../../orpc";
 import { rowToForm } from "./mapping";
 
-/** Товар для формы редактирования плюс поля, которые приходят из Ozon. */
+/** Товар для формы редактирования плюс остаток и SKU для Ozon Доставки. */
 export const byId = adminProcedure
   .input(z.object({ id: z.string().min(1) }))
   .handler(async ({ context, input }) => {
@@ -22,7 +22,6 @@ export const byId = adminProcedure
         offerId: row.ozonOfferId,
         sku: row.ozonSku,
         stockAvailable: row.stockAvailable,
-        stockSyncedAt: row.stockSyncedAt,
       },
       updatedAt: row.updatedAt,
     };
