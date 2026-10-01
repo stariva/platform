@@ -88,7 +88,7 @@ const config: NextConfig = {
       {
         source: "/chrisfleur",
         destination:
-          "/?utm_source=chrisfleur&utm_medium=social&utm_campaign=blogger_chrisfleur",
+          "/catalog/clothes?utm_source=chrisfleur&utm_medium=social&utm_campaign=blogger_chrisfleur",
         permanent: false,
       },
     ];
