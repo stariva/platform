@@ -292,20 +292,19 @@ export function ProductForm({
               control={control}
               name="madeToOrder"
               render={({ field }) => (
-                <label className="flex items-center justify-between gap-4">
-                  <span>
-                    <span className="block text-sm font-medium">
-                      Можно сплести под заказ
-                    </span>
-                    <span className="text-muted-foreground text-xs">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label htmlFor="madeToOrder">Можно сплести под заказ</Label>
+                    <p className="text-muted-foreground text-xs">
                       На сайте — форма заявки с размером и цветом
-                    </span>
-                  </span>
+                    </p>
+                  </div>
                   <Switch
+                    id="madeToOrder"
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
-                </label>
+                </div>
               )}
             />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -472,13 +471,14 @@ export function ProductForm({
               control={control}
               name="featured"
               render={({ field }) => (
-                <label className="flex items-center justify-between gap-4 text-sm font-medium">
-                  Показывать на главной
+                <div className="flex items-center justify-between gap-4">
+                  <Label htmlFor="featured">Показывать на главной</Label>
                   <Switch
+                    id="featured"
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
-                </label>
+                </div>
               )}
             />
             <FieldRow

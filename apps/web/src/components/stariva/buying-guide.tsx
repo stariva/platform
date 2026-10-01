@@ -14,14 +14,12 @@ export function BuyingGuide({ product }: { product: Product }) {
         </h2>
         {product.dimensions && (
           <p>
-            <strong>Размеры этой модели:</strong>{" "}
-            <span dangerouslySetInnerHTML={{ __html: product.dimensions }} />.
+            <strong>Размеры этой модели:</strong> {product.dimensions}.
           </p>
         )}
         {product.material && (
           <p>
-            <strong>Материал:</strong>{" "}
-            <span dangerouslySetInnerHTML={{ __html: product.material }} />.
+            <strong>Материал:</strong> {product.material}.
           </p>
         )}
         {lampshade ? (
