@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { categories, getFeaturedProducts } from "@/lib/ozon-service";
 import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 // Рендерим страницу динамически на каждый запрос: сборка образа идёт без
 // боевых Ozon-креденшелов (Dockerfile копирует .env.example), поэтому
@@ -52,6 +52,7 @@ async function FeaturedProducts() {
   );
 }
 
+/** Показывает ссылку на товар, его цену и доступность в общем каталоге. */
 function ProductCard({ product }: { product: Product; index?: number }) {
   return (
     <Link
@@ -107,10 +108,18 @@ function ProductCard({ product }: { product: Product; index?: number }) {
       </div>
       <p
         className={`mt-1.5 label-caps text-[9px] ${
-          product.inStock ? "text-sage" : "text-terracotta/90"
+          product.inStock
+            ? "text-sage"
+            : product.madeToOrder
+              ? "text-terracotta/90"
+              : "text-taupe"
         }`}
       >
-        {product.inStock ? "В наличии" : "Под заказ"}
+        {product.inStock
+          ? "В наличии"
+          : product.madeToOrder
+            ? "Под заказ"
+            : "Нет в наличии"}
       </p>
     </Link>
   );

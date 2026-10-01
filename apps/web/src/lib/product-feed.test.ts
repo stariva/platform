@@ -15,6 +15,8 @@ const product: Product = {
   category: "interior",
   subcategory: "lampshades",
   inStock: true,
+  stockAvailable: 1,
+  madeToOrder: true,
   material: "Хлопок",
 };
 

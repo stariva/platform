@@ -16,6 +16,8 @@ const product: Product = {
   subcategory: "tops",
   ozonSku: 3723160127,
   inStock: true,
+  stockAvailable: 1,
+  madeToOrder: true,
   material: "",
   featured: false,
 };

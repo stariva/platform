@@ -173,6 +173,14 @@ export interface Product {
   ozonUrl?: string;
   /** Есть свободный остаток на Ozon — можно купить на сайте сразу. Иначе — под заказ через мастера. */
   inStock: boolean;
+  /** Свободный остаток готовых изделий на нашем FBS-складе. */
+  stockAvailable: number;
+  /** Можно сплести под заказ — в размере и цвете покупателя. */
+  madeToOrder: boolean;
+  /** Срок изготовления под заказ, если отличается от общего MADE_TO_ORDER_DAYS. */
+  leadTimeDays?: { min: number; max: number };
+  seoTitle?: string;
+  seoDescription?: string;
   material: string;
   dimensions?: string;
   careInstructions?: string;

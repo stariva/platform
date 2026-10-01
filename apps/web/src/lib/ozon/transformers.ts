@@ -170,6 +170,22 @@ export function extractAttributes(
   return result;
 }
 
+/** Чистый текст для карточки (без HTML-тегов), не длиннее 200 символов. */
+export function toShortDescription(description: string, name: string): string {
+  const plainDescription = description
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|div|h\d)>/gi, " ")
+    .replace(/<li>/gi, " • ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!plainDescription) return name;
+  if (plainDescription.length <= 200) return plainDescription;
+  // Обрезаем по границе слова, чтобы не оборвать слово посередине
+  return `${plainDescription.slice(0, 200).replace(/\s+\S*$/, "")}…`;
+}
+
 /** Maps Ozon product data and attributes to the storefront product model. */
 export function transformOzonProduct(
   ozonProduct: OzonProductInfoV3,
@@ -203,9 +219,11 @@ export function transformOzonProduct(
   // Наличие на сайте совпадает с наличием на Ozon: есть свободный остаток
   // (present − reserved) хотя бы на одном складе — товар можно купить сразу,
   // иначе — только индивидуальный заказ через мастера.
-  const inStock = (ozonProduct.stocks?.stocks ?? []).some(
-    (stock) => stock.present - stock.reserved > 0,
+  const stockAvailable = (ozonProduct.stocks?.stocks ?? []).reduce(
+    (sum, stock) => sum + Math.max(0, stock.present - stock.reserved),
+    0,
   );
+  const inStock = stockAvailable > 0;
 
   // primary_image в v3 — массив строк; ставим первой, затем остальные из images[]
   const primaryImage = Array.isArray(ozonProduct.primary_image)
@@ -237,18 +255,7 @@ export function transformOzonProduct(
           .join("")
     : `<p>${name}</p>`;
 
-  // Чистый текст для карточки (без HTML тегов)
-  const plainDescription = rawDescription
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<li>/gi, " • ")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-
-  const shortDescription = plainDescription
-    ? plainDescription.slice(0, 200).replace(/\s+\S*$/, "") +
-      (plainDescription.length > 200 ? "…" : "")
-    : name;
+  const shortDescription = toShortDescription(rawDescription, name);
 
   // Создаём уникальный slug из названия товара для SEO
   // Приоритет: название товара > артикул > ID
@@ -290,6 +297,8 @@ export function transformOzonProduct(
       undefined,
     ozonUrl: `https://www.ozon.ru/product/${ozonProduct.sku || ozonProduct.id}`,
     inStock,
+    stockAvailable,
+    madeToOrder: true,
     material: attrs?.material || "100% хлопок",
     careInstructions: attrs?.careInstructions,
     color: attrs?.color,

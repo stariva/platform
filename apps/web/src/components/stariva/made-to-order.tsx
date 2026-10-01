@@ -34,8 +34,8 @@ import { appendCampaign } from "@/lib/campaign-attribution";
 import {
   COLOR_SWATCHES,
   CUSTOM_SIZE,
-  MADE_TO_ORDER_DAYS,
   type MadeToOrderConfig,
+  madeToOrderLeadTime,
   PHOTO_COLOR,
 } from "@/lib/made-to-order";
 import type { Product } from "@/lib/ozon-types";
@@ -46,6 +46,7 @@ interface MadeToOrderProps {
   productUrl: string;
 }
 
+/** Показывает срок изготовления, выбор размера и цвета и открывает заявку. */
 export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
   const sizes = product.sizes?.length ? product.sizes : config.defaultSizes;
   const isClothes = product.category === "clothes";
@@ -63,7 +64,7 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
     <div className="mb-8 rounded-xl border border-espresso/8 bg-sand p-5">
       <div className="flex items-center gap-2 label-caps text-[10px] text-terracotta mb-2">
         <ScissorsIcon />
-        Под заказ · {MADE_TO_ORDER_DAYS}
+        Под заказ · {madeToOrderLeadTime(product)}
       </div>
       <h2 className="font-serif text-xl text-espresso mb-1.5">
         {config.title}
@@ -204,6 +205,7 @@ const measurementSchema = z
 
 type RequestValues = z.infer<typeof requestSchema>;
 
+/** Собирает контактные данные и мерки и отправляет заявку на изготовление. */
 function MadeToOrderDialog({
   open,
   onOpenChange,
@@ -482,7 +484,7 @@ function MadeToOrderDialog({
             </Button>
             <p className="text-taupe text-[11px] text-center">
               Оплата — только после согласования деталей. Изготовление{" "}
-              {MADE_TO_ORDER_DAYS}.
+              {madeToOrderLeadTime(product)}.
             </p>
           </form>
         </Form>
