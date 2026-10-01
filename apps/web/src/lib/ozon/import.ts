@@ -2,7 +2,8 @@ import type { NewProductRow } from "@stariva/db/schema";
 import type { OzonCatalogItem } from "./api-client";
 import { transformOzonProduct } from "./transformers";
 
-const PLACEHOLDER_IMAGE = "/images/catalog/placeholder.jpg";
+const PLACEHOLDER_IMAGE =
+  "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg";
 
 export type ImportResult =
   | { ok: true; row: NewProductRow }

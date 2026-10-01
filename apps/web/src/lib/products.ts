@@ -6,9 +6,10 @@ export const categories: Category[] = [
     name: "Одежда",
     description:
       "Туники, накидки, пояса и комплекты из натурального хлопка, созданные вручную в технике макраме",
-    image: "/images/catalog/category-clothes.jpg",
+    image: "https://cdn.stariva.ru/site/images/catalog/category-clothes.jpg",
     hero: {
-      image: "/images/catalog/hero-clothes-editorial.webp",
+      image:
+        "https://cdn.stariva.ru/site/images/catalog/hero-clothes-editorial.webp",
       alt: "Туника, топ и пояс из хлопкового макраме на деревянной вешалке",
       width: 2164,
       height: 727,
@@ -25,9 +26,10 @@ export const categories: Category[] = [
     name: "Сумки",
     description:
       "Авоськи, сумки и корзины ручной работы из хлопкового шнура в технике макраме",
-    image: "/images/catalog/category-decor.jpg",
+    image: "https://cdn.stariva.ru/site/images/catalog/category-decor.jpg",
     hero: {
-      image: "/images/catalog/hero-bags-editorial.webp",
+      image:
+        "https://cdn.stariva.ru/site/images/catalog/hero-bags-editorial.webp",
       alt: "Плетёная хлопковая сумка и клатч на деревянной скамье",
       width: 2172,
       height: 724,
@@ -44,9 +46,10 @@ export const categories: Category[] = [
     name: "Декор интерьера",
     description:
       "Абажуры, панно, плейсменты и вигвамы — изделия, которые создают уют в вашем доме",
-    image: "/images/catalog/category-interior.jpg",
+    image: "https://cdn.stariva.ru/site/images/catalog/category-interior.jpg",
     hero: {
-      image: "/images/catalog/hero-interior-editorial.webp",
+      image:
+        "https://cdn.stariva.ru/site/images/catalog/hero-interior-editorial.webp",
       alt: "Хлопковый абажур и панно макраме в интерьере при дневном свете",
       width: 2172,
       height: 724,

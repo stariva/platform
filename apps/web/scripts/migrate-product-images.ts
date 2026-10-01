@@ -67,15 +67,15 @@ for (const row of rows) {
     );
 
     if (apply) {
+      // Массив собираем поэлементно: ${array} раскрылся бы в ($1, $2) без ARRAY
+      const sameImages = sql`ARRAY[${sql.join(
+        row.images.map((url) => sql`${url}`),
+        sql`, `,
+      )}]::text[]`;
       const result = await db
         .update(products)
         .set({ images })
-        .where(
-          and(
-            eq(products.id, row.id),
-            eq(products.images, sql`${row.images}::text[]`),
-          ),
-        )
+        .where(and(eq(products.id, row.id), eq(products.images, sameImages)))
         .returning({ id: products.id });
       if (result.length === 0) {
         throw new Error("фото товара изменились во время переноса");

@@ -8,7 +8,7 @@ export const makrameVPodarok: BlogPost = {
   date: "2025-08-05",
   readTime: "6 мин",
   category: "Подарки",
-  coverImage: "/images/blog/gift-wrapping.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/gift-wrapping.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameVPodarok: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/gift-wrapping.png",
+      src: "https://cdn.stariva.ru/site/images/blog/gift-wrapping.png",
       alt: "Упаковка макраме в подарок",
       caption: "Крафтовая бумага и натуральный шнур — идеальная упаковка",
     },

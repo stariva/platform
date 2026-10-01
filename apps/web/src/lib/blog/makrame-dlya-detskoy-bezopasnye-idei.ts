@@ -8,7 +8,7 @@ export const makrameDlyaDetskoyBezopasnyeIdei: BlogPost = {
   date: "2025-08-18",
   readTime: "7 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/nursery-decor.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/nursery-decor.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameDlyaDetskoyBezopasnyeIdei: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/nursery-decor.png",
+      src: "https://cdn.stariva.ru/site/images/blog/nursery-decor.png",
       alt: "Макраме мобиль в детской",
       caption: "Натуральные материалы безопасны для малышей",
     },

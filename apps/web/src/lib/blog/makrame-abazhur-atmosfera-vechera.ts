@@ -8,7 +8,7 @@ export const makrameAbazhurAtmosfera: BlogPost = {
   date: "2026-06-15",
   readTime: "6 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/abazhur-svet.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/abazhur-svet.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameAbazhurAtmosfera: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/abazhur-svet.png",
+      src: "https://cdn.stariva.ru/site/images/blog/abazhur-svet.png",
       alt: "Макраме-абажур в вечернем свете",
       caption: "Тени от плетения — живая картина на стене каждый вечер",
     },

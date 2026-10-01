@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/catalog`,
     images: [
       {
-        url: `${BASE_URL}/images/catalog/category-interior.jpg`,
+        url: `https://cdn.stariva.ru/site/images/catalog/category-interior.jpg`,
         width: 1200,
         height: 800,
         alt: "Каталог Stariva",

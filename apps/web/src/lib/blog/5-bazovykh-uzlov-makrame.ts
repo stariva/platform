@@ -8,7 +8,7 @@ export const bazovyeUzlyMakrame: BlogPost = {
   date: "2025-12-05",
   readTime: "8 мин",
   category: "Мастерство",
-  coverImage: "/images/blog/knots-guide.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/knots-guide.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const bazovyeUzlyMakrame: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/knots-guide.png",
+      src: "https://cdn.stariva.ru/site/images/blog/knots-guide.png",
       alt: "Образцы базовых узлов макраме",
       caption: "Пять узлов — и вы можете создать что угодно",
     },

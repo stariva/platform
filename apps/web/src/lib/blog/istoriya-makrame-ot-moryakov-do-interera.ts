@@ -8,7 +8,7 @@ export const istoriyaMakrameOtMoryakovDoInterera: BlogPost = {
   date: "2026-03-06",
   readTime: "7 мин",
   category: "История",
-  coverImage: "/images/blog/macrame-history.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/macrame-history.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const istoriyaMakrameOtMoryakovDoInterera: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/macrame-detail.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/macrame-detail.jpg",
       alt: "Детали макраме плетения",
       caption:
         "Традиционные узлы макраме требуют терпения и внимания к деталям",

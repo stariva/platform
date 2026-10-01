@@ -8,7 +8,7 @@ export const filosofiyaSlowLivingIRuchnayaRabota: BlogPost = {
   date: "2026-01-10",
   readTime: "6 мин",
   category: "Философия",
-  coverImage: "/images/blog/slow-living.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/slow-living.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const filosofiyaSlowLivingIRuchnayaRabota: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/atelier-workspace.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/atelier-workspace.jpg",
       alt: "Мастерская Stariva",
       caption:
         "В мастерской время течёт иначе — здесь важен процесс, а не только результат",

@@ -9,7 +9,7 @@ export const makrameVInterereSkandinvskiyStil: BlogPost = {
   date: "2026-05-28",
   readTime: "6 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/living-room-styling.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/living-room-styling.jpg",
   content: [
     {
       type: "paragraph",
@@ -25,7 +25,7 @@ export const makrameVInterereSkandinvskiyStil: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/living-room-styling.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/living-room-styling.jpg",
       alt: "Макраме в скандинавском интерьере гостиной",
       caption: "Лаконичный абажур из макраме в скандинавском интерьере",
     },

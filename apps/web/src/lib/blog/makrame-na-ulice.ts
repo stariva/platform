@@ -8,7 +8,7 @@ export const makrameNaUlice: BlogPost = {
   date: "2025-11-22",
   readTime: "5 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/outdoor-terrace.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/outdoor-terrace.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameNaUlice: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/outdoor-terrace.png",
+      src: "https://cdn.stariva.ru/site/images/blog/outdoor-terrace.png",
       alt: "Макраме на солнечной террасе",
       caption: "Закрытая терраса — идеальное место для уличного макраме",
     },

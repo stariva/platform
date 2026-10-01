@@ -8,7 +8,7 @@ export const makrameDlyaBalkonovILodzhiy: BlogPost = {
   date: "2026-06-10",
   readTime: "5 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/minimalist-interior.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/minimalist-interior.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameDlyaBalkonovILodzhiy: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/minimalist-interior.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/minimalist-interior.jpg",
       alt: "Макраме в минималистичном интерьере",
       caption:
         "Макраме как функциональный элемент — защита и красота одновременно",

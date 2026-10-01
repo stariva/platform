@@ -8,7 +8,7 @@ export const makrameVMalenkoyKvartire: BlogPost = {
   date: "2025-10-10",
   readTime: "5 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/small-apartment.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/small-apartment.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameVMalenkoyKvartire: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/small-apartment.png",
+      src: "https://cdn.stariva.ru/site/images/blog/small-apartment.png",
       alt: "Макраме в маленькой квартире",
       caption: "Одно панно вместо десяти мелочей — правило минимализма",
     },

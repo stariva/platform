@@ -8,7 +8,7 @@ export const uhodZaIzdeliyamiIzMakrame: BlogPost = {
   date: "2026-02-07",
   readTime: "4 мин",
   category: "Советы",
-  coverImage: "/images/blog/care-guide.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/care-guide.jpg",
   content: [
     {
       type: "paragraph",
@@ -32,7 +32,7 @@ export const uhodZaIzdeliyamiIzMakrame: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/cotton-materials.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/cotton-materials.jpg",
       alt: "Натуральные материалы для макраме",
       caption:
         "Натуральный хлопок — живой материал, требующий бережного отношения",

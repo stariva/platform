@@ -6,6 +6,7 @@ import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
   absoluteImageUrl,
   categoryLabels,
@@ -16,7 +17,6 @@ import {
   type WorkshopCategory,
   type WorkshopLevel,
 } from "@/lib/workshops-data";
-import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 // Курсы живут в базе и правятся в админке; без базы при сборке образа список был бы пустым
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/workshops`,
     images: [
       {
-        url: `${BASE_URL}/images/workshops/hero-workshops-editorial.webp`,
+        url: `https://cdn.stariva.ru/site/images/workshops/hero-workshops-editorial.webp`,
         width: 2172,
         height: 724,
         alt: "Мастер-классы по макраме Stariva",
@@ -189,7 +189,7 @@ export default async function WorkshopsPage() {
       {/* Hero */}
       <section className="relative h-[520px] md:h-[500px] overflow-hidden">
         <Image
-          src="/images/workshops/hero-workshops-editorial.webp"
+          src="https://cdn.stariva.ru/site/images/workshops/hero-workshops-editorial.webp"
           alt="Мастерица завязывает узлы макраме за деревянным столом у окна"
           fill
           priority

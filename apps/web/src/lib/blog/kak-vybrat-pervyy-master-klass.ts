@@ -8,7 +8,7 @@ export const kakVybratPervyyMasterKlass: BlogPost = {
   date: "2026-01-24",
   readTime: "5 мин",
   category: "Мастерство",
-  coverImage: "/images/blog/atelier-workspace.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/atelier-workspace.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const kakVybratPervyyMasterKlass: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/atelier-workspace.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/atelier-workspace.jpg",
       alt: "Мастерская Stariva",
       caption: "На мастер-классах Stariva — не более 8 человек в группе",
     },

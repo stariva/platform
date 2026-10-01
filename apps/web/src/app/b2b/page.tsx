@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/b2b`,
     images: [
       {
-        url: `${BASE_URL}/images/b2b/hero-cafe-editorial.webp`,
+        url: `https://cdn.stariva.ru/site/images/b2b/hero-cafe-editorial.webp`,
         width: 1672,
         height: 941,
         alt: "Макраме-декор для кафе — Stariva",
@@ -68,7 +68,7 @@ const advantages = [
 const useCases = [
   {
     label: "Кафе и кофейни",
-    image: "/images/b2b/hero-cafe-editorial.webp",
+    image: "https://cdn.stariva.ru/site/images/b2b/hero-cafe-editorial.webp",
     alt: "Хлопковые абажуры макраме над столиками светлой кофейни",
     objectPosition: "65% center",
     items: [
@@ -80,7 +80,8 @@ const useCases = [
   },
   {
     label: "Рестораны",
-    image: "/images/b2b/project-restaurant-editorial.webp",
+    image:
+      "https://cdn.stariva.ru/site/images/b2b/project-restaurant-editorial.webp",
     alt: "Плетёная перегородка макраме рядом с сервированным столом ресторана",
     objectPosition: "60% center",
     items: [
@@ -92,7 +93,8 @@ const useCases = [
   },
   {
     label: "Отели и лобби",
-    image: "/images/b2b/project-hotel-editorial.webp",
+    image:
+      "https://cdn.stariva.ru/site/images/b2b/project-hotel-editorial.webp",
     alt: "Панно из натурального хлопка за деревянной стойкой отеля",
     objectPosition: "center 45%",
     items: [
@@ -104,7 +106,8 @@ const useCases = [
   },
   {
     label: "Офисы и коворкинги",
-    image: "/images/b2b/project-office-editorial.webp",
+    image:
+      "https://cdn.stariva.ru/site/images/b2b/project-office-editorial.webp",
     alt: "Светлый офис с рабочими столами и подвесными перегородками макраме",
     objectPosition: "center center",
     items: [
@@ -188,7 +191,7 @@ export default function B2BPage() {
       <section className="relative min-h-[88vh] flex items-end overflow-hidden bg-espresso">
         <div className="absolute inset-x-0 top-0 h-[480px] md:h-full">
           <Image
-            src="/images/b2b/hero-cafe-editorial.webp"
+            src="https://cdn.stariva.ru/site/images/b2b/hero-cafe-editorial.webp"
             alt="Абажуры ручного плетения в кафе с деревянной мебелью и дневным светом из окна"
             fill
             priority

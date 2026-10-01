@@ -23,9 +23,9 @@ export function OrganizationJsonLd() {
       height: 512,
     },
     image: [
-      `${BASE_URL}/images/about/hero-founder.jpg`,
-      `${BASE_URL}/images/about/atelier-wide.jpg`,
-      `${BASE_URL}/images/catalog/lampshade-dome.jpg`,
+      `https://cdn.stariva.ru/site/images/about/hero-founder.jpg`,
+      `https://cdn.stariva.ru/site/images/about/atelier-wide.jpg`,
+      `https://cdn.stariva.ru/site/images/catalog/lampshade-dome.jpg`,
     ],
     telephone: "+79778722546",
     email: "info@stariva.ru",
@@ -475,7 +475,7 @@ export function PersonJsonLd() {
     description:
       "Мастер ручного макраме из Подмосковья. Создаёт абажуры, одежду и декор из натурального хлопка с 2018 года.",
     url: `${BASE_URL}/about`,
-    image: `${BASE_URL}/images/about/hero-founder.jpg`,
+    image: `https://cdn.stariva.ru/site/images/about/hero-founder.jpg`,
     worksFor: {
       "@id": `${BASE_URL}/#organization`,
     },

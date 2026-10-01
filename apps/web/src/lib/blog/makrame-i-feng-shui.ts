@@ -8,7 +8,7 @@ export const makrameIFengShui: BlogPost = {
   date: "2026-04-17",
   readTime: "8 мин",
   category: "Философия",
-  coverImage: "/images/blog/hands-crafting.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/hands-crafting.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameIFengShui: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/hands-crafting.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/hands-crafting.jpg",
       alt: "Руки мастера, плетущие макраме",
       caption: "Плетение макраме — это форма mindfulness медитации",
     },

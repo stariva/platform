@@ -8,7 +8,7 @@ export const naturalnoKrasenieKhlopka: BlogPost = {
   date: "2025-11-08",
   readTime: "7 мин",
   category: "Материалы",
-  coverImage: "/images/blog/natural-dyeing.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/natural-dyeing.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const naturalnoKrasenieKhlopka: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/natural-dyeing.png",
+      src: "https://cdn.stariva.ru/site/images/blog/natural-dyeing.png",
       alt: "Натуральное крашение хлопкового шнура",
       caption: "Индиго, грецкий орех и куркума — наши основные красители",
     },

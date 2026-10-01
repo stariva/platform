@@ -8,7 +8,7 @@ export const kakVybratMakrameSvetilnikDlyaDoma: BlogPost = {
   date: "2026-02-20",
   readTime: "5 мин",
   category: "Советы",
-  coverImage: "/images/blog/bedroom-styling.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/bedroom-styling.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const kakVybratMakrameSvetilnikDlyaDoma: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/living-room-styling.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/living-room-styling.jpg",
       alt: "Макраме в интерьере гостиной",
       caption: "В просторной гостиной можно использовать крупные светильники",
     },

@@ -8,7 +8,7 @@ export const makrameAbazhurSvoimiRukamiSChegoNachat: BlogPost = {
   date: "2025-07-12",
   readTime: "8 мин",
   category: "Мастерство",
-  coverImage: "/images/blog/macrame-detail.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/macrame-detail.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameAbazhurSvoimiRukamiSChegoNachat: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/cotton-materials.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/cotton-materials.jpg",
       alt: "Материалы для плетения макраме абажура",
       caption: "Натуральный хлопковый шнур — основа любого изделия из макраме",
     },

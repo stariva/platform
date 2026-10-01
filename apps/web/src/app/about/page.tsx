@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/about`,
     images: [
       {
-        url: `${BASE_URL}/images/about/hero-founder-editorial.webp`,
+        url: `https://cdn.stariva.ru/site/images/about/hero-founder-editorial.webp`,
         width: 1672,
         height: 941,
         alt: "Ольга Карпычева — мастер Stariva",
@@ -110,7 +110,7 @@ export default function AboutPage() {
         {/* Full-bleed image */}
         <div className="absolute inset-0">
           <Image
-            src="/images/about/hero-founder-editorial.webp"
+            src="https://cdn.stariva.ru/site/images/about/hero-founder-editorial.webp"
             alt="Ольга Карпычева в мастерской"
             fill
             priority
@@ -188,7 +188,7 @@ export default function AboutPage() {
       {/* ── Atelier image full-bleed ── */}
       <section className="relative aspect-[16/7] overflow-hidden">
         <Image
-          src="/images/about/atelier-wide-editorial.webp"
+          src="https://cdn.stariva.ru/site/images/about/atelier-wide-editorial.webp"
           alt="Мастерская Stariva"
           fill
           className="object-cover object-center"
@@ -249,7 +249,7 @@ export default function AboutPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="relative aspect-[3/4] rounded-xl overflow-hidden col-span-1">
                 <Image
-                  src="/images/about/hands-knotting-editorial.webp"
+                  src="https://cdn.stariva.ru/site/images/about/hands-knotting-editorial.webp"
                   alt="Руки мастерицы, завязывающей узлы макраме"
                   fill
                   className="object-cover"
@@ -258,7 +258,7 @@ export default function AboutPage() {
               </div>
               <div className="relative aspect-[3/4] rounded-xl overflow-hidden col-span-1 mt-12">
                 <Image
-                  src="/images/about/cotton-spools-editorial.webp"
+                  src="https://cdn.stariva.ru/site/images/about/cotton-spools-editorial.webp"
                   alt="Катушки натурального хлопкового шнура"
                   fill
                   className="object-cover"
@@ -356,7 +356,7 @@ export default function AboutPage() {
       {/* ── Finished pieces full-bleed ── */}
       <section className="relative aspect-[16/7] overflow-hidden">
         <Image
-          src="/images/about/finished-pieces-editorial.webp"
+          src="https://cdn.stariva.ru/site/images/about/finished-pieces-editorial.webp"
           alt="Изделия Stariva — абажур, панно, платье"
           fill
           className="object-cover object-center"

@@ -8,7 +8,7 @@ export const makrameSumkiTrendLeta: BlogPost = {
   date: "2025-09-15",
   readTime: "5 мин",
   category: "Мода",
-  coverImage: "/images/blog/summer-bag.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/summer-bag.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameSumkiTrendLeta: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/summer-bag.png",
+      src: "https://cdn.stariva.ru/site/images/blog/summer-bag.png",
       alt: "Макраме сумка на пляже",
       caption: "Пляжная сумка из натурального хлопка",
     },

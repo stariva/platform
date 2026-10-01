@@ -8,7 +8,7 @@ export const makrameNaSvadbe: BlogPost = {
   date: "2026-06-25",
   readTime: "8 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/makrame-svadba.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/makrame-svadba.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameNaSvadbe: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/makrame-svadba.png",
+      src: "https://cdn.stariva.ru/site/images/blog/makrame-svadba.png",
       alt: "Макраме арка для свадебной церемонии",
       caption:
         "Арка из хлопкового шнура с живыми цветами — символ и декор одновременно",

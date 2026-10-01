@@ -1,6 +1,6 @@
+import { type NextRequest, NextResponse } from "next/server";
 import { workSteps } from "@/app/resort/_data";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
-import { type NextRequest, NextResponse } from "next/server";
 
 const SITE_HOST = BASE_URL.replace(/^https?:\/\//, "");
 const VALID_DAYS = 30;
@@ -54,10 +54,19 @@ const products = [
 ];
 
 const photos = [
-  { src: "/images/resort/terrace.png", caption: "Террасы и беседки" },
-  { src: "/images/resort/glamping.png", caption: "Глэмпинг" },
-  { src: "/images/resort/reception.png", caption: "Ресепшн" },
-  { src: "/images/resort/spa.png", caption: "SPA" },
+  {
+    src: "https://cdn.stariva.ru/site/images/resort/terrace.png",
+    caption: "Террасы и беседки",
+  },
+  {
+    src: "https://cdn.stariva.ru/site/images/resort/glamping.png",
+    caption: "Глэмпинг",
+  },
+  {
+    src: "https://cdn.stariva.ru/site/images/resort/reception.png",
+    caption: "Ресепшн",
+  },
+  { src: "https://cdn.stariva.ru/site/images/resort/spa.png", caption: "SPA" },
 ];
 
 const conditions = [

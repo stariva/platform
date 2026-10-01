@@ -65,6 +65,8 @@ test("falls back to a placeholder image and exposes the lead time", () => {
     leadTimeMinDays: 5,
     leadTimeMaxDays: 7,
   });
-  assert.deepEqual(product.images, ["/images/catalog/placeholder.jpg"]);
+  assert.deepEqual(product.images, [
+    "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg",
+  ]);
   assert.deepEqual(product.leadTimeDays, { min: 5, max: 7 });
 });

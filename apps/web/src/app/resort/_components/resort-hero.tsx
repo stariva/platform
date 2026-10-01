@@ -12,7 +12,7 @@ export function ResortHero() {
     <section className="relative min-h-[90vh] flex flex-col justify-end overflow-hidden">
       <div className="absolute inset-0">
         <Image
-          src="/images/resort/hero.png"
+          src="https://cdn.stariva.ru/site/images/resort/hero.png"
           alt="Макраме-декор на террасе базы отдыха"
           fill
           className="object-cover"

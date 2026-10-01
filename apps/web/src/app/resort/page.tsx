@@ -1,9 +1,9 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ResortAdvantages } from "./_components/resort-advantages";
 import { ResortContactStrip } from "./_components/resort-contact-strip";
 import { ResortCtaDownload } from "./_components/resort-cta-download";
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/resort`,
     images: [
       {
-        url: `${BASE_URL}/images/resort/hero.png`,
+        url: `https://cdn.stariva.ru/site/images/resort/hero.png`,
         width: 1200,
         height: 630,
         alt: "Макраме-декор для баз отдыха — Stariva",

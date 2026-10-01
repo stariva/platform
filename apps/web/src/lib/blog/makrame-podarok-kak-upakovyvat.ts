@@ -8,7 +8,8 @@ export const makramePodarokKakUpak: BlogPost = {
   date: "2026-06-20",
   readTime: "7 мин",
   category: "Подарки",
-  coverImage: "/images/blog/makrame-podarok-upak.png",
+  coverImage:
+    "https://cdn.stariva.ru/site/images/blog/makrame-podarok-upak.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +25,7 @@ export const makramePodarokKakUpak: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/makrame-podarok-upak.png",
+      src: "https://cdn.stariva.ru/site/images/blog/makrame-podarok-upak.png",
       alt: "Макраме упакованное в крафт-бумагу как подарок",
       caption:
         "Крафт-бумага, хлопковый шнур, сухоцвет — упаковка без пластика выглядит дороже",

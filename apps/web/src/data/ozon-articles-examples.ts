@@ -154,10 +154,11 @@ export function example6_transformOzonProduct() {
     description:
       "Красивое платье макраме в стиле бохо. Материал: 100% хлопок. Размеры: XS, S, M, L. Цвет: белый. Уход: ручная стирка в холодной воде.",
     images: [
-      "/images/catalog/dress-boho-1.jpg",
-      "/images/catalog/dress-boho-2.jpg",
+      "https://cdn.stariva.ru/site/images/catalog/dress-boho-1.jpg",
+      "https://cdn.stariva.ru/site/images/catalog/dress-boho-2.jpg",
     ],
-    primary_image: "/images/catalog/dress-boho-1.jpg",
+    primary_image:
+      "https://cdn.stariva.ru/site/images/catalog/dress-boho-1.jpg",
     price: "4500",
     old_price: "5500",
     currency_code: "RUB",
@@ -236,8 +237,9 @@ export function example7_transformMultipleProducts() {
       price: "4500",
       old_price: "",
       currency_code: "RUB",
-      images: ["/images/catalog/dress-boho-1.jpg"],
-      primary_image: "/images/catalog/dress-boho-1.jpg",
+      images: ["https://cdn.stariva.ru/site/images/catalog/dress-boho-1.jpg"],
+      primary_image:
+        "https://cdn.stariva.ru/site/images/catalog/dress-boho-1.jpg",
       stocks: { coming: 0, present: 5, reserved: 1 },
       // ... остальные поля
     } as OzonProductInfo,
@@ -250,8 +252,9 @@ export function example7_transformMultipleProducts() {
       price: "3200",
       old_price: "",
       currency_code: "RUB",
-      images: ["/images/catalog/lampshade-dome.jpg"],
-      primary_image: "/images/catalog/lampshade-dome.jpg",
+      images: ["https://cdn.stariva.ru/site/images/catalog/lampshade-dome.jpg"],
+      primary_image:
+        "https://cdn.stariva.ru/site/images/catalog/lampshade-dome.jpg",
       stocks: { coming: 0, present: 3, reserved: 0 },
       // ... остальные поля
     } as OzonProductInfo,
@@ -264,8 +267,8 @@ export function example7_transformMultipleProducts() {
       price: "2800",
       old_price: "3500",
       currency_code: "RUB",
-      images: ["/images/catalog/bag-tote.jpg"],
-      primary_image: "/images/catalog/bag-tote.jpg",
+      images: ["https://cdn.stariva.ru/site/images/catalog/bag-tote.jpg"],
+      primary_image: "https://cdn.stariva.ru/site/images/catalog/bag-tote.jpg",
       stocks: { coming: 0, present: 8, reserved: 2 },
       // ... остальные поля
     } as OzonProductInfo,

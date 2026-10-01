@@ -8,7 +8,7 @@ export const makrameDlyaKafeIRestoranov: BlogPost = {
   date: "2025-09-02",
   readTime: "8 мин",
   category: "Бизнес",
-  coverImage: "/images/blog/cafe-interior.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/cafe-interior.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameDlyaKafeIRestoranov: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/cafe-interior.png",
+      src: "https://cdn.stariva.ru/site/images/blog/cafe-interior.png",
       alt: "Макраме в интерьере кафе",
       caption: "Абажуры разной высоты создают визуальный ритм",
     },

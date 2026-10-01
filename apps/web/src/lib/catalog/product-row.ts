@@ -2,7 +2,8 @@ import type { ProductRow } from "@stariva/db/schema";
 import { toShortDescription } from "@/lib/ozon/transformers";
 import type { Product } from "@/lib/ozon-types";
 
-const PLACEHOLDER_IMAGE = "/images/catalog/placeholder.jpg";
+const PLACEHOLDER_IMAGE =
+  "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg";
 const DEFAULT_MATERIAL = "100% хлопок";
 
 /** Строка таблицы products → модель витрины. Цены в базе — в копейках. */

@@ -8,7 +8,7 @@ export const makrameOsenZimniyDekor: BlogPost = {
   date: "2025-10-25",
   readTime: "6 мин",
   category: "Интерьер",
-  coverImage: "/images/blog/autumn-decor.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/autumn-decor.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameOsenZimniyDekor: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/autumn-decor.png",
+      src: "https://cdn.stariva.ru/site/images/blog/autumn-decor.png",
       alt: "Осенний интерьер с макраме",
       caption:
         "Макраме + сухоцветы + свечи — беспроигрышное сочетание для осени",

@@ -8,7 +8,7 @@ export const kakUkrasiteDetskuyuKomnatuMakrame: BlogPost = {
   date: "2026-05-15",
   readTime: "5 мин",
   category: "Интерьер",
-  coverImage: "/images/catalog/tipi-kids.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/catalog/tipi-kids.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const kakUkrasiteDetskuyuKomnatuMakrame: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/catalog/tipi-kids.jpg",
+      src: "https://cdn.stariva.ru/site/images/catalog/tipi-kids.jpg",
       alt: "Детский вигвам из макраме в интерьере",
       caption:
         "Детский вигвам Stariva — ручная работа из натурального хлопка и дерева",

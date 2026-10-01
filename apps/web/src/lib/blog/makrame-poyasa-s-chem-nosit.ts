@@ -8,7 +8,7 @@ export const makramePoyasaSChem: BlogPost = {
   date: "2026-06-10",
   readTime: "5 мин",
   category: "Мода",
-  coverImage: "/images/blog/makrame-s-platiem.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/makrame-s-platiem.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makramePoyasaSChem: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/makrame-s-platiem.png",
+      src: "https://cdn.stariva.ru/site/images/blog/makrame-s-platiem.png",
       alt: "Льняное платье с макраме-поясом",
       caption:
         "Пояс из хлопкового шнура на льняном платье — классика летнего гардероба",

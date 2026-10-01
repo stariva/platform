@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}${IN_STOCK_HREF}`,
     images: [
       {
-        url: `${BASE_URL}/images/catalog/category-interior.jpg`,
+        url: `https://cdn.stariva.ru/site/images/catalog/category-interior.jpg`,
         width: 1200,
         height: 800,
         alt: "Изделия Stariva в наличии",

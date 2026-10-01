@@ -266,7 +266,7 @@ export function transformOzonProduct(
   } else if (galleryImages.length > 0) {
     images = galleryImages;
   } else {
-    images = ["/images/catalog/placeholder.jpg"];
+    images = ["https://cdn.stariva.ru/site/images/catalog/placeholder.jpg"];
   }
 
   const name = ozonProduct.name || "Без названия";

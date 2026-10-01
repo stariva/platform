@@ -126,7 +126,9 @@ export async function generateMetadata({
   const title = productMetaTitle(product);
   const description = productMetaDescription(product);
   const url = `/catalog/${categorySlug}/${slug}`;
-  const image = product.images[0] ?? "/images/about/hero-founder.jpg";
+  const image =
+    product.images[0] ??
+    "https://cdn.stariva.ru/site/images/about/hero-founder.jpg";
   const isExternal = image.startsWith("http");
 
   return {

@@ -8,7 +8,7 @@ export const dizainMakrameSChegoNachatEsliVyNeKhudozhnik: BlogPost = {
   date: "2026-04-03",
   readTime: "7 мин",
   category: "Мастерство",
-  coverImage: "/images/blog/workspace-creative.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/workspace-creative.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const dizainMakrameSChegoNachatEsliVyNeKhudozhnik: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/workspace-creative.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/workspace-creative.jpg",
       alt: "Рабочее пространство дизайнера макраме",
       caption: "Лучше всего рисовать эскизы на квадратной бумаге",
     },

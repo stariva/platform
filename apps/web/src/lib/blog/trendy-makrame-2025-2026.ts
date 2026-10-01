@@ -8,7 +8,7 @@ export const trendyMakrame20252026: BlogPost = {
   date: "2025-12-18",
   readTime: "6 мин",
   category: "Тренды",
-  coverImage: "/images/blog/trends-2025.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/trends-2025.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const trendyMakrame20252026: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/trends-2025.png",
+      src: "https://cdn.stariva.ru/site/images/blog/trends-2025.png",
       alt: "Тренды макраме 2025",
       caption: "Земляные оттенки и чистые формы — главная тенденция сезона",
     },

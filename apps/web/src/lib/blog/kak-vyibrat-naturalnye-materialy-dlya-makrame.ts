@@ -8,7 +8,7 @@ export const kakVyibratNaturalnyeMaterialyDlyaMakrame: BlogPost = {
   date: "2026-03-20",
   readTime: "6 мин",
   category: "Материалы",
-  coverImage: "/images/blog/natural-fibers.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/natural-fibers.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const kakVyibratNaturalnyeMaterialyDlyaMakrame: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/natural-fibers.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/natural-fibers.jpg",
       alt: "Натуральные волокна для макраме",
       caption: "Различные структуры и толщины натурального хлопка",
     },

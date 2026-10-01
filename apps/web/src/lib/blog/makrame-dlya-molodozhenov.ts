@@ -8,7 +8,7 @@ export const makrameDlyaMolodozhenov: BlogPost = {
   date: "2026-05-01",
   readTime: "6 мин",
   category: "События",
-  coverImage: "/images/blog/boho-bedroom.jpg",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/boho-bedroom.jpg",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const makrameDlyaMolodozhenov: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/boho-bedroom.jpg",
+      src: "https://cdn.stariva.ru/site/images/blog/boho-bedroom.jpg",
       alt: "Макраме в бохо интерьере",
       caption: "Макраме идеально подходит для создания атмосферы на площадке",
     },

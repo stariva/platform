@@ -11,7 +11,7 @@ import CategoryFilters from "../catalog/[category]/category-filters";
 export const dynamic = "force-dynamic";
 
 const heroImage = {
-  src: "/images/catalog/hero-lampshades-editorial.webp",
+  src: "https://cdn.stariva.ru/site/images/catalog/hero-lampshades-editorial.webp",
   alt: "Купольный абажур из хлопкового макраме в интерьере при дневном свете",
   width: 2172,
   height: 724,

@@ -8,7 +8,7 @@ export const kakUkhazhivatZaMakrameStirkaChistkaKhranenie: BlogPost = {
   date: "2025-09-28",
   readTime: "6 мин",
   category: "Уход",
-  coverImage: "/images/blog/care-washing.png",
+  coverImage: "https://cdn.stariva.ru/site/images/blog/care-washing.png",
   content: [
     {
       type: "paragraph",
@@ -24,7 +24,7 @@ export const kakUkhazhivatZaMakrameStirkaChistkaKhranenie: BlogPost = {
     },
     {
       type: "image",
-      src: "/images/blog/care-washing.png",
+      src: "https://cdn.stariva.ru/site/images/blog/care-washing.png",
       alt: "Стирка макраме вручную",
       caption: "Стирайте макраме только вручную в прохладной воде",
     },

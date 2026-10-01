@@ -4,9 +4,18 @@ import { motion } from "motion/react";
 import Image from "next/image";
 
 const gallery = [
-  { src: "/images/atmosphere-1.jpg", caption: "Спальня — закатный свет" },
-  { src: "/images/atmosphere-2.jpg", caption: "Гостиная — деталь" },
-  { src: "/images/atmosphere-3.jpg", caption: "Платье на льне" },
+  {
+    src: "https://cdn.stariva.ru/site/images/atmosphere-1.jpg",
+    caption: "Спальня — закатный свет",
+  },
+  {
+    src: "https://cdn.stariva.ru/site/images/atmosphere-2.jpg",
+    caption: "Гостиная — деталь",
+  },
+  {
+    src: "https://cdn.stariva.ru/site/images/atmosphere-3.jpg",
+    caption: "Платье на льне",
+  },
 ];
 
 export function Atmosphere() {
@@ -66,7 +75,7 @@ export function Atmosphere() {
           <div className="lg:col-span-5">
             <div className="relative aspect-[4/5] overflow-hidden rounded-sm">
               <Image
-                src="/images/craftswoman.jpg"
+                src="https://cdn.stariva.ru/site/images/craftswoman.jpg"
                 alt="Мастер за работой — плетение макраме"
                 fill
                 className="object-cover"
