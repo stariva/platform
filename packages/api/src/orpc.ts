@@ -16,10 +16,10 @@
  * @see https://orpc.dev/docs/server/context
  */
 
+import { ORPCError, os } from "@orpc/server";
 import type { Session } from "@stariva/auth";
 import { logger } from "@stariva/config";
 import { db } from "@stariva/db";
-import { ORPCError, os } from "@orpc/server";
 
 export interface CreateORPCContextOptions {
   /** Request headers, kept on the context for procedures that need them. */
@@ -101,13 +101,16 @@ export const protectedProcedure = publicProcedure.use(({ context, next }) => {
  *
  * @example ADMIN_EMAILS=admin@example.com,ops@example.com
  */
-export const adminProcedure = protectedProcedure.use(({ context, next }) => {
+export function isAdminEmail(email: string): boolean {
   const adminEmails = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+  return adminEmails.includes(email.toLowerCase());
+}
 
-  if (!adminEmails.includes(context.session.user.email.toLowerCase())) {
+export const adminProcedure = protectedProcedure.use(({ context, next }) => {
+  if (!isAdminEmail(context.session.user.email)) {
     throw new ORPCError("FORBIDDEN", { message: "Admin access required" });
   }
 
