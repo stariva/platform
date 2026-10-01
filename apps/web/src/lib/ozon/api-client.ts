@@ -284,6 +284,10 @@ export async function fetchOzonCatalog(): Promise<OzonCatalogItem[] | null> {
   }
 }
 
+/**
+ * Преобразует каталог Ozon в товары витрины; возвращает null при недоступности
+ * каталога или отсутствии учётных данных и пустой массив, если товаров нет.
+ */
 export async function fetchFromOzon(): Promise<Product[] | null> {
   const catalog = await fetchOzonCatalog();
   return (

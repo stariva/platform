@@ -52,6 +52,7 @@ async function FeaturedProducts() {
   );
 }
 
+/** Показывает ссылку на товар, его цену и доступность в общем каталоге. */
 function ProductCard({ product }: { product: Product; index?: number }) {
   return (
     <Link
