@@ -1,0 +1,1 @@
+ALTER TABLE "product_order_items" ALTER COLUMN "ozon_sku" SET DATA TYPE bigint;
