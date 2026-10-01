@@ -1,10 +1,10 @@
-import { env } from "@stariva/config";
 import {
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "@stariva/config";
 
 const BUCKET_NAME = env.AWS_S3_BUCKET;
 
@@ -93,6 +93,45 @@ export async function uploadBufferToS3(
       `Failed to upload to S3 bucket '${BUCKET_NAME}' key '${key}': ${e?.message ?? String(err)}`,
     );
   }
+}
+
+// ─── Публичный бакет (фото каталога) ─────────────────────────────────────────
+
+/** Задан публичный бакет и ключи — можно выкладывать фото каталога. */
+export function isPublicStorageConfigured(): boolean {
+  return Boolean(isStorageConfigured() && env.AWS_S3_PUBLIC_BUCKET);
+}
+
+/** Постоянный публичный адрес файла из публичного бакета. */
+export function publicObjectUrl(key: string): string {
+  const base =
+    env.AWS_S3_PUBLIC_URL ??
+    `${env.AWS_S3_ENDPOINT ?? "https://storage.yandexcloud.net"}/${env.AWS_S3_PUBLIC_BUCKET}`;
+  return `${base.replace(/\/+$/, "")}/${key}`;
+}
+
+/**
+ * Кладёт файл в публичный бакет. Ключ должен меняться вместе с содержимым
+ * (например, хеш в имени): файл кэшируется браузерами навсегда.
+ */
+export async function uploadPublicObject(
+  key: string,
+  body: Buffer | Uint8Array,
+  contentType: string,
+): Promise<string> {
+  const bucket = env.AWS_S3_PUBLIC_BUCKET;
+  if (!bucket) throw new Error("AWS_S3_PUBLIC_BUCKET is not configured");
+
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+  return publicObjectUrl(key);
 }
 
 export async function getDownloadUrl(

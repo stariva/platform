@@ -33,6 +33,10 @@ export const env = createEnv({
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
     AWS_REGION: z.string().default("us-east-1"),
     AWS_S3_BUCKET: z.string().default("acme-bucket"),
+    // Публичный бакет для фото каталога (отдельно от приватного с видео)
+    AWS_S3_PUBLIC_BUCKET: z.string().optional(),
+    // Базовый адрес публичных файлов; по умолчанию <endpoint>/<public bucket>
+    AWS_S3_PUBLIC_URL: z.url().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_NAME: z.string().default("Acme Inc."),
@@ -58,6 +62,8 @@ export const env = createEnv({
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
     AWS_REGION: process.env.AWS_REGION,
     AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
+    AWS_S3_PUBLIC_BUCKET: process.env.AWS_S3_PUBLIC_BUCKET,
+    AWS_S3_PUBLIC_URL: process.env.AWS_S3_PUBLIC_URL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     NEXT_PUBLIC_APP_SHORT_NAME: process.env.NEXT_PUBLIC_APP_SHORT_NAME,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
