@@ -84,6 +84,34 @@ test("drops the placeholder image and an old price not above the price", () => {
   assert.equal(result.row.oldPrice, null);
 });
 
+for (const oldPrice of [
+  "21474836.48",
+  "90071992547409.92",
+  "Infinity",
+  "1e308",
+]) {
+  test(`normalizes invalid old price ${oldPrice} to null without skipping the product`, () => {
+    const result = ozonItemToProductRow(
+      { info: info({ old_price: oldPrice }) },
+      0,
+      now,
+    );
+    assert.ok(result.ok);
+    assert.equal(result.row.price, 350_000);
+    assert.equal(result.row.oldPrice, null);
+  });
+}
+
+test("preserves an old price at the PostgreSQL integer limit", () => {
+  const result = ozonItemToProductRow(
+    { info: info({ old_price: "21474836.47" }) },
+    0,
+    now,
+  );
+  assert.ok(result.ok);
+  assert.equal(result.row.oldPrice, 2_147_483_647);
+});
+
 test("skips a product with zero price", () => {
   const result = ozonItemToProductRow(
     { info: info({ price: "0", old_price: "" }) },

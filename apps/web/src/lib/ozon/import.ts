@@ -30,8 +30,16 @@ export function ozonItemToProductRow(
   if (!Number.isSafeInteger(price) || price <= 0 || price > 2_147_483_647) {
     return skip(`некорректная цена: ${product.price}`);
   }
-  const oldPrice =
+  let oldPrice =
     product.oldPrice === undefined ? null : Math.round(product.oldPrice * 100);
+  if (
+    oldPrice !== null &&
+    (!Number.isSafeInteger(oldPrice) ||
+      oldPrice <= 0 ||
+      oldPrice > 2_147_483_647)
+  ) {
+    oldPrice = null;
+  }
 
   const ozonSku = product.ozonSku ?? null;
 
