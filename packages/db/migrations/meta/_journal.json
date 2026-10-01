@@ -57,6 +57,13 @@
       "when": 1790874800376,
       "tag": "0007_workshops_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790875615355,
+      "tag": "0008_reviews",
+      "breakpoints": true
     }
   ]
 }

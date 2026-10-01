@@ -6,14 +6,9 @@ export const revalidate = 14400; // 4 hours
 
 const offerIdSchema = z.string().min(1).optional();
 
-/** Returns Ozon reviews, optionally filtered by offer ID and product SKUs. */
+/** Returns published reviews, optionally filtered by offer ID. */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const skusParam = searchParams.get("skus");
-  const skus = skusParam
-    ? skusParam.split(",").map(Number).filter(Boolean)
-    : undefined;
-
   const parsedOfferId = offerIdSchema.safeParse(
     searchParams.get("offerId") ?? undefined,
   );
@@ -24,7 +19,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const reviews = await getReviews({ offerId: parsedOfferId.data, skus });
+  const reviews = await getReviews({ offerId: parsedOfferId.data });
 
   return NextResponse.json({ reviews, total: reviews.length });
 }

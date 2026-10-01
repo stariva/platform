@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  for (const path of parsed.data.paths) revalidatePath(path);
+  // Шаблон маршрута вроде /catalog/[category]/[slug] сбрасывает все его страницы
+  for (const path of parsed.data.paths) {
+    if (path.includes("[")) revalidatePath(path, "page");
+    else revalidatePath(path);
+  }
   return NextResponse.json({ revalidated: parsed.data.paths.length });
 }

@@ -78,41 +78,20 @@ export interface OzonProductInfoResponse {
   };
 }
 
-// ─── Ozon Review API Types ────────────────────────────────────────────────────
+// ─── Reviews ──────────────────────────────────────────────────────────────────
 
-export interface OzonReview {
-  uuid: string;
-  sku: number;
-  rating: number; // 1–5
-  created_at: string; // ISO-8601
-  text: string;
-  /** Author's display name – may be absent if hidden by buyer */
-  reviewer_name?: string;
-  /** Photo URLs attached by buyer */
-  media?: { url: string }[];
-  /** "published" | "processing" | "rejected" */
-  status: string;
-}
-
-export interface OzonReviewListResponse {
-  reviews: OzonReview[];
-  total: number;
-  page_token: string;
-}
-
-// Normalised review for the UI (decoupled from raw Ozon shape)
+/** Отзыв в виде, в котором его показывает витрина (строка таблицы reviews). */
 export interface Review {
   id: string;
   rating: number;
   text: string;
   date: string; // ISO-8601
   reviewerName: string;
-  productSku?: number;
   /** Артикул продавца (offer_id) — по нему отзыв привязывается к товару */
   productOfferId?: string;
   productTitle?: string;
   photos: string[];
-  source: "ozon" | "static";
+  source: "ozon" | "site";
 }
 
 // ─── Internal Product Types ───────────────────────────────────────────────────
