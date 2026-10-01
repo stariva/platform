@@ -161,7 +161,25 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
     ) as Record<T, number>;
   }
 
-  const visible = products.filter((p) => matchesExcept(p));
+  const filtersKey = JSON.stringify([query, status, stock, order, category]);
+  const [visibleRows, setVisibleRows] = useState(() => ({
+    filtersKey,
+    ids: products.map((p) => p.id),
+  }));
+
+  // Keep row membership until the search or filters change.
+  if (visibleRows.filtersKey !== filtersKey) {
+    setVisibleRows({
+      filtersKey,
+      ids: products.filter((p) => matchesExcept(p)).map((p) => p.id),
+    });
+  }
+
+  const productsById = new Map(products.map((p) => [p.id, p]));
+  const visible = visibleRows.ids.flatMap((id) => {
+    const product = productsById.get(id);
+    return product ? [product] : [];
+  });
   const filtersActive =
     needle !== "" ||
     status !== "all" ||
