@@ -177,6 +177,7 @@ interface ProductJsonLdProps {
   url: string;
   category: string;
   material?: string;
+  color?: string;
   brand?: string;
   rating?: { average: number; count: number } | null;
   reviews?: {
@@ -200,6 +201,7 @@ export function ProductJsonLd({
   url,
   category,
   material,
+  color,
   brand = "Stariva",
   rating,
   reviews,
@@ -234,6 +236,10 @@ export function ProductJsonLd({
 
   if (material) {
     schema.material = material;
+  }
+
+  if (color) {
+    schema.color = color;
   }
 
   if (rating && rating.count > 0) {

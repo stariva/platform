@@ -90,6 +90,32 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
   ],
 };
 
+interface Spec {
+  label: string;
+  value: string;
+}
+
+/** Строки блока «Характеристики»: показываем только то, что заполнено. */
+function productSpecs(product: Product, categorySlug: string): Spec[] {
+  const specs: Spec[] = [];
+  if (product.material) {
+    specs.push({ label: "Материал", value: product.material });
+  }
+  if (product.color) specs.push({ label: "Цвет", value: product.color });
+  if (product.dimensions) {
+    specs.push({ label: "Размеры изделия", value: product.dimensions });
+  }
+  // У интерьера и сумок «размеры» в базе — это габариты, а не размерная сетка
+  if (categorySlug === "clothes" && product.sizes?.length) {
+    specs.push({ label: "Размеры", value: product.sizes.join(", ") });
+  }
+  if (product.careInstructions) {
+    specs.push({ label: "Уход", value: product.careInstructions });
+  }
+  specs.push({ label: "Изготовление", value: "Вручную, мастерская Stariva" });
+  return specs;
+}
+
 /** Displays product details and links the rating to the reviews section. */
 export function ProductDetails({
   product,
@@ -104,6 +130,12 @@ export function ProductDetails({
   const readyToShip = isPurchasable(product);
   const madeToOrder = getProductMadeToOrder(product);
   const productUrl = `https://stariva.ru/catalog/${categorySlug}/${product.slug}`;
+  // Бейдж не должен обещать хлопок там, где шнур полиэфирный или пряжа шерстяная
+  const materialBadge =
+    product.material && product.material.length <= 28
+      ? product.material
+      : "Натуральные материалы";
+  const specs = productSpecs(product, categorySlug);
 
   return (
     <main className="min-h-screen bg-parchment">
@@ -297,7 +329,7 @@ export function ProductDetails({
                       strokeLinejoin="round"
                     />
                   </svg>
-                  100% хлопок
+                  {materialBadge}
                 </span>
                 <span className="w-px h-3 bg-espresso/15" />
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
@@ -496,8 +528,22 @@ export function ProductDetails({
         <div className="max-w-6xl mx-auto">
           <div className="max-w-3xl">
             <h2 className="font-serif text-2xl text-espresso mb-6">Описание</h2>
+            {specs.length > 0 && (
+              <dl className="mb-8 grid gap-px overflow-hidden rounded-xl border border-espresso/10 bg-espresso/10 sm:grid-cols-2">
+                {specs.map(({ label, value }) => (
+                  <div key={label} className="bg-parchment px-5 py-3.5">
+                    <dt className="label-caps text-[10px] text-taupe mb-1">
+                      {label}
+                    </dt>
+                    <dd className="text-espresso text-sm leading-snug">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
             <div
-              className="prose prose-lg text-dark-grey"
+              className="product-description text-dark-grey"
               // biome-ignore lint/security/noDangerouslySetInnerHtml: product description comes from Ozon API (trusted source) and is sanitized server-side
               dangerouslySetInnerHTML={{ __html: product.description }}
             />
