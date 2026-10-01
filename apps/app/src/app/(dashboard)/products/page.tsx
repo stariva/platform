@@ -11,15 +11,10 @@ import { PRODUCT_CATEGORIES } from "@stariva/validators";
 import Link from "next/link";
 import { SiteHeader } from "~/components/layout";
 import { AvailabilitySwitches } from "~/components/products/availability-switches";
+import { PriceCell } from "~/components/products/price-cell";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
-
-const rub = new Intl.NumberFormat("ru-RU", {
-  style: "currency",
-  currency: "RUB",
-  maximumFractionDigits: 2,
-});
 
 export default async function ProductsPage() {
   const products = await api.admin.products.list();
@@ -93,8 +88,8 @@ export default async function ProductsPage() {
                         {subcategories[product.subcategory]}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {rub.format(product.price)}
+                    <TableCell className="text-right">
+                      <PriceCell id={product.id} price={product.price} />
                     </TableCell>
                     <TableCell>
                       <AvailabilitySwitches
