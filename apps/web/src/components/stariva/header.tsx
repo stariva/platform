@@ -66,6 +66,7 @@ const nav = [
   { label: "В наличии", href: IN_STOCK_HREF },
   { label: "Мастер-классы", href: "/workshops" },
   { label: "Блог", href: "/blog" },
+  { label: "Отзывы", href: "/reviews" },
   { label: "Для бизнеса", href: "/b2b", hasB2b: true },
   { label: "О бренде", href: "/about" },
 ];
@@ -592,6 +593,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
               { label: "Корзина", href: "/cart" },
               { label: "Мастер-классы", href: "/workshops" },
               { label: "Блог", href: "/blog" },
+              { label: "Отзывы", href: "/reviews" },
               { label: "О бренде", href: "/about" },
               { label: "Заказать", href: "/#order" },
             ].map((item) => (
