@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
+import { ProductCardImages } from "@/components/stariva/product-card-images";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -181,30 +181,11 @@ function ProductCard({
       >
         {/* Image */}
         <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-sand">
-          <Image
-            src={product.images[0] ?? "/placeholder.jpg"}
+          <ProductCardImages
+            images={product.images}
             alt={product.name}
-            fill
-            className={`object-cover ${
-              product.images[1]
-                ? "transition-opacity duration-300 group-hover:opacity-0"
-                : "transition-transform duration-500 group-hover:scale-105"
-            }`}
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            unoptimized={(product.images[0] ?? "/placeholder.jpg").startsWith(
-              "http",
-            )}
           />
-          {product.images[1] && (
-            <Image
-              src={product.images[1]}
-              alt=""
-              fill
-              className="object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-              sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-              unoptimized={product.images[1].startsWith("http")}
-            />
-          )}
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {product.oldPrice && (
