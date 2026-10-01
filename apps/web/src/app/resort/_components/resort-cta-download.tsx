@@ -6,7 +6,7 @@ export function ResortCtaDownload() {
     <section className="py-24 lg:py-36 bg-sand">
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
         <div className="max-w-3xl mx-auto text-center">
-          <p className="label-caps text-terracotta text-[10px] mb-4">
+          <p className="label-caps text-terracotta text-[11px] mb-4">
             Коммерческое предложение
           </p>
           <h2
@@ -44,7 +44,7 @@ export function ResortCtaDownload() {
             </a>
           </div>
 
-          <p className="text-mid-grey text-[12px] mt-6">
+          <p className="text-taupe text-[12px] mt-6">
             Или позвоните:{" "}
             <a
               href="tel:+79778722546"

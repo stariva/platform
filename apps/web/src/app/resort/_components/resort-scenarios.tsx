@@ -6,7 +6,7 @@ export function ResortScenarios() {
     <section className="py-24 lg:py-36 bg-parchment">
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
         <div className="mb-14">
-          <p className="label-caps text-terracotta text-[10px] mb-4">
+          <p className="label-caps text-terracotta text-[11px] mb-4">
             Где используется
           </p>
           <h2
@@ -36,7 +36,7 @@ export function ResortScenarios() {
                   {s.tags.map((t) => (
                     <span
                       key={t}
-                      className="label-caps text-[9px] text-white bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/25"
+                      className="label-caps text-[11px] text-white bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/25"
                     >
                       {t}
                     </span>

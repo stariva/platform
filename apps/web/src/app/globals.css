@@ -12,7 +12,8 @@
   --white: #fdfcfb; /* primary background — warm optical white     */
   --off-white: #f5f3f0; /* cards, subtle section separator             */
   --light-grey: #eae8e4; /* hover surfaces, light borders               */
-  --mid-grey: #b0aca6; /* secondary text, disabled states             */
+  --mid-grey: #b0aca6; /* decorative only: scrollbars, disabled states  */
+  --text-grey: #6b6761; /* secondary text — ≥4.5:1 on every light bg   */
   --dark-grey: #4a4845; /* body text, captions                         */
   --near-black: #161513; /* headings, primary text, dark UI elements    */
 
@@ -21,7 +22,7 @@
   --sand: var(--off-white);
   --cream: var(--off-white);
   --espresso: var(--near-black);
-  --taupe: var(--mid-grey);
+  --taupe: var(--text-grey);
   --terracotta: var(
     --near-black
   ); /* buttons & accents → dark instead of colour */
@@ -29,13 +30,13 @@
   --linen: var(--light-grey);
   --birch: var(--mid-grey);
   --sage: var(--dark-grey);
-  --sage-light: var(--mid-grey);
+  --sage-light: var(--text-grey);
   --sage-pale: var(--off-white);
   --warm-beige: var(--light-grey);
   --chalk: var(--white);
   --chalk-card: var(--off-white);
   --graphite: var(--near-black);
-  --smoke: var(--mid-grey);
+  --smoke: var(--text-grey);
 
   /* shadcn tokens */
   --background: var(--white);
@@ -49,7 +50,7 @@
   --secondary: var(--off-white);
   --secondary-foreground: var(--near-black);
   --muted: var(--off-white);
-  --muted-foreground: var(--mid-grey);
+  --muted-foreground: var(--text-grey);
   --accent: var(--light-grey);
   --accent-foreground: var(--near-black);
   --destructive: oklch(0.577 0.245 27.325);
@@ -71,6 +72,7 @@
   --color-off-white: var(--off-white);
   --color-light-grey: var(--light-grey);
   --color-mid-grey: var(--mid-grey);
+  --color-text-grey: var(--text-grey);
   --color-dark-grey: var(--dark-grey);
   --color-near-black: var(--near-black);
   /* Full alias set — nothing breaks in existing components */

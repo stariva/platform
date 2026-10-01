@@ -152,7 +152,7 @@ export default function AboutPage() {
                 <span className="font-serif text-3xl lg:text-4xl text-white leading-none">
                   {s.value}
                 </span>
-                <span className="label-caps text-white/50 text-[10px] leading-tight whitespace-pre">
+                <span className="label-caps text-white/75 text-[11px] leading-tight whitespace-pre">
                   {s.label}
                 </span>
               </div>
@@ -196,7 +196,7 @@ export default function AboutPage() {
         />
         <div className="absolute inset-0 bg-espresso/10" />
         <div className="absolute bottom-8 right-8 lg:bottom-12 lg:right-14">
-          <span className="label-caps text-white/60 text-[10px] tracking-widest">
+          <span className="label-caps text-white/60 text-[11px] tracking-widest">
             Мастерская Stariva
           </span>
         </div>
@@ -305,7 +305,7 @@ export default function AboutPage() {
                   <Badge
                     key={tag}
                     variant="outline"
-                    className="label-caps text-[10px] px-4 py-2 rounded-full border-espresso/15 text-taupe tracking-widest"
+                    className="label-caps text-[11px] px-4 py-2 rounded-full border-espresso/15 text-taupe tracking-widest"
                   >
                     {tag}
                   </Badge>
@@ -341,7 +341,7 @@ export default function AboutPage() {
                   <h3 className="font-serif text-xl lg:text-2xl text-parchment">
                     {item.event}
                   </h3>
-                  <p className="text-parchment/55 text-[14px] leading-[1.8] lg:max-w-xl">
+                  <p className="text-parchment/70 text-[14px] leading-[1.8] lg:max-w-xl">
                     {item.detail}
                   </p>
                 </div>

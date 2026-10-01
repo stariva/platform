@@ -89,7 +89,7 @@ export default async function AccountCoursesPage() {
               />
             </div>
             <div className="flex-1 p-5 flex flex-col">
-              <p className="label-caps text-[10px] text-taupe mb-1">
+              <p className="label-caps text-[11px] text-taupe mb-1">
                 {categoryLabels[workshop.category]} ·{" "}
                 {levelLabels[workshop.level]}
               </p>

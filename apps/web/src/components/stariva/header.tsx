@@ -349,7 +349,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
                                     viewBox="0 0 14 14"
                                     fill="none"
                                     aria-hidden="true"
-                                    className="text-mid-grey group-hover:text-near-black transition-colors translate-x-0 group-hover:translate-x-0.5 transition-transform duration-200"
+                                    className="text-taupe group-hover:text-near-black transition-colors translate-x-0 group-hover:translate-x-0.5 transition-transform duration-200"
                                   >
                                     <path
                                       d="M2 7h10M8 3l4 4-4 4"
@@ -360,14 +360,14 @@ export function Header({ variant = "solid" }: HeaderProps) {
                                     />
                                   </svg>
                                 </div>
-                                <p className="text-mid-grey text-[12px] leading-relaxed mb-3">
+                                <p className="text-taupe text-[12px] leading-relaxed mb-3">
                                   {cat.desc}
                                 </p>
                                 <div className="flex flex-wrap gap-1.5">
                                   {cat.items.map((item) => (
                                     <span
                                       key={item}
-                                      className="text-[10px] label-caps text-dark-grey bg-off-white px-2 py-1 rounded-full"
+                                      className="text-[11px] label-caps text-dark-grey bg-off-white px-2 py-1 rounded-full"
                                     >
                                       {item}
                                     </span>
@@ -380,7 +380,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
 
                         {/* Footer row */}
                         <div className="mt-5 pt-4 border-t border-espresso/8 flex items-center justify-between">
-                          <span className="text-mid-grey text-[12px]">
+                          <span className="text-taupe text-[12px]">
                             Все изделия создаются вручную из натурального
                             хлопка.{" "}
                             <Link
@@ -393,7 +393,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
                           </span>
                           <Link
                             href="/catalog"
-                            className="inline-flex items-center gap-2 label-caps text-[10px] text-dark-grey hover:text-near-black transition-colors"
+                            className="inline-flex items-center gap-2 label-caps text-[11px] text-dark-grey hover:text-near-black transition-colors"
                           >
                             Смотреть весь каталог
                             <svg
@@ -543,7 +543,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
               variant="ghost"
               size="icon-sm"
               onClick={() => setMenuOpen(false)}
-              className="text-espresso/50 hover:text-espresso"
+              className="text-espresso/60 hover:text-espresso"
               aria-label="Закрыть меню"
             >
               <svg
@@ -565,7 +565,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
 
           <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-1">
             {/* Catalog sub-links */}
-            <div className="label-caps text-taupe text-[10px] px-1 mb-2">
+            <div className="label-caps text-taupe text-[11px] px-1 mb-2">
               Каталог
             </div>
             {catalogNav.map((cat) => (
@@ -583,7 +583,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
               </Link>
             ))}
 
-            <div className="mt-4 label-caps text-taupe text-[10px] px-1 mb-2">
+            <div className="mt-4 label-caps text-taupe text-[11px] px-1 mb-2">
               Навигация
             </div>
             {[
@@ -623,7 +623,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
               </Link>
             ))}
 
-            <div className="mt-4 label-caps text-taupe text-[10px] px-1 mb-2">
+            <div className="mt-4 label-caps text-taupe text-[11px] px-1 mb-2">
               Для бизнеса
             </div>
             {b2bLinks.map((link) => (
@@ -661,7 +661,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
             ))}
 
             {/* Account */}
-            <div className="mt-4 label-caps text-taupe text-[10px] px-1 mb-2">
+            <div className="mt-4 label-caps text-taupe text-[11px] px-1 mb-2">
               Личный кабинет
             </div>
             {session ? (

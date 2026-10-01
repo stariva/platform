@@ -312,7 +312,7 @@ export function ProductDetails({
 
               {readyToShip && (
                 <div className="mb-4 rounded-xl border border-sage/30 bg-sage/5 p-5">
-                  <div className="flex items-center gap-2 label-caps text-[10px] text-sage mb-2">
+                  <div className="flex items-center gap-2 label-caps text-[11px] text-sage mb-2">
                     <span className="size-1.5 rounded-full bg-sage" />В наличии
                     · отправим за {IN_STOCK_SHIP_DAYS}
                   </div>
@@ -331,7 +331,7 @@ export function ProductDetails({
               )}
 
               {readyToShip && madeToOrder && (
-                <div className="flex items-center gap-3 mb-4 label-caps text-[9px] text-taupe/70">
+                <div className="flex items-center gap-3 mb-4 label-caps text-[11px] text-taupe">
                   <span className="h-px flex-1 bg-espresso/10" />
                   или сплетём под вас
                   <span className="h-px flex-1 bg-espresso/10" />
@@ -340,7 +340,7 @@ export function ProductDetails({
 
               {!readyToShip && !madeToOrder && (
                 <div className="mb-4 rounded-xl border border-espresso/8 bg-sand p-5">
-                  <p className="label-caps text-[10px] text-taupe mb-1.5">
+                  <p className="label-caps text-[11px] text-taupe mb-1.5">
                     Нет в наличии
                   </p>
                   <p className="text-taupe text-[13px] leading-relaxed">
@@ -359,7 +359,7 @@ export function ProductDetails({
               ) : (
                 product.dimensions && (
                   <div className="flex flex-col items-center text-center p-4 bg-sand rounded-xl border border-espresso/6 mb-8">
-                    <span className="label-caps text-[9px] text-taupe/60 mb-1">
+                    <span className="label-caps text-[11px] text-taupe mb-1">
                       Размеры
                     </span>
                     <span className="text-espresso text-[12px] leading-snug">
@@ -412,7 +412,7 @@ export function ProductDetails({
 
                 {/* Delivery info */}
                 <div className="flex items-center justify-center gap-4 pt-1">
-                  <span className="flex items-center gap-1.5 text-[10px] text-taupe label-caps">
+                  <span className="flex items-center gap-1.5 text-[11px] text-taupe label-caps">
                     <svg
                       width="12"
                       height="12"
@@ -453,7 +453,7 @@ export function ProductDetails({
                     Доставка по России
                   </span>
                   <span className="w-px h-3 bg-espresso/15" />
-                  <span className="flex items-center gap-1.5 text-[10px] text-taupe label-caps">
+                  <span className="flex items-center gap-1.5 text-[11px] text-taupe label-caps">
                     <svg
                       width="12"
                       height="12"
@@ -486,7 +486,7 @@ export function ProductDetails({
               <dl className="mb-8 grid gap-px overflow-hidden rounded-xl border border-espresso/10 bg-espresso/10 sm:grid-cols-2">
                 {specs.map(({ label, value }) => (
                   <div key={label} className="bg-parchment px-5 py-3.5">
-                    <dt className="label-caps text-[10px] text-taupe mb-1">
+                    <dt className="label-caps text-[11px] text-taupe mb-1">
                       {label}
                     </dt>
                     <dd className="text-espresso text-sm leading-snug">

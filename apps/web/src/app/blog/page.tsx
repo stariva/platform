@@ -152,7 +152,7 @@ export default function BlogPage() {
                   <p className="text-taupe text-sm leading-relaxed mb-4 line-clamp-2">
                     {post.excerpt}
                   </p>
-                  <time dateTime={post.date} className="text-sm text-taupe/70">
+                  <time dateTime={post.date} className="text-sm text-taupe">
                     {formatDate(post.date)}
                   </time>
                 </Link>

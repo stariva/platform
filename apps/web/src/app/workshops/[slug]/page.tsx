@@ -371,7 +371,7 @@ export default async function WorkshopDetailPage({
                         {lesson.title}
                       </span>
                       {lesson.free && (
-                        <span className="ml-2 text-[10px] text-terracotta label-caps">
+                        <span className="ml-2 text-[11px] text-terracotta label-caps">
                           Бесплатно
                         </span>
                       )}
@@ -530,7 +530,7 @@ export default async function WorkshopDetailPage({
                         <div className="font-serif text-base text-espresso">
                           {s.value}
                         </div>
-                        <div className="label-caps text-[9px] text-taupe mt-0.5">
+                        <div className="label-caps text-[11px] text-taupe mt-0.5">
                           {s.label}
                         </div>
                       </div>
@@ -579,7 +579,7 @@ export default async function WorkshopDetailPage({
                     />
                   </div>
                   <div className="p-4">
-                    <p className="label-caps text-[10px] text-taupe mb-1">
+                    <p className="label-caps text-[11px] text-taupe mb-1">
                       {categoryLabels[w.category]}
                     </p>
                     <h3 className="font-serif text-lg text-espresso group-hover:text-terracotta transition-colors mb-1">
