@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
 import { certificates } from "@stariva/db/schema";
 import { and, eq } from "drizzle-orm";
-import { getWorkshopBySlug } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { getCourseProgressSummary } from "./access";
 
 export interface CertificateInfo {
@@ -50,7 +50,7 @@ export async function issueCertificateIfComplete(
   const existing = await getCertificate(userId, workshopSlug);
   if (existing) return existing;
 
-  const workshop = getWorkshopBySlug(workshopSlug);
+  const workshop = await getWorkshopBySlug(workshopSlug, "owned");
   if (!workshop) return null;
 
   const summary = await getCourseProgressSummary(userId, workshop);

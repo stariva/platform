@@ -19,17 +19,24 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
+  absoluteImageUrl,
   categoryLabels,
+  formatDurationLabel,
   formatPrice,
-  getWorkshopBySlug,
   levelColors,
   levelLabels,
-  workshops,
 } from "@/lib/workshops-data";
+import {
+  fetchPublishedWorkshops,
+  getWorkshopBySlug,
+} from "@/lib/workshops/workshops-db";
 import { WorkshopPurchase } from "./workshop-purchase";
 
-export async function generateStaticParams() {
-  return workshops.map((w) => ({ slug: w.slug }));
+// Страницы курсов собираются по запросу и кэшируются; админка сбрасывает кэш при сохранении
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return [];
 }
 
 export async function generateMetadata({
@@ -38,7 +45,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const workshop = getWorkshopBySlug(slug);
+  const workshop = await getWorkshopBySlug(slug);
   if (!workshop) return {};
 
   const title = `${workshop.title} — мастер-класс по макраме`;
@@ -50,7 +57,7 @@ export async function generateMetadata({
         : "Купить на сайте Stariva.";
   const description = `${workshop.description} Уровень: ${levelLabels[workshop.level]}. ${workshop.lessonsCount} уроков, ${workshop.duration}. ${callToAction}`;
   const url = `/workshops/${slug}`;
-  const image = `${BASE_URL}${workshop.cover}`;
+  const image = absoluteImageUrl(BASE_URL, workshop.cover);
 
   return {
     title,
@@ -78,10 +85,10 @@ export default async function WorkshopDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const workshop = getWorkshopBySlug(slug);
+  const workshop = await getWorkshopBySlug(slug);
   if (!workshop) notFound();
 
-  const related = workshops
+  const related = (await fetchPublishedWorkshops())
     .filter((w) => w.slug !== workshop.slug && w.category === workshop.category)
     .slice(0, 3);
 
@@ -316,11 +323,11 @@ export default async function WorkshopDetailPage({
                       i < workshop.lessons.length - 1
                         ? "border-b border-espresso/8"
                         : ""
-                    } ${i === 0 ? "bg-sand/60" : ""}`}
+                    } ${lesson.free ? "bg-sand/60" : ""}`}
                   >
                     {/* Free preview or locked */}
                     <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-espresso/6">
-                      {i === 0 ? (
+                      {lesson.free ? (
                         <svg
                           width="14"
                           height="14"
@@ -363,14 +370,14 @@ export default async function WorkshopDetailPage({
                       <span className="text-espresso/80 text-sm">
                         {lesson.title}
                       </span>
-                      {i === 0 && (
+                      {lesson.free && (
                         <span className="ml-2 text-[10px] text-terracotta label-caps">
                           Бесплатно
                         </span>
                       )}
                     </div>
                     <span className="text-taupe text-xs flex-shrink-0">
-                      {lesson.duration}
+                      {formatDurationLabel(lesson.durationSeconds)}
                     </span>
                   </div>
                 ))}

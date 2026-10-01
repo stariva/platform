@@ -23,6 +23,7 @@ import {
   type FallbackEntry,
 } from "@/lib/chat/fallback-model";
 import { buildSystemPrompt } from "@/lib/chat/knowledge";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import { chatTools } from "@/lib/chat/tools";
 
 export const runtime = "nodejs";
@@ -140,7 +141,7 @@ async function handler(request: NextRequest) {
       ),
     } as ModelMessage;
   });
-  const system = buildSystemPrompt();
+  const system = buildSystemPrompt(await fetchPublishedWorkshops());
 
   // Извлекаем текст последнего сообщения пользователя для input трейса
   const lastUserMessage = [...trimmed].reverse().find((m) => m.role === "user");

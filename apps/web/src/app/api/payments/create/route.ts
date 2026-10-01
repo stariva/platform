@@ -5,7 +5,8 @@ import { grantAccess, hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { attachPaymentId, createOrder } from "@/lib/payments/orders";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
-import { getWorkshopBySlug, workshopPriceKopecks } from "@/lib/workshops-data";
+import { workshopPriceKopecks } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
 
-  const workshop = getWorkshopBySlug(parsed.data.slug);
+  const workshop = await getWorkshopBySlug(parsed.data.slug);
   if (!workshop) {
     return NextResponse.json(
       { error: "Мастер-класс не найден" },

@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { hasAccess } from "@/lib/account/access";
 import { issueCertificateIfComplete } from "@/lib/account/certificates";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopBySlug } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { PrintButton } from "./print-button";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function CertificatePage({
   const session = await getSession();
   if (!session) return null;
 
-  const workshop = getWorkshopBySlug(slug);
+  const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
 
   if (!(await hasAccess(session.user.id, slug))) {

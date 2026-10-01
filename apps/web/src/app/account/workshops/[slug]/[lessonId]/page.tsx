@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCourseProgressMap, hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopBySlug, getWorkshopLessons } from "@/lib/workshops-data";
+import { getWorkshopLessons } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { VideoPlayer } from "./video-player";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function LessonPlayerPage({
   const session = await getSession();
   if (!session) return null;
 
-  const workshop = getWorkshopBySlug(slug);
+  const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
 
   if (!(await hasAccess(session.user.id, slug))) {

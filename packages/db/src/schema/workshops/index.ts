@@ -1,3 +1,4 @@
+export * from "./catalog";
 export * from "./certificates";
 export * from "./course-access";
 export * from "./lesson-progress";

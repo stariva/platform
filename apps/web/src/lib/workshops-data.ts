@@ -1,18 +1,22 @@
+// Сами мастер-классы лежат в таблице workshops и правятся в админке;
+// читает их ./workshops/workshops-db.ts. Здесь — типы, подписи и чистые хелперы.
+
 export type WorkshopLevel = "beginner" | "intermediate" | "advanced";
 export type WorkshopCategory = "lampshades" | "clothing" | "interior";
+export type WorkshopStatus = "draft" | "published" | "archived";
 
 export interface WorkshopLesson {
+  /** Стабильный идентификатор урока: на него ссылается прогресс просмотра. */
+  id: string;
   title: string;
-  duration: string; // e.g. "12 мин"
-  /** Стабильный идентификатор урока. Если не задан — генерируется как `${slug}-${n}`. */
-  id?: string;
-  /** Ключ объекта видео в Yandex S3. Если не задан — `workshops/${slug}/${id}.mp4`. */
-  videoKey?: string;
-  /** Бесплатный урок-превью (доступен без покупки). По умолчанию бесплатен только первый. */
-  free?: boolean;
+  durationSeconds: number;
+  /** Ключ объекта видео в Yandex S3. Пусто — видео ещё не загружено. */
+  videoKey: string;
+  /** Бесплатный урок-превью (доступен без покупки). */
+  free: boolean;
 }
 
-/** Урок с гарантированно заполненными полями (после резолвинга). */
+/** Урок в виде, удобном для страниц и плеера. */
 export interface ResolvedLesson {
   id: string;
   index: number;
@@ -31,12 +35,16 @@ export interface WorkshopMaterialFile {
 
 export interface Workshop {
   slug: string;
+  /** archived — не продаётся и не в каталоге, но купившие продолжают смотреть. */
+  status: WorkshopStatus;
   title: string;
   subtitle: string;
   category: WorkshopCategory;
   level: WorkshopLevel;
+  /** В рублях; 0 — бесплатный курс. */
   price: number;
-  duration: string; // total, e.g. "3 ч 20 мин"
+  /** Общая длительность, например «3 ч 20 мин». */
+  duration: string;
   lessonsCount: number;
   cover: string;
   previewImage: string;
@@ -70,59 +78,6 @@ export const levelColors: Record<WorkshopLevel, string> = {
   advanced: "bg-terracotta/15 text-terracotta",
 };
 
-export const workshops: Workshop[] = [
-  {
-    slug: "poyas-makrame-serdce",
-    title: "Пояс макраме «Сердце»",
-    subtitle: "Бесплатный мастер-класс: плетёный пояс с узором-сердцем",
-    category: "clothing",
-    level: "beginner",
-    price: 0,
-    duration: "16 мин",
-    lessonsCount: 1,
-    cover: "/images/workshops/cover-poyas-serdce.jpg",
-    previewImage: "/images/workshops/preview-poyas-serdce.jpg",
-    featured: true,
-    description:
-      "Бесплатный мастер-класс для знакомства с макраме: сплетите изящный пояс с узором-сердцем в одном видеоуроке. Идеальный первый проект, чтобы попробовать технику перед покупкой полного курса.",
-    whatYouLearn: [
-      "Базовые узлы макраме для пояса",
-      "Плетение узора-сердца",
-      "Равномерное натяжение нити",
-      "Финишная обработка концов и завязки",
-    ],
-    materials: [
-      "Хлопковый шнур 3 мм — 15 м",
-      "Кольцо или пряжка для пояса",
-      "Ножницы",
-      "Расчёска для бахромы",
-    ],
-    lessons: [
-      {
-        title: "Плетение пояса «Сердце»",
-        duration: "16 мин",
-        free: true,
-      },
-    ],
-    testimonial: {
-      text: "ПЛЕЙСХОЛДЕР — заменить на реальный отзыв клиентки после публикации мастер-класса.",
-      author: "Имя, город",
-    },
-  },
-];
-
-export function getWorkshopBySlug(slug: string): Workshop | undefined {
-  return workshops.find((w) => w.slug === slug);
-}
-
-export function getWorkshopsByCategory(category: WorkshopCategory): Workshop[] {
-  return workshops.filter((w) => w.category === category);
-}
-
-export function getFeaturedWorkshops(): Workshop[] {
-  return workshops.filter((w) => w.featured);
-}
-
 export function formatPrice(price: number): string {
   if (price === 0) return "Бесплатно";
   return new Intl.NumberFormat("ru-RU", {
@@ -132,56 +87,39 @@ export function formatPrice(price: number): string {
   }).format(price);
 }
 
-/**
- * Парсит человекочитаемую длительность ("3 ч 20 мин", "12 мин") в секунды.
- */
-export function parseDurationToSeconds(duration: string): number {
-  let total = 0;
-  const hours = duration.match(/(\d+)\s*ч/);
-  const minutes = duration.match(/(\d+)\s*мин/);
-  if (hours) total += Number(hours[1]) * 3600;
-  if (minutes) total += Number(minutes[1]) * 60;
-  return total;
+/** Длительность для витрины: 960 → «16 мин», 12000 → «3 ч 20 мин». */
+export function formatDurationLabel(totalSeconds: number): string {
+  const minutes = Math.max(1, Math.round(totalSeconds / 60));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} мин`;
+  return m === 0 ? `${h} ч` : `${h} ч ${m} мин`;
 }
 
-/** Префикс ключей объектов курса в Yandex S3. */
-export function workshopStoragePrefix(slug: string): string {
-  return `workshops/${slug}`;
+/** Адрес картинки с доменом: в соцсети и sitemap нужны абсолютные ссылки. */
+export function absoluteImageUrl(baseUrl: string, src: string): string {
+  return src.startsWith("http") ? src : `${baseUrl}${src}`;
 }
 
-/**
- * Возвращает уроки мастер-класса с заполненными id, ключами видео и флагом
- * бесплатного превью. По умолчанию бесплатен только первый урок.
- *
- * Конвенция ключей S3 (если videoKey не задан явно):
- *   workshops/<slug>/<lessonId>.mp4
- */
+/** Уроки мастер-класса в удобном для страниц виде. */
 export function getWorkshopLessons(workshop: Workshop): ResolvedLesson[] {
-  return workshop.lessons.map((lesson, i) => {
-    const id = lesson.id ?? `${workshop.slug}-${i + 1}`;
-    return {
-      id,
-      index: i,
-      title: lesson.title,
-      duration: lesson.duration,
-      durationSeconds: parseDurationToSeconds(lesson.duration),
-      videoKey:
-        lesson.videoKey ?? `${workshopStoragePrefix(workshop.slug)}/${id}.mp4`,
-      free: lesson.free ?? i === 0,
-    };
-  });
+  return workshop.lessons.map((lesson, i) => ({
+    id: lesson.id,
+    index: i,
+    title: lesson.title,
+    duration: formatDurationLabel(lesson.durationSeconds),
+    durationSeconds: lesson.durationSeconds,
+    videoKey: lesson.videoKey,
+    free: lesson.free,
+  }));
 }
 
-/** Находит конкретный урок мастер-класса по его id. */
-export function getWorkshopLesson(
-  slug: string,
+/** Находит урок мастер-класса по его id. */
+export function findWorkshopLesson(
+  workshop: Workshop,
   lessonId: string,
-): { workshop: Workshop; lesson: ResolvedLesson } | undefined {
-  const workshop = getWorkshopBySlug(slug);
-  if (!workshop) return undefined;
-  const lesson = getWorkshopLessons(workshop).find((l) => l.id === lessonId);
-  if (!lesson) return undefined;
-  return { workshop, lesson };
+): ResolvedLesson | undefined {
+  return getWorkshopLessons(workshop).find((l) => l.id === lessonId);
 }
 
 /** Цена мастер-класса в копейках (для платёжной системы и БД). */

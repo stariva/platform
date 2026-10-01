@@ -59,6 +59,27 @@ export async function createPresignedUrl(key: string): Promise<string> {
   return getSignedUrl(getClient(), command, { expiresIn: 3600 }); // 1 hour
 }
 
+/**
+ * Ссылка для загрузки файла напрямую из браузера в закрытый бакет (PUT).
+ * Видео слишком большие, чтобы гнать их через сервер приложения. Content-Type
+ * подписывается — браузер обязан отправить тот же.
+ */
+export async function createUploadUrl(
+  key: string,
+  contentType: string,
+  options?: { expiresIn?: number; contentLength?: number },
+): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+    ContentLength: options?.contentLength,
+  });
+  return getSignedUrl(getClient(), command, {
+    expiresIn: options?.expiresIn ?? 3 * 3600,
+  });
+}
+
 export function generateS3Key(originalKey: string, temporary = false): string {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 15);

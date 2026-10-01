@@ -17,6 +17,7 @@ import {
   IconExternalLink,
   IconPackage,
   IconPlus,
+  IconSchool,
   IconSettings,
 } from "@tabler/icons-react";
 import Link from "next/link";
@@ -27,6 +28,11 @@ import { NavUser } from "~/components/sidebar";
 const catalog = [
   { title: "Товары", url: "/products", icon: IconPackage },
   { title: "Добавить товар", url: "/products/new", icon: IconPlus },
+];
+
+const learning = [
+  { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
+  { title: "Добавить мастер-класс", url: "/workshops/new", icon: IconPlus },
 ];
 
 export function AppSidebar({
@@ -68,6 +74,28 @@ export function AppSidebar({
                     item.url === "/products"
                       ? pathname === "/products" ||
                         /^\/products\/(?!new)/.test(pathname)
+                      : pathname === item.url
+                  }
+                  render={<Link href={item.url} />}
+                >
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Обучение</SidebarGroupLabel>
+          <SidebarMenu>
+            {learning.map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  isActive={
+                    item.url === "/workshops"
+                      ? pathname === "/workshops" ||
+                        /^\/workshops\/(?!new)/.test(pathname)
                       : pathname === item.url
                   }
                   render={<Link href={item.url} />}

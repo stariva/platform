@@ -22,8 +22,8 @@ import {
   levelLabels,
   type WorkshopCategory,
   type WorkshopLevel,
-  workshops,
 } from "@/lib/workshops-data";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 // ─── Типы выходных данных (используются и в UI виджета) ─────────────────────
 
@@ -270,7 +270,7 @@ export const chatTools = {
       level,
       maxPrice,
     }): Promise<{ workshops: WorkshopCard[]; total: number }> => {
-      let list = [...workshops];
+      let list = [...(await fetchPublishedWorkshops())];
       if (category) {
         list = list.filter(
           (w) => w.category === (category as WorkshopCategory),

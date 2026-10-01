@@ -3,7 +3,8 @@ import { blogPosts } from "@/lib/blog-data";
 import { IN_STOCK_HREF } from "@/lib/in-stock";
 import { categories, getProducts } from "@/lib/ozon-service";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
-import { workshops } from "@/lib/workshops-data";
+import { absoluteImageUrl } from "@/lib/workshops-data";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 export const revalidate = 3600;
 
@@ -122,12 +123,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // ── Мастер-классы ─────────────────────────────────────────────────────────
-  const workshopPages: MetadataRoute.Sitemap = workshops.map((workshop) => ({
+  const workshopPages: MetadataRoute.Sitemap = (
+    await fetchPublishedWorkshops()
+  ).map((workshop) => ({
     url: `${BASE_URL}/workshops/${workshop.slug}`,
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: workshop.featured ? 0.8 : 0.7,
-    images: [`${BASE_URL}${workshop.cover}`],
+    images: [absoluteImageUrl(BASE_URL, workshop.cover)],
   }));
 
   return [
