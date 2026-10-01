@@ -37,27 +37,32 @@ const pointInfoResponseSchema = z.object({
   points: z.array(pointInfoSchema),
 });
 const POINT_INFO_BATCH_SIZE = 100;
+// Сплит, который Ozon не может доставить, приходит без способа доставки
+// и с warehouse_id = 0 — такие сплиты отбрасываются в checkout().
 const checkoutResponseSchema = z.object({
   splits: z.array(
     z.object({
       commissions: z.object({ total: moneySchema }).nullable().optional(),
-      delivery_method: z.object({
-        id: positiveInteger,
-        delivery_type: z.enum(["COURIER", "PVZ", "POSTAMAT"]),
-        unavailable_reason: z.string().optional(),
-        timeslots: z.array(
-          z.object({
-            timeslot_id: positiveInteger,
-            logistic_date_range: z.object({ from: isoDate, to: isoDate }),
-          }),
-        ),
-      }),
+      delivery_method: z
+        .object({
+          id: positiveInteger,
+          delivery_type: z.enum(["COURIER", "PVZ", "POSTAMAT"]),
+          unavailable_reason: z.string().optional(),
+          timeslots: z.array(
+            z.object({
+              timeslot_id: positiveInteger,
+              logistic_date_range: z.object({ from: isoDate, to: isoDate }),
+            }),
+          ),
+        })
+        .nullable()
+        .optional(),
       delivery_schema: z.enum(["FBO", "FBS", "UNSPECIFIED"]),
       items: z.array(
         z.object({ sku: positiveInteger, quantity: positiveInteger }),
       ),
       unavailable_reason: z.string().optional(),
-      warehouse_id: positiveInteger,
+      warehouse_id: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     }),
   ),
 });
@@ -231,13 +236,16 @@ export async function checkout(
 
   const splits: CheckoutSplit[] = [];
   for (const split of data.splits) {
-    const timeslot = split.delivery_method.timeslots[0];
+    const method = split.delivery_method;
+    const timeslot = method?.timeslots[0];
     if (
       split.delivery_schema === "UNSPECIFIED" ||
       (split.unavailable_reason !== undefined &&
         split.unavailable_reason !== "UNSPECIFIED") ||
-      (split.delivery_method.unavailable_reason !== undefined &&
-        split.delivery_method.unavailable_reason !== "UNSPECIFIED") ||
+      !method ||
+      (method.unavailable_reason !== undefined &&
+        method.unavailable_reason !== "UNSPECIFIED") ||
+      split.warehouse_id <= 0 ||
       !split.commissions ||
       !timeslot
     ) {
@@ -248,8 +256,8 @@ export async function checkout(
       warehouseId: split.warehouse_id,
       items: split.items,
       deliveryMethod: {
-        id: split.delivery_method.id,
-        type: split.delivery_method.delivery_type,
+        id: method.id,
+        type: method.delivery_type,
         timeslotId: timeslot.timeslot_id,
         logisticDateFrom: timeslot.logistic_date_range.from,
         logisticDateTo: timeslot.logistic_date_range.to,
