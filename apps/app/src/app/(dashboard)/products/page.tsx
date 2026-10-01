@@ -12,6 +12,7 @@ import Link from "next/link";
 import { SiteHeader } from "~/components/layout";
 import { AvailabilitySwitches } from "~/components/products/availability-switches";
 import { PriceCell } from "~/components/products/price-cell";
+import { ProductThumb } from "~/components/products/product-thumb";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
@@ -58,17 +59,7 @@ export default async function ProductsPage() {
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
-                      {product.image ? (
-                        // biome-ignore lint/performance/noImgElement: превью из внешнего бакета без оптимизации
-                        <img
-                          src={product.image}
-                          alt=""
-                          className="size-10 rounded object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="bg-muted size-10 rounded" />
-                      )}
+                      <ProductThumb src={product.image} />
                     </TableCell>
                     <TableCell className="max-w-[360px]">
                       <Link
