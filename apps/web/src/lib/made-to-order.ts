@@ -2,7 +2,7 @@
 // Всё плетётся вручную под конкретного покупателя, поэтому в карточках товаров
 // показываем, что размер и цвет подбираются, а для одежды — снимаются мерки.
 
-import type { ProductCategory } from "@/lib/ozon-types";
+import type { Product, ProductCategory } from "@/lib/ozon-types";
 
 export interface MeasurementField {
   id: string;
@@ -116,4 +116,31 @@ export const madeToOrder: Record<ProductCategory, MadeToOrderConfig> = {
 
 export function getMadeToOrder(category: string): MadeToOrderConfig | null {
   return madeToOrder[category as ProductCategory] ?? null;
+}
+
+/** Настройки заказа для изделия — null, если его не плетём под заказ. */
+export function getProductMadeToOrder(
+  product: Pick<Product, "category" | "madeToOrder">,
+): MadeToOrderConfig | null {
+  return product.madeToOrder ? getMadeToOrder(product.category) : null;
+}
+
+/** «1 день», «2–4 дня», «5–7 дней» — склоняем по последнему числу. */
+function pluralDays(n: number) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "день";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "дня";
+  return "дней";
+}
+
+/** Срок изготовления изделия: свой из каталога или общий MADE_TO_ORDER_DAYS. */
+export function madeToOrderLeadTime(
+  product: Pick<Product, "leadTimeDays">,
+): string {
+  const lead = product.leadTimeDays;
+  if (!lead) return MADE_TO_ORDER_DAYS;
+  const range =
+    lead.min === lead.max ? `${lead.max}` : `${lead.min}–${lead.max}`;
+  return `${range} ${pluralDays(lead.max)}`;
 }

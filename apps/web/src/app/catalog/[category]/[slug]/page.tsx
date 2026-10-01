@@ -211,6 +211,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         oldPrice={product.oldPrice}
         currency={product.currency}
         inStock={product.inStock}
+        madeToOrder={product.madeToOrder}
         url={url}
         category={category.name}
         material={product.material}

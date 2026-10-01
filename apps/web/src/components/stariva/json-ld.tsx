@@ -173,6 +173,7 @@ interface ProductJsonLdProps {
   oldPrice?: number;
   currency?: string;
   inStock: boolean;
+  madeToOrder: boolean;
   url: string;
   category: string;
   material?: string;
@@ -195,6 +196,7 @@ export function ProductJsonLd({
   oldPrice,
   currency = "RUB",
   inStock,
+  madeToOrder,
   url,
   category,
   material,
@@ -220,7 +222,9 @@ export function ProductJsonLd({
       priceCurrency: currency,
       availability: inStock
         ? "https://schema.org/InStock"
-        : "https://schema.org/MadeToOrder",
+        : madeToOrder
+          ? "https://schema.org/MadeToOrder"
+          : "https://schema.org/OutOfStock",
       seller: {
         "@id": `${BASE_URL}/#organization`,
       },

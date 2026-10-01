@@ -38,6 +38,7 @@ export interface ProductCard {
   categoryLabel: string;
   url: string;
   inStock: boolean;
+  madeToOrder: boolean;
   shortDescription?: string;
 }
 
@@ -106,7 +107,7 @@ export const chatTools = {
   // Поиск готовых изделий из каталога (товары Ozon).
   searchProducts: tool({
     description:
-      "Найти изделия из каталога Stariva. inStock=true — есть в наличии, можно сразу купить на сайте; inStock=false — плетём под заказ, оформляется через мастера. Используй, когда клиент хочет что-то купить, спрашивает что есть в наличии, просит подобрать готовое изделие или интересуется ценой конкретного товара. Можно фильтровать по категории, ключевым словам и максимальной цене.",
+      "Найти изделия из каталога Stariva. inStock=true — есть в наличии, можно сразу купить на сайте; madeToOrder=true — можно сплести под заказ в размере и цвете клиента, оформляется через мастера (одно изделие может быть и тем, и другим); если оба false — изделия сейчас нет, предложи похожее или написать мастеру. Используй, когда клиент хочет что-то купить, спрашивает что есть в наличии, просит подобрать готовое изделие или интересуется ценой конкретного товара. Можно фильтровать по категории, ключевым словам и максимальной цене.",
     inputSchema: z.object({
       query: z
         .string()
@@ -164,8 +165,9 @@ export const chatTools = {
         image: p.images?.[0],
         category: p.category,
         categoryLabel: CATEGORY_LABELS[p.category] ?? p.category,
-        url: p.ozonUrl || productUrl(p.category, p.slug),
+        url: productUrl(p.category, p.slug),
         inStock: p.inStock,
+        madeToOrder: p.madeToOrder,
         shortDescription: p.shortDescription,
       }));
 

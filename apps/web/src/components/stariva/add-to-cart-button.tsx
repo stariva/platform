@@ -14,9 +14,11 @@ import type { Product } from "@/lib/ozon-types";
 export function AddToCartButton({
   product,
   className,
+  label = "В корзину",
 }: {
   product: Product;
   className?: string;
+  label?: string;
 }) {
   const { add } = useCart();
   const [added, setAdded] = useState(false);
@@ -52,7 +54,7 @@ export function AddToCartButton({
         "flex items-center justify-center gap-2 w-full bg-espresso hover:bg-terracotta text-white py-4 h-auto rounded-2xl transition-colors label-caps"
       }
     >
-      {added ? "Добавлено ✓" : "В корзину"}
+      {added ? "Добавлено ✓" : label}
     </Button>
   );
 }

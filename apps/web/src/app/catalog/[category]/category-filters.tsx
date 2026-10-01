@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getMadeToOrder } from "@/lib/made-to-order";
+import { getProductMadeToOrder } from "@/lib/made-to-order";
 import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 
@@ -166,7 +166,7 @@ function ProductCard({
   index: number;
   showAddToCart: boolean;
 }) {
-  const madeToOrder = getMadeToOrder(product.category);
+  const madeToOrder = getProductMadeToOrder(product);
 
   return (
     <motion.div
@@ -238,12 +238,14 @@ function ProductCard({
         </div>
         {product.inStock ? (
           <p className="mt-1.5 label-caps text-[9px] text-sage">В наличии</p>
+        ) : madeToOrder ? (
+          <p className="mt-1.5 label-caps text-[9px] text-terracotta/90">
+            {madeToOrder.badge}
+          </p>
         ) : (
-          madeToOrder && (
-            <p className="mt-1.5 label-caps text-[9px] text-terracotta/90">
-              {madeToOrder.badge}
-            </p>
-          )
+          <p className="mt-1.5 label-caps text-[9px] text-taupe">
+            Нет в наличии
+          </p>
         )}
       </Link>
       {showAddToCart && (

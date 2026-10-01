@@ -16,7 +16,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { getMadeToOrder } from "@/lib/made-to-order";
+import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
+import { getProductMadeToOrder } from "@/lib/made-to-order";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 import { formatRating, pluralRatings } from "@/lib/ratings";
@@ -99,7 +100,9 @@ export function ProductDetails({
 }: ProductDetailsProps) {
   const [activeImage, setActiveImage] = useState(0);
   const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior;
-  const madeToOrder = getMadeToOrder(categorySlug);
+  // Два независимых способа купить: готовое со склада и сплести под заказ
+  const readyToShip = isPurchasable(product);
+  const madeToOrder = getProductMadeToOrder(product);
   const productUrl = `https://stariva.ru/catalog/${categorySlug}/${product.slug}`;
 
   return (
@@ -257,13 +260,6 @@ export function ProductDetails({
                 )}
               </div>
 
-              {product.inStock && (
-                <p className="inline-flex items-center gap-2 label-caps text-[10px] text-sage mb-4">
-                  <span className="size-1.5 rounded-full bg-sage" />В наличии ·
-                  отправим сразу после оплаты
-                </p>
-              )}
-
               {/* Trust signals */}
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
@@ -328,7 +324,47 @@ export function ProductDetails({
                 {product.shortDescription}
               </p>
 
-              {madeToOrder && !product.inStock ? (
+              {readyToShip && (
+                <div className="mb-4 rounded-xl border border-sage/30 bg-sage/5 p-5">
+                  <div className="flex items-center gap-2 label-caps text-[10px] text-sage mb-2">
+                    <span className="size-1.5 rounded-full bg-sage" />В наличии
+                    · отправим за {IN_STOCK_SHIP_DAYS}
+                  </div>
+                  <h2 className="font-serif text-xl text-espresso mb-1.5">
+                    Готовое изделие
+                  </h2>
+                  <p className="text-taupe text-[13px] leading-relaxed mb-5">
+                    {product.stockAvailable === 1
+                      ? "Осталось одно изделие"
+                      : `Готово ${product.stockAvailable} ${pluralItems(product.stockAvailable)}`}{" "}
+                    — уже сплетено, точно как на фото. Оплата на сайте, доставка
+                    Ozon.
+                  </p>
+                  <AddToCartButton product={product} label="Купить готовое" />
+                </div>
+              )}
+
+              {readyToShip && madeToOrder && (
+                <div className="flex items-center gap-3 mb-4 label-caps text-[9px] text-taupe/70">
+                  <span className="h-px flex-1 bg-espresso/10" />
+                  или сплетём под вас
+                  <span className="h-px flex-1 bg-espresso/10" />
+                </div>
+              )}
+
+              {!readyToShip && !madeToOrder && (
+                <div className="mb-4 rounded-xl border border-espresso/8 bg-sand p-5">
+                  <p className="label-caps text-[10px] text-taupe mb-1.5">
+                    Нет в наличии
+                  </p>
+                  <p className="text-taupe text-[13px] leading-relaxed">
+                    Это изделие сейчас закончилось. Напишите мастеру —
+                    подскажем, когда появится, или подберём похожее.
+                  </p>
+                </div>
+              )}
+
+              {madeToOrder ? (
                 <MadeToOrder
                   product={product}
                   config={madeToOrder}
@@ -349,8 +385,7 @@ export function ProductDetails({
 
               {/* CTA Buttons */}
               <div className="space-y-3 mt-auto">
-                <AddToCartButton product={product} />
-                {!(product.ozonSku && product.inStock) && (
+                {!readyToShip && (
                   <Button
                     asChild
                     className="flex items-center justify-center gap-2 w-full bg-espresso hover:bg-terracotta text-white py-4 h-auto rounded-2xl transition-colors label-caps"
