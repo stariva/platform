@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isExternalImage, productImageKey } from "./product-images";
+import { productImageKey } from "@stariva/storage";
+import { isExternalImage } from "./product-images";
 
 const base = "https://storage.yandexcloud.net/stariva-public/";
 

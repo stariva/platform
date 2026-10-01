@@ -37,6 +37,11 @@ export const env = createEnv({
     AWS_S3_PUBLIC_BUCKET: z.string().optional(),
     // Базовый адрес публичных файлов; по умолчанию <endpoint>/<public bucket>
     AWS_S3_PUBLIC_URL: z.url().optional(),
+
+    // Витрина (stariva.ru): админка сбрасывает её кэш после правок каталога.
+    // Один и тот же REVALIDATE_SECRET задаётся и сайту, и админке.
+    STOREFRONT_URL: z.url().optional(),
+    REVALIDATE_SECRET: z.string().min(32).optional(),
   },
   client: {
     NEXT_PUBLIC_APP_NAME: z.string().default("Acme Inc."),
@@ -64,6 +69,8 @@ export const env = createEnv({
     AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
     AWS_S3_PUBLIC_BUCKET: process.env.AWS_S3_PUBLIC_BUCKET,
     AWS_S3_PUBLIC_URL: process.env.AWS_S3_PUBLIC_URL,
+    STOREFRONT_URL: process.env.STOREFRONT_URL,
+    REVALIDATE_SECRET: process.env.REVALIDATE_SECRET,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     NEXT_PUBLIC_APP_SHORT_NAME: process.env.NEXT_PUBLIC_APP_SHORT_NAME,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,

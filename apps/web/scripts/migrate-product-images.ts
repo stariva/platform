@@ -12,10 +12,11 @@ import { and, db, eq, sql } from "@stariva/db";
 import { products } from "@stariva/db/schema";
 import {
   isPublicStorageConfigured,
+  productImageKey,
   publicObjectUrl,
   uploadPublicObject,
 } from "@stariva/storage";
-import { isExternalImage, productImageKey } from "@/lib/catalog/product-images";
+import { isExternalImage } from "@/lib/catalog/product-images";
 
 const apply = process.argv.includes("--apply");
 const MAX_BYTES = 15 * 1024 * 1024;
