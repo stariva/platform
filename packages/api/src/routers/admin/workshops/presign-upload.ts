@@ -65,6 +65,8 @@ export const presignUpload = adminProcedure
         : workshopMaterialKey(input.slug, input.fileName);
     return {
       key,
-      uploadUrl: await createUploadUrl(key, input.contentType),
+      uploadUrl: await createUploadUrl(key, input.contentType, {
+        contentLength: input.size,
+      }),
     };
   });

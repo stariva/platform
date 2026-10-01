@@ -7,6 +7,14 @@ import {
   workshopFormSchema,
 } from "./workshop";
 
+const lesson = {
+  id: "l-1",
+  title: "Основа",
+  durationSeconds: 600,
+  videoKey: "workshops/abazhur-kupol/l-1-abc.mp4",
+  free: true,
+};
+
 const valid: WorkshopFormValues = {
   title: "Абажур «Купол»",
   slug: "abazhur-kupol",
@@ -20,15 +28,7 @@ const valid: WorkshopFormValues = {
   previewImage: "",
   whatYouLearn: [],
   materials: [],
-  lessons: [
-    {
-      id: "l-1",
-      title: "Основа",
-      durationSeconds: 600,
-      videoKey: "workshops/abazhur-kupol/l-1-abc.mp4",
-      free: true,
-    },
-  ],
+  lessons: [lesson],
   materialFiles: [],
   ozonUrl: "",
   featured: false,
@@ -52,6 +52,27 @@ describe("workshopFormSchema", () => {
     expect(errorPaths({ ...valid, price: -1 })).toEqual(["price"]);
   });
 
+  test("prices allow whole kopecks despite floating-point rounding", () => {
+    for (const price of [
+      0.01,
+      0.29,
+      1.1,
+      0.1 + 0.2,
+      21_474_835.99,
+      21_474_836,
+    ]) {
+      expect(errorPaths({ ...valid, price })).toEqual([]);
+    }
+  });
+
+  test("prices reject fractional kopecks and amounts above the maximum", () => {
+    for (const price of [
+      0.001, 1.005, 2990.999, 21_474_835.999, 21_474_836.01,
+    ]) {
+      expect(errorPaths({ ...valid, price })).toEqual(["price"]);
+    }
+  });
+
   test("a draft may be incomplete", () => {
     expect(
       errorPaths({ ...valid, status: "draft", cover: "", lessons: [] }),
@@ -61,20 +82,18 @@ describe("workshopFormSchema", () => {
   test("publishing needs a cover, a lesson and a video for every lesson", () => {
     expect(errorPaths({ ...valid, cover: "" })).toEqual(["cover"]);
     expect(errorPaths({ ...valid, lessons: [] })).toEqual(["lessons"]);
-    const [lesson] = valid.lessons;
     expect(
       errorPaths({
         ...valid,
-        lessons: [{ ...lesson!, videoKey: "" }],
+        lessons: [{ ...lesson, videoKey: "" }],
       }),
     ).toEqual(["lessons.0.videoKey"]);
   });
 
   test("lesson ids must be unique", () => {
-    const [lesson] = valid.lessons;
-    expect(
-      errorPaths({ ...valid, lessons: [lesson!, { ...lesson! }] }),
-    ).toEqual(["lessons.1.id"]);
+    expect(errorPaths({ ...valid, lessons: [lesson, { ...lesson }] })).toEqual([
+      "lessons.1.id",
+    ]);
   });
 
   test("covers are https links or site paths, nothing else", () => {

@@ -80,7 +80,11 @@ export const workshopFormSchema = z
     price: z
       .number({ error: "Укажите цену (0 — бесплатно)" })
       .min(0, "Цена не может быть отрицательной")
-      .max(MAX_RUBLES),
+      .max(MAX_RUBLES)
+      .refine(
+        (price) => Math.abs(price * 100 - Math.round(price * 100)) < 1e-6,
+        "Цена должна содержать не больше двух знаков после запятой",
+      ),
     cover: imageSrc,
     previewImage: imageSrc,
     whatYouLearn: textList(300),

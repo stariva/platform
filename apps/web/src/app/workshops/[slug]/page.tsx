@@ -35,6 +35,10 @@ import { WorkshopPurchase } from "./workshop-purchase";
 // Страницы курсов собираются по запросу и кэшируются; админка сбрасывает кэш при сохранении
 export const revalidate = 3600;
 
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {

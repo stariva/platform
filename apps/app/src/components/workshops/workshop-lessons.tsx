@@ -107,7 +107,7 @@ export function WorkshopLessons({
     );
 
   const move = (from: number, to: number) => {
-    const next = [...lessons];
+    const next = [...getLessons()];
     const [item] = next.splice(from, 1);
     if (item === undefined) return;
     next.splice(to, 0, item);
@@ -231,7 +231,9 @@ export function WorkshopLessons({
                     ) {
                       return;
                     }
-                    onChange(lessons.filter((item) => item.id !== lesson.id));
+                    onChange(
+                      getLessons().filter((item) => item.id !== lesson.id),
+                    );
                   }}
                 >
                   <IconTrash />

@@ -38,7 +38,10 @@ test("image keys are content hashed", () => {
   const bytes = new Uint8Array([1, 2, 3]);
   const key = workshopImageKey("s", bytes, "image/webp");
   assert.equal(key, workshopImageKey("s", bytes, "image/webp"));
-  assert.notEqual(key, workshopImageKey("s", new Uint8Array([9]), "image/webp"));
+  assert.notEqual(
+    key,
+    workshopImageKey("s", new Uint8Array([9]), "image/webp"),
+  );
   assert.match(key, /^workshops\/s\/[0-9a-f]{16}\.webp$/);
 });
 

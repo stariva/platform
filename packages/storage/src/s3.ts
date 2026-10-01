@@ -67,12 +67,13 @@ export async function createPresignedUrl(key: string): Promise<string> {
 export async function createUploadUrl(
   key: string,
   contentType: string,
-  options?: { expiresIn?: number },
+  options?: { expiresIn?: number; contentLength?: number },
 ): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
     ContentType: contentType,
+    ContentLength: options?.contentLength,
   });
   return getSignedUrl(getClient(), command, {
     expiresIn: options?.expiresIn ?? 3 * 3600,
