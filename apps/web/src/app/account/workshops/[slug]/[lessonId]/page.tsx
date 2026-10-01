@@ -61,7 +61,7 @@ export default async function LessonPlayerPage({
           />
 
           <div className="mt-4">
-            <p className="label-caps text-[10px] text-taupe mb-1">
+            <p className="label-caps text-[11px] text-taupe mb-1">
               Урок {index + 1} из {lessons.length} · {lesson.duration}
             </p>
             <h1 className="font-serif text-2xl text-espresso">

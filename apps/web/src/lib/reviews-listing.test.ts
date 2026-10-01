@@ -15,6 +15,7 @@ function review(id: string, rating: number, photos: string[] = []): Review {
     text: "Текст",
     date: "2026-09-03T17:30:58.000Z",
     reviewerName: "Галина П.",
+    productIds: [],
     photos,
     source: "ozon",
   };

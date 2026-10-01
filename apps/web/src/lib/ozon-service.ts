@@ -77,8 +77,8 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 }
 
 export interface ReviewFilter {
-  /** Артикул товара (offer_id) — отзывы только на него */
-  offerId?: string;
+  /** Наш товар (products.id) — отзывы только на него */
+  productId?: string;
 }
 
 /**
@@ -97,12 +97,12 @@ const getPublishedReviews = cache(async (): Promise<Review[]> => {
 });
 
 export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
-  const { offerId } = filter;
+  const { productId } = filter;
   const all = await getPublishedReviews();
 
   const byDate = (a: Review, b: Review) => b.date.localeCompare(a.date);
-  if (offerId) {
-    return all.filter((r) => r.productOfferId === offerId).sort(byDate);
+  if (productId) {
+    return all.filter((r) => r.productIds.includes(productId)).sort(byDate);
   }
 
   const score = (r: Review) =>
@@ -132,28 +132,39 @@ export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
 export async function getAllReviews({
   verifiedOnly = false,
 }: {
-  /** Только отзывы, перенесённые с Ozon */
+  /** Только отзывы с маркетплейсов (Ozon, Авито), без оставленных на сайте */
   verifiedOnly?: boolean;
 } = {}): Promise<Review[]> {
   const all = await getPublishedReviews();
   return all
-    .filter((review) => !verifiedOnly || review.source === "ozon")
+    .filter((review) => !verifiedOnly || review.source !== "site")
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export interface RatingSummary {
   average: number;
   count: number;
+  /** Откуда оценки — для подписи «на Ozon и Авито» */
+  sources: Review["source"][];
+}
+
+/** Средняя оценка по списку отзывов; null, если отзывов нет. */
+export function summarizeRatings(reviews: Review[]): RatingSummary | null {
+  if (reviews.length === 0) return null;
+  const sum = reviews.reduce((total, review) => total + review.rating, 0);
+  const sources = new Set(reviews.map((review) => review.source));
+  return {
+    average: sum / reviews.length,
+    count: reviews.length,
+    sources: (["ozon", "avito", "site"] as const).filter((s) => sources.has(s)),
+  };
 }
 
 /** Рейтинг по тем же отзывам, что показываются на сайте. */
 export async function getRatingSummary(
-  offerId?: string,
+  productId?: string,
 ): Promise<RatingSummary | null> {
-  const reviews = await getReviews({ offerId });
-  if (reviews.length === 0) return null;
-  const sum = reviews.reduce((total, review) => total + review.rating, 0);
-  return { average: sum / reviews.length, count: reviews.length };
+  return summarizeRatings(await getReviews({ productId }));
 }
 
 export { categories } from "./products";

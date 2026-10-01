@@ -6,27 +6,34 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { products } from "./products";
 
 export const reviewSource = pgEnum("review_source", [
   "ozon", // перенесён с Ozon
+  "avito", // перенесён с Авито
   "site", // оставлен напрямую на сайте
 ]);
 
 /**
  * Отзыв покупателя. Источник правды для сайта — эта таблица.
  *
- * Отзывы с Ozon переносятся сюда как есть, но на сайте виден только тот, что
- * отмечен published: фото и имя автора — его персональные данные, поэтому
- * каждый отзыв сначала проверяют в админке. Фото можно скрыть отдельно
- * (showPhotos), не убирая сам отзыв.
+ * Отзывы с маркетплейсов переносятся сюда как есть, но на сайте виден только
+ * тот, что отмечен published: фото и имя автора — его персональные данные,
+ * поэтому каждый отзыв сначала проверяют в админке. Фото можно скрыть
+ * отдельно (showPhotos), не убирая сам отзыв.
+ *
+ * К каким товарам относится отзыв — в review_products: объявление на Авито —
+ * это модель во всех цветах, а у нас отдельная карточка на каждый цвет.
  */
 export const reviews = pgTable(
   "reviews",
   {
-    // Для отзывов с Ozon — их uuid, чтобы повторный импорт не плодил дубли
+    // Для отзывов с Ozon — их uuid, с Авито — avito-…, чтобы повторный импорт
+    // не плодил дубли
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
@@ -35,7 +42,8 @@ export const reviews = pgTable(
     text: text("text").notNull(),
     // Как автор подписан на витрине: имя и первая буква фамилии
     reviewerName: text("reviewer_name").notNull(),
-    // Артикул товара (products.ozon_offer_id) — по нему отзыв попадает на карточку
+    // Товар, как он назван в источнике: артикул Ozon и название карточки или
+    // объявления. На витрину отзыв попадает по review_products, не по ним.
     productOfferId: text("product_offer_id"),
     productTitle: text("product_title"),
     // Ссылки на фото в нашем публичном бакете (пока не перенесены — на CDN Ozon)
@@ -58,6 +66,26 @@ export const reviews = pgTable(
     index("reviews_listing_idx").on(table.published, table.reviewedAt),
     index("reviews_product_offer_id_idx").on(table.productOfferId),
     check("reviews_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
+  ],
+);
+
+/**
+ * Товары, на карточках которых показывается отзыв. Отзыв без связей — отзыв
+ * о мастерской: виден только в общих блоках.
+ */
+export const reviewProducts = pgTable(
+  "review_products",
+  {
+    reviewId: text("review_id")
+      .notNull()
+      .references(() => reviews.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.reviewId, table.productId] }),
+    index("review_products_product_id_idx").on(table.productId),
   ],
 );
 

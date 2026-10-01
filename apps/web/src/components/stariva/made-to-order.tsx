@@ -62,7 +62,7 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
 
   return (
     <div className="mb-8 rounded-xl border border-espresso/8 bg-sand p-5">
-      <div className="flex items-center gap-2 label-caps text-[10px] text-terracotta mb-2">
+      <div className="flex items-center gap-2 label-caps text-[11px] text-terracotta mb-2">
         <ScissorsIcon />
         Под заказ · {madeToOrderLeadTime(product)}
       </div>
@@ -75,7 +75,7 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
 
       {/* Размер */}
       <fieldset className="mb-4">
-        <legend className="label-caps text-[9px] text-taupe/70 mb-2">
+        <legend className="label-caps text-[11px] text-taupe mb-2">
           Размер
         </legend>
         <div className="flex flex-wrap gap-1.5">
@@ -101,7 +101,7 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
 
       {/* Цвет */}
       <fieldset className="mb-5">
-        <legend className="label-caps text-[9px] text-taupe/70 mb-2">
+        <legend className="label-caps text-[11px] text-taupe mb-2">
           Цвет шнура
           <span className="normal-case tracking-normal text-espresso/70 ml-1.5">
             — {color}
@@ -351,7 +351,7 @@ function MadeToOrderDialog({
           >
             {customSize && (
               <div>
-                <p className="label-caps text-[10px] text-taupe mb-2">
+                <p className="label-caps text-[11px] text-taupe mb-2">
                   {product.category === "clothes"
                     ? "Ваши мерки, см"
                     : "Желаемые размеры, см"}
@@ -511,7 +511,7 @@ function Chip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-full label-caps text-[10px] border transition-colors ${
+      className={`px-3 py-1.5 rounded-full label-caps text-[11px] border transition-colors ${
         active
           ? "bg-espresso text-parchment border-espresso"
           : accent

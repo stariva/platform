@@ -184,7 +184,7 @@ function ToolThinking({ label }: { label: string }) {
 function Thumb({ src, alt }: { src?: string; alt: string }) {
   if (!src) {
     return (
-      <div className="h-14 w-14 shrink-0 rounded-lg bg-linen/60 flex items-center justify-center text-taupe text-[10px]">
+      <div className="h-14 w-14 shrink-0 rounded-lg bg-linen/60 flex items-center justify-center text-taupe text-[11px]">
         Stariva
       </div>
     );

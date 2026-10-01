@@ -43,7 +43,7 @@ export default function NotFound() {
         </div>
 
         {/* Description */}
-        <p className="text-mid-grey text-base lg:text-lg text-center max-w-md leading-[1.8] mb-12">
+        <p className="text-taupe text-base lg:text-lg text-center max-w-md leading-[1.8] mb-12">
           Возможно, страница была перемещена или удалена. Попробуйте найти
           нужное через меню или воспользуйтесь ссылками ниже.
         </p>
@@ -74,7 +74,7 @@ export default function NotFound() {
         {/* Divider */}
         <div className="flex items-center gap-4 mb-8 w-full max-w-sm">
           <span className="flex-1 h-px bg-light-grey" />
-          <span className="text-mid-grey text-[11px] tracking-widest uppercase font-sans">
+          <span className="text-taupe text-[11px] tracking-widest uppercase font-sans">
             или перейдите
           </span>
           <span className="flex-1 h-px bg-light-grey" />

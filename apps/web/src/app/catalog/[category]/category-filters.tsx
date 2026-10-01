@@ -128,7 +128,7 @@ export default function CategoryFilters({
         <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
           {filteredProducts.length === 0 ? (
             <div className="text-center py-28">
-              <p className="font-serif text-2xl text-espresso/40">
+              <p className="font-serif text-2xl text-espresso/60">
                 В этой категории пока нет товаров
               </p>
               <p className="text-taupe text-sm mt-2">
@@ -208,7 +208,7 @@ function ProductCard({
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {product.oldPrice && (
-              <span className="label-caps bg-terracotta text-white px-2.5 py-1 rounded-full text-[10px]">
+              <span className="label-caps bg-terracotta text-white px-2.5 py-1 rounded-full text-[11px]">
                 −{Math.round((1 - product.price / product.oldPrice) * 100)}%
               </span>
             )}
@@ -230,20 +230,20 @@ function ProductCard({
               {formatPrice(product.price)}
             </span>
             {product.oldPrice && (
-              <span className="text-taupe/60 line-through text-[12px]">
+              <span className="text-taupe line-through text-[12px]">
                 {formatPrice(product.oldPrice)}
               </span>
             )}
           </div>
         </div>
         {product.inStock ? (
-          <p className="mt-1.5 label-caps text-[9px] text-sage">В наличии</p>
+          <p className="mt-1.5 label-caps text-[11px] text-sage">В наличии</p>
         ) : madeToOrder ? (
-          <p className="mt-1.5 label-caps text-[9px] text-terracotta/90">
+          <p className="mt-1.5 label-caps text-[11px] text-terracotta/90">
             {madeToOrder.badge}
           </p>
         ) : (
-          <p className="mt-1.5 label-caps text-[9px] text-taupe">
+          <p className="mt-1.5 label-caps text-[11px] text-taupe">
             Нет в наличии
           </p>
         )}

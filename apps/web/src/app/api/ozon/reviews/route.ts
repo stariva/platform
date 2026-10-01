@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getReviews } from "@/lib/ozon-service";
+import { getProducts, getReviews } from "@/lib/ozon-service";
+import type { Review } from "@/lib/ozon-types";
 
 export const revalidate = 14400; // 4 hours
 
@@ -19,7 +20,17 @@ export async function GET(request: Request) {
     );
   }
 
-  const reviews = await getReviews({ offerId: parsedOfferId.data });
+  const offerId = parsedOfferId.data;
+  let reviews: Review[];
+  if (offerId) {
+    // Отзывы привязаны к нашим товарам — находим товар по артикулу Ozon
+    const product = (await getProducts()).find(
+      (p) => p.ozonOfferId === offerId,
+    );
+    reviews = product ? await getReviews({ productId: product.id }) : [];
+  } else {
+    reviews = await getReviews();
+  }
 
   return NextResponse.json({ reviews, total: reviews.length });
 }

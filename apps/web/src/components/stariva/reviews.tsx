@@ -6,11 +6,26 @@ import {
   getReviews,
   type RatingSummary,
 } from "@/lib/ozon-service";
-import { formatRating, pluralRatings } from "@/lib/ratings";
+import type { Review } from "@/lib/ozon-types";
+import { formatRating, pluralRatings, ratingSourcesLabel } from "@/lib/ratings";
 import { TelegramIcon } from "./icons";
 import { ReviewCard, Stars } from "./review-card";
 
-/** Displays the average rating and total number of Ozon ratings. */
+/** Магазины, откуда перенесены отзывы, — ссылки под блоком. */
+export const SOURCE_PROFILES: Partial<
+  Record<Review["source"], { name: string; href: string }>
+> = {
+  ozon: {
+    name: "Ozon",
+    href: "https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/",
+  },
+  avito: {
+    name: "Авито",
+    href: "https://www.avito.ru/brands/i3320470/all?sellerId=5c2374e4adcfe4219ff7e1702a15d27f",
+  },
+};
+
+/** Displays the average rating and total number of marketplace ratings. */
 export function RatingPanel({ summary }: { summary: RatingSummary }) {
   return (
     <div className="flex items-center gap-4 lg:gap-5">
@@ -20,7 +35,8 @@ export function RatingPanel({ summary }: { summary: RatingSummary }) {
       <div className="flex flex-col gap-1.5">
         <Stars rating={summary.average} className="w-4 h-4" />
         <span className="text-sm text-taupe">
-          {summary.count} {pluralRatings(summary.count)} на&nbsp;Ozon
+          {summary.count} {pluralRatings(summary.count)}{" "}
+          {ratingSourcesLabel(summary.sources)}
         </span>
       </div>
     </div>
@@ -32,8 +48,8 @@ interface ReviewsProps {
   verifiedOnly?: boolean;
   /** How many reviews to show */
   limit?: number;
-  /** Product page: show reviews for this Ozon offer_id */
-  offerId?: string;
+  /** Product page: show reviews linked to this product (products.id) */
+  productId?: string;
   /** Override section heading */
   heading?: string;
 }
@@ -41,16 +57,17 @@ interface ReviewsProps {
 /** Shows product reviews when available, otherwise store-wide reviews. */
 export async function Reviews({
   limit = 6,
-  offerId,
+  productId,
   heading,
   verifiedOnly = false,
 }: ReviewsProps) {
-  const isProductPage = Boolean(offerId);
-  const productReviews = isProductPage ? await getReviews({ offerId }) : [];
+  const isProductPage = Boolean(productId);
+  const productReviews = isProductPage ? await getReviews({ productId }) : [];
   // Нет отзывов на этот товар — показываем лучшие отзывы магазина
   const showProductReviews = productReviews.length > 0;
+  // Подтверждённые — с маркетплейсов, где отзыв оставляют только после покупки
   const reviews = (showProductReviews ? productReviews : await getReviews())
-    .filter((review) => !verifiedOnly || review.source === "ozon")
+    .filter((review) => !verifiedOnly || review.source !== "site")
     .slice(0, limit);
 
   if (reviews.length === 0) return null;
@@ -59,17 +76,21 @@ export async function Reviews({
   const totalReviews = (await getAllReviews({ verifiedOnly })).length;
 
   const summary = showProductReviews
-    ? await getRatingSummary(offerId)
+    ? await getRatingSummary(productId)
     : await getRatingSummary();
 
   // Ссылки на товары для общих блоков отзывов
   const productHrefs = new Map<string, string>();
   if (!showProductReviews) {
     for (const p of await getProducts()) {
-      if (p.ozonOfferId)
-        productHrefs.set(p.ozonOfferId, `/catalog/${p.category}/${p.slug}`);
+      productHrefs.set(p.id, `/catalog/${p.category}/${p.slug}`);
     }
   }
+
+  // Те же площадки, что и в подписи к рейтингу
+  const sourceProfiles = (summary?.sources ?? []).flatMap(
+    (source) => SOURCE_PROFILES[source] ?? [],
+  );
 
   const title = showProductReviews
     ? (heading ?? "Отзывы о товаре")
@@ -85,7 +106,7 @@ export async function Reviews({
           <div>
             <div className="label-caps text-terracotta mb-4 flex items-center gap-3">
               <span className="w-8 h-px bg-terracotta" />
-              Отзывы с Ozon
+              Отзывы покупателей
             </div>
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-espresso leading-[1.05] tracking-tight text-balance max-w-3xl">
               {title ?? (
@@ -122,11 +143,7 @@ export async function Reviews({
               key={review.id}
               review={review}
               index={i}
-              productHref={
-                review.productOfferId
-                  ? productHrefs.get(review.productOfferId)
-                  : undefined
-              }
+              productHref={productHrefs.get(review.productIds[0] ?? "")}
             />
           ))}
         </div>
@@ -142,17 +159,24 @@ export async function Reviews({
           </div>
         )}
 
-        <p className="mt-4 text-center label-caps text-taupe">
-          Отзывы покупателей с&nbsp;
-          <a
-            href="https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4 hover:text-terracotta transition-colors"
-          >
-            Ozon
-          </a>
-        </p>
+        {sourceProfiles.length > 0 && (
+          <p className="mt-4 text-center label-caps text-taupe">
+            Отзывы покупателей с&nbsp;
+            {sourceProfiles.map(({ name, href }, i) => (
+              <span key={name}>
+                {i > 0 && " и "}
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 hover:text-terracotta transition-colors"
+                >
+                  {name}
+                </a>
+              </span>
+            ))}
+          </p>
+        )}
       </div>
     </section>
   );

@@ -18,8 +18,8 @@ import {
 import {
   getProductBySlug,
   getProductsByCategory,
-  getRatingSummary,
   getReviews,
+  summarizeRatings,
 } from "@/lib/ozon-service";
 import { getCategoryBySlug } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
@@ -181,12 +181,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const url = `/catalog/${categorySlug}/${slug}`;
 
-  const productReviews = product.ozonOfferId
-    ? await getReviews({ offerId: product.ozonOfferId })
-    : [];
-  const rating = product.ozonOfferId
-    ? await getRatingSummary(product.ozonOfferId)
-    : null;
+  const productReviews = await getReviews({ productId: product.id });
+  const rating = summarizeRatings(productReviews);
+  // Google не разрешает размечать отзывы, собранные на других площадках, —
+  // отзывы с Авито показываем, но в разметку товара не отдаём
+  const markupReviews = productReviews.filter((r) => r.source !== "avito");
 
   return (
     <>
@@ -222,8 +221,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
         category={category.name}
         material={product.material}
         color={product.color}
-        rating={rating}
-        reviews={productReviews}
+        rating={summarizeRatings(markupReviews)}
+        reviews={markupReviews}
       />
       <FAQJsonLd
         items={categoryFaqJsonLd[categorySlug] ?? categoryFaqJsonLd.interior}
@@ -236,7 +235,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={rating}
       />
       <BuyingGuide product={product} />
-      <Reviews offerId={product.ozonOfferId} heading="Отзывы о товаре" />
+      <Reviews productId={product.id} heading="Отзывы о товаре" />
       <Footer />
       <MobileStickyBar />
     </>

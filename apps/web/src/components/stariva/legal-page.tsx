@@ -25,7 +25,7 @@ export function LegalPage({
         <div className="space-y-10 text-espresso/80 text-[15px] leading-[1.85]">
           {children}
 
-          <p className="pt-6 border-t border-espresso/10 text-espresso/50 text-[13px]">
+          <p className="pt-6 border-t border-espresso/10 text-espresso/70 text-[13px]">
             Редакция от {LEGAL_VERSION_LABEL}
           </p>
         </div>

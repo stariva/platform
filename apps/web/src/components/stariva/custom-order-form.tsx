@@ -50,7 +50,7 @@ const defaults: Values = {
   personalDataConsent: false,
 };
 const fieldClass =
-  "mt-2 block w-full rounded-xl border border-espresso/20 bg-parchment px-4 py-3 text-base text-espresso placeholder:text-taupe/80 focus:outline-none focus:ring-2 focus:ring-terracotta/40 disabled:opacity-60";
+  "mt-2 block w-full rounded-xl border border-espresso/20 bg-parchment px-4 py-3 text-base text-espresso placeholder:text-taupe focus:outline-none focus:ring-2 focus:ring-terracotta/40 disabled:opacity-60";
 const hints: Record<string, string> = {
   lampshade: "Диаметр и высота абажура в см; если знаете — тип крепления.",
   clothes:

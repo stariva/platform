@@ -122,7 +122,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             <p className="text-taupe text-lg leading-relaxed mb-6">
               {post.excerpt}
             </p>
-            <time dateTime={post.date} className="text-sm text-taupe/70">
+            <time dateTime={post.date} className="text-sm text-taupe">
               {formatDate(post.date)}
             </time>
           </header>

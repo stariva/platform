@@ -5,7 +5,7 @@ export function ResortProcess() {
     <section className="py-24 lg:py-36 bg-espresso text-parchment">
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
         <div className="mb-14">
-          <p className="label-caps text-terracotta text-[10px] mb-4">
+          <p className="label-caps text-terracotta text-[11px] mb-4">
             Как работаем
           </p>
           <h2

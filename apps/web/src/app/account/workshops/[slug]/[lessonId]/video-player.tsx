@@ -953,7 +953,7 @@ export function VideoPlayer({
           showControls && started ? "opacity-100" : "opacity-0"
         }`}
       >
-        <p className="text-[10px] uppercase tracking-[0.18em] text-white/60">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">
           {lessonLabel}
         </p>
         <p className="truncate font-serif text-base sm:text-lg">
@@ -993,7 +993,7 @@ export function VideoPlayer({
           <div className="flex max-w-md flex-col items-center gap-4 text-center">
             {nextLesson ? (
               <>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-white/60">
                   {countdown !== null
                     ? `Следующий урок через ${countdown} сек`
                     : "Следующий урок"}
@@ -1146,7 +1146,7 @@ export function VideoPlayer({
 
             <span className="ml-1.5 whitespace-nowrap text-xs tabular-nums text-white/85 sm:ml-2 sm:text-[13px]">
               {formatTime(currentTime)}
-              <span className="text-white/45"> / {formatTime(duration)}</span>
+              <span className="text-white/65"> / {formatTime(duration)}</span>
             </span>
 
             <div className="flex-1" />

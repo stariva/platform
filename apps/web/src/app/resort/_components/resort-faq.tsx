@@ -6,7 +6,7 @@ export function ResortFaq() {
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
         <div className="max-w-2xl mx-auto">
           <div className="mb-12 text-center">
-            <p className="label-caps text-terracotta text-[10px] mb-4">
+            <p className="label-caps text-terracotta text-[11px] mb-4">
               Частые вопросы
             </p>
             <h2

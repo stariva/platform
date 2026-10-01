@@ -7,6 +7,17 @@ export function pluralRatings(n: number) {
   return "оценок";
 }
 
+const MARKETPLACE_NAMES: Partial<Record<string, string>> = {
+  ozon: "Ozon",
+  avito: "Авито",
+};
+
+/** ["ozon", "avito"] → «на Ozon и Авито»; отзывы с сайта не упоминаем. */
+export function ratingSourcesLabel(sources: readonly string[]) {
+  const names = sources.flatMap((s) => MARKETPLACE_NAMES[s] ?? []);
+  return names.length > 0 ? `на ${names.join(" и ")}` : "";
+}
+
 /** 4.933 → «4,9» */
 export function formatRating(value: number) {
   return value.toFixed(1).replace(".", ",");

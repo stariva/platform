@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
-import { RatingPanel } from "@/components/stariva/reviews";
+import { RatingPanel, SOURCE_PROFILES } from "@/components/stariva/reviews";
 import { ReviewCard } from "@/components/stariva/review-card";
-import { getAllReviews, getProducts } from "@/lib/ozon-service";
+import { getAllReviews, getProducts, summarizeRatings } from "@/lib/ozon-service";
 import {
   pageWindow,
   paginateReviews,
@@ -20,7 +20,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const TITLE = "Отзывы покупателей";
 const DESCRIPTION =
-  "Все отзывы покупателей о макраме-изделиях мастерской Stariva: пояса, сумки, абажуры и декор. Реальные оценки и фото с Ozon.";
+  "Все отзывы покупателей о макраме-изделиях мастерской Stariva: пояса, сумки, абажуры и декор. Реальные оценки и фото с Ozon и Авито.";
 
 export async function generateMetadata({
   searchParams,
@@ -181,7 +181,7 @@ export default async function ReviewsPage({
 }) {
   const query = parseReviewsQuery(await searchParams);
 
-  // Как и на главной, показываем только отзывы, перенесённые с Ozon
+  // Как и на главной, только отзывы с маркетплейсов, без оставленных на сайте
   const all = await getAllReviews({ verifiedOnly: true });
   const result = paginateReviews(all, query);
   // Страница за пределами списка (старая ссылка, сменился фильтр) — на последнюю
@@ -196,18 +196,14 @@ export default async function ReviewsPage({
     ratingCounts.set(review.rating, (ratingCounts.get(review.rating) ?? 0) + 1);
   }
 
-  const summary =
-    all.length > 0
-      ? {
-          average: all.reduce((sum, r) => sum + r.rating, 0) / all.length,
-          count: all.length,
-        }
-      : null;
+  const summary = summarizeRatings(all);
+  const sourceProfiles = (summary?.sources ?? []).flatMap(
+    (source) => SOURCE_PROFILES[source] ?? [],
+  );
 
   const productHrefs = new Map<string, string>();
   for (const p of await getProducts()) {
-    if (p.ozonOfferId)
-      productHrefs.set(p.ozonOfferId, `/catalog/${p.category}/${p.slug}`);
+    productHrefs.set(p.id, `/catalog/${p.category}/${p.slug}`);
   }
 
   return (
@@ -226,7 +222,7 @@ export default async function ReviewsPage({
             <div>
               <div className="label-caps text-terracotta mb-4 flex items-center gap-3">
                 <span className="w-8 h-px bg-terracotta" />
-                Отзывы с Ozon
+                Отзывы покупателей
               </div>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-espresso leading-[1.05] tracking-tight text-balance max-w-3xl">
                 Что говорят <span className="italic">мои покупатели</span>
@@ -266,11 +262,7 @@ export default async function ReviewsPage({
                     key={review.id}
                     review={review}
                     index={i}
-                    productHref={
-                      review.productOfferId
-                        ? productHrefs.get(review.productOfferId)
-                        : undefined
-                    }
+                    productHref={productHrefs.get(review.productIds[0] ?? "")}
                   />
                 ))}
               </div>
@@ -282,17 +274,24 @@ export default async function ReviewsPage({
             </>
           )}
 
-          <p className="mt-10 text-center label-caps text-taupe">
-            Отзывы покупателей с&nbsp;
-            <a
-              href="https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-4 hover:text-terracotta transition-colors"
-            >
-              Ozon
-            </a>
-          </p>
+          {sourceProfiles.length > 0 && (
+            <p className="mt-10 text-center label-caps text-taupe">
+              Отзывы покупателей с&nbsp;
+              {sourceProfiles.map(({ name, href }, i) => (
+                <span key={name}>
+                  {i > 0 && " и "}
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-4 hover:text-terracotta transition-colors"
+                  >
+                    {name}
+                  </a>
+                </span>
+              ))}
+            </p>
+          )}
         </div>
       </section>
 

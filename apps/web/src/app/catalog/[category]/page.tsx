@@ -112,7 +112,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           <div className="relative z-10 max-w-[1440px] mx-auto px-5 lg:px-12 pt-20 pb-16 lg:pt-24 lg:pb-20">
             {/* Breadcrumb */}
             <nav
-              className="flex items-center gap-2 text-sm text-white/50 mb-8"
+              className="flex items-center gap-2 text-sm text-white/75 mb-8"
               aria-label="Breadcrumb"
             >
               <Link href="/" className="hover:text-white/80 transition-colors">
