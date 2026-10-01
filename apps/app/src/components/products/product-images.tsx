@@ -22,11 +22,14 @@ import { client } from "~/orpc/react";
 export function ProductImages({
   productId,
   images,
+  getImages,
   onChange,
   error,
 }: {
   productId?: string;
   images: string[];
+  /** Текущее значение формы: пока идёт загрузка, фото могли удалить или переставить. */
+  getImages: () => string[];
   onChange: (images: string[]) => void;
   error?: string;
 }) {
@@ -60,7 +63,7 @@ export function ProductImages({
     }
     // Одинаковые файлы получают один и тот же адрес — не дублируем
     if (uploaded.length > 0) {
-      onChange([...new Set([...images, ...uploaded])]);
+      onChange([...new Set([...getImages(), ...uploaded])]);
     }
   };
 

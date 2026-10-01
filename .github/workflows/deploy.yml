@@ -128,7 +128,9 @@ jobs:
       - name: Roll out new image on k3s
         run: |
           # Деплоймент создаётся один раз руками: stariva/infra, k3s/31-app.stariva.ru.yaml
-          if ! kubectl get deployment/stariva-app -n stariva >/dev/null 2>&1; then
+          # Пропускаем только отсутствие Deployment; ошибки доступа к API валят шаг
+          deployment="$(kubectl get deployment/stariva-app -n stariva --ignore-not-found -o name)" || exit 1
+          if [ -z "$deployment" ]; then
             echo "::notice::deployment/stariva-app ещё не создан — пропускаю выкатку админки"
             exit 0
           fi

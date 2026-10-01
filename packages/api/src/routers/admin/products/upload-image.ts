@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import {
+  detectImageType,
   isPublicStorageConfigured,
   PRODUCT_IMAGE_TYPES,
   productImageKey,
@@ -35,10 +36,17 @@ export const uploadImage = adminProcedure
       });
     }
     const bytes = new Uint8Array(await input.file.arrayBuffer());
+    // Тип файла от браузера не проверяем на слово: определяем по содержимому
+    const contentType = detectImageType(bytes);
+    if (!contentType) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Файл не похож на JPEG, PNG, WebP, AVIF или GIF",
+      });
+    }
     const key = productImageKey(
       input.productId ?? "drafts",
       bytes,
-      input.file.type,
+      contentType,
     );
-    return { url: await uploadPublicObject(key, bytes, input.file.type) };
+    return { url: await uploadPublicObject(key, bytes, contentType) };
   });

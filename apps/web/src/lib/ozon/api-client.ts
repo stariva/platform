@@ -1,6 +1,7 @@
 import { logger } from "@stariva/config";
 import { z } from "zod";
 import { env } from "@/env";
+import { freeFbsStock } from "../catalog/stock-changes";
 import type { OzonReview, Product, Review } from "../ozon-types";
 import type { ExtractedAttributes, OzonProductInfoV3 } from "./transformers";
 import {
@@ -257,7 +258,13 @@ const stocksPageSchema = z.object({
       z.object({
         product_id: z.number().int().positive(),
         stocks: z
-          .array(z.object({ present: z.number(), reserved: z.number() }))
+          .array(
+            z.object({
+              type: z.string(),
+              present: z.number(),
+              reserved: z.number(),
+            }),
+          )
           .default([]),
       }),
     )
@@ -265,7 +272,7 @@ const stocksPageSchema = z.object({
 });
 
 /**
- * Свободный остаток (present − reserved по всем складам) по product_id.
+ * Свободный остаток на складе FBS (present − reserved) по product_id.
  * Всегда свежий, без data cache. null — Ozon недоступен или нет ключей.
  */
 export async function fetchOzonStocks(): Promise<Map<number, number> | null> {
@@ -307,10 +314,7 @@ export async function fetchOzonStocks(): Promise<Map<number, number> | null> {
         return null;
       }
       for (const item of parsed.data.items) {
-        const free = item.stocks.reduce(
-          (sum, stock) => sum + Math.max(0, stock.present - stock.reserved),
-          0,
-        );
+        const free = freeFbsStock(item.stocks);
         stocks.set(item.product_id, (stocks.get(item.product_id) ?? 0) + free);
       }
       if (!parsed.data.cursor || parsed.data.items.length < 100) {

@@ -394,7 +394,8 @@ export function ProductForm({
                   <Input
                     id="sizes"
                     defaultValue={field.value.join(", ")}
-                    onBlur={(event) =>
+                    // Не onBlur: при отправке по Enter blur может не случиться
+                    onChange={(event) =>
                       field.onChange(
                         event.target.value
                           .split(",")
@@ -519,6 +520,7 @@ export function ProductForm({
             <ProductImages
               productId={id}
               images={field.value}
+              getImages={() => form.getValues("images")}
               onChange={field.onChange}
               error={errors.images?.message}
             />

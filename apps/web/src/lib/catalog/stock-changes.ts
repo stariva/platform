@@ -23,3 +23,18 @@ export function stockChanges(
       : [{ id: row.id, stockAvailable: next }];
   });
 }
+
+/**
+ * Свободный остаток для продажи с сайта: только склад FBS (наш, дома).
+ * FBO и rFBS — другие схемы, Ozon Доставка по нашему fbs_sku с них не возит.
+ */
+export function freeFbsStock(
+  stocks: { type: string; present: number; reserved: number }[],
+): number {
+  return stocks
+    .filter((stock) => stock.type === "fbs")
+    .reduce(
+      (sum, stock) => sum + Math.max(0, stock.present - stock.reserved),
+      0,
+    );
+}
