@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth/session";
 import { listUserOrders } from "@/lib/payments/orders";
-import { formatPrice, getWorkshopBySlug } from "@/lib/workshops-data";
+import { formatPrice } from "@/lib/workshops-data";
+import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,9 @@ export default async function AccountOrdersPage() {
   if (!session) return null;
 
   const orders = await listUserOrders(session.user.id);
+  const workshopsBySlug = await getWorkshopsBySlugs([
+    ...new Set(orders.map((order) => order.workshopSlug)),
+  ]);
 
   if (orders.length === 0) {
     return (
@@ -42,7 +46,7 @@ export default async function AccountOrdersPage() {
   return (
     <div className="bg-white border border-espresso/10 rounded-2xl overflow-hidden">
       {orders.map((order, i) => {
-        const workshop = getWorkshopBySlug(order.workshopSlug);
+        const workshop = workshopsBySlug.get(order.workshopSlug);
         const status = statusLabels[order.status] ?? statusLabels.pending;
         return (
           <div

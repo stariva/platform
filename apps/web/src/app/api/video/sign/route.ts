@@ -2,7 +2,8 @@ import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopLesson } from "@/lib/workshops-data";
+import { findWorkshopLesson } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 
 export const runtime = "nodejs";
 
@@ -24,9 +25,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const found = getWorkshopLesson(slug, lessonId);
-  if (!found) {
+  // Архивный курс не продаётся, но купившие продолжают его смотреть
+  const workshop = await getWorkshopBySlug(slug, "owned");
+  const lesson = workshop && findWorkshopLesson(workshop, lessonId);
+  if (!workshop || !lesson) {
     return NextResponse.json({ error: "Урок не найден" }, { status: 404 });
+  }
+  if (!lesson.videoKey) {
+    return NextResponse.json(
+      { error: "Видео ещё не загружено" },
+      { status: 404 },
+    );
   }
 
   if (!isStorageConfigured()) {
@@ -36,8 +45,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Проверка доступа
-  if (!found.lesson.free) {
+  // Проверка доступа: превью открыто всем, пока курс опубликован
+  if (!(lesson.free && workshop.status === "published")) {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
@@ -52,7 +61,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = await getDownloadUrl(found.lesson.videoKey, {
+    const url = await getDownloadUrl(lesson.videoKey, {
       expiresIn: URL_TTL_SECONDS,
     });
     return NextResponse.json(

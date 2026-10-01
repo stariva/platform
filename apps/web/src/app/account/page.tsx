@@ -6,11 +6,8 @@ import {
   listAccessibleSlugs,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import {
-  categoryLabels,
-  getWorkshopBySlug,
-  levelLabels,
-} from "@/lib/workshops-data";
+import { categoryLabels, levelLabels } from "@/lib/workshops-data";
+import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +17,9 @@ export default async function AccountCoursesPage() {
   if (!session) return null;
 
   const slugs = await listAccessibleSlugs(session.user.id);
+  const bySlug = await getWorkshopsBySlugs(slugs);
   const workshops = slugs
-    .map((slug) => getWorkshopBySlug(slug))
+    .map((slug) => bySlug.get(slug))
     .filter((w): w is NonNullable<typeof w> => Boolean(w));
 
   if (workshops.length === 0) {

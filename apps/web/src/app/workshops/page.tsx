@@ -7,14 +7,19 @@ import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import {
+  absoluteImageUrl,
   categoryLabels,
   formatPrice,
   levelColors,
   levelLabels,
+  type Workshop,
   type WorkshopCategory,
   type WorkshopLevel,
-  workshops,
 } from "@/lib/workshops-data";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
+
+// Курсы живут в базе и правятся в админке; без базы при сборке образа список был бы пустым
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Мастер-классы по макраме онлайн — видеокурсы Stariva",
@@ -55,7 +60,7 @@ function LevelBadge({ level }: { level: WorkshopLevel }) {
   );
 }
 
-function WorkshopCard({ workshop }: { workshop: (typeof workshops)[0] }) {
+function WorkshopCard({ workshop }: { workshop: Workshop }) {
   return (
     <Link
       href={`/workshops/${workshop.slug}`}
@@ -157,7 +162,8 @@ function WorkshopCard({ workshop }: { workshop: (typeof workshops)[0] }) {
   );
 }
 
-export default function WorkshopsPage() {
+export default async function WorkshopsPage() {
+  const workshops = await fetchPublishedWorkshops();
   const featured = workshops.filter((w) => w.featured);
   const _rest = workshops.filter((w) => !w.featured);
 
@@ -176,7 +182,7 @@ export default function WorkshopsPage() {
         items={workshops.map((w) => ({
           name: w.title,
           url: `/workshops/${w.slug}`,
-          image: `${BASE_URL}${w.cover}`,
+          image: absoluteImageUrl(BASE_URL, w.cover),
         }))}
       />
 

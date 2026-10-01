@@ -2,7 +2,7 @@ import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopBySlug } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 
 export const runtime = "nodejs";
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const workshop = getWorkshopBySlug(slug);
+  const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) {
     return NextResponse.json({ error: "Курс не найден" }, { status: 404 });
   }

@@ -2,7 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { hasAccess, upsertLessonProgress } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopLesson } from "@/lib/workshops-data";
+import { findWorkshopLesson } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
     parsed.data;
 
   // Урок должен существовать
-  if (!getWorkshopLesson(slug, lessonId)) {
+  const workshop = await getWorkshopBySlug(slug, "owned");
+  if (!workshop || !findWorkshopLesson(workshop, lessonId)) {
     return NextResponse.json({ error: "Урок не найден" }, { status: 404 });
   }
 

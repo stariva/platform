@@ -366,7 +366,7 @@ export function CourseJsonLd({
     "@type": "Course",
     name,
     description,
-    image: `${BASE_URL}${image}`,
+    image: image.startsWith("http") ? image : `${BASE_URL}${image}`,
     url: `${BASE_URL}${url}`,
     educationalLevel: levelMap[level],
     numberOfCredits: lessonsCount,

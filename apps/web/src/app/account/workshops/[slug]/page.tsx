@@ -6,7 +6,8 @@ import {
   hasAccess,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopBySlug, getWorkshopLessons } from "@/lib/workshops-data";
+import { getWorkshopLessons } from "@/lib/workshops-data";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { MaterialsList } from "./materials-list";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function AccountCoursePage({
   const session = await getSession();
   if (!session) return null;
 
-  const workshop = getWorkshopBySlug(slug);
+  const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
 
   // Нет доступа — отправляем на публичную страницу с покупкой
