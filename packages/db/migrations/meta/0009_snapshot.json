@@ -93,13 +93,9 @@
         "accounts_user_id_users_id_fk": {
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -169,13 +165,9 @@
         "sessions_user_id_users_id_fk": {
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -184,9 +176,7 @@
       "uniqueConstraints": {
         "sessions_token_unique": {
           "name": "sessions_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "nullsNotDistinct": false
         }
       },
@@ -269,9 +259,7 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "nullsNotDistinct": false
         }
       },
@@ -383,13 +371,9 @@
         "product_order_items_order_id_product_orders_id_fk": {
           "name": "product_order_items_order_id_product_orders_id_fk",
           "tableFrom": "product_order_items",
-          "columnsFrom": [
-            "order_id"
-          ],
+          "columnsFrom": ["order_id"],
           "tableTo": "product_orders",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -548,13 +532,9 @@
         "product_orders_user_id_users_id_fk": {
           "name": "product_orders_user_id_users_id_fk",
           "tableFrom": "product_orders",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "set null"
         }
@@ -1445,13 +1425,9 @@
         "certificates_user_id_users_id_fk": {
           "name": "certificates_user_id_users_id_fk",
           "tableFrom": "certificates",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1460,17 +1436,12 @@
       "uniqueConstraints": {
         "certificates_number_unique": {
           "name": "certificates_number_unique",
-          "columns": [
-            "number"
-          ],
+          "columns": ["number"],
           "nullsNotDistinct": false
         },
         "certificates_user_workshop_uq": {
           "name": "certificates_user_workshop_uq",
-          "columns": [
-            "user_id",
-            "workshop_slug"
-          ],
+          "columns": ["user_id", "workshop_slug"],
           "nullsNotDistinct": false
         }
       },
@@ -1518,26 +1489,18 @@
         "course_access_user_id_users_id_fk": {
           "name": "course_access_user_id_users_id_fk",
           "tableFrom": "course_access",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "course_access_order_id_orders_id_fk": {
           "name": "course_access_order_id_orders_id_fk",
           "tableFrom": "course_access",
-          "columnsFrom": [
-            "order_id"
-          ],
+          "columnsFrom": ["order_id"],
           "tableTo": "orders",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "set null"
         }
@@ -1546,10 +1509,7 @@
       "uniqueConstraints": {
         "course_access_user_workshop_uq": {
           "name": "course_access_user_workshop_uq",
-          "columns": [
-            "user_id",
-            "workshop_slug"
-          ],
+          "columns": ["user_id", "workshop_slug"],
           "nullsNotDistinct": false
         }
       },
@@ -1618,13 +1578,9 @@
         "lesson_progress_user_id_users_id_fk": {
           "name": "lesson_progress_user_id_users_id_fk",
           "tableFrom": "lesson_progress",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1633,10 +1589,7 @@
       "uniqueConstraints": {
         "lesson_progress_user_lesson_uq": {
           "name": "lesson_progress_user_lesson_uq",
-          "columns": [
-            "user_id",
-            "lesson_id"
-          ],
+          "columns": ["user_id", "lesson_id"],
           "nullsNotDistinct": false
         }
       },
@@ -1711,13 +1664,9 @@
         "orders_user_id_users_id_fk": {
           "name": "orders_user_id_users_id_fk",
           "tableFrom": "orders",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1733,10 +1682,7 @@
     "public.product_delivery_method": {
       "name": "product_delivery_method",
       "schema": "public",
-      "values": [
-        "pickup",
-        "courier"
-      ]
+      "values": ["pickup", "courier"]
     },
     "public.product_order_status": {
       "name": "product_order_status",
@@ -1755,20 +1701,12 @@
     "public.product_category": {
       "name": "product_category",
       "schema": "public",
-      "values": [
-        "clothes",
-        "interior",
-        "bags"
-      ]
+      "values": ["clothes", "interior", "bags"]
     },
     "public.product_status": {
       "name": "product_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "published",
-        "archived"
-      ]
+      "values": ["draft", "published", "archived"]
     },
     "public.product_subcategory": {
       "name": "product_subcategory",
@@ -1790,47 +1728,27 @@
     "public.review_source": {
       "name": "review_source",
       "schema": "public",
-      "values": [
-        "ozon",
-        "site"
-      ]
+      "values": ["ozon", "site"]
     },
     "public.workshop_category": {
       "name": "workshop_category",
       "schema": "public",
-      "values": [
-        "lampshades",
-        "clothing",
-        "interior"
-      ]
+      "values": ["lampshades", "clothing", "interior"]
     },
     "public.workshop_level": {
       "name": "workshop_level",
       "schema": "public",
-      "values": [
-        "beginner",
-        "intermediate",
-        "advanced"
-      ]
+      "values": ["beginner", "intermediate", "advanced"]
     },
     "public.workshop_status": {
       "name": "workshop_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "published",
-        "archived"
-      ]
+      "values": ["draft", "published", "archived"]
     },
     "public.order_status": {
       "name": "order_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "paid",
-        "canceled",
-        "refunded"
-      ]
+      "values": ["pending", "paid", "canceled", "refunded"]
     }
   },
   "schemas": {},

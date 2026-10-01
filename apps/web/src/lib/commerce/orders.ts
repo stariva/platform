@@ -130,7 +130,9 @@ export async function markProductOrderPaid(orderId: string): Promise<boolean> {
     // Не уходим ниже нуля, если два заказа на последнюю штуку оплатили одновременно
     await db
       .update(products)
-      .set({ stockAvailable: sql`greatest(${products.stockAvailable} - ${item.quantity}, 0)` })
+      .set({
+        stockAvailable: sql`greatest(${products.stockAvailable} - ${item.quantity}, 0)`,
+      })
       .where(eq(products.slug, item.productSlug));
   }
   return true;
