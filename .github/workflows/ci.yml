@@ -83,6 +83,10 @@ jobs:
         shell: bash
         run: cp .env.example .env
 
+      # Эти пакеты отдают код из dist — без сборки тесты их не находят
+      - name: Build packages used by tests
+        run: bun run build --filter=@stariva/config --filter=@stariva/storage
+
       - name: Test
         run: bun test
 

@@ -65,6 +65,11 @@ const config: NextConfig = {
       { protocol: "https", hostname: "cdn3.ozone.ru" },
       { protocol: "https", hostname: "ir.ozone.ru" },
       { protocol: "https", hostname: "s3.ozone.ru" },
+      // Наш публичный бакет с фото каталога (Yandex Object Storage)
+      { protocol: "https", hostname: "storage.yandexcloud.net" },
+      { protocol: "https", hostname: "*.storage.yandexcloud.net" },
+      // CDN перед публичным бакетом (Yandex Cloud CDN)
+      { protocol: "https", hostname: "cdn.stariva.ru" },
     ],
   },
   async redirects() {

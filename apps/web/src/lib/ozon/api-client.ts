@@ -1,6 +1,7 @@
 import { logger } from "@stariva/config";
 import { z } from "zod";
 import { env } from "@/env";
+import { freeFbsStock } from "../catalog/stock-changes";
 import type { OzonReview, Product, Review } from "../ozon-types";
 import type { ExtractedAttributes, OzonProductInfoV3 } from "./transformers";
 import {
@@ -247,6 +248,87 @@ export async function fetchOzonReviews(limit = 20): Promise<Review[] | null> {
 }
 
 // ─── Products ─────────────────────────────────────────────────────────────────
+
+// ─── Stocks ──────────────────────────────────────────────────────────────────
+
+const stocksPageSchema = z.object({
+  cursor: z.string().default(""),
+  items: z
+    .array(
+      z.object({
+        product_id: z.number().int().positive(),
+        stocks: z
+          .array(
+            z.object({
+              type: z.string(),
+              present: z.number(),
+              reserved: z.number(),
+            }),
+          )
+          .default([]),
+      }),
+    )
+    .default([]),
+});
+
+/**
+ * Свободный остаток на складе FBS (present − reserved) по product_id.
+ * Всегда свежий, без data cache. null — Ozon недоступен или нет ключей.
+ */
+export async function fetchOzonStocks(): Promise<Map<number, number> | null> {
+  const clientId = env.OZON_CLIENT_ID;
+  const apiKey = env.OZON_API_KEY;
+  if (!clientId || !apiKey) return null;
+
+  const stocks = new Map<number, number>();
+  let cursor = "";
+  try {
+    // Защита от бесконечного курсора: 50 страниц по 100 — с большим запасом
+    for (let page = 0; page < 50; page++) {
+      const res = await fetch(`${OZON_API_URL}/v4/product/info/stocks`, {
+        signal: AbortSignal.timeout(10_000),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Client-Id": clientId,
+          "Api-Key": apiKey,
+        },
+        body: JSON.stringify({
+          filter: { visibility: "ALL" },
+          cursor,
+          limit: 100,
+        }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        logger.warn("ozon.stocks.failed", {
+          status: res.status,
+          text: await res.text(),
+        });
+        return null;
+      }
+
+      const parsed = stocksPageSchema.safeParse(await res.json());
+      if (!parsed.success) {
+        logger.warn("ozon.stocks.validation_failed");
+        return null;
+      }
+      for (const item of parsed.data.items) {
+        const free = freeFbsStock(item.stocks);
+        stocks.set(item.product_id, (stocks.get(item.product_id) ?? 0) + free);
+      }
+      if (!parsed.data.cursor || parsed.data.items.length < 100) {
+        return stocks;
+      }
+      cursor = parsed.data.cursor;
+    }
+    logger.warn("ozon.stocks.too_many_pages");
+    return null;
+  } catch (error) {
+    logger.error("ozon.stocks.error", error);
+    return null;
+  }
+}
 
 export interface OzonCatalogItem {
   info: OzonProductInfoV3;

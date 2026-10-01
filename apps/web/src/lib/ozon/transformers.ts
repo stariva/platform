@@ -97,6 +97,9 @@ export function slugify(text: string): string {
   });
 }
 
+/** Длиннее — уже не характеристика, а текст описания. */
+const MAX_ATTRIBUTE_LENGTH = 200;
+
 export function extractAttributes(
   attrs: {
     id?: number;
@@ -131,11 +134,13 @@ export function extractAttributes(
     }
   }
 
-  // Fallback: ищем по ключевым словам для материала, ухода, цвета
+  // Fallback: ищем по ключевым словам для материала, ухода, цвета.
+  // Длинные значения — это описание/аннотация товара, а не характеристика:
+  // в них тоже встречаются «хлопок» и «стирка».
   for (const attr of attrs) {
     const vals = (attr.values ?? [])
       .map((v) => (v.value ?? "").trim())
-      .filter(Boolean);
+      .filter((v) => v && v.length <= MAX_ATTRIBUTE_LENGTH);
     if (!vals.length) continue;
 
     const materialKeywords =

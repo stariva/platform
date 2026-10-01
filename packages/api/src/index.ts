@@ -20,6 +20,6 @@ type RouterInputs = InferRouterInputs<AppRouter>;
  */
 type RouterOutputs = InferRouterOutputs<AppRouter>;
 
-export { createORPCContext } from "./orpc";
+export { createORPCContext, isAdminEmail } from "./orpc";
 export { type AppRouter, appRouter } from "./routers";
 export type { RouterInputs, RouterOutputs };

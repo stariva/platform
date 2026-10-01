@@ -21,6 +21,8 @@ mock.module("./catalog/products-db", () => ({
     return products;
   },
 }));
+const scheduleStockSync = mock(() => {});
+mock.module("./catalog/stock-sync", () => ({ scheduleStockSync }));
 mock.module("./ozon/api-client", () => ({
   fetchOzonReviews: fetchReviews,
 }));
@@ -136,4 +138,15 @@ test("rating summary uses the same deduplicated set as displayed reviews", async
   });
   assert.deepEqual(fetchReviews.mock.lastCall, [100]);
   assert.equal(await getRatingSummary("unknown-offer"), null);
+});
+
+test("stock sync is scheduled only after a successful catalog read", async () => {
+  scheduleStockSync.mockClear();
+  fetchProducts.mockResolvedValue(null);
+  await getProductsResult();
+  assert.equal(scheduleStockSync.mock.calls.length, 0);
+
+  fetchProducts.mockResolvedValue([product]);
+  await getProductsResult();
+  assert.equal(scheduleStockSync.mock.calls.length, 1);
 });

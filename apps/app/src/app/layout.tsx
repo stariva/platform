@@ -11,14 +11,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     env.VERCEL_ENV === "production" ? APP_CONFIG.url : "http://localhost:3000",
   ),
-  title: "Bun Turbo Starter",
-  description: "Simple monorepo with shared backend for web & mobile apps",
-  openGraph: {
-    title: "Bun Turbo Starter",
-    description: "Simple monorepo with shared backend for web & mobile apps",
-    url: APP_CONFIG.url,
-    siteName: "Bun Turbo Starter",
-  },
+  title: { default: "Stariva — админка", template: "%s — админка Stariva" },
+  description: "Управление каталогом Stariva",
+  // Админка не для поисковиков
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
@@ -39,7 +35,7 @@ const geistMono = Geist_Mono({
 
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
       <body
         className={cn(
           "bg-background text-foreground min-h-screen font-sans antialiased",
