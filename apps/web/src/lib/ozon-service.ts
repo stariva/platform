@@ -128,6 +128,19 @@ export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
   return [...firstPerProduct, ...rest];
 }
 
+/** Все опубликованные отзывы магазина, новые сверху — для страницы /reviews. */
+export async function getAllReviews({
+  verifiedOnly = false,
+}: {
+  /** Только отзывы, перенесённые с Ozon */
+  verifiedOnly?: boolean;
+} = {}): Promise<Review[]> {
+  const all = await getPublishedReviews();
+  return all
+    .filter((review) => !verifiedOnly || review.source === "ozon")
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
 export interface RatingSummary {
   average: number;
   count: number;

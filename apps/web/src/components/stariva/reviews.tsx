@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  getAllReviews,
   getProducts,
   getRatingSummary,
   getReviews,
@@ -10,7 +11,7 @@ import { TelegramIcon } from "./icons";
 import { ReviewCard, Stars } from "./review-card";
 
 /** Displays the average rating and total number of Ozon ratings. */
-function RatingPanel({ summary }: { summary: RatingSummary }) {
+export function RatingPanel({ summary }: { summary: RatingSummary }) {
   return (
     <div className="flex items-center gap-4 lg:gap-5">
       <span className="font-serif text-6xl lg:text-7xl text-espresso leading-none tabular-nums">
@@ -53,6 +54,9 @@ export async function Reviews({
     .slice(0, limit);
 
   if (reviews.length === 0) return null;
+
+  // Страница /reviews показывает те же отзывы целиком — зовём туда, если есть что ещё почитать
+  const totalReviews = (await getAllReviews({ verifiedOnly })).length;
 
   const summary = showProductReviews
     ? await getRatingSummary(offerId)
@@ -126,6 +130,17 @@ export async function Reviews({
             />
           ))}
         </div>
+
+        {totalReviews > reviews.length && (
+          <div className="mt-6 text-center">
+            <Link
+              href="/reviews"
+              className="inline-flex items-center gap-2 label-caps-md text-espresso border border-espresso/25 rounded-full px-6 py-3 hover:border-terracotta hover:text-terracotta transition-colors"
+            >
+              Все отзывы ({totalReviews}) &rarr;
+            </Link>
+          </div>
+        )}
 
         <p className="mt-4 text-center label-caps text-taupe">
           Отзывы покупателей с&nbsp;
