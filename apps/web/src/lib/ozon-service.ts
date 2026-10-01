@@ -2,6 +2,7 @@ import { logger } from "@stariva/config";
 import { cache } from "react";
 import { OZON_REVIEWS } from "@/data/ozon-reviews";
 import { fetchPublishedProducts } from "./catalog/products-db";
+import { scheduleStockSync } from "./catalog/stock-sync";
 import { isPurchasable } from "./in-stock";
 import { fetchOzonReviews } from "./ozon/api-client";
 import type { Product, Review } from "./ozon-types";
@@ -19,7 +20,10 @@ export interface ProductsResult {
  */
 export const getProductsResult = cache(async (): Promise<ProductsResult> => {
   try {
-    return { products: await fetchPublishedProducts(), status: "available" };
+    const products = await fetchPublishedProducts();
+    // Остатки FBS сверяем с Ozon после ответа, не задерживая страницу
+    scheduleStockSync();
+    return { products, status: "available" };
   } catch (error) {
     // База недоступна (в том числе при сборке образа) — это сбой, а не пустой
     // каталог: страницы показывают «каталог временно недоступен».
