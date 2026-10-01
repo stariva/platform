@@ -1,5 +1,4 @@
 import {
-  Badge,
   buttonVariants,
   Table,
   TableBody,
@@ -8,24 +7,14 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
-import { PRODUCT_CATEGORIES, PRODUCT_STATUS_LABELS } from "@stariva/validators";
+import { PRODUCT_CATEGORIES } from "@stariva/validators";
 import Link from "next/link";
 import { SiteHeader } from "~/components/layout";
+import { AvailabilitySwitches } from "~/components/products/availability-switches";
+import { PriceCell } from "~/components/products/price-cell";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
-
-const rub = new Intl.NumberFormat("ru-RU", {
-  style: "currency",
-  currency: "RUB",
-  maximumFractionDigits: 2,
-});
-
-const statusVariant = {
-  published: "default",
-  draft: "secondary",
-  archived: "outline",
-} as const;
 
 export default async function ProductsPage() {
   const products = await api.admin.products.list();
@@ -57,8 +46,7 @@ export default async function ProductsPage() {
                 <TableHead>Название</TableHead>
                 <TableHead>Категория</TableHead>
                 <TableHead className="text-right">Цена</TableHead>
-                <TableHead>Как купить</TableHead>
-                <TableHead>Статус</TableHead>
+                <TableHead>Продажа</TableHead>
                 <TableHead className="text-right">Порядок</TableHead>
               </TableRow>
             </TableHeader>
@@ -100,29 +88,17 @@ export default async function ProductsPage() {
                         {subcategories[product.subcategory]}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {rub.format(product.price)}
+                    <TableCell className="text-right">
+                      <PriceCell id={product.id} price={product.price} />
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {product.stockAvailable > 0 && (
-                          <Badge variant="default">
-                            В наличии: {product.stockAvailable}
-                          </Badge>
-                        )}
-                        {product.madeToOrder && (
-                          <Badge variant="secondary">Под заказ</Badge>
-                        )}
-                        {product.stockAvailable === 0 &&
-                          !product.madeToOrder && (
-                            <Badge variant="outline">Нет в наличии</Badge>
-                          )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant[product.status]}>
-                        {PRODUCT_STATUS_LABELS[product.status]}
-                      </Badge>
+                      <AvailabilitySwitches
+                        id={product.id}
+                        name={product.name}
+                        status={product.status}
+                        madeToOrder={product.madeToOrder}
+                        stockAvailable={product.stockAvailable}
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-right tabular-nums">
                       {product.sortOrder}
