@@ -25,6 +25,18 @@ export function productImageKey(
   return `products/${productId}/${hash}.${extension}`;
 }
 
+/** Ключ фото из отзыва в публичном бакете; устроен так же, как productImageKey. */
+export function reviewImageKey(
+  reviewId: string,
+  bytes: Uint8Array,
+  contentType: string,
+): string {
+  const extension = PRODUCT_IMAGE_TYPES[contentType];
+  if (!extension) throw new Error(`unsupported image type: ${contentType}`);
+  const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  return `reviews/${reviewId}/${hash}.${extension}`;
+}
+
 const ascii = (bytes: Uint8Array, start: number, end: number) =>
   String.fromCharCode(...bytes.subarray(start, end));
 

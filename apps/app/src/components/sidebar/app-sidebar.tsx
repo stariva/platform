@@ -15,6 +15,7 @@ import {
 } from "@stariva/ui";
 import {
   IconExternalLink,
+  IconMessageStar,
   IconPackage,
   IconPlus,
   IconSchool,
@@ -28,6 +29,7 @@ import { NavUser } from "~/components/sidebar";
 const catalog = [
   { title: "Товары", url: "/products", icon: IconPackage },
   { title: "Добавить товар", url: "/products/new", icon: IconPlus },
+  { title: "Отзывы", url: "/reviews", icon: IconMessageStar },
 ];
 
 const learning = [

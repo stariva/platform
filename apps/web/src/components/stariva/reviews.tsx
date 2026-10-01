@@ -33,8 +33,6 @@ interface ReviewsProps {
   limit?: number;
   /** Product page: show reviews for this Ozon offer_id */
   offerId?: string;
-  /** Product page: Ozon SKUs for live Seller API reviews */
-  skus?: number[];
   /** Override section heading */
   heading?: string;
 }
@@ -43,14 +41,11 @@ interface ReviewsProps {
 export async function Reviews({
   limit = 6,
   offerId,
-  skus,
   heading,
   verifiedOnly = false,
 }: ReviewsProps) {
-  const isProductPage = Boolean(offerId || skus?.length);
-  const productReviews = isProductPage
-    ? await getReviews({ offerId, skus })
-    : [];
+  const isProductPage = Boolean(offerId);
+  const productReviews = isProductPage ? await getReviews({ offerId }) : [];
   // Нет отзывов на этот товар — показываем лучшие отзывы магазина
   const showProductReviews = productReviews.length > 0;
   const reviews = (showProductReviews ? productReviews : await getReviews())
@@ -60,9 +55,7 @@ export async function Reviews({
   if (reviews.length === 0) return null;
 
   const summary = showProductReviews
-    ? offerId
-      ? await getRatingSummary(offerId, skus)
-      : null
+    ? await getRatingSummary(offerId)
     : await getRatingSummary();
 
   // Ссылки на товары для общих блоков отзывов

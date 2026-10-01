@@ -173,13 +173,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const url = `/catalog/${categorySlug}/${slug}`;
 
-  const skus = product.ozonSku ? [product.ozonSku] : undefined;
-  const productReviews =
-    product.ozonOfferId || skus
-      ? await getReviews({ offerId: product.ozonOfferId, skus })
-      : [];
+  const productReviews = product.ozonOfferId
+    ? await getReviews({ offerId: product.ozonOfferId })
+    : [];
   const rating = product.ozonOfferId
-    ? await getRatingSummary(product.ozonOfferId, skus)
+    ? await getRatingSummary(product.ozonOfferId)
     : null;
 
   return (
@@ -229,11 +227,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={rating}
       />
       <BuyingGuide product={product} />
-      <Reviews
-        offerId={product.ozonOfferId}
-        skus={product.ozonSku ? [product.ozonSku] : undefined}
-        heading="Отзывы о товаре"
-      />
+      <Reviews offerId={product.ozonOfferId} heading="Отзывы о товаре" />
       <Footer />
       <MobileStickyBar />
     </>
