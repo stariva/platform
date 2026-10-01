@@ -2,7 +2,6 @@ import { logger } from "@stariva/config";
 import { cache } from "react";
 import { fetchPublishedProducts } from "./catalog/products-db";
 import { fetchPublishedReviews } from "./catalog/reviews-db";
-import { scheduleStockSync } from "./catalog/stock-sync";
 import { isPurchasable } from "./in-stock";
 import type { Product, Review } from "./ozon-types";
 import { categories } from "./products";
@@ -13,15 +12,13 @@ export interface ProductsResult {
 }
 
 /**
- * Каталог из своей базы (таблица products). Ozon остаётся только складом и
- * доставкой готовых изделий. Один запрос на рендер: страница, метаданные и
+ * Каталог и остатки — из своей базы (таблица products). Ozon нужен только для
+ * доставки готовых изделий. Один запрос на рендер: страница, метаданные и
  * отзывы берут товары из одного результата.
  */
 export const getProductsResult = cache(async (): Promise<ProductsResult> => {
   try {
     const products = await fetchPublishedProducts();
-    // Остатки FBS сверяем с Ozon после ответа, не задерживая страницу
-    scheduleStockSync();
     return { products, status: "available" };
   } catch (error) {
     // База недоступна (в том числе при сборке образа) — это сбой, а не пустой

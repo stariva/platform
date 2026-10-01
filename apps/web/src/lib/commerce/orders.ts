@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
-import { productOrderItems, productOrders } from "@stariva/db/schema";
-import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { productOrderItems, productOrders, products } from "@stariva/db/schema";
+import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
@@ -110,7 +110,11 @@ export async function getProductOrderItems(orderId: string) {
     .where(eq(productOrderItems.orderId, orderId));
 }
 
-/** Идемпотентно помечает заказ оплаченным. Возвращает true, если статус реально сменился. */
+/**
+ * Идемпотентно помечает заказ оплаченным и списывает проданное с остатка.
+ * Возвращает true, если статус реально сменился. Списание идёт только при
+ * смене статуса, поэтому повторный webhook остаток не трогает.
+ */
 export async function markProductOrderPaid(orderId: string): Promise<boolean> {
   const result = await db
     .update(productOrders)
@@ -119,7 +123,17 @@ export async function markProductOrderPaid(orderId: string): Promise<boolean> {
       and(eq(productOrders.id, orderId), eq(productOrders.status, "pending")),
     )
     .returning({ id: productOrders.id });
-  return result.length > 0;
+  if (result.length === 0) return false;
+
+  const items = await getProductOrderItems(orderId);
+  for (const item of items) {
+    // Не уходим ниже нуля, если два заказа на последнюю штуку оплатили одновременно
+    await db
+      .update(products)
+      .set({ stockAvailable: sql`greatest(${products.stockAvailable} - ${item.quantity}, 0)` })
+      .where(eq(products.slug, item.productSlug));
+  }
+  return true;
 }
 
 export async function markProductOrderCanceled(orderId: string): Promise<void> {

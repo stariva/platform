@@ -44,8 +44,6 @@ mock.module("./catalog/products-db", () => ({
     return products;
   },
 }));
-const scheduleStockSync = mock(() => {});
-mock.module("./catalog/stock-sync", () => ({ scheduleStockSync }));
 mock.module("./catalog/reviews-db", () => ({
   fetchPublishedReviews: fetchReviews,
 }));
@@ -140,15 +138,4 @@ test("rating summary uses the same set as displayed reviews", async () => {
     average: reviews.reduce((total, r) => total + r.rating, 0) / reviews.length,
   });
   assert.equal(await getRatingSummary("unknown-offer"), null);
-});
-
-test("stock sync is scheduled only after a successful catalog read", async () => {
-  scheduleStockSync.mockClear();
-  fetchProducts.mockResolvedValue(null);
-  await getProductsResult();
-  assert.equal(scheduleStockSync.mock.calls.length, 0);
-
-  fetchProducts.mockResolvedValue([product]);
-  await getProductsResult();
-  assert.equal(scheduleStockSync.mock.calls.length, 1);
 });

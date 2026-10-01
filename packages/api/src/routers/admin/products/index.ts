@@ -3,6 +3,7 @@ import { list } from "./list";
 import { save } from "./save";
 import { setAvailability } from "./set-availability";
 import { setPrice } from "./set-price";
+import { setStock } from "./set-stock";
 import { uploadImage } from "./upload-image";
 
 export const adminProductsRouter = {
@@ -11,5 +12,6 @@ export const adminProductsRouter = {
   save,
   setAvailability,
   setPrice,
+  setStock,
   uploadImage,
 };
