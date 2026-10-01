@@ -20,7 +20,7 @@ const row: ReviewRow = {
 };
 
 test("maps a row to a storefront review", () => {
-  assert.deepEqual(reviewRowToReview(row), {
+  assert.deepEqual(reviewRowToReview(row, ["product-1"]), {
     id: "r-1",
     rating: 5,
     text: "Красивая вещь",
@@ -28,9 +28,14 @@ test("maps a row to a storefront review", () => {
     reviewerName: "Галина П.",
     productOfferId: "BELT_003",
     productTitle: "Пояс",
+    productIds: ["product-1"],
     photos: row.photos,
     source: "ozon",
   });
+});
+
+test("a review without links belongs to no product", () => {
+  assert.deepEqual(reviewRowToReview(row).productIds, []);
 });
 
 test("hidden photos never reach the storefront", () => {

@@ -8,6 +8,7 @@ const review = (overrides: Partial<Review>): Review => ({
   text: "Хороший отзыв",
   date: "2026-09-01T00:00:00.000Z",
   reviewerName: "Анна К.",
+  productIds: [],
   photos: [],
   source: "ozon",
   ...overrides,
@@ -17,12 +18,14 @@ const publishedReviews: Review[] = [
   review({
     id: "belt-old",
     productOfferId: "BELT_002",
+    productIds: ["belt-cream"],
     productTitle: "Пояс",
     date: "2026-08-01T00:00:00.000Z",
   }),
   review({
     id: "belt-new",
     productOfferId: "BELT_002",
+    productIds: ["belt-cream"],
     productTitle: "Пояс",
     rating: 3,
     date: "2026-09-01T00:00:00.000Z",
@@ -30,6 +33,7 @@ const publishedReviews: Review[] = [
   review({
     id: "bag",
     productOfferId: "BAG_001",
+    productIds: ["bag-white"],
     productTitle: "Сумка",
     photos: ["https://cdn.example/a.jpg"],
   }),
@@ -55,6 +59,7 @@ const {
   getInStockProductsResult,
   getReviews,
   getRatingSummary,
+  summarizeRatings,
 } = await import("./ozon-service");
 
 const product: Product = {
@@ -114,13 +119,28 @@ test("in-stock results filter purchasable products and retain catalog availabili
   });
 });
 
-test("product reviews contain only that offer, newest first", async () => {
-  const reviews = await getReviews({ offerId: "BELT_002" });
+test("product reviews contain only that product, newest first", async () => {
+  const reviews = await getReviews({ productId: "belt-cream" });
   assert.deepEqual(
     reviews.map((r) => r.id),
     ["belt-new", "belt-old"],
   );
-  assert.deepEqual(await getReviews({ offerId: "unknown-offer" }), []);
+  assert.deepEqual(await getReviews({ productId: "unknown-product" }), []);
+});
+
+test("a review linked to several products shows on each of them", async () => {
+  const elka = review({
+    id: "elka",
+    source: "avito",
+    productIds: ["elka-beige", "elka-khaki"],
+  });
+  for (const productId of ["elka-beige", "elka-khaki"]) {
+    fetchReviews.mockResolvedValueOnce([elka]);
+    assert.deepEqual(
+      (await getReviews({ productId })).map((r) => r.id),
+      ["elka"],
+    );
+  }
 });
 
 test("store-wide reviews put photo reviews first and spread products", async () => {
@@ -132,10 +152,21 @@ test("store-wide reviews put photo reviews first and spread products", async () 
 });
 
 test("rating summary uses the same set as displayed reviews", async () => {
-  const reviews = await getReviews({ offerId: "BELT_002" });
-  assert.deepEqual(await getRatingSummary("BELT_002"), {
+  const reviews = await getReviews({ productId: "belt-cream" });
+  assert.deepEqual(await getRatingSummary("belt-cream"), {
     count: reviews.length,
     average: reviews.reduce((total, r) => total + r.rating, 0) / reviews.length,
+    sources: ["ozon"],
   });
-  assert.equal(await getRatingSummary("unknown-offer"), null);
+  assert.equal(await getRatingSummary("unknown-product"), null);
+});
+
+test("rating summary lists marketplaces in a stable order", () => {
+  const summary = summarizeRatings([
+    review({ source: "site" }),
+    review({ source: "avito" }),
+    review({ source: "ozon" }),
+  ]);
+  assert.deepEqual(summary?.sources, ["ozon", "avito", "site"]);
+  assert.equal(summarizeRatings([]), null);
 });

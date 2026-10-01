@@ -4,9 +4,7 @@ import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
 import { revalidateStorefront } from "../../../storefront";
-
-/** Страницы витрины, где показываются отзывы: главная, B2B, курорты и карточки товаров. */
-const REVIEW_PAGES = ["/", "/b2b", "/resort", "/catalog/[category]/[slug]"];
+import { REVIEW_PAGES } from "./pages";
 
 /**
  * Меняет, как отзыв выглядит на сайте: показан ли он, видны ли его фото и как

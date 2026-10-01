@@ -71,6 +71,13 @@
       "when": 1790880719300,
       "tag": "0009_workshop_images_to_cdn",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790884098310,
+      "tag": "0010_avito_reviews",
+      "breakpoints": true
     }
   ]
 }

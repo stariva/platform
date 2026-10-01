@@ -87,11 +87,14 @@ export interface Review {
   text: string;
   date: string; // ISO-8601
   reviewerName: string;
-  /** Артикул продавца (offer_id) — по нему отзыв привязывается к товару */
+  /** Артикул Ozon (offer_id), как он указан в источнике */
   productOfferId?: string;
+  /** Название товара или объявления в источнике */
   productTitle?: string;
+  /** Наши товары, на карточках которых показывается отзыв */
+  productIds: string[];
   photos: string[];
-  source: "ozon" | "site";
+  source: "ozon" | "avito" | "site";
 }
 
 // ─── Internal Product Types ───────────────────────────────────────────────────
