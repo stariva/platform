@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ozonProductInfoV3Schema, transformOzonProduct } from "./transformers";
+import {
+  extractAttributes,
+  ozonProductInfoV3Schema,
+  transformOzonProduct,
+} from "./transformers";
 
 const product = {
   id: 1,
@@ -104,4 +108,14 @@ test("product is in stock only when Ozon has unreserved stock", () => {
   assert.equal(withStocks([{ present: 1, reserved: 1 }]), false);
   assert.equal(withStocks([]), false);
   assert.equal(transformOzonProduct(product).inStock, false);
+});
+
+test("a long annotation that mentions cotton is not taken for the material", () => {
+  const annotation = `Костюм макраме из хлопкового шнура. ${"Описание. ".repeat(40)}Стирка ручная.`;
+  const attrs = extractAttributes([
+    { id: 4180, values: [{ value: annotation }] },
+    { id: 8229, values: [{ value: "100% хлопок" }] },
+  ]);
+  assert.equal(attrs.material, "100% хлопок");
+  assert.equal(attrs.careInstructions, undefined);
 });
