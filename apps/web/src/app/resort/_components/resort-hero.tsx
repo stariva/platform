@@ -24,11 +24,11 @@ export function ResortHero() {
       <div className="relative max-w-[1440px] mx-auto px-5 lg:px-12 pb-16 lg:pb-24 pt-32">
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 mb-6">
-            <span className="label-caps text-white/60 text-[10px]">
+            <span className="label-caps text-white/60 text-[11px]">
               Для бизнеса
             </span>
             <span className="w-6 h-px bg-white/30" />
-            <span className="label-caps text-terracotta text-[10px]">
+            <span className="label-caps text-terracotta text-[11px]">
               Базы отдыха
             </span>
           </div>
@@ -77,7 +77,7 @@ export function ResortHero() {
               <div className="font-serif text-white text-3xl leading-none mb-1">
                 {s.value}
               </div>
-              <div className="label-caps text-white/50 text-[10px]">
+              <div className="label-caps text-white/75 text-[11px]">
                 {s.label}
               </div>
             </div>

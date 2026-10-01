@@ -108,7 +108,7 @@ export function NewsletterForm({ source = "blog" }: NewsletterFormProps) {
                     placeholder="Ваш email"
                     autoComplete="email"
                     disabled={submitting}
-                    className="rounded-full border-espresso/15 bg-parchment text-espresso placeholder:text-taupe/60 focus-visible:border-terracotta"
+                    className="rounded-full border-espresso/15 bg-parchment text-espresso placeholder:text-taupe focus-visible:border-terracotta"
                     {...field}
                   />
                 </FormControl>

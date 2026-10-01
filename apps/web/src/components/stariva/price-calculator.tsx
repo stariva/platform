@@ -130,7 +130,7 @@ export function PriceCalculator({ selection, onChange }: PriceCalculatorProps) {
             <div className="font-serif text-3xl lg:text-4xl leading-none">
               {formatRub(estimate.min)} – {formatRub(estimate.max)}
             </div>
-            <p className="text-parchment/55 text-[12px] leading-relaxed mt-3">
+            <p className="text-parchment/70 text-[12px] leading-relaxed mt-3">
               Ориентировочный диапазон. Точную цену мастер подтвердит после
               обсуждения деталей.
             </p>

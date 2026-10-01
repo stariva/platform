@@ -267,7 +267,7 @@ export default function B2BPage() {
                 <span className="font-serif text-3xl lg:text-4xl text-white leading-none">
                   {s.value}
                 </span>
-                <span className="label-caps text-white/50 text-[10px] leading-tight whitespace-pre">
+                <span className="label-caps text-white/75 text-[11px] leading-tight whitespace-pre">
                   {s.label}
                 </span>
               </div>
@@ -401,7 +401,7 @@ export default function B2BPage() {
                   <h3 className="font-serif text-xl lg:text-2xl text-parchment lg:w-48 flex-shrink-0">
                     {item.title}
                   </h3>
-                  <p className="text-parchment/55 text-[14px] leading-[1.85] lg:max-w-2xl">
+                  <p className="text-parchment/70 text-[14px] leading-[1.85] lg:max-w-2xl">
                     {item.desc}
                   </p>
                 </div>
@@ -440,7 +440,7 @@ export default function B2BPage() {
                       viewBox="0 0 16 16"
                       fill="none"
                       aria-hidden="true"
-                      className="flex-shrink-0 transition-transform duration-200 group-open:rotate-180 text-espresso/40"
+                      className="flex-shrink-0 transition-transform duration-200 group-open:rotate-180 text-espresso/60"
                     >
                       <path
                         d="M3 6l5 5 5-5"
@@ -507,7 +507,7 @@ export default function B2BPage() {
                 <PhoneIcon className="w-5 h-5 shrink-0" />
                 <span className="font-serif text-xl">+7 977 872 25 46</span>
               </a>
-              <p className="text-espresso/40 text-[11px] label-caps pt-2 border-t border-espresso/8">
+              <p className="text-espresso/70 text-[11px] label-caps pt-2 border-t border-espresso/8">
                 Работаем по договору — самозанятые, документы для бухгалтерии
               </p>
             </div>

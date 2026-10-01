@@ -54,7 +54,7 @@ export function Stars({
 
 function OzonBadge() {
   return (
-    <span className="inline-flex items-center gap-1 label-caps text-[9px] bg-[#005BFF]/8 text-[#005BFF] px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 label-caps text-[11px] bg-[#005BFF]/8 text-[#005BFF] px-2 py-0.5 rounded-full">
       <svg
         viewBox="0 0 16 16"
         fill="currentColor"

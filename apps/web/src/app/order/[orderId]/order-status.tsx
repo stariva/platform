@@ -166,7 +166,7 @@ export function OrderStatus({ orderId }: { orderId: string }) {
 
       {order.postings.length > 0 && (
         <div className="border-t border-espresso/8 pt-3">
-          <p className="label-caps text-taupe text-[10px] mb-2">Отправления</p>
+          <p className="label-caps text-taupe text-[11px] mb-2">Отправления</p>
           {order.postings.map((p) => (
             <div
               key={p.postingNumber}

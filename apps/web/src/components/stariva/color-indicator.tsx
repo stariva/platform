@@ -36,7 +36,7 @@ export function ColorIndicator({
         aria-label={`Цвет: ${color.name}`}
       />
       {showLabel && (
-        <span className="label-caps text-[10px] text-espresso">
+        <span className="label-caps text-[11px] text-espresso">
           {color.name}
         </span>
       )}
@@ -71,7 +71,7 @@ export function ColorSwatches({
         />
       ))}
       {remainingCount > 0 && (
-        <span className="label-caps text-[9px] text-taupe ml-1">
+        <span className="label-caps text-[11px] text-taupe ml-1">
           +{remainingCount}
         </span>
       )}

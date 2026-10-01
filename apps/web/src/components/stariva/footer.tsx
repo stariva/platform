@@ -207,7 +207,7 @@ export function Footer() {
 
         {/* Legal */}
         <div className="mt-12 pt-8 border-t border-parchment/15">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 text-[11px] leading-relaxed text-parchment/55">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 text-[11px] leading-relaxed text-parchment/70">
             <div>
               {SELLER.shortName}, ИНН {SELLER.inn} — самозанятый (НПД)
             </div>
@@ -230,7 +230,7 @@ export function Footer() {
               <CookieSettingsLink className="hover:text-linen transition-colors text-left" />
             </div>
           </div>
-          <div className="mt-4 text-[11px] text-parchment/40">
+          <div className="mt-4 text-[11px] text-parchment/60">
             © Stariva, 2018–2026. Все права защищены. Каждое изделие уникально.
           </div>
         </div>

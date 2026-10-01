@@ -16,15 +16,15 @@
 .counter { position: absolute; right: 24px; bottom: 16px; color: #fff; padding: 5px 10px; background: #16151366; border-radius: 20px; font-size: 11px; letter-spacing: .12em; font-variant-numeric: tabular-nums; }
 .counter span { opacity: .65; }
 .tabs { position: relative; z-index: 2; display: flex; margin: 0 24px; border-bottom: 1px solid #16151326; }
-.tab { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; color: inherit; opacity: .6; cursor: pointer; font-size: 12px; transition: opacity 160ms ease; }
+.tab { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; color: inherit; opacity: .7; cursor: pointer; font-size: 12px; transition: opacity 160ms ease; }
 .tab:hover, .tab[aria-selected="true"] { opacity: 1; }
 .tab::after { position: absolute; content: ""; bottom: -1px; left: 0; right: 0; height: 2px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 260ms cubic-bezier(.23,1,.32,1); }
 .tab[aria-selected="true"]::after { transform: scaleX(1); }
-.tabNumber { display: none; font-size: 10px; opacity: .55; }
+.tabNumber { display: none; font-size: 11px; opacity: .75; }
 .copy { position: relative; display: grid; padding: 24px 24px 30px; }
 .panel { grid-area: 1 / 1; min-width: 0; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 260ms ease, transform 350ms cubic-bezier(.23,1,.32,1); }
 .panel[data-active="true"] { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.eyebrow { font-size: 9px; line-height: 1.5; letter-spacing: .2em; text-transform: uppercase; opacity: .75; }
+.eyebrow { font-size: 11px; line-height: 1.5; letter-spacing: .2em; text-transform: uppercase; opacity: .75; }
 .title { margin-top: 12px; font-family: var(--font-serif), Georgia, serif; font-size: 52px; line-height: .98; letter-spacing: -.035em; min-height: 110px; text-wrap: balance; }
 .title span { font-style: italic; }
 .title[data-long="true"] { font-size: 36px; }
@@ -58,7 +58,6 @@
   .counter { right: 5%; bottom: 44px; }
   .copy { display: grid; align-content: center; height: 100%; min-height: 680px; padding: 44px 5% 124px; }
   .panel { width: 44%; }
-  .eyebrow { font-size: 11px; }
   .title { margin-top: 22px; font-size: clamp(78px, 7.2vw, 108px); min-height: 180px; }
   .title[data-long="true"] { font-size: clamp(54px, 5vw, 76px); }
   .description { margin-top: 24px; font-size: 15px; min-height: 74px; }

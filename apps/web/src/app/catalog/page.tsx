@@ -107,7 +107,7 @@ function ProductCard({ product }: { product: Product; index?: number }) {
         )}
       </div>
       <p
-        className={`mt-1.5 label-caps text-[9px] ${
+        className={`mt-1.5 label-caps text-[11px] ${
           product.inStock
             ? "text-sage"
             : product.madeToOrder
