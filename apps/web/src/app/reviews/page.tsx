@@ -6,7 +6,11 @@ import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { RatingPanel, SOURCE_PROFILES } from "@/components/stariva/reviews";
 import { ReviewCard } from "@/components/stariva/review-card";
-import { getAllReviews, getProducts, summarizeRatings } from "@/lib/ozon-service";
+import {
+  getAllReviews,
+  getProducts,
+  summarizeRatings,
+} from "@/lib/ozon-service";
 import {
   pageWindow,
   paginateReviews,

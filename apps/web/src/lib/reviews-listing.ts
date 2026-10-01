@@ -23,7 +23,10 @@ export function parseReviewsQuery(params: RawSearchParams): ReviewsQuery {
   const page = Number(first(params.page));
   return {
     photos: first(params.photos) === "1",
-    rating: Number.isInteger(rating) && rating >= 1 && rating <= 5 ? rating : undefined,
+    rating:
+      Number.isInteger(rating) && rating >= 1 && rating <= 5
+        ? rating
+        : undefined,
     page: Number.isInteger(page) && page >= 1 ? page : 1,
   };
 }
