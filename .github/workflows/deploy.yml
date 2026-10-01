@@ -127,7 +127,7 @@ jobs:
 
       - name: Roll out new image on k3s
         run: |
-          # Деплоймент создаётся один раз руками: kubectl apply -f deploy/k8s/app.yaml
+          # Деплоймент создаётся один раз руками: stariva/infra, k3s/31-app.stariva.ru.yaml
           if ! kubectl get deployment/stariva-app -n stariva >/dev/null 2>&1; then
             echo "::notice::deployment/stariva-app ещё не создан — пропускаю выкатку админки"
             exit 0
