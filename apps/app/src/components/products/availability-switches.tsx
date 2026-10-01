@@ -25,6 +25,7 @@ export function AvailabilitySwitches({
   const router = useRouter();
   const [published, setPublished] = useState(status === "published");
   const [toOrder, setToOrder] = useState(madeToOrder);
+  const [previousProps, setPreviousProps] = useState({ status, madeToOrder });
 
   const mutation = useMutation({
     ...orpc.admin.products.setAvailability.mutationOptions(),
@@ -40,6 +41,18 @@ export function AvailabilitySwitches({
       toast.error(error.message || "Не сохранилось");
     },
   });
+
+  if (
+    status !== previousProps.status ||
+    madeToOrder !== previousProps.madeToOrder
+  ) {
+    setPreviousProps({ status, madeToOrder });
+    // The current mutation owns optimistic values until it succeeds or fails.
+    if (!mutation.isPending) {
+      setPublished(status === "published");
+      setToOrder(madeToOrder);
+    }
+  }
 
   const archived = status === "archived" && !published;
 

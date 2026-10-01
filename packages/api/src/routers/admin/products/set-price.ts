@@ -22,6 +22,11 @@ export const setPrice = adminProcedure
   )
   .handler(async ({ context, input }) => {
     const price = Math.round(input.price * 100);
+    if (price <= 0) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Минимальная цена — 0.01 ₽",
+      });
+    }
 
     const [current] = await context.db
       .select({

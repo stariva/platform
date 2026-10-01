@@ -18,7 +18,13 @@ export function PriceCell({ id, price }: { id: string; price: number }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [shown, setShown] = useState(price);
+  const [previousPrice, setPreviousPrice] = useState(price);
   const cancelled = useRef(false);
+
+  if (price !== previousPrice) {
+    setPreviousPrice(price);
+    setShown(price);
+  }
 
   const mutation = useMutation({
     ...orpc.admin.products.setPrice.mutationOptions(),
