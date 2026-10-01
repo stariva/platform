@@ -14,8 +14,14 @@ const liveReviews: Review[] = [
 const fetchReviews = mock(async (_limit: number) => liveReviews);
 const fetchProducts = mock(async (): Promise<Product[] | null> => null);
 
+mock.module("./catalog/products-db", () => ({
+  fetchPublishedProducts: async () => {
+    const products = await fetchProducts();
+    if (products === null) throw new Error("db_unavailable");
+    return products;
+  },
+}));
 mock.module("./ozon/api-client", () => ({
-  fetchFromOzon: fetchProducts,
   fetchOzonReviews: fetchReviews,
 }));
 
@@ -40,11 +46,13 @@ const product: Product = {
   category: "interior",
   subcategory: "lampshades",
   inStock: true,
+  stockAvailable: 1,
+  madeToOrder: true,
   ozonSku: 1234,
   material: "Хлопок",
 };
 
-test("catalog results distinguish unavailable Ozon from a successful empty catalog", async () => {
+test("catalog results distinguish an unavailable database from a successful empty catalog", async () => {
   for (const products of [null, []]) {
     fetchProducts.mockResolvedValue(products);
     const expected = {

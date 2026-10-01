@@ -196,6 +196,11 @@ export function transformOzonToProduct(
     ozonId: ozonProduct.id,
     ozonUrl: `https://www.ozon.ru/product/${ozonProduct.id}`,
     inStock: ozonProduct.stocks.present > 0,
+    stockAvailable: Math.max(
+      0,
+      ozonProduct.stocks.present - ozonProduct.stocks.reserved,
+    ),
+    madeToOrder: true,
     material,
     dimensions,
     careInstructions: extractCareInstructions(ozonProduct.description),

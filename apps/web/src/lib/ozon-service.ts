@@ -1,7 +1,9 @@
 import { logger } from "@stariva/config";
+import { cache } from "react";
 import { OZON_REVIEWS } from "@/data/ozon-reviews";
+import { fetchPublishedProducts } from "./catalog/products-db";
 import { isPurchasable } from "./in-stock";
-import { fetchFromOzon, fetchOzonReviews } from "./ozon/api-client";
+import { fetchOzonReviews } from "./ozon/api-client";
 import type { Product, Review } from "./ozon-types";
 import { categories } from "./products";
 
@@ -10,16 +12,21 @@ export interface ProductsResult {
   status: "available" | "unavailable";
 }
 
-export async function getProductsResult(): Promise<ProductsResult> {
-  const ozonProducts = await fetchFromOzon();
-
-  if (ozonProducts !== null) {
-    return { products: ozonProducts, status: "available" };
+/**
+ * Каталог из своей базы (таблица products). Ozon остаётся только складом и
+ * доставкой готовых изделий. Один запрос на рендер: страница, метаданные и
+ * отзывы берут товары из одного результата.
+ */
+export const getProductsResult = cache(async (): Promise<ProductsResult> => {
+  try {
+    return { products: await fetchPublishedProducts(), status: "available" };
+  } catch (error) {
+    // База недоступна (в том числе при сборке образа) — это сбой, а не пустой
+    // каталог: страницы показывают «каталог временно недоступен».
+    logger.warn("catalog.products.unavailable", { error: String(error) });
+    return { products: [], status: "unavailable" };
   }
-
-  logger.warn("ozon.products.unavailable");
-  return { products: [], status: "unavailable" };
-}
+});
 
 export async function getProducts(): Promise<Product[]> {
   return (await getProductsResult()).products;

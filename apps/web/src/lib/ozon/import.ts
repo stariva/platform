@@ -33,11 +33,6 @@ export function ozonItemToProductRow(
   const oldPrice =
     product.oldPrice === undefined ? null : Math.round(product.oldPrice * 100);
 
-  // Свободный остаток по всем складам (у нас это FBS-склад дома)
-  const free = (info.stocks?.stocks ?? []).reduce(
-    (sum, stock) => sum + Math.max(0, stock.present - stock.reserved),
-    0,
-  );
   const ozonSku = product.ozonSku ?? null;
 
   return {
@@ -63,7 +58,7 @@ export function ozonItemToProductRow(
       ozonOfferId: info.offer_id || null,
       ozonSku,
       // Без SKU товар нельзя отправить Ozon Доставкой — продаём только под заказ
-      stockAvailable: ozonSku === null ? 0 : free,
+      stockAvailable: ozonSku === null ? 0 : product.stockAvailable,
       stockSyncedAt: now,
       sortOrder,
     },
