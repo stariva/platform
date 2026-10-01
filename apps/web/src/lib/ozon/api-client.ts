@@ -248,7 +248,13 @@ export async function fetchOzonReviews(limit = 20): Promise<Review[] | null> {
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
-export async function fetchFromOzon(): Promise<Product[] | null> {
+export interface OzonCatalogItem {
+  info: OzonProductInfoV3;
+  attrs?: ExtractedAttributes;
+}
+
+/** Товары Ozon в исходном виде — с поштучными остатками, до перевода в Product. */
+export async function fetchOzonCatalog(): Promise<OzonCatalogItem[] | null> {
   const clientId = env.OZON_CLIENT_ID;
   const apiKey = env.OZON_API_KEY;
 
@@ -271,12 +277,16 @@ export async function fetchFromOzon(): Promise<Product[] | null> {
 
     const attrsMap = await fetchProductAttributes(productIds, clientId, apiKey);
 
-    const products = items.map((item) =>
-      transformOzonProduct(item, attrsMap.get(item.id)),
-    );
-    return products;
+    return items.map((info) => ({ info, attrs: attrsMap.get(info.id) }));
   } catch (error) {
     logger.error("ozon.fetch.error", error);
     return null;
   }
+}
+
+export async function fetchFromOzon(): Promise<Product[] | null> {
+  const catalog = await fetchOzonCatalog();
+  return (
+    catalog?.map(({ info, attrs }) => transformOzonProduct(info, attrs)) ?? null
+  );
 }
