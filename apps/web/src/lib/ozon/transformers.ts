@@ -175,20 +175,42 @@ export function extractAttributes(
   return result;
 }
 
-/** Чистый текст для карточки (без HTML-тегов), не длиннее 200 символов. */
-export function toShortDescription(description: string, name: string): string {
-  const plainDescription = description
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<\/(p|div|h\d)>/gi, " ")
-    .replace(/<li>/gi, " • ")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+const SHORT_DESCRIPTION_MAX = 200;
 
-  if (!plainDescription) return name;
-  if (plainDescription.length <= 200) return plainDescription;
-  // Обрезаем по границе слова, чтобы не оборвать слово посередине
-  return `${plainDescription.slice(0, 200).replace(/\s+\S*$/, "")}…`;
+/**
+ * Чистый текст для карточки (без HTML-тегов), не длиннее 200 символов.
+ * Абзацы склеиваем через точку, чтобы заголовок-зачин не слипался со вторым
+ * абзацем, а обрезаем по границе предложения.
+ */
+export function toShortDescription(description: string, name: string): string {
+  const text = description
+    .replace(/(?:<br\s*\/?>\s*){2,}/gi, "</p>")
+    .replace(/<\/(?:p|div|h\d|li)>/gi, "</p>")
+    .split("</p>")
+    .map((part) =>
+      part
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean)
+    .map((part) => (/[.!?…:]$/.test(part) ? part : `${part}.`))
+    .join(" ");
+
+  if (!text) return name;
+  if (text.length <= SHORT_DESCRIPTION_MAX) return text;
+
+  const head = text.slice(0, SHORT_DESCRIPTION_MAX);
+  const sentenceEnd = Math.max(
+    head.lastIndexOf(". "),
+    head.lastIndexOf("! "),
+    head.lastIndexOf("? "),
+  );
+  if (sentenceEnd >= SHORT_DESCRIPTION_MAX / 2) {
+    return head.slice(0, sentenceEnd + 1);
+  }
+  // Иначе по границе слова, чтобы не оборвать слово посередине
+  return `${head.replace(/\s+\S*$/, "")}…`;
 }
 
 /** Maps Ozon product data and attributes to the storefront product model. */

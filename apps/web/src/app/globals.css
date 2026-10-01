@@ -179,6 +179,36 @@
   }
 }
 
+/* Описание товара приходит HTML-ом (абзацы, списки): preflight сбрасывает
+   отступы и маркеры, возвращаем их только для этого блока */
+.product-description {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.product-description > * + * {
+  margin-top: 1rem;
+}
+.product-description p > strong:only-child {
+  @apply font-serif text-lg font-medium text-espresso;
+}
+.product-description p:has(> strong:only-child) {
+  margin-top: 1.75rem;
+}
+.product-description ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.product-description ul ul {
+  margin-top: 0.5rem;
+  list-style: circle;
+}
+.product-description li + li {
+  margin-top: 0.4rem;
+}
+.product-description li::marker {
+  color: var(--terracotta);
+}
+
 /* Custom scrollbar for atmosphere horizontal scroll */
 .atmosphere-scroll::-webkit-scrollbar {
   height: 4px;

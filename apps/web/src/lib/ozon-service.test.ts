@@ -1,17 +1,40 @@
 import { mock, test } from "bun:test";
 import assert from "node:assert/strict";
-import { OZON_REVIEWS } from "@/data/ozon-reviews";
 import type { Product, Review } from "./ozon-types";
 
-const snapshot = OZON_REVIEWS[0];
-if (!snapshot?.productOfferId) throw new Error("Missing snapshot review");
+const review = (overrides: Partial<Review>): Review => ({
+  id: "r",
+  rating: 5,
+  text: "Хороший отзыв",
+  date: "2026-09-01T00:00:00.000Z",
+  reviewerName: "Анна К.",
+  photos: [],
+  source: "ozon",
+  ...overrides,
+});
 
-const liveReviews: Review[] = [
-  { ...snapshot, productSku: 1234, rating: 1 },
-  { ...snapshot, id: "new-live-review", productSku: 1234, rating: 3 },
-  { ...snapshot, id: "other-product", productSku: 5678, rating: 2 },
+const publishedReviews: Review[] = [
+  review({
+    id: "belt-old",
+    productOfferId: "BELT_002",
+    productTitle: "Пояс",
+    date: "2026-08-01T00:00:00.000Z",
+  }),
+  review({
+    id: "belt-new",
+    productOfferId: "BELT_002",
+    productTitle: "Пояс",
+    rating: 3,
+    date: "2026-09-01T00:00:00.000Z",
+  }),
+  review({
+    id: "bag",
+    productOfferId: "BAG_001",
+    productTitle: "Сумка",
+    photos: ["https://cdn.example/a.jpg"],
+  }),
 ];
-const fetchReviews = mock(async (_limit: number) => liveReviews);
+const fetchReviews = mock(async (): Promise<Review[]> => publishedReviews);
 const fetchProducts = mock(async (): Promise<Product[] | null> => null);
 
 mock.module("./catalog/products-db", () => ({
@@ -23,8 +46,8 @@ mock.module("./catalog/products-db", () => ({
 }));
 const scheduleStockSync = mock(() => {});
 mock.module("./catalog/stock-sync", () => ({ scheduleStockSync }));
-mock.module("./ozon/api-client", () => ({
-  fetchOzonReviews: fetchReviews,
+mock.module("./catalog/reviews-db", () => ({
+  fetchPublishedReviews: fetchReviews,
 }));
 
 const {
@@ -93,50 +116,29 @@ test("in-stock results filter purchasable products and retain catalog availabili
   });
 });
 
-test("product reviews filter the shared live request by SKU and deduplicate snapshot IDs", async () => {
-  const reviews = await getReviews({
-    offerId: snapshot.productOfferId,
-    skus: [1234],
-  });
-
-  assert.deepEqual(fetchReviews.mock.lastCall, [100]);
-  assert.equal(reviews.filter((review) => review.id === snapshot.id).length, 1);
-  assert.equal(
-    reviews.some((review) => review.id === "new-live-review"),
-    true,
+test("product reviews contain only that offer, newest first", async () => {
+  const reviews = await getReviews({ offerId: "BELT_002" });
+  assert.deepEqual(
+    reviews.map((r) => r.id),
+    ["belt-new", "belt-old"],
   );
-  assert.equal(
-    reviews.some((review) => review.id === "other-product"),
-    false,
-  );
-  assert.equal(
-    (await getReviews({ skus: [1234] })).some(
-      (review) => review.id === "other-product",
-    ),
-    false,
-  );
-
-  assert.equal(
-    (await getReviews()).some((review) => review.id === "other-product"),
-    true,
-  );
-  assert.deepEqual(fetchReviews.mock.lastCall, [100]);
+  assert.deepEqual(await getReviews({ offerId: "unknown-offer" }), []);
 });
 
-test("rating summary uses the same deduplicated set as displayed reviews", async () => {
-  const reviews = await getReviews({
-    offerId: snapshot.productOfferId,
-    skus: [1234],
-  });
-  const summary = await getRatingSummary(snapshot.productOfferId, [1234]);
+test("store-wide reviews put photo reviews first and spread products", async () => {
+  const reviews = await getReviews();
+  assert.deepEqual(
+    reviews.map((r) => r.id),
+    ["bag", "belt-old", "belt-new"],
+  );
+});
 
-  assert.deepEqual(summary, {
+test("rating summary uses the same set as displayed reviews", async () => {
+  const reviews = await getReviews({ offerId: "BELT_002" });
+  assert.deepEqual(await getRatingSummary("BELT_002"), {
     count: reviews.length,
-    average:
-      reviews.reduce((total, review) => total + review.rating, 0) /
-      reviews.length,
+    average: reviews.reduce((total, r) => total + r.rating, 0) / reviews.length,
   });
-  assert.deepEqual(fetchReviews.mock.lastCall, [100]);
   assert.equal(await getRatingSummary("unknown-offer"), null);
 });
 

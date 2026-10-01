@@ -1,10 +1,9 @@
 import { logger } from "@stariva/config";
 import { cache } from "react";
-import { OZON_REVIEWS } from "@/data/ozon-reviews";
 import { fetchPublishedProducts } from "./catalog/products-db";
+import { fetchPublishedReviews } from "./catalog/reviews-db";
 import { scheduleStockSync } from "./catalog/stock-sync";
 import { isPurchasable } from "./in-stock";
-import { fetchOzonReviews } from "./ozon/api-client";
 import type { Product, Review } from "./ozon-types";
 import { categories } from "./products";
 
@@ -81,46 +80,39 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 }
 
 export interface ReviewFilter {
-  /** Артикул товара (offer_id) — отзывы из снимка кабинета продавца */
+  /** Артикул товара (offer_id) — отзывы только на него */
   offerId?: string;
-  /** SKU товара — фильтр живых отзывов из Seller API (когда он доступен по подписке) */
-  skus?: number[];
 }
 
 /**
- * Отзывы с Ozon: живые из Seller API (если подписка позволяет) плюс снимок
- * из кабинета продавца. Без фильтра — лучшие отзывы магазина: сначала с фото
- * и развёрнутым текстом.
+ * Отзывы, которые мы сами отметили для показа в админке. Без фильтра — лучшие
+ * отзывы магазина: сначала с фото и развёрнутым текстом. Один запрос к базе на
+ * рендер, как и у каталога.
  */
+const getPublishedReviews = cache(async (): Promise<Review[]> => {
+  try {
+    return await fetchPublishedReviews();
+  } catch (error) {
+    // Нет базы — просто не показываем отзывы, страница от этого не падает
+    logger.warn("catalog.reviews.unavailable", { error: String(error) });
+    return [];
+  }
+});
+
 export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
-  const { offerId, skus } = filter;
-  const isProductPage = Boolean(offerId || skus?.length);
-
-  const live = (await fetchOzonReviews(100)) ?? [];
-  const liveMatched = isProductPage
-    ? live.filter(
-        (r) => r.productSku !== undefined && skus?.includes(r.productSku),
-      )
-    : live;
-  const snapshot = isProductPage
-    ? OZON_REVIEWS.filter((r) => offerId && r.productOfferId === offerId)
-    : OZON_REVIEWS;
-
-  const seen = new Set<string>();
-  const merged = [...liveMatched, ...snapshot].filter((r) => {
-    if (seen.has(r.id)) return false;
-    seen.add(r.id);
-    return true;
-  });
+  const { offerId } = filter;
+  const all = await getPublishedReviews();
 
   const byDate = (a: Review, b: Review) => b.date.localeCompare(a.date);
-  if (isProductPage) return merged.sort(byDate);
+  if (offerId) {
+    return all.filter((r) => r.productOfferId === offerId).sort(byDate);
+  }
 
   const score = (r: Review) =>
     (r.rating === 5 ? 2 : 0) +
     (r.photos.length > 0 ? 2 : 0) +
     (r.text.length >= 80 ? 1 : 0);
-  const ranked = merged.sort((a, b) => score(b) - score(a) || byDate(a, b));
+  const ranked = [...all].sort((a, b) => score(b) - score(a) || byDate(a, b));
 
   // Сначала по одному отзыву на вид товара, чтобы в блоке не было пяти поясов подряд
   const seenProducts = new Set<string>();
@@ -144,12 +136,11 @@ export interface RatingSummary {
   count: number;
 }
 
-/** Рейтинг по отзывам Ozon из того же набора, что показывается на сайте. */
+/** Рейтинг по тем же отзывам, что показываются на сайте. */
 export async function getRatingSummary(
   offerId?: string,
-  skus?: number[],
 ): Promise<RatingSummary | null> {
-  const reviews = await getReviews({ offerId, skus });
+  const reviews = await getReviews({ offerId });
   if (reviews.length === 0) return null;
   const sum = reviews.reduce((total, review) => total + review.rating, 0);
   return { average: sum / reviews.length, count: reviews.length };

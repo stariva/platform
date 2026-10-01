@@ -2,7 +2,7 @@ import { logger } from "@stariva/config";
 import { z } from "zod";
 import { env } from "@/env";
 import { freeFbsStock } from "../catalog/stock-changes";
-import type { OzonReview, Product, Review } from "../ozon-types";
+import type { Product } from "../ozon-types";
 import type { ExtractedAttributes, OzonProductInfoV3 } from "./transformers";
 import {
   extractAttributes,
@@ -172,78 +172,6 @@ async function fetchProductAttributes(
     return result;
   } catch {
     return new Map();
-  }
-}
-
-// ─── Reviews ─────────────────────────────────────────────────────────────────
-
-function transformOzonReview(raw: OzonReview): Review {
-  return {
-    id: raw.uuid,
-    rating: raw.rating,
-    text: raw.text,
-    date: raw.created_at,
-    reviewerName: raw.reviewer_name ?? "Покупатель",
-    productSku: raw.sku,
-    photos: (raw.media ?? []).map((m) => m.url),
-    source: "ozon",
-  };
-}
-
-/**
- * Fetches published reviews from Ozon Seller API.
- * Returns null if credentials are missing or the request fails.
- * Revalidates every 4 hours (ISR). Тело запроса одинаковое для всех страниц,
- * чтобы в data cache была одна запись на весь сайт — фильтр по товару делает
- * вызывающий код, иначе каждая карточка товара ходит в Ozon отдельно.
- */
-export async function fetchOzonReviews(limit = 20): Promise<Review[] | null> {
-  const clientId = env.OZON_CLIENT_ID;
-  const apiKey = env.OZON_API_KEY;
-
-  if (!clientId || !apiKey) {
-    return null;
-  }
-
-  try {
-    const body = {
-      limit,
-      sort_by: "created_at",
-      sort_dir: "DESC",
-    };
-
-    const res = await fetch(`${OZON_API_URL}/v1/review/list`, {
-      signal: AbortSignal.timeout(6000),
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Client-Id": clientId,
-        "Api-Key": apiKey,
-      },
-      body: JSON.stringify(body),
-      next: { revalidate: 14400 }, // 4 hours
-    });
-
-    if (!res.ok) {
-      if (res.status === 403) {
-        // Subscription doesn't include reviews API — skip silently
-        return null;
-      }
-      const text = await res.text();
-      logger.warn("ozon.reviews.failed", { status: res.status, text });
-      return null;
-    }
-
-    const data = await res.json();
-    // API returns { reviews: [...] } or { result: { reviews: [...] } }
-    const raw: OzonReview[] = data.reviews ?? data.result?.reviews ?? [];
-    const published = raw.filter(
-      (r) => r.status === "published" && r.text?.trim(),
-    );
-    return published.map(transformOzonReview);
-  } catch (error) {
-    logger.error("ozon.reviews.error", error);
-    return null;
   }
 }
 

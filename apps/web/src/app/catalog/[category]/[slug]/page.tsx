@@ -12,6 +12,10 @@ import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Reviews } from "@/components/stariva/reviews";
 import {
+  productMetaDescription,
+  productMetaTitle,
+} from "@/lib/catalog/product-seo";
+import {
   getProductBySlug,
   getProductsByCategory,
   getRatingSummary,
@@ -119,12 +123,8 @@ export async function generateMetadata({
 
   if (!product || !category || product.category !== categorySlug) return {};
 
-  const title = product.color
-    ? `${product.name}, цвет: ${product.color} — купить в интернет-магазине`
-    : `${product.name} — купить в интернет-магазине`;
-  const description = product.shortDescription
-    ? `${product.shortDescription} Заказ на сайте Stariva. Размеры, фотографии и условия доставки.`
-    : `${product.name} — ручная работа. Размеры, фотографии и заказ на сайте Stariva.`;
+  const title = productMetaTitle(product);
+  const description = productMetaDescription(product);
   const url = `/catalog/${categorySlug}/${slug}`;
   const image = product.images[0] ?? "/images/about/hero-founder.jpg";
   const isExternal = image.startsWith("http");
@@ -167,19 +167,23 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const allCategoryProducts = await getProductsByCategory(categorySlug);
+  // Сначала похожие из той же подкатегории, затем остальные из категории
   const relatedProducts = allCategoryProducts
     .filter((p) => p.id !== product.id)
+    .sort(
+      (a, b) =>
+        Number(b.subcategory === product.subcategory) -
+        Number(a.subcategory === product.subcategory),
+    )
     .slice(0, 3);
 
   const url = `/catalog/${categorySlug}/${slug}`;
 
-  const skus = product.ozonSku ? [product.ozonSku] : undefined;
-  const productReviews =
-    product.ozonOfferId || skus
-      ? await getReviews({ offerId: product.ozonOfferId, skus })
-      : [];
+  const productReviews = product.ozonOfferId
+    ? await getReviews({ offerId: product.ozonOfferId })
+    : [];
   const rating = product.ozonOfferId
-    ? await getRatingSummary(product.ozonOfferId, skus)
+    ? await getRatingSummary(product.ozonOfferId)
     : null;
 
   return (
@@ -203,7 +207,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       />
       <ProductJsonLd
         name={product.name}
-        description={product.shortDescription || product.description}
+        description={productMetaDescription(product)}
         image={product.images.map((img) =>
           img.startsWith("http") ? img : `${BASE_URL}${img}`,
         )}
@@ -215,6 +219,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         url={url}
         category={category.name}
         material={product.material}
+        color={product.color}
         rating={rating}
         reviews={productReviews}
       />
@@ -229,11 +234,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={rating}
       />
       <BuyingGuide product={product} />
-      <Reviews
-        offerId={product.ozonOfferId}
-        skus={product.ozonSku ? [product.ozonSku] : undefined}
-        heading="Отзывы о товаре"
-      />
+      <Reviews offerId={product.ozonOfferId} heading="Отзывы о товаре" />
       <Footer />
       <MobileStickyBar />
     </>

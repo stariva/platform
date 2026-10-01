@@ -41,7 +41,7 @@ test("converts kopecks to rubles and fills storefront defaults", () => {
   assert.equal(product.oldPrice, undefined);
   assert.equal(product.material, "100% хлопок");
   assert.equal(product.sizes, undefined);
-  assert.equal(product.shortDescription, "Первый абзац Второй абзац");
+  assert.equal(product.shortDescription, "Первый абзац. Второй абзац.");
   assert.equal(product.ozonUrl, "https://www.ozon.ru/product/4804740135");
   assert.equal(product.leadTimeDays, undefined);
 });
