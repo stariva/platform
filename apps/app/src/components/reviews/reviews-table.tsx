@@ -16,28 +16,53 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { orpc } from "~/orpc/react";
+import {
+  type ReviewProductOption,
+  ReviewProductsPicker,
+} from "./review-products-picker";
 
 export interface AdminReview {
   id: string;
-  source: "ozon" | "site";
+  source: "ozon" | "avito" | "site";
   rating: number;
   text: string;
   reviewerName: string;
   productOfferId: string | null;
   productTitle: string | null;
+  productIds: string[];
   photos: string[];
   reviewedAt: string;
   published: boolean;
   showPhotos: boolean;
 }
 
-type Filter = "all" | "published" | "hidden";
+type Filter = "all" | "published" | "hidden" | "unlinked";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Все" },
   { id: "published", label: "На сайте" },
   { id: "hidden", label: "Скрытые" },
+  { id: "unlinked", label: "Без товара" },
 ];
+
+const SOURCE_LABELS: Record<AdminReview["source"], string | null> = {
+  ozon: "Ozon",
+  avito: "Авито",
+  site: null,
+};
+
+function matchesFilter(review: AdminReview, filter: Filter) {
+  switch (filter) {
+    case "published":
+      return review.published;
+    case "hidden":
+      return !review.published;
+    case "unlinked":
+      return review.productIds.length === 0;
+    default:
+      return true;
+  }
+}
 
 /** Ozon отдаёт уменьшенную копию по префиксу wc200 — для миниатюр хватает. */
 function thumbnail(src: string) {
@@ -49,11 +74,16 @@ function thumbnail(src: string) {
 
 const dateFormat = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" });
 
-/** Отзывы с переключателями «показывать на сайте» и «показывать фото». */
+/**
+ * Отзывы с переключателями «показывать на сайте» и «показывать фото» и
+ * привязкой к товарам каталога.
+ */
 export function ReviewsTable({
   initialReviews,
+  products,
 }: {
   initialReviews: AdminReview[];
+  products: ReviewProductOption[];
 }) {
   const [reviews, setReviews] = useState(initialReviews);
   const [filter, setFilter] = useState<Filter>("all");
@@ -77,10 +107,22 @@ export function ReviewsTable({
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
   });
 
-  const visible = reviews.filter(
-    (r) =>
-      filter === "all" || (filter === "published" ? r.published : !r.published),
-  );
+  const setProducts = useMutation({
+    ...orpc.admin.reviews.setProducts.mutationOptions(),
+    onSuccess: ({ productIds, revalidated }, { id }) => {
+      toast.success(
+        revalidated
+          ? "Товары сохранены, сайт обновлён"
+          : "Товары сохранены. На сайте изменение появится в течение часа",
+      );
+      setReviews((current) =>
+        current.map((r) => (r.id === id ? { ...r, productIds } : r)),
+      );
+    },
+    onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
+  });
+
+  const visible = reviews.filter((r) => matchesFilter(r, filter));
   const publishedCount = reviews.filter((r) => r.published).length;
 
   return (
@@ -107,6 +149,7 @@ export function ReviewsTable({
             <TableRow>
               <TableHead className="w-40">Фото</TableHead>
               <TableHead>Отзыв</TableHead>
+              <TableHead className="w-56">Товары</TableHead>
               <TableHead className="w-44">Подпись</TableHead>
               <TableHead className="w-24 text-center">На сайте</TableHead>
               <TableHead className="w-28 text-center">Фото на сайте</TableHead>
@@ -116,7 +159,7 @@ export function ReviewsTable({
             {visible.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Отзывов нет
@@ -166,8 +209,10 @@ export function ReviewsTable({
                     <span className="text-muted-foreground text-xs">
                       {dateFormat.format(new Date(review.reviewedAt))}
                     </span>
-                    {review.source === "ozon" && (
-                      <Badge variant="outline">Ozon</Badge>
+                    {SOURCE_LABELS[review.source] && (
+                      <Badge variant="outline">
+                        {SOURCE_LABELS[review.source]}
+                      </Badge>
                     )}
                     {review.productTitle && (
                       <span className="text-muted-foreground text-xs">
@@ -179,6 +224,16 @@ export function ReviewsTable({
                   <p className="mt-1 text-sm whitespace-pre-line">
                     {review.text}
                   </p>
+                </TableCell>
+                <TableCell className="align-top whitespace-normal">
+                  <ReviewProductsPicker
+                    products={products}
+                    selected={review.productIds}
+                    disabled={setProducts.isPending}
+                    onChange={(productIds) =>
+                      setProducts.mutate({ id: review.id, productIds })
+                    }
+                  />
                 </TableCell>
                 <TableCell className="align-top">
                   <Input

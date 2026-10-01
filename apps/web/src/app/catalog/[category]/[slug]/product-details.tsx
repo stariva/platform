@@ -17,9 +17,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
 import { getProductMadeToOrder } from "@/lib/made-to-order";
+import type { RatingSummary } from "@/lib/ozon-service";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
-import { formatRating, pluralRatings } from "@/lib/ratings";
+import { formatRating, pluralRatings, ratingSourcesLabel } from "@/lib/ratings";
 import { ProductGallery } from "./product-gallery";
 
 interface ProductDetailsProps {
@@ -27,7 +28,7 @@ interface ProductDetailsProps {
   category: Category;
   categorySlug: string;
   relatedProducts: Product[];
-  rating?: { average: number; count: number } | null;
+  rating?: RatingSummary | null;
 }
 
 // ─── FAQ data per category ────────────────────────────────────────────────────
@@ -230,7 +231,8 @@ export function ProductDetails({
                     {formatRating(rating.average)}
                   </span>
                   <span className="text-taupe underline underline-offset-4 decoration-taupe/40 group-hover:text-terracotta group-hover:decoration-terracotta transition-colors">
-                    {rating.count} {pluralRatings(rating.count)} на Ozon
+                    {rating.count} {pluralRatings(rating.count)}{" "}
+                    {ratingSourcesLabel(rating.sources)}
                   </span>
                 </a>
               )}

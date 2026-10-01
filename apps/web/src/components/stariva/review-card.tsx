@@ -68,6 +68,25 @@ function OzonBadge() {
   );
 }
 
+function AvitoBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 label-caps text-[9px] bg-[#00AAFF]/10 text-[#0077B3] px-2 py-0.5 rounded-full">
+      <svg
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        className="w-2.5 h-2.5"
+        aria-hidden="true"
+      >
+        <circle cx="5" cy="10.5" r="4" />
+        <circle cx="11.5" cy="5" r="3" />
+        <circle cx="12.5" cy="12.5" r="2" />
+        <circle cx="4" cy="3.5" r="1.5" />
+      </svg>
+      Авито
+    </span>
+  );
+}
+
 const LONG_TEXT = 220;
 
 /**
@@ -88,7 +107,7 @@ interface ReviewCardProps {
   productHref?: string;
 }
 
-/** Displays an Ozon review with expandable text and a photo lightbox. */
+/** Displays a marketplace review with expandable text and a photo lightbox. */
 export function ReviewCard({ review, index, productHref }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [photoIndex, setPhotoIndex] = useState<number | null>(null);
@@ -167,6 +186,7 @@ export function ReviewCard({ review, index, productHref }: ReviewCardProps) {
       <div className="flex items-center justify-between mb-3">
         <Stars rating={review.rating} />
         {review.source === "ozon" && <OzonBadge />}
+        {review.source === "avito" && <AvitoBadge />}
       </div>
 
       {/* Text */}
