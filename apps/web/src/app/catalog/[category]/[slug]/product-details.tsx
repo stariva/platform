@@ -3,7 +3,6 @@
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { MadeToOrder } from "@/components/stariva/made-to-order";
 import { Stars } from "@/components/stariva/review-card";
@@ -21,6 +20,7 @@ import { getProductMadeToOrder } from "@/lib/made-to-order";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 import { formatRating, pluralRatings } from "@/lib/ratings";
+import { ProductGallery } from "./product-gallery";
 
 interface ProductDetailsProps {
   product: Product;
@@ -124,7 +124,6 @@ export function ProductDetails({
   relatedProducts,
   rating,
 }: ProductDetailsProps) {
-  const [activeImage, setActiveImage] = useState(0);
   const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior;
   // Два независимых способа купить: готовое со склада и сплести под заказ
   const readyToShip = isPurchasable(product);
@@ -187,64 +186,19 @@ export function ProductDetails({
               transition={{ duration: 0.6 }}
               className="min-w-0"
             >
-              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-sand mb-4">
-                <Image
-                  src={
-                    product.images[activeImage] ??
-                    product.images[0] ??
-                    "/placeholder.jpg"
-                  }
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  priority
-                  loading="eager"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  unoptimized={(
-                    product.images[activeImage] ??
-                    product.images[0] ??
-                    "/placeholder.jpg"
-                  ).startsWith("http")}
-                />
-                {product.oldPrice && (
-                  <span className="absolute top-6 left-6 bg-terracotta text-white label-caps px-4 py-2 rounded-full">
-                    Скидка{" "}
-                    {Math.round((1 - product.price / product.oldPrice) * 100)}%
-                  </span>
-                )}
-              </div>
-              {product.images.length > 1 && (
-                <div className="-m-1 flex gap-3 overflow-x-auto scroll-p-1 p-1 pb-2">
-                  {product.images.map((img, i) => (
-                    <Button
-                      // biome-ignore lint/suspicious/noArrayIndexKey: image thumbnails are positional, index is the correct key
-                      key={i}
-                      variant="ghost"
-                      size="icon"
-                      type="button"
-                      aria-label={`Показать фото ${i + 1} из ${product.images.length}`}
-                      aria-pressed={activeImage === i}
-                      onClick={() => setActiveImage(i)}
-                      className={`size-20 shrink-0 scroll-m-1 rounded-lg border-2 bg-sand p-1 transition-colors duration-150 active:scale-[0.97] focus-visible:border-espresso focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 focus-visible:ring-offset-parchment focus-visible:transition-none motion-reduce:transition-none motion-reduce:active:scale-100 ${
-                        activeImage === i
-                          ? "border-espresso"
-                          : "border-espresso/20 hover:border-espresso/50"
-                      }`}
-                    >
-                      <span className="relative block size-full overflow-hidden rounded-sm">
-                        <Image
-                          src={img}
-                          alt=""
-                          fill
-                          className="object-contain"
-                          sizes="68px"
-                          unoptimized={img.startsWith("http")}
-                        />
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              )}
+              <ProductGallery
+                images={product.images}
+                name={product.name}
+                badge={
+                  product.oldPrice && (
+                    <span className="absolute top-6 left-6 bg-terracotta text-white label-caps px-4 py-2 rounded-full">
+                      Скидка{" "}
+                      {Math.round((1 - product.price / product.oldPrice) * 100)}
+                      %
+                    </span>
+                  )
+                }
+              />
             </motion.div>
 
             {/* Info */}
