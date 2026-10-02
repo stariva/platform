@@ -37,16 +37,28 @@ const request = (body: unknown) =>
     body: JSON.stringify(body),
   });
 
+const stock = (productSlug: string) => ({
+  productSlug,
+  fulfillmentType: "stock",
+});
+const madeToOrder = (productSlug: string) => ({
+  productSlug,
+  fulfillmentType: "made_to_order",
+});
+
 test("returns fresh price and capped stock for buyable products", async () => {
   catalog = { products: [product], status: "available" };
 
-  const res = await POST(request({ slugs: [product.slug, product.slug] }));
+  const res = await POST(
+    request({ lines: [stock(product.slug), stock(product.slug)] }),
+  );
 
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), {
     lines: [
       {
         productSlug: product.slug,
+        fulfillmentType: "stock",
         available: true,
         name: "Туника",
         image: "https://cdn.stariva.ru/a.jpg",
@@ -64,12 +76,55 @@ test("tells sold-out products from missing ones", async () => {
     status: "available",
   };
 
-  const res = await POST(request({ slugs: [product.slug, "gone"] }));
+  const res = await POST(
+    request({ lines: [stock(product.slug), stock("gone")] }),
+  );
 
   assert.deepEqual(await res.json(), {
     lines: [
-      { productSlug: product.slug, available: false, reason: "sold_out" },
-      { productSlug: "gone", available: false, reason: "missing" },
+      {
+        productSlug: product.slug,
+        fulfillmentType: "stock",
+        available: false,
+        reason: "sold_out",
+      },
+      {
+        productSlug: "gone",
+        fulfillmentType: "stock",
+        available: false,
+        reason: "missing",
+      },
+    ],
+  });
+});
+
+test("made-to-order lines ignore stock and keep a separate line", async () => {
+  catalog = {
+    products: [{ ...product, inStock: false, stockAvailable: 0 }],
+    status: "available",
+  };
+
+  const res = await POST(
+    request({ lines: [stock(product.slug), madeToOrder(product.slug)] }),
+  );
+
+  assert.deepEqual(await res.json(), {
+    lines: [
+      {
+        productSlug: product.slug,
+        fulfillmentType: "stock",
+        available: false,
+        reason: "sold_out",
+      },
+      {
+        productSlug: product.slug,
+        fulfillmentType: "made_to_order",
+        available: true,
+        name: "Туника",
+        image: "https://cdn.stariva.ru/a.jpg",
+        price: 350000,
+        maxQuantity: 10,
+      },
     ],
   });
 });
@@ -77,10 +132,14 @@ test("tells sold-out products from missing ones", async () => {
 test("reports a catalog outage instead of marking everything missing", async () => {
   catalog = { products: [], status: "unavailable" };
 
-  assert.equal((await POST(request({ slugs: [product.slug] }))).status, 503);
+  assert.equal(
+    (await POST(request({ lines: [stock(product.slug)] }))).status,
+    503,
+  );
 });
 
 test("rejects a malformed body", async () => {
-  assert.equal((await POST(request({ slugs: [] }))).status, 400);
+  assert.equal((await POST(request({ lines: [] }))).status, 400);
+  assert.equal((await POST(request({ slugs: [product.slug] }))).status, 400);
   assert.equal((await POST(request({}))).status, 400);
 });
