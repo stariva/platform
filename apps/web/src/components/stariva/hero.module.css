@@ -1,7 +1,7 @@
 .hero {
   --hero-ink: #161513;
   --hero-paper: #eee8dc;
-  padding-top: 72px;
+  padding-top: 60px; /* = fixed header height */
   background: var(--hero-paper);
   color: var(--hero-ink);
 }
@@ -36,7 +36,7 @@
 .catalog { display: inline-flex; align-items: center; gap: 14px; min-height: 40px; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #16151366; }
 .note { max-width: 365px; margin-top: 10px; font-size: 11px; line-height: 1.5; opacity: .7; }
 .tab:focus-visible, .cta:focus-visible, .catalog:focus-visible, .panel:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
-.hero[data-instant="true"] .photo, .hero[data-instant="true"] .panel, .hero[data-instant="true"] .tab::after { transition: none; }
+.hero[data-instant="true"], .hero[data-instant="true"] .photo, .hero[data-instant="true"] .panel, .hero[data-instant="true"] .tab::after { transition: none; }
 @media (min-width: 390px) { .photos { height: 320px; } .title[data-long="true"] { font-size: 40px; } }
 @media (min-width: 640px) and (max-width: 1023px) {
   .photos { height: 460px; }
@@ -46,15 +46,41 @@
   .description { min-height: 0; }
   .cta { width: auto; }
 }
+/*
+  Desktop: the 16:9 photos (1671×941 source) sit in a panel on the right that
+  is never wider than the stage height allows at 16:9. On wide monitors the
+  photo is therefore shown whole and at ~native scale instead of being
+  upscaled and cropped to a letterbox; the space left of it is a flat field
+  that the photo's left edge dissolves into, and which carries the copy.
+  Below ~16:9 viewports the panel is simply full-bleed, as before.
+*/
+/* Registered so the field colour crossfades with the photos between tones. */
+@property --hero-field { syntax: "<color>"; inherits: true; initial-value: #f3eadb; }
 @media (min-width: 1024px) {
-  .hero { padding-top: 80px; }
-  .hero[data-tone="dark"] { --hero-ink: #fdfcfb; --hero-paper: #161513; }
-  .stage { min-height: 680px; height: min(820px, calc(100svh - 80px)); }
-  .photos { position: absolute; inset: 0; height: auto; }
+  .hero { padding-top: 68px; --hero-field: #f3eadb; background: var(--hero-field); transition: --hero-field 500ms ease; }
+  .hero[data-tone="dark"] { --hero-ink: #fdfcfb; --hero-paper: #161513; --hero-field: #24211d; }
+  .stage { --stage-h: max(680px, min(940px, calc(100svh - 68px))); height: var(--stage-h); background: var(--hero-field); }
+  .photos { position: absolute; inset: 0 0 0 auto; width: min(100%, calc(var(--stage-h) * 16 / 9)); height: auto; }
   .photo[data-fashion="true"] { left: 0; }
-  .image { object-position: center center; }
-  .shade { display: block; position: absolute; inset: 0; background: linear-gradient(90deg, #16151366, transparent 70%); transition: opacity 500ms ease; }
-  .hero[data-tone="light"] .shade { opacity: 1; background: linear-gradient(90deg, #f3eadbd9 0%, #f3eadb8c 30%, #f3eadb00 58%); }
+  .image { object-position: center 35%; }
+  /* Eased field → transparent ramp: starts a few px outside the photo so the
+     two antialiased edges never coincide (no hairline at fractional DPR), and
+     keeps zero slope at the field side so there is no visible seam. */
+  .shade {
+    display: block; position: absolute; inset: 0 auto 0 -4px; width: 58%;
+    background: linear-gradient(90deg,
+      var(--hero-field) 0%,
+      color-mix(in srgb, var(--hero-field) 97%, transparent) 10%,
+      color-mix(in srgb, var(--hero-field) 90%, transparent) 20%,
+      color-mix(in srgb, var(--hero-field) 78%, transparent) 30%,
+      color-mix(in srgb, var(--hero-field) 62%, transparent) 40%,
+      color-mix(in srgb, var(--hero-field) 46%, transparent) 50%,
+      color-mix(in srgb, var(--hero-field) 30%, transparent) 60%,
+      color-mix(in srgb, var(--hero-field) 16%, transparent) 70%,
+      color-mix(in srgb, var(--hero-field) 6%, transparent) 80%,
+      transparent 100%);
+  }
+  .hero[data-tone="dark"] .shade { width: 70%; }
   .counter { right: 5%; bottom: 44px; }
   .copy { display: grid; align-content: center; height: 100%; min-height: 680px; padding: 44px 5% 124px; }
   .panel { width: 44%; }
@@ -71,6 +97,6 @@
   .tabNumber { display: inline; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .photo, .panel, .shade, .tab, .tab::after, .cta { transition: none; }
+  .hero, .photo, .panel, .shade, .tab, .tab::after, .cta { transition: none; }
   .panel { transform: none; }
 }
