@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CustomOrder } from "@/components/stariva/custom-order";
+import { FittingSketches } from "@/components/stariva/fitting-sketches";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Hero } from "@/components/stariva/hero";
@@ -244,6 +245,7 @@ export default function Page() {
             </p>
           </div>
         </section>
+        <FittingSketches />
         <CustomOrder />
       </HomeOrderProvider>
       <section className="border-t border-espresso/10 py-10 lg:py-14">
