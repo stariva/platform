@@ -128,7 +128,7 @@ export async function generateMetadata({
   const url = `/catalog/${categorySlug}/${slug}`;
   const image =
     product.images[0] ??
-    "https://cdn.stariva.ru/site/images/about/hero-founder.jpg";
+    "https://cdn.stariva.ru/site/images/about/founder-2026.jpg";
   const isExternal = image.startsWith("http");
 
   return {
