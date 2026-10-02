@@ -12,8 +12,9 @@ const slides = [
     label: "Одежда",
     number: "01",
     productType: "clothes",
-    image: "https://cdn.stariva.ru/site/images/home/hero-fashion-beach-v3.webp",
-    alt: "Две модели в светлом платье и тунике макраме на солнечном морском пляже",
+    image:
+      "https://cdn.stariva.ru/site/images/home/hero-fashion-macrame-v4.webp",
+    alt: "Две модели в топе, юбке и платье с бахромой из хлопкового макраме на фоне моря",
     eyebrow: "Одежда макраме · ручная работа",
     title: "Сплетено",
     accent: "для вас.",
