@@ -15,7 +15,7 @@ const HomeOrderContext = createContext<{
 } | null>(null);
 
 export function HomeOrderProvider({ children }: { children: ReactNode }) {
-  const [productType, setProductType] = useState<string | undefined>("clothes");
+  const [productType, setProductType] = useState<string | undefined>(undefined);
   return (
     <HomeOrderContext.Provider value={{ productType, setProductType }}>
       {children}
