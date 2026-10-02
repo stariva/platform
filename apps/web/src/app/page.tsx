@@ -30,9 +30,9 @@ export const metadata: Metadata = {
     url: SITE_URL,
     images: [
       {
-        url: "https://cdn.stariva.ru/site/images/home/hero-fashion-beach-v3.webp",
-        width: 1536,
-        height: 1024,
+        url: "https://cdn.stariva.ru/site/images/home/hero-fashion-macrame-v4.webp",
+        width: 1671,
+        height: 941,
         alt: "Stariva — одежда макраме по вашим меркам",
       },
     ],
