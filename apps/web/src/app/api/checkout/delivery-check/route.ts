@@ -6,7 +6,7 @@ import { checkDeliveryAvailable } from "@/lib/ozon-delivery/client";
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  phone: z.string().min(5).max(20),
+  phone: z.string().min(5).max(32),
 });
 
 export async function POST(request: NextRequest) {

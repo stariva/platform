@@ -45,7 +45,7 @@ type Step = "contact" | "delivery" | "review";
 
 const contactFormSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(120),
-  phone: z.string().trim().min(5, "Введите телефон").max(20),
+  phone: z.string().trim().min(5, "Введите телефон").max(32),
   email: z
     .string()
     .trim()

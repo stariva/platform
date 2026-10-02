@@ -21,7 +21,7 @@ const deliverySchema = z.object({
 
 const bodySchema = z.object({
   contactName: z.string().min(1).max(120),
-  contactPhone: z.string().min(5).max(20),
+  contactPhone: z.string().min(5).max(32),
   contactEmail: z.string().email().optional(),
   items: z
     .array(
