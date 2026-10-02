@@ -327,44 +327,51 @@ export async function updateMadeToOrderDetails(
   orderId: string,
   input: MadeToOrderDetailsInput,
 ): Promise<boolean> {
-  const updated = await db
-    .update(productOrders)
-    .set({
-      ...(input.customerNotes !== undefined && {
-        customerNotes: input.customerNotes || null,
-      }),
-      ...(input.deliveryNote !== undefined && {
-        deliveryNote: input.deliveryNote || null,
-      }),
-    })
-    .where(
-      and(
-        eq(productOrders.id, orderId),
-        eq(productOrders.kind, "made_to_order"),
-        inArray(productOrders.status, [...DETAILS_EDITABLE_STATUSES]),
-      ),
-    )
-    .returning({ id: productOrders.id });
-  if (updated.length === 0) return false;
-
-  const existing = new Map(
-    (await getProductOrderItems(orderId)).map((item) => [item.id, item]),
-  );
-  for (const entry of input.items) {
-    const item = existing.get(entry.id);
-    if (!item?.options) continue;
-    await db
-      .update(productOrderItems)
+  return db.transaction(async (tx) => {
+    const updated = await tx
+      .update(productOrders)
       .set({
-        options: {
-          ...item.options,
-          measurements: entry.measurements,
-          comment: entry.comment || undefined,
-        },
+        ...(input.customerNotes !== undefined && {
+          customerNotes: input.customerNotes || null,
+        }),
+        ...(input.deliveryNote !== undefined && {
+          deliveryNote: input.deliveryNote || null,
+        }),
       })
-      .where(eq(productOrderItems.id, item.id));
-  }
-  return true;
+      .where(
+        and(
+          eq(productOrders.id, orderId),
+          eq(productOrders.kind, "made_to_order"),
+          inArray(productOrders.status, [...DETAILS_EDITABLE_STATUSES]),
+        ),
+      )
+      .returning({ id: productOrders.id });
+    if (updated.length === 0) return false;
+
+    const existing = new Map(
+      (
+        await tx
+          .select()
+          .from(productOrderItems)
+          .where(eq(productOrderItems.orderId, orderId))
+      ).map((item) => [item.id, item]),
+    );
+    for (const entry of input.items) {
+      const item = existing.get(entry.id);
+      if (!item?.options) continue;
+      await tx
+        .update(productOrderItems)
+        .set({
+          options: {
+            ...item.options,
+            measurements: entry.measurements,
+            comment: entry.comment || undefined,
+          },
+        })
+        .where(eq(productOrderItems.id, item.id));
+    }
+    return true;
+  });
 }
 
 /**
