@@ -106,53 +106,63 @@ export default function AboutPage() {
       <PersonJsonLd />
 
       {/* ── Hero ── */}
-      <section className="relative min-h-[90vh] flex items-end overflow-hidden">
-        {/* Full-bleed image */}
-        <div className="absolute inset-0">
+      {/*
+        Mobile: full-bleed photo, white copy over a dark gradient.
+        Desktop: the photo is a 3:2 panel on the right that never grows past
+        its native height (so it is neither upscaled nor cropped top/bottom),
+        washed into a wall-coloured field on the left that carries dark copy.
+      */}
+      <section className="relative min-h-[90vh] flex items-end overflow-hidden lg:items-center lg:bg-linen lg:[--hero-h:clamp(640px,90vh,1080px)] lg:min-h-(--hero-h)">
+        <div className="absolute inset-0 lg:left-auto lg:w-[min(66%,calc(var(--hero-h)*1.5))]">
           <Image
             src="https://cdn.stariva.ru/site/images/about/founder-2026-editorial.webp"
             alt="Ольга Карпычева в мастерской"
             fill
             priority
             unoptimized
-            className="object-cover object-[56%_center] lg:object-center"
-            sizes="100vw"
+            className="object-cover object-[56%_center] lg:object-[70%_center]"
+            sizes="(min-width: 1024px) 66vw, 100vw"
           />
-          {/* Bottom-up gradient for text legibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-espresso/90 via-espresso/45 to-transparent lg:from-espresso/80 lg:via-espresso/20" />
-          {/* Top thin gradient to blend with header */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-espresso/30 to-transparent" />
+          {/* Mobile: bottom-up gradient for text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-espresso/90 via-espresso/45 to-transparent lg:hidden" />
+          {/* Mobile: top thin gradient to blend with header */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-espresso/30 to-transparent lg:hidden" />
+          {/* Desktop: dissolve the photo's left edge into the wall-coloured field.
+              Starts a few px outside the photo so the two antialiased edges
+              never coincide — at fractional DPR they'd leave a dark hairline. */}
+          <div className="absolute inset-y-0 -left-1 hidden w-1/2 fade-linen-x lg:block" />
         </div>
 
-        {/* Content pinned to bottom */}
-        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-14 pb-16 lg:pb-24 pt-[400px] sm:pt-[480px] lg:pt-[100px]">
+        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-14 pb-16 pt-[400px] sm:pt-[480px] lg:py-20">
           <div className="max-w-3xl">
-            <p className="label-caps text-linen/70 mb-5 tracking-widest">
+            <p className="label-caps text-linen/70 mb-5 tracking-widest lg:text-taupe">
               О бренде
             </p>
-            <h1 className="font-serif text-white text-[clamp(3rem,7vw,6.5rem)] leading-[0.95] tracking-tight text-balance">
+            <h1 className="font-serif text-white text-[clamp(3rem,7vw,6.5rem)] leading-[0.95] tracking-tight text-balance lg:text-espresso">
               Сделано руками.
               <br />
-              <em className="not-italic text-linen">Согрето душой.</em>
+              <em className="not-italic text-linen lg:text-taupe">
+                Согрето душой.
+              </em>
             </h1>
-            <p className="mt-8 text-white/75 text-lg lg:text-xl max-w-xl leading-[1.75]">
+            <p className="mt-8 text-white/75 text-lg lg:text-xl max-w-xl leading-[1.75] lg:max-w-md xl:max-w-lg lg:text-espresso/75">
               Stariva — мастер ручного макраме из Подмосковья. Я создаю одежду,
               интерьерные предметы и декор из натурального хлопка с 2018 года.
             </p>
           </div>
 
           {/* Stats row */}
-          <div className="mt-14 flex flex-wrap gap-px border border-white/10 rounded-xl overflow-hidden w-fit">
+          <div className="mt-14 flex flex-wrap gap-px border border-white/10 rounded-xl overflow-hidden w-fit lg:border-espresso/10 lg:bg-espresso/10">
             {stats.map((s, i) => (
               <div
                 // biome-ignore lint/suspicious/noArrayIndexKey: stats are static and never reordered
                 key={i}
-                className="px-8 py-5 bg-white/8 backdrop-blur-sm flex flex-col gap-1 min-w-[110px]"
+                className="px-8 py-5 bg-white/8 backdrop-blur-sm flex flex-col gap-1 min-w-[110px] lg:bg-parchment/70"
               >
-                <span className="font-serif text-3xl lg:text-4xl text-white leading-none">
+                <span className="font-serif text-3xl lg:text-4xl text-white leading-none lg:text-espresso">
                   {s.value}
                 </span>
-                <span className="label-caps text-white/75 text-[11px] leading-tight whitespace-pre">
+                <span className="label-caps text-white/75 text-[11px] leading-tight whitespace-pre lg:text-taupe">
                   {s.label}
                 </span>
               </div>
