@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { type CartItem, MAX_CART_QUANTITY } from "@/lib/cart/cart-context";
 import type { CartLineState } from "@/lib/cart/use-cart-validation";
+import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -25,12 +26,22 @@ export function CartItemRow({
   const productHref = `/catalog/product/${item.productSlug}`;
   // Страницы изделия, которого нет в каталоге, не существует
   const linkable = !(unavailable && state.reason === "missing");
+  const madeToOrder = item.fulfillmentType === "made_to_order";
   const maxQuantity =
-    state.status === "available" ? state.maxQuantity : MAX_CART_QUANTITY;
+    state.status === "available"
+      ? state.maxQuantity
+      : madeToOrder
+        ? MAX_MADE_TO_ORDER_QUANTITY
+        : MAX_CART_QUANTITY;
   const atLimit = item.quantity >= maxQuantity;
   const meta = [
+    madeToOrder &&
+      item.options &&
+      `Размер: ${item.options.size} · Цвет: ${item.options.color}`,
     item.quantity > 1 && `${formatPrice(item.price / 100)} за шт.`,
-    stockHint(item.quantity, maxQuantity),
+    madeToOrder
+      ? atLimit && `Больше ${maxQuantity} шт. — напишите мастеру`
+      : stockHint(item.quantity, maxQuantity),
   ]
     .filter(Boolean)
     .join(" · ");

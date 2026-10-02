@@ -25,11 +25,33 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackProductEvent } from "@/lib/analytics";
-import { type CartItem, useCart } from "@/lib/cart/cart-context";
-import { useCartValidation } from "@/lib/cart/use-cart-validation";
+import {
+  type CartItem,
+  cartLineKey,
+  type FulfillmentType,
+  useCart,
+} from "@/lib/cart/cart-context";
+import {
+  type CartLineState,
+  useCartValidation,
+} from "@/lib/cart/use-cart-validation";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { CartItemRow } from "./cart-item-row";
 import { CartSummary, MobileCheckoutBar } from "./cart-summary";
+
+const SECTION_ORDER: FulfillmentType[] = ["stock", "made_to_order"];
+
+const SECTION_TITLES: Record<FulfillmentType, { title: string; hint: string }> =
+  {
+    stock: {
+      title: "Готовые изделия",
+      hint: "Отправим со склада, оплачиваются отдельно",
+    },
+    made_to_order: {
+      title: "Под заказ",
+      hint: "Сплетём после оплаты, оплачиваются отдельно",
+    },
+  };
 
 export default function CartPage() {
   const {
@@ -43,17 +65,32 @@ export default function CartPage() {
   } = useCart();
   const { states, loading, notices, dismissNotices } = useCartValidation();
   const ctaRef = useRef<HTMLDivElement>(null);
-  const ctaInView = useInView(ctaRef, hydrated && items.length > 0);
 
-  const isUnavailable = (item: CartItem) =>
-    states.get(item.productSlug)?.status === "unavailable";
-  const buyable = items.filter((item) => !isUnavailable(item));
-  const unavailable = items.filter(isUnavailable);
-  const subtotal = buyable.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const count = buyable.reduce((sum, i) => sum + i.quantity, 0);
+  const stateOf = (item: CartItem): CartLineState =>
+    states.get(cartLineKey(item)) ?? { status: "unknown" };
+  // Готовые изделия и изделия под заказ оформляются и оплачиваются раздельно
+  const sections = SECTION_ORDER.map((kind) => {
+    const sectionItems = items.filter((item) => item.fulfillmentType === kind);
+    const buyable = sectionItems.filter(
+      (item) => stateOf(item).status !== "unavailable",
+    );
+    return {
+      kind,
+      items: sectionItems,
+      unavailable: sectionItems.filter(
+        (item) => stateOf(item).status === "unavailable",
+      ),
+      subtotal: buyable.reduce((sum, i) => sum + i.price * i.quantity, 0),
+      count: buyable.reduce((sum, i) => sum + i.quantity, 0),
+    };
+  }).filter((section) => section.items.length > 0);
+  // Мобильная панель — только когда оформление одно: при двух секциях
+  // итог каждой стоит сразу под её списком
+  const single = sections.length === 1 ? sections[0] : undefined;
+  const ctaInView = useInView(ctaRef, hydrated && Boolean(single));
 
   function removeItem(item: CartItem) {
-    remove(item.productSlug);
+    remove(cartLineKey(item));
     trackProductEvent("remove", [
       {
         id: item.productSlug,
@@ -69,8 +106,8 @@ export default function CartPage() {
     });
   }
 
-  function removeUnavailable() {
-    for (const item of unavailable) remove(item.productSlug);
+  function removeUnavailable(unavailable: CartItem[]) {
+    for (const item of unavailable) remove(cartLineKey(item));
   }
 
   const hasItems = hydrated && items.length > 0;
@@ -110,7 +147,7 @@ export default function CartPage() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Отмена</AlertDialogCancel>
-                    <AlertDialogAction onClick={clear}>
+                    <AlertDialogAction onClick={() => clear()}>
                       Очистить
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -124,71 +161,102 @@ export default function CartPage() {
           ) : items.length === 0 ? (
             <EmptyCart />
           ) : (
-            <div className="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-              <div>
-                {notices.length > 0 && (
-                  <div
-                    role="alert"
-                    className="mb-6 flex gap-3 rounded-2xl border border-espresso/15 px-4 py-3 text-sm text-espresso"
-                  >
-                    <TriangleAlertIcon
-                      className="size-4 shrink-0 mt-0.5"
-                      aria-hidden="true"
-                    />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      {notices.map((notice) => (
-                        <p key={notice}>{notice}</p>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={dismissNotices}
-                      className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-espresso transition-colors"
-                    >
-                      Понятно
-                    </button>
-                  </div>
-                )}
-                <ul className="border-y border-espresso/10 py-6 divide-y divide-espresso/8">
-                  {items.map((item) => (
-                    <CartItemRow
-                      key={item.productSlug}
-                      item={item}
-                      state={
-                        states.get(item.productSlug) ?? { status: "unknown" }
-                      }
-                      onQuantityChange={(quantity) =>
-                        setQty(item.productSlug, quantity)
-                      }
-                      onRemove={() => removeItem(item)}
-                    />
-                  ))}
-                </ul>
-                <Link
-                  href="/catalog"
-                  className="mt-5 inline-flex items-center gap-2 text-sm text-espresso hover:text-taupe transition-colors"
+            <div className="space-y-12 lg:space-y-16">
+              {notices.length > 0 && (
+                <div
+                  role="alert"
+                  className="flex gap-3 rounded-2xl border border-espresso/15 px-4 py-3 text-sm text-espresso"
                 >
-                  <ArrowLeftIcon className="size-4" aria-hidden="true" />
-                  Продолжить покупки
-                </Link>
-              </div>
-              <CartSummary
-                subtotal={subtotal}
-                count={count}
-                unavailableCount={unavailable.length}
-                checking={loading}
-                onRemoveUnavailable={removeUnavailable}
-                ctaRef={ctaRef}
-              />
+                  <TriangleAlertIcon
+                    className="size-4 shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <div className="flex-1 min-w-0 space-y-1">
+                    {notices.map((notice) => (
+                      <p key={notice}>{notice}</p>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={dismissNotices}
+                    className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-espresso transition-colors"
+                  >
+                    Понятно
+                  </button>
+                </div>
+              )}
+              {sections.map((section, index) => (
+                <section
+                  key={section.kind}
+                  aria-labelledby={
+                    single ? undefined : `cart-section-${section.kind}`
+                  }
+                >
+                  {!single && (
+                    <div className="mb-5">
+                      <h2
+                        id={`cart-section-${section.kind}`}
+                        className="font-serif text-2xl lg:text-3xl text-espresso"
+                      >
+                        {SECTION_TITLES[section.kind].title}
+                      </h2>
+                      <p className="mt-1 text-sm text-taupe">
+                        {SECTION_TITLES[section.kind].hint}
+                      </p>
+                    </div>
+                  )}
+                  <div className="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+                    <div>
+                      <ul className="border-y border-espresso/10 py-6 divide-y divide-espresso/8">
+                        {section.items.map((item) => (
+                          <CartItemRow
+                            key={cartLineKey(item)}
+                            item={item}
+                            state={stateOf(item)}
+                            onQuantityChange={(quantity) =>
+                              setQty(cartLineKey(item), quantity)
+                            }
+                            onRemove={() => removeItem(item)}
+                          />
+                        ))}
+                      </ul>
+                      {index === sections.length - 1 && (
+                        <Link
+                          href="/catalog"
+                          className="mt-5 inline-flex items-center gap-2 text-sm text-espresso hover:text-taupe transition-colors"
+                        >
+                          <ArrowLeftIcon
+                            className="size-4"
+                            aria-hidden="true"
+                          />
+                          Продолжить покупки
+                        </Link>
+                      )}
+                    </div>
+                    <CartSummary
+                      kind={section.kind}
+                      subtotal={section.subtotal}
+                      count={section.count}
+                      unavailableCount={section.unavailable.length}
+                      checking={loading}
+                      onRemoveUnavailable={() =>
+                        removeUnavailable(section.unavailable)
+                      }
+                      ctaRef={single ? ctaRef : undefined}
+                    />
+                  </div>
+                </section>
+              ))}
             </div>
           )}
         </div>
       </main>
-      {hasItems && (
+      {hydrated && single && (
         <MobileCheckoutBar
-          subtotal={subtotal}
-          count={count}
-          blocked={unavailable.length > 0 || count === 0}
+          kind={single.kind}
+          subtotal={single.subtotal}
+          count={single.count}
+          blocked={single.unavailable.length > 0 || single.count === 0}
           visible={!ctaInView}
         />
       )}

@@ -1,5 +1,14 @@
+import {
+  getProductMadeToOrder,
+  isMadeToOrderColor,
+  isMadeToOrderSize,
+} from "@/lib/made-to-order";
 import { getProductsResult } from "@/lib/ozon-service";
 import type { Product } from "@/lib/ozon-types";
+import {
+  MAX_MADE_TO_ORDER_QUANTITY,
+  type MadeToOrderOptions,
+} from "./made-to-order-options";
 
 /** Максимум одного изделия в заказе. */
 export const MAX_ITEM_QUANTITY = 99;
@@ -51,6 +60,90 @@ export function isCatalogProductBuyable(product: Product | undefined): boolean {
       (product.ozonSku ?? 0) > 0 &&
       priceInKopecks(product) !== null,
   );
+}
+
+/**
+ * Можно ли заказать изделие под заказ: оно плетётся под заказ и у него есть
+ * цена в рублях. Остаток и SKU не нужны — изделие делается после оплаты.
+ */
+export function isMadeToOrderBuyable(product: Product | undefined): boolean {
+  return Boolean(
+    product &&
+      getProductMadeToOrder(product) &&
+      product.currency === "RUB" &&
+      priceInKopecks(product) !== null,
+  );
+}
+
+export interface RequestedMadeToOrderItem {
+  productSlug: string;
+  quantity: number;
+  options: MadeToOrderOptions;
+}
+
+export interface ResolvedMadeToOrderItem extends RequestedMadeToOrderItem {
+  name: string;
+  /** В копейках, за единицу */
+  price: number;
+}
+
+/** Размер или цвет не из тех, что предлагает карточка изделия. */
+export class MadeToOrderOptionsError extends Error {
+  constructor(readonly productSlug: string) {
+    super(`made_to_order_invalid_options:${productSlug}`);
+    this.name = "MadeToOrderOptionsError";
+  }
+}
+
+/**
+ * Цена и название — из каталога, размер и цвет — от покупателя, но только из
+ * предложенных на карточке. Позиции с разными параметрами остаются отдельными.
+ */
+export async function resolveMadeToOrderItems(
+  requestedItems: RequestedMadeToOrderItem[],
+): Promise<ResolvedMadeToOrderItem[]> {
+  const { products, status } = await getProductsResult();
+  if (status === "unavailable") throw new Error("catalog_unavailable");
+
+  const productsBySlug = new Map(
+    products.map((product) => [product.slug, product]),
+  );
+  const resolved: ResolvedMadeToOrderItem[] = [];
+  const unavailable = new Set<string>();
+
+  for (const item of requestedItems) {
+    const product = productsBySlug.get(item.productSlug);
+    const price = product ? priceInKopecks(product) : null;
+    const config = product ? getProductMadeToOrder(product) : null;
+    if (
+      !product ||
+      !config ||
+      price === null ||
+      !isMadeToOrderBuyable(product)
+    ) {
+      unavailable.add(item.productSlug);
+      continue;
+    }
+    if (
+      item.quantity > MAX_MADE_TO_ORDER_QUANTITY ||
+      !isMadeToOrderSize(product, config, item.options.size) ||
+      !isMadeToOrderColor(item.options.color)
+    ) {
+      throw new MadeToOrderOptionsError(item.productSlug);
+    }
+    resolved.push({
+      productSlug: item.productSlug,
+      quantity: item.quantity,
+      name: product.name,
+      price,
+      options: item.options,
+    });
+  }
+
+  if (unavailable.size > 0) {
+    throw new CatalogItemsUnavailableError([...unavailable]);
+  }
+  return resolved;
 }
 
 /** Resolves all price and fulfillment data from the server-side catalog. */
