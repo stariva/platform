@@ -6,13 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { reachGoal } from "@/lib/analytics";
 import { appendCampaign } from "@/lib/campaign-attribution";
-import {
-  COLORS,
-  COMPLEXITIES,
-  calculatePrice,
-  PRODUCT_TYPES,
-  SIZES,
-} from "@/lib/custom-order/pricing";
+import { PRODUCT_TYPES } from "@/lib/custom-order/pricing";
 import { validatePhoto } from "@/lib/custom-order/schema";
 import {
   ConsentCheckbox,
@@ -20,7 +14,6 @@ import {
   PersonalDataConsentLabel,
 } from "./consent-checkbox";
 import { useHomeOrder } from "./home-order-context";
-import { PriceCalculator } from "./price-calculator";
 
 const schema = z.object({
   contact: z
@@ -33,33 +26,54 @@ const schema = z.object({
     .trim()
     .min(5, "Коротко опишите, что хотите заказать")
     .max(3000),
-  name: z.string().trim().max(120),
-  measurements: z.string().trim().max(500),
-  budget: z.string().trim().max(100),
-  measurementHelp: z.boolean(),
   personalDataConsent: z.boolean().refine(Boolean, PD_CONSENT_ERROR),
 });
 type Values = z.infer<typeof schema>;
 const defaults: Values = {
   contact: "",
   description: "",
-  name: "",
-  measurements: "",
-  budget: "",
-  measurementHelp: false,
   personalDataConsent: false,
 };
 const fieldClass =
   "mt-2 block w-full rounded-xl border border-espresso/20 bg-parchment px-4 py-3 text-base text-espresso placeholder:text-taupe focus:outline-none focus:ring-2 focus:ring-terracotta/40 disabled:opacity-60";
-const hints: Record<string, string> = {
-  lampshade: "Диаметр и высота абажура в см; если знаете — тип крепления.",
-  clothes:
-    "Рост, обхват груди, талии и бёдер, желаемая длина в см. Можно прислать позже.",
-  bag: "Ширина, высота, глубина и длина ручек или ремня в см.",
-  panel: "Ширина и высота панно в см, с бахромой или без неё.",
-  tipi: "Ширина основания, высота и место установки в см.",
-  "plant-hanger": "Диаметр горшка и желаемая длина подвеса в см.",
-  placemat: "Диаметр или ширина × длина в см, количество изделий.",
+const tips: Record<string, { example: string; mention: string }> = {
+  lampshade: {
+    example:
+      "Например: абажур на кухню над столом, диаметр около 40 см, светлый, плотное плетение.",
+    mention: "диаметр и высоту, цвет, куда повесите и тип крепления",
+  },
+  clothes: {
+    example:
+      "Например: молочная туника для отпуска, длина до колена. Нужна помощь с мерками.",
+    mention: "что за вещь, цвет, длину, рост и обхваты, если знаете",
+  },
+  bag: {
+    example: "Например: авоська для рынка, бежевая, ручки на плечо.",
+    mention: "размеры, цвет, длину ручек или ремня",
+  },
+  panel: {
+    example:
+      "Например: панно над кроватью, примерно 80 × 100 см, натуральный цвет, с бахромой.",
+    mention: "ширину и высоту, цвет, нужна ли бахрома",
+  },
+  tipi: {
+    example:
+      "Например: подвесное кресло на балкон, крепление в потолок уже есть.",
+    mention: "что именно нужно, размеры и где будет стоять или висеть",
+  },
+  "plant-hanger": {
+    example: "Например: два подвеса для горшков диаметром 15 см, длина 1 м.",
+    mention: "диаметр горшка, длину подвеса и количество",
+  },
+  placemat: {
+    example: "Например: 6 круглых подставок под тарелки, диаметр 35 см.",
+    mention: "размер, форму и сколько штук нужно",
+  },
+};
+const defaultTip = {
+  example:
+    "Расскажите своими словами: что за изделие, для какого места, какой цвет и размер.",
+  mention: "что за изделие, размер, цвет и для какого места",
 };
 
 export function CustomOrderForm() {
@@ -68,21 +82,17 @@ export function CustomOrderForm() {
   const request = useRef<{ signature: string; id: string } | null>(null);
   const started = useRef(false);
   const locked = useRef(false);
-  const { selection, setSelection } = useHomeOrder();
+  const { productType, setProductType } = useHomeOrder();
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiText, setAiText] = useState("");
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: defaults,
   });
-  const estimate = calculatePrice(selection);
-  const nameOf = (options: { id: string; label: string }[], value?: string) =>
-    options.find((item) => item.id === value)?.label ?? "";
+  const tip = tips[productType ?? ""] ?? defaultTip;
   const start = () => {
     if (!started.current) {
       reachGoal("custom_order_started", { location: "homepage" });
@@ -107,20 +117,10 @@ export function CustomOrderForm() {
             : "",
         ),
       );
-      for (const [key, value] of Object.entries({
-        productType: nameOf(PRODUCT_TYPES, selection.productType),
-        size:
-          selection.productType === "clothes"
-            ? "По меркам"
-            : nameOf(SIZES, selection.size),
-        color: nameOf(COLORS, selection.color),
-        complexity: nameOf(COMPLEXITIES, selection.complexity),
-      }))
-        if (value) fd.append(key, value);
-      if (estimate) {
-        fd.append("estimateMin", String(estimate.min));
-        fd.append("estimateMax", String(estimate.max));
-      }
+      const productLabel = PRODUCT_TYPES.find(
+        (item) => item.id === productType,
+      )?.label;
+      if (productLabel) fd.append("productType", productLabel);
       if (photo) fd.append("photo", photo);
       appendCampaign(fd);
       const signature = JSON.stringify({
@@ -148,7 +148,6 @@ export function CustomOrderForm() {
       reachGoal("custom_order_submitted", { location: "homepage" });
       form.reset(defaults);
       setPhoto(null);
-      setSelection({});
       if (fileInput.current) fileInput.current.value = "";
     } catch {
       setError(
@@ -158,33 +157,6 @@ export function CustomOrderForm() {
     } finally {
       locked.current = false;
       setSubmitting(false);
-    }
-  }
-  async function askAi() {
-    const description = form.getValues("description");
-    if (description.length < 5) {
-      setAiText("Сначала опишите вашу идею в форме выше.");
-      return;
-    }
-    setAiLoading(true);
-    try {
-      const response = await fetch("/api/ai/estimate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description, ...selection }),
-      });
-      const data = await response.json();
-      setAiText(
-        response.ok
-          ? `${data.designSummary}\n${(data.suggestions ?? []).join("\n")}`
-          : "Помощник сейчас недоступен. Отправьте заявку — Ольга поможет с выбором.",
-      );
-    } catch {
-      setAiText(
-        "Помощник сейчас недоступен. Вы можете отправить заявку мастеру.",
-      );
-    } finally {
-      setAiLoading(false);
     }
   }
   if (success)
@@ -218,7 +190,6 @@ export function CustomOrderForm() {
             setSuccess("");
             request.current = null;
             started.current = false;
-            setAiText("");
           }}
           className="mt-5 block text-sm underline underline-offset-4"
         >
@@ -234,31 +205,36 @@ export function CustomOrderForm() {
         noValidate
       >
         <fieldset disabled={submitting} className="space-y-5">
-          <legend className="font-serif text-2xl text-espresso mb-5">
+          <legend className="font-serif text-2xl text-espresso mb-2!">
             Получить расчёт от мастера
           </legend>
-          <label htmlFor={`${id}-type`} className="block text-sm text-espresso">
-            Что будем создавать?
-            <select
-              id={`${id}-type`}
-              value={selection.productType ?? ""}
-              onChange={(e) =>
-                setSelection({
-                  ...selection,
-                  productType: e.target.value,
-                  size: undefined,
-                })
-              }
-              className={fieldClass}
-            >
-              <option value="">Пока выбираю</option>
+          <p className="text-sm text-espresso/75 leading-relaxed">
+            Напишите своими словами, что хотите. Ольга уточнит детали и
+            посчитает стоимость.
+          </p>
+          <fieldset>
+            <legend className="text-sm text-espresso">
+              Что будем создавать?{" "}
+              <span className="text-taupe">· можно не выбирать</span>
+            </legend>
+            <div className="mt-2 flex flex-wrap gap-2">
               {PRODUCT_TYPES.map((item) => (
-                <option key={item.id} value={item.id}>
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={productType === item.id}
+                  onClick={() =>
+                    setProductType(
+                      productType === item.id ? undefined : item.id,
+                    )
+                  }
+                  className="rounded-full border border-espresso/20 px-3.5 py-2 text-sm text-espresso transition-colors hover:border-terracotta aria-pressed:border-terracotta aria-pressed:bg-terracotta aria-pressed:text-parchment"
+                >
                   {item.label}
-                </option>
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </fieldset>
           <label
             htmlFor={`${id}-description`}
             className="block text-sm text-espresso"
@@ -268,16 +244,19 @@ export function CustomOrderForm() {
               id={`${id}-description`}
               {...form.register("description")}
               maxLength={3000}
-              rows={3}
-              placeholder={
-                selection.productType === "clothes"
-                  ? "Например: молочная туника для отпуска, длина до колена. Нужна помощь с мерками."
-                  : "Расскажите об изделии: цвет, размер и детали, которые вам нравятся."
-              }
+              rows={5}
+              placeholder={tip.example}
               className={fieldClass}
               aria-invalid={!!form.formState.errors.description}
-              aria-describedby={`${id}-description-error`}
+              aria-describedby={`${id}-description-tip ${id}-description-error`}
             />
+            <span
+              id={`${id}-description-tip`}
+              className="mt-2 block text-xs leading-relaxed text-taupe"
+            >
+              Полезно указать: {tip.mention}. Не знаете размеры или бюджет — так
+              и напишите, поможем.
+            </span>
             <span
               id={`${id}-description-error`}
               className="text-red-700 text-sm"
@@ -285,6 +264,45 @@ export function CustomOrderForm() {
               {form.formState.errors.description?.message}
             </span>
           </label>
+          <label htmlFor={`${id}-photo`} className="block text-sm">
+            Фото для примера или места, где будет изделие{" "}
+            <span className="text-taupe">· необязательно</span>
+            <input
+              ref={fileInput}
+              id={`${id}-photo`}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className={`${fieldClass} file:mr-3 file:text-sm`}
+              onChange={(e) => {
+                const selected = e.target.files?.[0] ?? null;
+                const problem = selected ? validatePhoto(selected) : null;
+                setPhotoError(problem ?? "");
+                setPhoto(problem ? null : selected);
+                if (problem) e.target.value = "";
+              }}
+            />
+            <span className="mt-1 block text-xs text-taupe">
+              JPG, PNG или WebP, до 8 МБ. Больше фото можно прислать в Telegram.
+            </span>
+            {photoError && (
+              <span role="alert" className="text-sm text-red-700">
+                {photoError}
+              </span>
+            )}
+          </label>
+          {(photo || photoError) && (
+            <button
+              type="button"
+              className="text-sm underline underline-offset-4"
+              onClick={() => {
+                setPhoto(null);
+                setPhotoError("");
+                if (fileInput.current) fileInput.current.value = "";
+              }}
+            >
+              Продолжить без фото
+            </button>
+          )}
           <label
             htmlFor={`${id}-contact`}
             className="block text-sm text-espresso"
@@ -303,94 +321,6 @@ export function CustomOrderForm() {
               {form.formState.errors.contact?.message}
             </span>
           </label>
-          <details className="rounded-xl border border-espresso/15 px-4 py-3">
-            <summary className="cursor-pointer text-sm text-espresso py-1">
-              Размеры, фото и пожелания{" "}
-              <span className="text-taupe">· необязательно</span>
-            </summary>
-            <div className="pt-4 space-y-4">
-              <label htmlFor={`${id}-measurements`} className="block text-sm">
-                Размеры или мерки, см
-                <textarea
-                  id={`${id}-measurements`}
-                  {...form.register("measurements")}
-                  rows={2}
-                  maxLength={500}
-                  placeholder={
-                    hints[selection.productType ?? ""] ??
-                    "Укажите желаемые размеры. Если пока не знаете — поможем."
-                  }
-                  className={fieldClass}
-                />
-              </label>
-              <label className="flex items-center gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  {...form.register("measurementHelp")}
-                  className="size-4 accent-terracotta"
-                />
-                Не знаю размеры — нужна помощь
-              </label>
-              <label htmlFor={`${id}-photo`} className="block text-sm">
-                Фото изделия или места, где оно будет
-                <input
-                  ref={fileInput}
-                  id={`${id}-photo`}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className={`${fieldClass} file:mr-3 file:text-sm`}
-                  onChange={(e) => {
-                    const selected = e.target.files?.[0] ?? null;
-                    const problem = selected ? validatePhoto(selected) : null;
-                    setPhotoError(problem ?? "");
-                    setPhoto(problem ? null : selected);
-                    if (problem) e.target.value = "";
-                  }}
-                />
-                <span className="mt-1 block text-xs text-taupe">
-                  JPG, PNG или WebP, до 8 МБ
-                </span>
-                {photoError && (
-                  <span role="alert" className="text-sm text-red-700">
-                    {photoError}
-                  </span>
-                )}
-              </label>
-              {(photo || photoError) && (
-                <button
-                  type="button"
-                  className="text-sm underline underline-offset-4"
-                  onClick={() => {
-                    setPhoto(null);
-                    setPhotoError("");
-                    if (fileInput.current) fileInput.current.value = "";
-                  }}
-                >
-                  Продолжить без фото
-                </button>
-              )}
-              <label htmlFor={`${id}-name`} className="block text-sm">
-                Как к вам обращаться
-                <input
-                  id={`${id}-name`}
-                  {...form.register("name")}
-                  maxLength={120}
-                  autoComplete="name"
-                  className={fieldClass}
-                />
-              </label>
-              <label htmlFor={`${id}-budget`} className="block text-sm">
-                Бюджет
-                <input
-                  id={`${id}-budget`}
-                  {...form.register("budget")}
-                  maxLength={100}
-                  placeholder="Например, до 10 000 ₽"
-                  className={fieldClass}
-                />
-              </label>
-            </div>
-          </details>
           <div hidden aria-hidden="true">
             <label htmlFor={`${id}-website`}>Website</label>
             <input
@@ -431,48 +361,19 @@ export function CustomOrderForm() {
           </button>
           <p className="text-xs leading-relaxed text-taupe">
             Заявка без оплаты. Стоимость, срок и доставку согласуем лично.
-            Источник перехода с рекламы может быть передан вместе с заявкой.
+            Удобнее в переписке —{" "}
+            <a
+              href="https://t.me/Olga_Stariva"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-4"
+            >
+              напишите в Telegram
+            </a>
+            . Источник перехода с рекламы может быть передан вместе с заявкой.
           </p>
         </fieldset>
       </form>
-      <details
-        className="mt-6 border-t border-espresso/10 pt-4"
-        onToggle={(e) => {
-          if (e.currentTarget.open) reachGoal("custom_order_calculator_open");
-        }}
-      >
-        <summary className="cursor-pointer text-sm text-espresso py-2">
-          Хочу сначала прикинуть стоимость
-        </summary>
-        <div className="pt-4">
-          <PriceCalculator selection={selection} onChange={setSelection} />
-        </div>
-      </details>
-      <details className="mt-2 border-t border-espresso/10 pt-3">
-        <summary className="cursor-pointer text-sm text-taupe py-2">
-          Помощь с идеей · AI-помощник
-        </summary>
-        <p className="mt-3 text-sm text-taupe">
-          Необязательный помощник. Окончательные параметры и цену подтверждает
-          мастер.
-        </p>
-        <button
-          type="button"
-          disabled={aiLoading}
-          onClick={askAi}
-          className="mt-3 rounded-full border border-espresso/20 px-5 py-3 text-sm"
-        >
-          {aiLoading ? "Подбираем идеи…" : "Предложить идеи"}
-        </button>
-        {aiText && (
-          <p
-            role="status"
-            className="mt-3 whitespace-pre-line text-sm text-espresso/75"
-          >
-            {aiText}
-          </p>
-        )}
-      </details>
     </div>
   );
 }

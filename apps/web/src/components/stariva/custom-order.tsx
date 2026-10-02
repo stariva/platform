@@ -6,9 +6,9 @@ import { useHomeOrder } from "./home-order-context";
 import { PhoneIcon, TelegramIcon } from "./icons";
 
 export function CustomOrder() {
-  const { selection } = useHomeOrder();
-  const clothes = selection.productType === "clothes";
-  const lampshade = selection.productType === "lampshade";
+  const { productType } = useHomeOrder();
+  const clothes = productType === "clothes";
+  const lampshade = productType === "lampshade";
   return (
     <section id="custom-order" className="py-12 lg:py-20 bg-sand">
       <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid lg:grid-cols-[0.8fr_1.2fr] gap-8 lg:gap-16 items-start">

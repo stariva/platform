@@ -8,20 +8,16 @@ import {
   useContext,
   useState,
 } from "react";
-import type { PriceSelection } from "@/lib/custom-order/pricing";
 
-type Selection = Partial<PriceSelection>;
 const HomeOrderContext = createContext<{
-  selection: Selection;
-  setSelection: Dispatch<SetStateAction<Selection>>;
+  productType: string | undefined;
+  setProductType: Dispatch<SetStateAction<string | undefined>>;
 } | null>(null);
 
 export function HomeOrderProvider({ children }: { children: ReactNode }) {
-  const [selection, setSelection] = useState<Selection>({
-    productType: "clothes",
-  });
+  const [productType, setProductType] = useState<string | undefined>(undefined);
   return (
-    <HomeOrderContext.Provider value={{ selection, setSelection }}>
+    <HomeOrderContext.Provider value={{ productType, setProductType }}>
       {children}
     </HomeOrderContext.Provider>
   );

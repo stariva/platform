@@ -66,7 +66,7 @@ export function Hero() {
   const [instant, setInstant] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
-  const { setSelection } = useHomeOrder();
+  const { setProductType } = useHomeOrder();
   const currentSlide = slides[active] ?? slides[0];
   const select = (index: number, keyboard = false) => {
     setInstant(keyboard);
@@ -204,16 +204,7 @@ export function Hero() {
                   href="#order"
                   data-location={`hero-${slide.id}`}
                   className={styles.cta}
-                  onClick={() =>
-                    setSelection((previous) => ({
-                      ...previous,
-                      productType: slide.productType,
-                      size:
-                        previous.productType === slide.productType
-                          ? previous.size
-                          : undefined,
-                    }))
-                  }
+                  onClick={() => setProductType(slide.productType)}
                 >
                   {slide.cta}
                   <span aria-hidden="true">↗</span>
