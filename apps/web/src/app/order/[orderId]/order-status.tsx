@@ -30,7 +30,16 @@ const statusLabels: Record<string, string> = {
   delivered: "Доставлен",
 };
 
-const orderResponseSchema = z.object({
+const postingStatusLabels: Record<string, string> = {
+  awaiting_packaging: "Ожидает сборки",
+  awaiting_deliver: "Ожидает отгрузки",
+  delivering: "В пути",
+  delivered: "Доставлено",
+  cancelled: "Отменено",
+  unknown: "Статус уточняется",
+};
+
+const orderResponseSchema =z.object({
   paid: z.boolean(),
   status: z.string(),
   amountTotal: z.number().int().nonnegative(),
@@ -173,7 +182,7 @@ export function OrderStatus({ orderId }: { orderId: string }) {
               className="flex items-center justify-between text-xs text-taupe"
             >
               <span>{p.postingNumber}</span>
-              <span>{p.status}</span>
+              <span>{postingStatusLabels[p.status] ?? "Статус уточняется"}</span>
             </div>
           ))}
         </div>

@@ -5,10 +5,11 @@ import {
   getProductOrderItems,
 } from "@/lib/commerce/orders";
 import { getFbsPosting } from "@/lib/ozon-delivery/client";
+import { phonesMatch } from "@/lib/phone";
 
 export const runtime = "nodejs";
 
-const bodySchema = z.object({ phone: z.string().min(5).max(20) });
+const bodySchema = z.object({ phone: z.string().min(5).max(32) });
 
 /**
  * Гостевой просмотр заказа: подтверждение по телефону вместо аккаунта —
@@ -26,7 +27,7 @@ export async function POST(
   }
 
   const order = await getProductOrderById(orderId);
-  if (!order || order.contactPhone !== parsed.data.phone) {
+  if (!order || !phonesMatch(order.contactPhone, parsed.data.phone)) {
     return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
   }
 
