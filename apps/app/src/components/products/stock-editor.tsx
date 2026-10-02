@@ -14,8 +14,9 @@ interface Props {
 }
 
 /**
- * Остаток готовых изделий. Ведётся у нас, а не в Ozon: при оплате заказа он
- * списывается сам, пополнять его нужно здесь.
+ * Остаток готовых изделий. Ведётся у нас: при оплате заказа он списывается
+ * сам, пополнять его нужно здесь. При сохранении дублируется на склад Ozon —
+ * Ozon Доставка отгружает только то, что числится в остатке на Ozon.
  */
 export function StockEditor({ id, stockAvailable, sku, offerId }: Props) {
   const router = useRouter();
@@ -27,7 +28,13 @@ export function StockEditor({ id, stockAvailable, sku, offerId }: Props) {
     onSuccess: (result) => {
       setSaved(result.stockAvailable);
       setValue(String(result.stockAvailable));
-      toast.success("Остаток сохранён");
+      if (result.ozonSynced) {
+        toast.success("Остаток сохранён и отправлен в Ozon");
+      } else {
+        toast.warning(
+          "Остаток сохранён на сайте, но в Ozon не обновился — без него Ozon Доставка не примет заказ. Сохраните ещё раз или поправьте остаток на складе Лотошино_наличие в кабинете Ozon.",
+        );
+      }
       router.refresh();
     },
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
@@ -63,7 +70,7 @@ export function StockEditor({ id, stockAvailable, sku, offerId }: Props) {
       </div>
       <p className="text-muted-foreground text-xs">
         {sku
-          ? `Ozon SKU ${sku}${offerId ? ` · артикул ${offerId}` : ""} — нужен только для доставки. `
+          ? `Ozon SKU ${sku}${offerId ? ` · артикул ${offerId}` : ""}. При сохранении остаток уходит на склад Ozon, а товар скрывается с витрины Ozon. `
           : "Нет SKU Ozon — продаётся только под заказ. "}
         Остаток уменьшается сам, когда заказ оплачен.
       </p>

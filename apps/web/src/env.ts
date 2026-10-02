@@ -9,6 +9,14 @@ export const env = createEnv({
   server: {
     OZON_API_KEY: z.string().min(1).optional(),
     OZON_CLIENT_ID: z.string().min(1).optional(),
+    // FBS-склад, с которого Ozon Доставка отгружает готовые изделия сайта.
+    // Ozon Доставка продаёт только то, что числится в остатке на Ozon,
+    // поэтому остаток из админки дублируется сюда. По умолчанию — Лотошино_наличие.
+    OZON_FBS_WAREHOUSE_ID: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(1020005006898070),
 
     // Ozon Доставка — приватное приложение (OAuth), отдельно от классического
     // Seller API выше. Нужен для продажи со своего сайта с доставкой Ozon.
@@ -76,6 +84,7 @@ export const env = createEnv({
   runtimeEnv: {
     OZON_API_KEY: process.env.OZON_API_KEY,
     OZON_CLIENT_ID: process.env.OZON_CLIENT_ID,
+    OZON_FBS_WAREHOUSE_ID: process.env.OZON_FBS_WAREHOUSE_ID,
     OZON_DELIVERY_CLIENT_ID: process.env.OZON_DELIVERY_CLIENT_ID,
     OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
     OZON_DELIVERY_REFRESH_TOKEN: process.env.OZON_DELIVERY_REFRESH_TOKEN,

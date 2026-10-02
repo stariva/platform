@@ -3,12 +3,17 @@ import { eq, products } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { revalidateStorefront } from "../../../storefront";
+import {
+  pushStorefrontStockToOzon,
+  revalidateStorefront,
+} from "../../../storefront";
 import { storefrontPaths } from "./mapping";
 
 /**
- * Остаток готовых изделий. Ведётся у нас: Ozon нужен только для доставки,
- * поэтому остаток правится здесь, а при оплате заказа списывается сам.
+ * Остаток готовых изделий. Ведётся у нас и правится здесь, при оплате заказа
+ * списывается сам. Ozon Доставка отгружает только то, что числится в остатке
+ * на Ozon, поэтому новое значение сразу дублируется на FBS-склад Ozon, а сам
+ * товар скрывается с витрины Ozon.
  */
 export const setStock = adminProcedure
   .input(
@@ -45,6 +50,11 @@ export const setStock = adminProcedure
       .set({ stockAvailable: input.stockAvailable })
       .where(eq(products.id, input.id));
 
-    const revalidated = await revalidateStorefront(storefrontPaths(current));
-    return { stockAvailable: input.stockAvailable, revalidated };
+    const [revalidated, ozonSynced] = await Promise.all([
+      revalidateStorefront(storefrontPaths(current)),
+      current.ozonSku === null
+        ? true
+        : pushStorefrontStockToOzon([current.slug]),
+    ]);
+    return { stockAvailable: input.stockAvailable, revalidated, ozonSynced };
   });

@@ -1,26 +1,19 @@
-import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv } from "@/env";
 import { isAuthorizedByAdmin } from "@/lib/internal-auth";
+import { pushStockToOzon } from "@/lib/ozon/stock-push";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  paths: z
-    .array(
-      z
-        .string()
-        .max(1024)
-        .regex(/^\/[^\s?#]*$/, "Ожидается путь страницы"),
-    )
-    .min(1)
-    .max(50),
+  slugs: z.array(z.string().min(1).max(256)).min(1).max(100),
 });
 
 /**
- * Сброс кэша страниц витрины по запросу админки (app.stariva.ru) после
- * правок каталога. Доступ — по общему REVALIDATE_SECRET.
+ * Админка (app.stariva.ru) после правки остатка просит продублировать его
+ * на склад Ozon: ключи Seller API есть только у витрины. Доступ — по общему
+ * REVALIDATE_SECRET.
  */
 export async function POST(request: NextRequest) {
   const secret = baseEnv.REVALIDATE_SECRET;
@@ -36,10 +29,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  // Шаблон маршрута вроде /catalog/[category]/[slug] сбрасывает все его страницы
-  for (const path of parsed.data.paths) {
-    if (path.includes("[")) revalidatePath(path, "page");
-    else revalidatePath(path);
+  try {
+    return NextResponse.json(await pushStockToOzon(parsed.data.slugs));
+  } catch (error) {
+    console.error("[ozon/stock] Не удалось отправить остаток в Ozon:", error);
+    return NextResponse.json({ error: "ozon_failed" }, { status: 502 });
   }
-  return NextResponse.json({ revalidated: parsed.data.paths.length });
 }
