@@ -6,13 +6,14 @@ export const categories: Category[] = [
     name: "Одежда",
     description:
       "Туники, накидки, пояса и комплекты из натурального хлопка, созданные вручную в технике макраме",
-    image: "https://cdn.stariva.ru/site/images/catalog/category-clothes.jpg",
+    image:
+      "https://cdn.stariva.ru/site/images/catalog/category-clothes-macrame-v4.jpg",
     hero: {
       image:
-        "https://cdn.stariva.ru/site/images/catalog/hero-clothes-editorial.webp",
-      alt: "Туника, топ и пояс из хлопкового макраме на деревянной вешалке",
-      width: 2164,
-      height: 727,
+        "https://cdn.stariva.ru/site/images/catalog/hero-clothes-macrame-v4.webp",
+      alt: "Две модели в топе, юбке и платье из хлопкового макраме на фоне моря",
+      width: 1671,
+      height: 557,
       objectPosition: "72% center",
     },
     subcategories: [

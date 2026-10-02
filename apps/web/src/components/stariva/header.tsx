@@ -30,7 +30,8 @@ const catalogNav = [
     label: "Одежда",
     href: "/catalog/clothes",
     desc: "Платья, топы и накидки из натурального хлопка ручного плетения",
-    image: "https://cdn.stariva.ru/site/images/catalog/category-clothes.jpg",
+    image:
+      "https://cdn.stariva.ru/site/images/catalog/category-clothes-macrame-v4.jpg",
     items: ["Платья макраме", "Топы", "Накидки"],
   },
   {

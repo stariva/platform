@@ -12,7 +12,7 @@ export default async function ProductsPage() {
   return (
     <>
       <SiteHeader title="Товары" />
-      <div className="space-y-4 px-4 pb-10 lg:px-6">
+      <div className="mx-auto w-full max-w-7xl space-y-4 px-4 pb-10 lg:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Товары</h1>
