@@ -115,7 +115,7 @@ export default function AboutPage() {
       <section className="relative min-h-[90vh] flex items-end overflow-hidden lg:items-center lg:bg-linen lg:[--hero-h:clamp(640px,90vh,1080px)] lg:min-h-(--hero-h)">
         <div className="absolute inset-0 lg:left-auto lg:w-[min(66%,calc(var(--hero-h)*1.5))]">
           <Image
-            src="https://cdn.stariva.ru/site/images/about/founder-2026-editorial.webp"
+            src="https://cdn.stariva.ru/site/images/about/founder-2026-hd.webp"
             alt="Ольга Карпычева в мастерской"
             fill
             priority
