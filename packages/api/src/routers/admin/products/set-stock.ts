@@ -32,16 +32,21 @@ export const setStock = adminProcedure
         category: products.category,
         slug: products.slug,
         ozonSku: products.ozonSku,
+        ozonOfferId: products.ozonOfferId,
       })
       .from(products)
       .where(eq(products.id, input.id));
     if (!current) {
       throw new ORPCError("NOT_FOUND", { message: "Товар не найден" });
     }
-    // Без SKU Ozon Доставка товар не отправит, поэтому готовым он быть не может
-    if (input.stockAvailable > 0 && current.ozonSku === null) {
+    // Для доставки нужен SKU, для синхронизации остатка — артикул.
+    if (
+      input.stockAvailable > 0 &&
+      (current.ozonSku === null || current.ozonOfferId === null)
+    ) {
       throw new ORPCError("BAD_REQUEST", {
-        message: "У товара нет SKU Ozon — его можно продавать только под заказ",
+        message:
+          "У товара нет SKU или артикула Ozon — его можно продавать только под заказ",
       });
     }
 

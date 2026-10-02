@@ -1,10 +1,20 @@
 import { env, logger } from "@stariva/config";
+import { z } from "zod";
+
+const stockSyncResponseSchema = z.object({
+  updated: z.array(z.string().min(1)),
+  syncedSlugs: z.array(z.string().min(1)),
+  failed: z.array(z.object({ offerId: z.string(), error: z.string() })),
+  hidden: z.array(z.number().int().positive()),
+});
 
 function storefrontRequest(path: string, body: unknown, timeoutMs: number) {
   const baseUrl = env.STOREFRONT_URL;
   const secret = env.REVALIDATE_SECRET;
   if (!baseUrl || !secret) return null;
-  return fetch(new URL(path, baseUrl), {
+  const url = new URL(path, baseUrl);
+  if (url.protocol !== "https:") return null;
+  return fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${secret}`,
@@ -25,7 +35,7 @@ export async function pushStorefrontStockToOzon(
   slugs: string[],
 ): Promise<boolean> {
   try {
-    const res = await storefrontRequest("/api/ozon/stock", { slugs }, 15_000);
+    const res = await storefrontRequest("/api/ozon/stock", { slugs }, 30_000);
     if (!res) {
       logger.warn("storefront.ozon_stock.not_configured");
       return false;
@@ -34,8 +44,13 @@ export async function pushStorefrontStockToOzon(
       logger.warn("storefront.ozon_stock.failed", { status: res.status });
       return false;
     }
-    const data = (await res.json()) as { failed?: unknown[] };
-    if (data.failed?.length) {
+    const data = stockSyncResponseSchema.parse(await res.json());
+    if (
+      data.failed.length > 0 ||
+      slugs.length === 0 ||
+      !slugs.every((slug) => data.syncedSlugs.includes(slug)) ||
+      data.updated.length < new Set(slugs).size
+    ) {
       logger.warn("storefront.ozon_stock.rejected", { failed: data.failed });
       return false;
     }

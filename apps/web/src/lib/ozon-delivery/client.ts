@@ -285,8 +285,10 @@ export async function checkout(
     logger.warn("ozon_delivery.checkout.unavailable", {
       splits: data.splits.map((split) => ({
         skus: split.items.map((item) => item.sku),
-        reason:
-          split.unavailable_reason ?? split.delivery_method?.unavailable_reason,
+        reason: [
+          split.unavailable_reason,
+          split.delivery_method?.unavailable_reason,
+        ].find((reason) => reason !== undefined && reason !== "UNSPECIFIED"),
       })),
     });
   }
