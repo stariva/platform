@@ -139,116 +139,113 @@ export default function Page() {
       <Header variant="solid" />
       <HomeOrderProvider>
         <Hero />
+        <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
+          <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
+            <p className="label-caps text-terracotta mb-4">
+              Изделия мастерской
+            </p>
+            <div className="flex flex-wrap justify-between items-end gap-5 mb-8">
+              <div>
+                <h2 className="font-serif text-4xl lg:text-5xl leading-tight">
+                  Начните с того,
+                  <br />
+                  <span className="italic">что вам близко</span>
+                </h2>
+                <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
+                  Модели из каталога Stariva. Выберите основу — размер, цвет и
+                  детали обсудим для вашего заказа.
+                </p>
+              </div>
+              <Link
+                href="/catalog"
+                className="py-2 text-sm underline underline-offset-4"
+              >
+                Весь каталог ↗
+              </Link>
+            </div>
+            <Suspense fallback={<Examples />}>
+              <LiveExamples />
+            </Suspense>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-sand p-5 lg:p-6">
+              <p className="text-sm text-espresso/80">
+                Есть своя идея? Пришлите фото или расскажите о ней.
+              </p>
+              <Link
+                href="#order"
+                data-location="examples"
+                className="rounded-full bg-espresso text-parchment px-6 py-3 text-sm"
+              >
+                Обсудить мой заказ ↗
+              </Link>
+            </div>
+          </div>
+        </section>
+        <Process />
+        <section className="bg-sand py-12 lg:py-16">
+          <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid md:grid-cols-2 gap-6 lg:gap-16">
+            <div>
+              <p className="label-caps text-terracotta mb-3">Ваш мастер</p>
+              <h2 className="font-serif text-3xl lg:text-4xl">
+                Ольга Карпычева
+              </h2>
+            </div>
+            <div>
+              <p className="text-espresso/75 leading-relaxed">
+                За Stariva стоит мастер, с которым можно обсудить вашу идею
+                напрямую. Ольга поможет выбрать размер, материал и детали, чтобы
+                изделие подходило именно вам.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-5 text-sm">
+                <Link href="/about" className="underline underline-offset-4">
+                  История мастерской
+                </Link>
+                <a
+                  href="https://t.me/Olga_Stariva"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4"
+                >
+                  Написать Ольге ↗
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+        <Suspense fallback={null}>
+          <Reviews verifiedOnly />
+        </Suspense>
+        <FAQJsonLd items={homeFaq} />
+        <section className="py-14 lg:py-20">
+          <div className="max-w-3xl mx-auto px-5">
+            <h2 className="font-serif text-3xl lg:text-4xl mb-8">
+              До первого заказа
+            </h2>
+            <div className="space-y-3">
+              {homeFaq.map((item) => (
+                <details
+                  key={item.question}
+                  className="rounded-xl border border-espresso/15"
+                >
+                  <summary className="cursor-pointer px-5 py-5 text-base text-espresso">
+                    {item.question}
+                  </summary>
+                  <p className="px-5 pb-5 text-sm leading-relaxed text-espresso/75">
+                    {item.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+            <p className="mt-5 text-sm text-taupe">
+              Подробные условия — в{" "}
+              <Link href="/offer" className="underline underline-offset-4">
+                договоре оферты
+              </Link>
+              .
+            </p>
+          </div>
+        </section>
         <CustomOrder />
       </HomeOrderProvider>
-      <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
-        <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
-          <p className="label-caps text-terracotta mb-4">Изделия мастерской</p>
-          <div className="flex flex-wrap justify-between items-end gap-5 mb-8">
-            <div>
-              <h2 className="font-serif text-4xl lg:text-5xl leading-tight">
-                Начните с того,
-                <br />
-                <span className="italic">что вам близко</span>
-              </h2>
-              <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
-                Модели из каталога Stariva. Выберите основу — размер, цвет и
-                детали обсудим для вашего заказа.
-              </p>
-            </div>
-            <Link
-              href="/catalog"
-              className="py-2 text-sm underline underline-offset-4"
-            >
-              Весь каталог ↗
-            </Link>
-          </div>
-          <Suspense fallback={<Examples />}>
-            <LiveExamples />
-          </Suspense>
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-sand p-5 lg:p-6">
-            <p className="text-sm text-espresso/80">
-              Есть своя идея? Пришлите фото или расскажите о ней.
-            </p>
-            <Link
-              href="#order"
-              data-location="examples"
-              className="rounded-full bg-espresso text-parchment px-6 py-3 text-sm"
-            >
-              Обсудить мой заказ ↗
-            </Link>
-          </div>
-        </div>
-      </section>
-      <Process />
-      <section className="bg-sand py-12 lg:py-16">
-        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid md:grid-cols-2 gap-6 lg:gap-16">
-          <div>
-            <p className="label-caps text-terracotta mb-3">Ваш мастер</p>
-            <h2 className="font-serif text-3xl lg:text-4xl">Ольга Карпычева</h2>
-          </div>
-          <div>
-            <p className="text-espresso/75 leading-relaxed">
-              За Stariva стоит мастер, с которым можно обсудить вашу идею
-              напрямую. Ольга поможет выбрать размер, материал и детали, чтобы
-              изделие подходило именно вам.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-5 text-sm">
-              <Link href="/about" className="underline underline-offset-4">
-                История мастерской
-              </Link>
-              <a
-                href="https://t.me/Olga_Stariva"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-4"
-              >
-                Написать Ольге ↗
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-      <Suspense fallback={null}>
-        <Reviews verifiedOnly />
-      </Suspense>
-      <FAQJsonLd items={homeFaq} />
-      <section className="py-14 lg:py-20">
-        <div className="max-w-3xl mx-auto px-5">
-          <h2 className="font-serif text-3xl lg:text-4xl mb-8">
-            До первого заказа
-          </h2>
-          <div className="space-y-3">
-            {homeFaq.map((item) => (
-              <details
-                key={item.question}
-                className="rounded-xl border border-espresso/15"
-              >
-                <summary className="cursor-pointer px-5 py-5 text-base text-espresso">
-                  {item.question}
-                </summary>
-                <p className="px-5 pb-5 text-sm leading-relaxed text-espresso/75">
-                  {item.answer}
-                </p>
-              </details>
-            ))}
-          </div>
-          <p className="mt-5 text-sm text-taupe">
-            Подробные условия — в{" "}
-            <Link href="/offer" className="underline underline-offset-4">
-              договоре оферты
-            </Link>
-            .
-          </p>
-          <Link
-            href="#order"
-            data-location="faq"
-            className="inline-block mt-7 rounded-full bg-terracotta text-parchment px-7 py-4 text-sm"
-          >
-            Получить расчёт от мастера ↗
-          </Link>
-        </div>
-      </section>
       <section className="border-t border-espresso/10 py-10 lg:py-14">
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid sm:grid-cols-3 gap-6">
           {[
