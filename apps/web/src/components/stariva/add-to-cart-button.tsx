@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
-import { useCart } from "@/lib/cart/cart-context";
+import { MAX_CART_QUANTITY, useCart } from "@/lib/cart/cart-context";
 import { isPurchasable } from "@/lib/in-stock";
 import type { Product } from "@/lib/ozon-types";
 
@@ -20,10 +21,28 @@ export function AddToCartButton({
   className?: string;
   label?: string;
 }) {
-  const { add } = useCart();
+  const { add, items } = useCart();
   const [added, setAdded] = useState(false);
 
   if (!isPurchasable(product)) return null;
+
+  const inCart =
+    items.find((item) => item.productSlug === product.slug)?.quantity ?? 0;
+  const limit = Math.min(product.stockAvailable, MAX_CART_QUANTITY);
+  const buttonClassName =
+    className ??
+    "flex items-center justify-center gap-2 w-full bg-espresso hover:bg-terracotta text-white py-4 h-auto rounded-2xl transition-colors label-caps";
+
+  // Весь остаток уже в корзине — класть больше нечего, ведём к оформлению
+  if (inCart >= limit) {
+    return (
+      <Button asChild className={buttonClassName}>
+        <Link href="/cart">
+          {limit === 1 ? "В корзине — перейти" : "Весь остаток в корзине"}
+        </Link>
+      </Button>
+    );
+  }
 
   return (
     <Button
@@ -49,10 +68,7 @@ export function AddToCartButton({
         setAdded(true);
         setTimeout(() => setAdded(false), 1500);
       }}
-      className={
-        className ??
-        "flex items-center justify-center gap-2 w-full bg-espresso hover:bg-terracotta text-white py-4 h-auto rounded-2xl transition-colors label-caps"
-      }
+      className={buttonClassName}
     >
       {added ? "Добавлено ✓" : label}
     </Button>

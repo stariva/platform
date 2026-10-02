@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth/client";
+import { useCart } from "@/lib/cart/cart-context";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS } from "@/lib/in-stock";
 import { CartTrigger } from "./cart-trigger";
 
@@ -79,6 +80,7 @@ interface HeaderProps {
 export function Header({ variant = "solid" }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { count: cartCount } = useCart();
   const [megaOpen, setMegaOpen] = useState(false);
   const [b2bOpen, setB2bOpen] = useState(false);
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -605,7 +607,14 @@ export function Header({ variant = "solid" }: HeaderProps) {
                   isActive(item.href) ? "text-terracotta" : "text-espresso/80"
                 }`}
               >
-                <span className="font-serif text-[17px]">{item.label}</span>
+                <span className="font-serif text-[17px]">
+                  {item.label}
+                  {item.href === "/cart" && cartCount > 0 && (
+                    <span className="ml-2 font-sans text-sm text-taupe">
+                      {cartCount}
+                    </span>
+                  )}
+                </span>
                 <svg
                   width="14"
                   height="14"

@@ -28,9 +28,11 @@ mock.module("@/lib/ozon-service", () => ({
   getProductsResult: async () => catalog,
 }));
 
-const { CatalogItemsUnavailableError, resolveCatalogItems } = await import(
-  "./catalog"
-);
+const {
+  CatalogItemsUnavailableError,
+  isCatalogProductBuyable,
+  resolveCatalogItems,
+} = await import("./catalog");
 
 test("resolves in-stock items with kopeck prices", async () => {
   catalog = { products: [product], status: "available" };
@@ -88,4 +90,20 @@ test("treats a catalog outage as a failure, not as sold-out items", async () => 
   assert.ok(error instanceof Error);
   assert.ok(!(error instanceof CatalogItemsUnavailableError));
   assert.equal(error.message, "catalog_unavailable");
+});
+
+test("a product is buyable only with stock, RUB price and an Ozon SKU", () => {
+  assert.equal(isCatalogProductBuyable(product), true);
+  assert.equal(isCatalogProductBuyable(undefined), false);
+  assert.equal(isCatalogProductBuyable({ ...product, inStock: false }), false);
+  assert.equal(
+    isCatalogProductBuyable({ ...product, stockAvailable: 0 }),
+    false,
+  );
+  assert.equal(
+    isCatalogProductBuyable({ ...product, ozonSku: undefined }),
+    false,
+  );
+  assert.equal(isCatalogProductBuyable({ ...product, currency: "USD" }), false);
+  assert.equal(isCatalogProductBuyable({ ...product, price: 0 }), false);
 });
