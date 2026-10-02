@@ -23,7 +23,7 @@ export function OrganizationJsonLd() {
       height: 512,
     },
     image: [
-      `https://cdn.stariva.ru/site/images/about/hero-founder.jpg`,
+      `https://cdn.stariva.ru/site/images/about/founder-2026.jpg`,
       `https://cdn.stariva.ru/site/images/about/atelier-wide.jpg`,
       `https://cdn.stariva.ru/site/images/catalog/lampshade-dome.jpg`,
     ],
@@ -475,7 +475,7 @@ export function PersonJsonLd() {
     description:
       "Мастер ручного макраме из Подмосковья. Создаёт абажуры, одежду и декор из натурального хлопка с 2018 года.",
     url: `${BASE_URL}/about`,
-    image: `https://cdn.stariva.ru/site/images/about/hero-founder.jpg`,
+    image: `https://cdn.stariva.ru/site/images/about/founder-2026.jpg`,
     worksFor: {
       "@id": `${BASE_URL}/#organization`,
     },

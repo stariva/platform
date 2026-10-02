@@ -59,7 +59,7 @@ export const metadata: Metadata = {
       "Эксклюзивные абажуры, платья и декор из макраме. Ручное плетение из натурального хлопка с 2018 года.",
     images: [
       {
-        url: "https://cdn.stariva.ru/site/images/about/hero-founder.jpg",
+        url: "https://cdn.stariva.ru/site/images/about/founder-2026.jpg",
         width: 1200,
         height: 630,
         alt: "Stariva — мастерская ручного макраме",
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     title: "Stariva — Абажуры и декор из макраме ручной работы",
     description:
       "Эксклюзивные абажуры, платья и декор из макраме. Ручное плетение из натурального хлопка с 2018 года.",
-    images: ["https://cdn.stariva.ru/site/images/about/hero-founder.jpg"],
+    images: ["https://cdn.stariva.ru/site/images/about/founder-2026.jpg"],
   },
   verification: {
     other: {

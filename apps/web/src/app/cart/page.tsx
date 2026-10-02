@@ -1,8 +1,14 @@
 "use client";
 
-import { ShoppingBagIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ShoppingBagIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { CheckoutProgress } from "@/components/stariva/checkout-progress";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -31,7 +37,7 @@ import {
 } from "@/lib/cart/use-cart-validation";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { CartItemRow } from "./cart-item-row";
-import { CartSummary } from "./cart-summary";
+import { CartSummary, MobileCheckoutBar } from "./cart-summary";
 
 const SECTION_ORDER: FulfillmentType[] = ["stock", "made_to_order"];
 
@@ -58,12 +64,30 @@ export default function CartPage() {
     clear,
   } = useCart();
   const { states, loading, notices, dismissNotices } = useCartValidation();
+  const ctaRef = useRef<HTMLDivElement>(null);
 
+  const stateOf = (item: CartItem): CartLineState =>
+    states.get(cartLineKey(item)) ?? { status: "unknown" };
   // Готовые изделия и изделия под заказ оформляются и оплачиваются раздельно
-  const sections = SECTION_ORDER.map((kind) => ({
-    kind,
-    items: items.filter((item) => item.fulfillmentType === kind),
-  })).filter((section) => section.items.length > 0);
+  const sections = SECTION_ORDER.map((kind) => {
+    const sectionItems = items.filter((item) => item.fulfillmentType === kind);
+    const buyable = sectionItems.filter(
+      (item) => stateOf(item).status !== "unavailable",
+    );
+    return {
+      kind,
+      items: sectionItems,
+      unavailable: sectionItems.filter(
+        (item) => stateOf(item).status === "unavailable",
+      ),
+      subtotal: buyable.reduce((sum, i) => sum + i.price * i.quantity, 0),
+      count: buyable.reduce((sum, i) => sum + i.quantity, 0),
+    };
+  }).filter((section) => section.items.length > 0);
+  // Мобильная панель — только когда оформление одно: при двух секциях
+  // итог каждой стоит сразу под её списком
+  const single = sections.length === 1 ? sections[0] : undefined;
+  const ctaInView = useInView(ctaRef, hydrated && Boolean(single));
 
   function removeItem(item: CartItem) {
     remove(cartLineKey(item));
@@ -82,24 +106,24 @@ export default function CartPage() {
     });
   }
 
-  function removeUnavailable(sectionItems: CartItem[]) {
-    for (const item of sectionItems) {
-      if (states.get(cartLineKey(item))?.status === "unavailable") {
-        remove(cartLineKey(item));
-      }
-    }
+  function removeUnavailable(unavailable: CartItem[]) {
+    for (const item of unavailable) remove(cartLineKey(item));
   }
+
+  const hasItems = hydrated && items.length > 0;
 
   return (
     <>
       <Header variant="solid" />
-      <main className="pt-28 lg:pt-36 pb-24 px-5">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-end justify-between gap-4 mb-8">
-            <h1 className="font-serif text-3xl lg:text-4xl text-espresso">
+      <main className="pt-24 lg:pt-32 pb-28 lg:pb-24 px-5">
+        <div className="max-w-6xl mx-auto">
+          {hasItems && <CheckoutProgress current={0} />}
+
+          <div className="flex items-end justify-between gap-4 mb-6 lg:mb-8">
+            <h1 className="font-serif text-4xl lg:text-5xl text-espresso">
               Корзина
-              {hydrated && totalCount > 0 && (
-                <span className="ml-3 align-middle font-sans text-base text-taupe">
+              {hasItems && (
+                <span className="ml-3 align-middle font-sans text-sm text-taupe">
                   {totalCount} {pluralItems(totalCount)}
                 </span>
               )}
@@ -109,7 +133,7 @@ export default function CartPage() {
                 <AlertDialogTrigger asChild>
                   <button
                     type="button"
-                    className="text-sm text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+                    className="mb-1 text-[13px] text-taupe underline-offset-4 hover:underline hover:text-espresso transition-colors"
                   >
                     Очистить корзину
                   </button>
@@ -137,14 +161,14 @@ export default function CartPage() {
           ) : items.length === 0 ? (
             <EmptyCart />
           ) : (
-            <div className="space-y-10">
+            <div className="space-y-12 lg:space-y-16">
               {notices.length > 0 && (
                 <div
                   role="alert"
-                  className="flex gap-3 rounded-2xl border border-terracotta/30 bg-sand px-4 py-3 text-sm text-espresso"
+                  className="flex gap-3 rounded-2xl border border-espresso/15 px-4 py-3 text-sm text-espresso"
                 >
                   <TriangleAlertIcon
-                    className="size-4 shrink-0 mt-0.5 text-terracotta"
+                    className="size-4 shrink-0 mt-0.5"
                     aria-hidden="true"
                   />
                   <div className="flex-1 min-w-0 space-y-1">
@@ -155,41 +179,35 @@ export default function CartPage() {
                   <button
                     type="button"
                     onClick={dismissNotices}
-                    className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+                    className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-espresso transition-colors"
                   >
                     Понятно
                   </button>
                 </div>
               )}
-              {sections.map((section) => {
-                const stateOf = (item: CartItem): CartLineState =>
-                  states.get(cartLineKey(item)) ?? { status: "unknown" };
-                const unavailable = section.items.filter(
-                  (item) => stateOf(item).status === "unavailable",
-                );
-                const buyable = section.items.filter(
-                  (item) => stateOf(item).status !== "unavailable",
-                );
-                return (
-                  <section
-                    key={section.kind}
-                    aria-labelledby={`cart-section-${section.kind}`}
-                  >
-                    {sections.length > 1 && (
-                      <div className="mb-4">
-                        <h2
-                          id={`cart-section-${section.kind}`}
-                          className="font-serif text-2xl text-espresso"
-                        >
-                          {SECTION_TITLES[section.kind].title}
-                        </h2>
-                        <p className="text-sm text-taupe">
-                          {SECTION_TITLES[section.kind].hint}
-                        </p>
-                      </div>
-                    )}
-                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-                      <ul className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
+              {sections.map((section, index) => (
+                <section
+                  key={section.kind}
+                  aria-labelledby={
+                    single ? undefined : `cart-section-${section.kind}`
+                  }
+                >
+                  {!single && (
+                    <div className="mb-5">
+                      <h2
+                        id={`cart-section-${section.kind}`}
+                        className="font-serif text-2xl lg:text-3xl text-espresso"
+                      >
+                        {SECTION_TITLES[section.kind].title}
+                      </h2>
+                      <p className="mt-1 text-sm text-taupe">
+                        {SECTION_TITLES[section.kind].hint}
+                      </p>
+                    </div>
+                  )}
+                  <div className="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+                    <div>
+                      <ul className="border-y border-espresso/10 py-6 divide-y divide-espresso/8">
                         {section.items.map((item) => (
                           <CartItemRow
                             key={cartLineKey(item)}
@@ -202,42 +220,83 @@ export default function CartPage() {
                           />
                         ))}
                       </ul>
-                      <CartSummary
-                        kind={section.kind}
-                        subtotal={buyable.reduce(
-                          (sum, i) => sum + i.price * i.quantity,
-                          0,
-                        )}
-                        count={buyable.reduce((sum, i) => sum + i.quantity, 0)}
-                        unavailableCount={unavailable.length}
-                        checking={loading}
-                        onRemoveUnavailable={() =>
-                          removeUnavailable(section.items)
-                        }
-                      />
+                      {index === sections.length - 1 && (
+                        <Link
+                          href="/catalog"
+                          className="mt-5 inline-flex items-center gap-2 text-sm text-espresso hover:text-taupe transition-colors"
+                        >
+                          <ArrowLeftIcon
+                            className="size-4"
+                            aria-hidden="true"
+                          />
+                          Продолжить покупки
+                        </Link>
+                      )}
                     </div>
-                  </section>
-                );
-              })}
+                    <CartSummary
+                      kind={section.kind}
+                      subtotal={section.subtotal}
+                      count={section.count}
+                      unavailableCount={section.unavailable.length}
+                      checking={loading}
+                      onRemoveUnavailable={() =>
+                        removeUnavailable(section.unavailable)
+                      }
+                      ctaRef={single ? ctaRef : undefined}
+                    />
+                  </div>
+                </section>
+              ))}
             </div>
           )}
         </div>
       </main>
+      {hydrated && single && (
+        <MobileCheckoutBar
+          kind={single.kind}
+          subtotal={single.subtotal}
+          count={single.count}
+          blocked={single.unavailable.length > 0 || single.count === 0}
+          visible={!ctaInView}
+        />
+      )}
       <Footer />
     </>
   );
 }
 
+/** Виден ли элемент на экране; пока не знаем — считаем, что виден. */
+function useInView(
+  ref: React.RefObject<HTMLElement | null>,
+  enabled: boolean,
+): boolean {
+  const [inView, setInView] = useState(true);
+  useEffect(() => {
+    const node = ref.current;
+    if (!enabled || !node) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      // Кнопка уже проскролена вверх — панель внизу больше не нужна
+      setInView(
+        Boolean(entry?.isIntersecting) ||
+          (entry?.boundingClientRect.top ?? 0) < 0,
+      );
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref, enabled]);
+  return inView;
+}
+
 function CartSkeleton() {
   return (
     <div
-      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start"
+      className="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start"
       aria-busy="true"
     >
-      <div className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
+      <div className="border-y border-espresso/10 py-6 space-y-8">
         {[0, 1].map((key) => (
-          <div key={key} className="flex gap-4 p-5">
-            <Skeleton className="size-24 rounded-xl" />
+          <div key={key} className="flex gap-5">
+            <Skeleton className="w-24 h-30 rounded-xl" />
             <div className="flex-1 space-y-3">
               <Skeleton className="h-5 w-2/3" />
               <Skeleton className="h-4 w-1/4" />
@@ -246,18 +305,22 @@ function CartSkeleton() {
           </div>
         ))}
       </div>
-      <Skeleton className="h-72 rounded-2xl" />
+      <Skeleton className="h-80 rounded-2xl" />
     </div>
   );
 }
 
 function EmptyCart() {
   return (
-    <div className="bg-white border border-espresso/10 rounded-2xl py-16 px-6 text-center">
-      <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-sand text-espresso">
-        <ShoppingBagIcon className="size-6" aria-hidden="true" />
+    <div className="border-y border-espresso/10 py-16 lg:py-24 px-6 text-center">
+      <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-sand text-espresso">
+        <ShoppingBagIcon
+          className="size-6"
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
       </div>
-      <h2 className="font-serif text-2xl text-espresso mb-2">
+      <h2 className="font-serif text-3xl text-espresso mb-3">
         В корзине пока пусто
       </h2>
       <p className="text-taupe text-sm max-w-md mx-auto mb-8 leading-relaxed">
@@ -267,17 +330,17 @@ function EmptyCart() {
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button
           asChild
-          className="bg-terracotta text-parchment hover:bg-terracotta-dark"
+          className="h-12 px-7 rounded-full bg-espresso text-parchment hover:bg-espresso/85"
         >
           <Link href={IN_STOCK_HREF}>Готовые изделия</Link>
         </Button>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="h-12 px-7 rounded-full">
           <Link href="/catalog">Весь каталог</Link>
         </Button>
       </div>
       <Link
         href="/#order"
-        className="mt-6 inline-block text-sm text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+        className="mt-6 inline-block text-sm text-taupe underline underline-offset-4 hover:text-espresso transition-colors"
       >
         Заказать изделие под себя
       </Link>
