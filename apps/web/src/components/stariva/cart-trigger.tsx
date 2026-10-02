@@ -33,7 +33,7 @@ export function CartTrigger({ isSolid }: { isSolid: boolean }) {
     <Link
       href="/cart"
       aria-label={`Корзина: ${count}`}
-      className={`relative hidden lg:inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
+      className={`relative inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
         isSolid
           ? "bg-espresso/8 text-espresso hover:bg-espresso/14"
           : "bg-white/15 border border-white/40 text-white hover:bg-white hover:text-espresso"

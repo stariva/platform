@@ -1,126 +1,227 @@
 "use client";
 
-import Image from "next/image";
+import { ShoppingBagIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/lib/cart/cart-context";
-import { formatPrice } from "@/lib/products";
+import { Skeleton } from "@/components/ui/skeleton";
+import { trackProductEvent } from "@/lib/analytics";
+import { type CartItem, useCart } from "@/lib/cart/cart-context";
+import { useCartValidation } from "@/lib/cart/use-cart-validation";
+import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
+import { CartItemRow } from "./cart-item-row";
+import { CartSummary } from "./cart-summary";
 
 export default function CartPage() {
-  const { items, remove, setQty, subtotal } = useCart();
+  const {
+    items,
+    hydrated,
+    count: totalCount,
+    add,
+    remove,
+    setQty,
+    clear,
+  } = useCart();
+  const { states, loading, notices, dismissNotices } = useCartValidation();
+
+  const isUnavailable = (item: CartItem) =>
+    states.get(item.productSlug)?.status === "unavailable";
+  const buyable = items.filter((item) => !isUnavailable(item));
+  const unavailable = items.filter(isUnavailable);
+  const subtotal = buyable.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const count = buyable.reduce((sum, i) => sum + i.quantity, 0);
+
+  function removeItem(item: CartItem) {
+    remove(item.productSlug);
+    trackProductEvent("remove", [
+      {
+        id: item.productSlug,
+        name: item.name,
+        price: item.price / 100,
+        quantity: item.quantity,
+      },
+    ]);
+    const { quantity, ...product } = item;
+    toast("Изделие удалено из корзины", {
+      description: item.name,
+      action: { label: "Вернуть", onClick: () => add(product, quantity) },
+    });
+  }
+
+  function removeUnavailable() {
+    for (const item of unavailable) remove(item.productSlug);
+  }
 
   return (
     <>
       <Header variant="solid" />
       <main className="pt-28 lg:pt-36 pb-24 px-5">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="font-serif text-3xl lg:text-4xl text-espresso mb-8">
-            Корзина
-          </h1>
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-end justify-between gap-4 mb-8">
+            <h1 className="font-serif text-3xl lg:text-4xl text-espresso">
+              Корзина
+              {hydrated && totalCount > 0 && (
+                <span className="ml-3 align-middle font-sans text-base text-taupe">
+                  {totalCount} {pluralItems(totalCount)}
+                </span>
+              )}
+            </h1>
+            {hydrated && items.length > 1 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-sm text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+                  >
+                    Очистить корзину
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Очистить корзину?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Все изделия будут удалены из корзины.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                    <AlertDialogAction onClick={clear}>
+                      Очистить
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
 
-          {items.length === 0 ? (
-            <div className="bg-white border border-espresso/10 rounded-2xl py-16 px-6 text-center">
-              <p className="text-taupe text-sm mb-6">Корзина пуста</p>
-              <Button
-                asChild
-                className="bg-terracotta text-parchment hover:bg-terracotta-dark"
-              >
-                <Link href="/catalog">В каталог</Link>
-              </Button>
-            </div>
+          {!hydrated ? (
+            <CartSkeleton />
+          ) : items.length === 0 ? (
+            <EmptyCart />
           ) : (
-            <>
-              <div className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
-                {items.map((item) => {
-                  const productHref = `/catalog/product/${item.productSlug}`;
-                  return (
-                    <div key={item.productSlug} className="flex gap-4 p-5">
-                      <Link
-                        href={productHref}
-                        className="relative w-20 h-20 rounded-lg overflow-hidden bg-sand flex-shrink-0"
-                      >
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      </Link>
-                      <div className="flex-1 min-w-0 flex flex-col justify-between">
-                        <div>
-                          <Link
-                            href={productHref}
-                            className="text-espresso font-medium truncate block hover:text-terracotta transition-colors"
-                          >
-                            {item.name}
-                          </Link>
-                          <p className="text-taupe text-sm mt-0.5">
-                            {formatPrice(item.price / 100)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 mt-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setQty(item.productSlug, item.quantity - 1)
-                            }
-                            className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
-                            aria-label={`Уменьшить количество товара ${item.name}`}
-                          >
-                            −
-                          </button>
-                          <span className="text-sm text-espresso w-5 text-center">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setQty(item.productSlug, item.quantity + 1)
-                            }
-                            className="w-7 h-7 rounded-full border border-espresso/15 text-espresso flex items-center justify-center"
-                            aria-label={`Увеличить количество товара ${item.name}`}
-                          >
-                            +
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => remove(item.productSlug)}
-                            className="ml-auto text-taupe text-sm hover:text-terracotta transition-colors"
-                          >
-                            Удалить
-                          </button>
-                        </div>
-                      </div>
-                      <span className="text-espresso font-medium flex-shrink-0">
-                        {formatPrice((item.price * item.quantity) / 100)}
-                      </span>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+              <div className="space-y-4">
+                {notices.length > 0 && (
+                  <div
+                    role="alert"
+                    className="flex gap-3 rounded-2xl border border-terracotta/30 bg-sand px-4 py-3 text-sm text-espresso"
+                  >
+                    <TriangleAlertIcon
+                      className="size-4 shrink-0 mt-0.5 text-terracotta"
+                      aria-hidden="true"
+                    />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {notices.map((notice) => (
+                        <p key={notice}>{notice}</p>
+                      ))}
                     </div>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={dismissNotices}
+                      className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+                    >
+                      Понятно
+                    </button>
+                  </div>
+                )}
+                <ul className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
+                  {items.map((item) => (
+                    <CartItemRow
+                      key={item.productSlug}
+                      item={item}
+                      state={
+                        states.get(item.productSlug) ?? { status: "unknown" }
+                      }
+                      onQuantityChange={(quantity) =>
+                        setQty(item.productSlug, quantity)
+                      }
+                      onRemove={() => removeItem(item)}
+                    />
+                  ))}
+                </ul>
               </div>
-
-              <div className="bg-white border border-espresso/10 rounded-2xl p-6 mt-6 flex items-center justify-between">
-                <div>
-                  <p className="text-taupe text-sm">Товары</p>
-                  <p className="text-espresso text-xl font-medium">
-                    {formatPrice(subtotal / 100)}
-                  </p>
-                </div>
-                <Button
-                  asChild
-                  className="bg-terracotta text-parchment hover:bg-terracotta-dark px-8 py-6 h-auto"
-                >
-                  <Link href="/checkout">Оформить заказ</Link>
-                </Button>
-              </div>
-            </>
+              <CartSummary
+                subtotal={subtotal}
+                count={count}
+                unavailableCount={unavailable.length}
+                checking={loading}
+                onRemoveUnavailable={removeUnavailable}
+              />
+            </div>
           )}
         </div>
       </main>
       <Footer />
     </>
+  );
+}
+
+function CartSkeleton() {
+  return (
+    <div
+      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start"
+      aria-busy="true"
+    >
+      <div className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
+        {[0, 1].map((key) => (
+          <div key={key} className="flex gap-4 p-5">
+            <Skeleton className="size-24 rounded-xl" />
+            <div className="flex-1 space-y-3">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-9 w-28 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-72 rounded-2xl" />
+    </div>
+  );
+}
+
+function EmptyCart() {
+  return (
+    <div className="bg-white border border-espresso/10 rounded-2xl py-16 px-6 text-center">
+      <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-sand text-espresso">
+        <ShoppingBagIcon className="size-6" aria-hidden="true" />
+      </div>
+      <h2 className="font-serif text-2xl text-espresso mb-2">
+        В корзине пока пусто
+      </h2>
+      <p className="text-taupe text-sm max-w-md mx-auto mb-8 leading-relaxed">
+        Готовые изделия можно купить сразу — отправим за {IN_STOCK_SHIP_DAYS}. А
+        если нужен свой размер или цвет, сплетём под заказ.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Button
+          asChild
+          className="bg-terracotta text-parchment hover:bg-terracotta-dark"
+        >
+          <Link href={IN_STOCK_HREF}>Готовые изделия</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/catalog">Весь каталог</Link>
+        </Button>
+      </div>
+      <Link
+        href="/#order"
+        className="mt-6 inline-block text-sm text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+      >
+        Заказать изделие под себя
+      </Link>
+    </div>
   );
 }
