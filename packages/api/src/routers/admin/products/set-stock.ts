@@ -3,12 +3,17 @@ import { eq, products } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { revalidateStorefront } from "../../../storefront";
+import {
+  pushStorefrontStockToOzon,
+  revalidateStorefront,
+} from "../../../storefront";
 import { storefrontPaths } from "./mapping";
 
 /**
- * Остаток готовых изделий. Ведётся у нас: Ozon нужен только для доставки,
- * поэтому остаток правится здесь, а при оплате заказа списывается сам.
+ * Остаток готовых изделий. Ведётся у нас и правится здесь, при оплате заказа
+ * списывается сам. Ozon Доставка отгружает только то, что числится в остатке
+ * на Ozon, поэтому новое значение сразу дублируется на FBS-склад Ozon, а сам
+ * товар скрывается с витрины Ozon.
  */
 export const setStock = adminProcedure
   .input(
@@ -27,16 +32,21 @@ export const setStock = adminProcedure
         category: products.category,
         slug: products.slug,
         ozonSku: products.ozonSku,
+        ozonOfferId: products.ozonOfferId,
       })
       .from(products)
       .where(eq(products.id, input.id));
     if (!current) {
       throw new ORPCError("NOT_FOUND", { message: "Товар не найден" });
     }
-    // Без SKU Ozon Доставка товар не отправит, поэтому готовым он быть не может
-    if (input.stockAvailable > 0 && current.ozonSku === null) {
+    // Для доставки нужен SKU, для синхронизации остатка — артикул.
+    if (
+      input.stockAvailable > 0 &&
+      (current.ozonSku === null || current.ozonOfferId === null)
+    ) {
       throw new ORPCError("BAD_REQUEST", {
-        message: "У товара нет SKU Ozon — его можно продавать только под заказ",
+        message:
+          "У товара нет SKU или артикула Ozon — его можно продавать только под заказ",
       });
     }
 
@@ -45,6 +55,11 @@ export const setStock = adminProcedure
       .set({ stockAvailable: input.stockAvailable })
       .where(eq(products.id, input.id));
 
-    const revalidated = await revalidateStorefront(storefrontPaths(current));
-    return { stockAvailable: input.stockAvailable, revalidated };
+    const [revalidated, ozonSynced] = await Promise.all([
+      revalidateStorefront(storefrontPaths(current)),
+      current.ozonSku === null
+        ? true
+        : pushStorefrontStockToOzon([current.slug]),
+    ]);
+    return { stockAvailable: input.stockAvailable, revalidated, ozonSynced };
   });

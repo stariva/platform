@@ -40,7 +40,7 @@ export const env = createEnv({
 
     // Витрина (stariva.ru): админка сбрасывает её кэш после правок каталога.
     // Один и тот же REVALIDATE_SECRET задаётся и сайту, и админке.
-    STOREFRONT_URL: z.url().optional(),
+    STOREFRONT_URL: z.url({ protocol: /^https$/ }).optional(),
     REVALIDATE_SECRET: z.string().min(32).optional(),
   },
   client: {

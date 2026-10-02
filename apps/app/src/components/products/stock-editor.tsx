@@ -14,27 +14,40 @@ interface Props {
 }
 
 /**
- * Остаток готовых изделий. Ведётся у нас, а не в Ozon: при оплате заказа он
- * списывается сам, пополнять его нужно здесь.
+ * Остаток готовых изделий. Ведётся у нас: при оплате заказа он списывается
+ * сам, пополнять его нужно здесь. При сохранении дублируется на склад Ozon —
+ * Ozon Доставка отгружает только то, что числится в остатке на Ozon.
  */
 export function StockEditor({ id, stockAvailable, sku, offerId }: Props) {
   const router = useRouter();
   const [value, setValue] = useState(String(stockAvailable));
   const [saved, setSaved] = useState(stockAvailable);
+  const [syncFailed, setSyncFailed] = useState(false);
 
   const mutation = useMutation({
     ...orpc.admin.products.setStock.mutationOptions(),
     onSuccess: (result) => {
+      setSyncFailed(!result.ozonSynced);
       setSaved(result.stockAvailable);
       setValue(String(result.stockAvailable));
-      toast.success("Остаток сохранён");
+      if (result.ozonSynced) {
+        toast.success("Остаток сохранён и отправлен в Ozon");
+      } else {
+        toast.warning(
+          "Остаток сохранён на сайте, но в Ozon не обновился — без него Ozon Доставка не примет заказ. Сохраните ещё раз или поправьте остаток на складе Лотошино_наличие в кабинете Ozon.",
+        );
+      }
       router.refresh();
     },
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
   });
 
   const parsed = value.trim() === "" ? Number.NaN : Number(value);
-  const changed = Number.isInteger(parsed) && parsed !== saved;
+  const canSave =
+    Number.isInteger(parsed) &&
+    parsed >= 0 &&
+    parsed <= 9999 &&
+    (parsed !== saved || syncFailed);
 
   return (
     <div className="bg-muted/50 space-y-2 rounded-md p-3 text-sm">
@@ -55,7 +68,7 @@ export function StockEditor({ id, stockAvailable, sku, offerId }: Props) {
         <Button
           type="button"
           variant="outline"
-          disabled={!changed || mutation.isPending}
+          disabled={!canSave || mutation.isPending}
           onClick={() => mutation.mutate({ id, stockAvailable: parsed })}
         >
           Сохранить остаток
@@ -63,7 +76,7 @@ export function StockEditor({ id, stockAvailable, sku, offerId }: Props) {
       </div>
       <p className="text-muted-foreground text-xs">
         {sku
-          ? `Ozon SKU ${sku}${offerId ? ` · артикул ${offerId}` : ""} — нужен только для доставки. `
+          ? `Ozon SKU ${sku}${offerId ? ` · артикул ${offerId}` : ""}. При сохранении остаток уходит на склад Ozon, а товар скрывается с витрины Ozon. `
           : "Нет SKU Ozon — продаётся только под заказ. "}
         Остаток уменьшается сам, когда заказ оплачен.
       </p>

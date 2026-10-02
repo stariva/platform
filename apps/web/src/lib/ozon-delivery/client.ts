@@ -1,3 +1,4 @@
+import { logger } from "@stariva/config";
 import { z } from "zod";
 import { getOzonDeliveryToken, isOzonDeliveryConfigured } from "./auth";
 import { normalizePointInfo, pointInfoSchema } from "./point-info";
@@ -279,6 +280,18 @@ export async function checkout(
     splits.length > 0 &&
     requested.size === quoted.size &&
     [...requested].every(([sku, quantity]) => quoted.get(sku) === quantity);
+  if (!available) {
+    // OUT_OF_STOCK здесь чаще всего значит, что остаток не дошёл до склада Ozon
+    logger.warn("ozon_delivery.checkout.unavailable", {
+      splits: data.splits.map((split) => ({
+        skus: split.items.map((item) => item.sku),
+        reason: [
+          split.unavailable_reason,
+          split.delivery_method?.unavailable_reason,
+        ].find((reason) => reason !== undefined && reason !== "UNSPECIFIED"),
+      })),
+    });
+  }
   return {
     available,
     reason: available ? undefined : "Доставка выбранных товаров недоступна",
