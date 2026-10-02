@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { type CartItem, MAX_CART_QUANTITY } from "@/lib/cart/cart-context";
 import type { CartLineState } from "@/lib/cart/use-cart-validation";
+import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +26,13 @@ export function CartItemRow({
   const productHref = `/catalog/product/${item.productSlug}`;
   // Страницы изделия, которого нет в каталоге, не существует
   const linkable = !(unavailable && state.reason === "missing");
+  const madeToOrder = item.fulfillmentType === "made_to_order";
   const maxQuantity =
-    state.status === "available" ? state.maxQuantity : MAX_CART_QUANTITY;
+    state.status === "available"
+      ? state.maxQuantity
+      : madeToOrder
+        ? MAX_MADE_TO_ORDER_QUANTITY
+        : MAX_CART_QUANTITY;
   const atLimit = item.quantity >= maxQuantity;
 
   const thumb = (
@@ -87,10 +93,17 @@ export function CartItemRow({
                   : "Нет в наличии"}
               </p>
             ) : (
-              <p className="mt-0.5 text-sm text-taupe tabular-nums">
-                {formatPrice(item.price / 100)}
-                {item.quantity > 1 && " за шт."}
-              </p>
+              <>
+                <p className="mt-0.5 text-sm text-taupe tabular-nums">
+                  {formatPrice(item.price / 100)}
+                  {item.quantity > 1 && " за шт."}
+                </p>
+                {madeToOrder && item.options && (
+                  <p className="mt-1 text-xs text-taupe">
+                    Размер: {item.options.size} · Цвет: {item.options.color}
+                  </p>
+                )}
+              </>
             )}
           </div>
           <button
@@ -137,7 +150,15 @@ export function CartItemRow({
                   <PlusIcon className="size-3.5" aria-hidden="true" />
                 </button>
               </fieldset>
-              <StockHint quantity={item.quantity} maxQuantity={maxQuantity} />
+              {madeToOrder ? (
+                atLimit && (
+                  <p className="mt-1.5 text-xs text-taupe">
+                    Больше {maxQuantity} шт. — напишите мастеру
+                  </p>
+                )
+              ) : (
+                <StockHint quantity={item.quantity} maxQuantity={maxQuantity} />
+              )}
             </div>
             <span className="text-espresso font-medium tabular-nums">
               {formatPrice((item.price * item.quantity) / 100)}

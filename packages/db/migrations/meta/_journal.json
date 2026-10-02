@@ -78,6 +78,20 @@
       "when": 1790884098310,
       "tag": "0010_avito_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790956184843,
+      "tag": "0011_made_to_order_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790956773148,
+      "tag": "0012_order_tracking_number",
+      "breakpoints": true
     }
   ]
 }

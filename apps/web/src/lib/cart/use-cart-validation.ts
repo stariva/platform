@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatPrice } from "@/lib/products";
-import { type CartItem, useCart } from "./cart-context";
+import { type CartItem, cartLineKey, useCart } from "./cart-context";
 import {
   type CartValidationLine,
   cartValidationResponseSchema,
+  validationLineKey,
 } from "./validation";
 
 /** Долгая проверка не должна держать корзину в «Проверяем…» */
@@ -20,7 +21,7 @@ export type CartLineState =
  * Сверяет корзину с каталогом: обновляет цены, ограничивает количество
  * остатком и сообщает, какие товары уже нельзя купить. Если проверить не
  * удалось, корзина работает как раньше — окончательное слово за сервером
- * при оформлении.
+ * при оформлении. Состояния отдаются по ключу строки корзины (`cartLineKey`).
  */
 export function useCartValidation() {
   const { items, hydrated, syncWithCatalog } = useCart();
@@ -34,10 +35,19 @@ export function useCartValidation() {
   itemsRef.current = items;
   const checked = useRef(new Set<string>());
 
-  const slugKey = useMemo(
+  // Проверяем товар, а не строку: размеры и цвета одного изделия на цену не влияют
+  const productKey = useMemo(
     () =>
-      items
-        .map((item) => item.productSlug)
+      [
+        ...new Set(
+          items.map((item) =>
+            validationLineKey({
+              productSlug: item.productSlug,
+              fulfillmentType: item.fulfillmentType,
+            }),
+          ),
+        ),
+      ]
         .sort()
         .join("\n"),
     [items],
@@ -45,13 +55,21 @@ export function useCartValidation() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const slugs = slugKey ? slugKey.split("\n") : [];
-    const currentSlugs = new Set(slugs);
-    for (const slug of checked.current) {
-      if (!currentSlugs.has(slug)) checked.current.delete(slug);
+    const keys = productKey ? productKey.split("\n") : [];
+    const currentKeys = new Set(keys);
+    for (const key of checked.current) {
+      if (!currentKeys.has(key)) checked.current.delete(key);
     }
-    if (slugs.length === 0 || slugs.every((slug) => checked.current.has(slug)))
+    if (keys.length === 0 || keys.every((key) => checked.current.has(key)))
       return;
+
+    const requestLines = keys.map((key) => {
+      const separator = key.indexOf(":");
+      return {
+        fulfillmentType: key.slice(0, separator),
+        productSlug: key.slice(separator + 1),
+      };
+    });
 
     const controller = new AbortController();
     setLoading(true);
@@ -60,7 +78,7 @@ export function useCartValidation() {
         const res = await fetch("/api/cart/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slugs }),
+          body: JSON.stringify({ lines: requestLines }),
           signal: AbortSignal.any([
             controller.signal,
             AbortSignal.timeout(VALIDATION_TIMEOUT_MS),
@@ -70,11 +88,11 @@ export function useCartValidation() {
         const parsed = cartValidationResponseSchema.safeParse(await res.json());
         if (!parsed.success) return;
 
-        for (const slug of slugs) checked.current.add(slug);
+        for (const key of keys) checked.current.add(key);
         setLines((prev) => {
           const next = new Map(prev);
           for (const line of parsed.data.lines) {
-            next.set(line.productSlug, line);
+            next.set(validationLineKey(line), line);
           }
           return next;
         });
@@ -95,14 +113,14 @@ export function useCartValidation() {
       controller.abort();
       setLoading(false);
     };
-  }, [hydrated, slugKey, syncWithCatalog]);
+  }, [hydrated, productKey, syncWithCatalog]);
 
   const states = useMemo(() => {
     const map = new Map<string, CartLineState>();
     for (const item of items) {
-      const line = lines.get(item.productSlug);
+      const line = lines.get(validationLineKey(item));
       map.set(
-        item.productSlug,
+        cartLineKey(item),
         !line
           ? { status: "unknown" }
           : line.available
@@ -126,19 +144,22 @@ function describeChanges(
   items: CartItem[],
   fresh: Extract<CartValidationLine, { available: true }>[],
 ): string[] {
-  const bySlug = new Map(items.map((item) => [item.productSlug, item]));
   const messages: string[] = [];
   for (const line of fresh) {
-    const item = bySlug.get(line.productSlug);
+    const key = validationLineKey(line);
+    const matching = items.filter((item) => validationLineKey(item) === key);
+    const [item] = matching;
     if (!item) continue;
     if (item.price !== line.price) {
       messages.push(
         `«${line.name}»: цена изменилась с ${formatPrice(item.price / 100)} на ${formatPrice(line.price / 100)}`,
       );
     }
-    if (item.quantity > line.maxQuantity) {
+    if (matching.some((i) => i.quantity > line.maxQuantity)) {
       messages.push(
-        `«${line.name}»: в наличии только ${line.maxQuantity} шт. — количество уменьшено`,
+        line.fulfillmentType === "made_to_order"
+          ? `«${line.name}»: под заказ можно не больше ${line.maxQuantity} шт. — количество уменьшено`
+          : `«${line.name}»: в наличии только ${line.maxQuantity} шт. — количество уменьшено`,
       );
     }
   }

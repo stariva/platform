@@ -19,11 +19,33 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackProductEvent } from "@/lib/analytics";
-import { type CartItem, useCart } from "@/lib/cart/cart-context";
-import { useCartValidation } from "@/lib/cart/use-cart-validation";
+import {
+  type CartItem,
+  cartLineKey,
+  type FulfillmentType,
+  useCart,
+} from "@/lib/cart/cart-context";
+import {
+  type CartLineState,
+  useCartValidation,
+} from "@/lib/cart/use-cart-validation";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { CartItemRow } from "./cart-item-row";
 import { CartSummary } from "./cart-summary";
+
+const SECTION_ORDER: FulfillmentType[] = ["stock", "made_to_order"];
+
+const SECTION_TITLES: Record<FulfillmentType, { title: string; hint: string }> =
+  {
+    stock: {
+      title: "Готовые изделия",
+      hint: "Отправим со склада, оплачиваются отдельно",
+    },
+    made_to_order: {
+      title: "Под заказ",
+      hint: "Сплетём после оплаты, оплачиваются отдельно",
+    },
+  };
 
 export default function CartPage() {
   const {
@@ -37,15 +59,14 @@ export default function CartPage() {
   } = useCart();
   const { states, loading, notices, dismissNotices } = useCartValidation();
 
-  const isUnavailable = (item: CartItem) =>
-    states.get(item.productSlug)?.status === "unavailable";
-  const buyable = items.filter((item) => !isUnavailable(item));
-  const unavailable = items.filter(isUnavailable);
-  const subtotal = buyable.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const count = buyable.reduce((sum, i) => sum + i.quantity, 0);
+  // Готовые изделия и изделия под заказ оформляются и оплачиваются раздельно
+  const sections = SECTION_ORDER.map((kind) => ({
+    kind,
+    items: items.filter((item) => item.fulfillmentType === kind),
+  })).filter((section) => section.items.length > 0);
 
   function removeItem(item: CartItem) {
-    remove(item.productSlug);
+    remove(cartLineKey(item));
     trackProductEvent("remove", [
       {
         id: item.productSlug,
@@ -61,8 +82,12 @@ export default function CartPage() {
     });
   }
 
-  function removeUnavailable() {
-    for (const item of unavailable) remove(item.productSlug);
+  function removeUnavailable(sectionItems: CartItem[]) {
+    for (const item of sectionItems) {
+      if (states.get(cartLineKey(item))?.status === "unavailable") {
+        remove(cartLineKey(item));
+      }
+    }
   }
 
   return (
@@ -98,7 +123,7 @@ export default function CartPage() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Отмена</AlertDialogCancel>
-                    <AlertDialogAction onClick={clear}>
+                    <AlertDialogAction onClick={() => clear()}>
                       Очистить
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -112,54 +137,88 @@ export default function CartPage() {
           ) : items.length === 0 ? (
             <EmptyCart />
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-              <div className="space-y-4">
-                {notices.length > 0 && (
-                  <div
-                    role="alert"
-                    className="flex gap-3 rounded-2xl border border-terracotta/30 bg-sand px-4 py-3 text-sm text-espresso"
-                  >
-                    <TriangleAlertIcon
-                      className="size-4 shrink-0 mt-0.5 text-terracotta"
-                      aria-hidden="true"
-                    />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      {notices.map((notice) => (
-                        <p key={notice}>{notice}</p>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={dismissNotices}
-                      className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
-                    >
-                      Понятно
-                    </button>
+            <div className="space-y-10">
+              {notices.length > 0 && (
+                <div
+                  role="alert"
+                  className="flex gap-3 rounded-2xl border border-terracotta/30 bg-sand px-4 py-3 text-sm text-espresso"
+                >
+                  <TriangleAlertIcon
+                    className="size-4 shrink-0 mt-0.5 text-terracotta"
+                    aria-hidden="true"
+                  />
+                  <div className="flex-1 min-w-0 space-y-1">
+                    {notices.map((notice) => (
+                      <p key={notice}>{notice}</p>
+                    ))}
                   </div>
-                )}
-                <ul className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
-                  {items.map((item) => (
-                    <CartItemRow
-                      key={item.productSlug}
-                      item={item}
-                      state={
-                        states.get(item.productSlug) ?? { status: "unknown" }
-                      }
-                      onQuantityChange={(quantity) =>
-                        setQty(item.productSlug, quantity)
-                      }
-                      onRemove={() => removeItem(item)}
-                    />
-                  ))}
-                </ul>
-              </div>
-              <CartSummary
-                subtotal={subtotal}
-                count={count}
-                unavailableCount={unavailable.length}
-                checking={loading}
-                onRemoveUnavailable={removeUnavailable}
-              />
+                  <button
+                    type="button"
+                    onClick={dismissNotices}
+                    className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+                  >
+                    Понятно
+                  </button>
+                </div>
+              )}
+              {sections.map((section) => {
+                const stateOf = (item: CartItem): CartLineState =>
+                  states.get(cartLineKey(item)) ?? { status: "unknown" };
+                const unavailable = section.items.filter(
+                  (item) => stateOf(item).status === "unavailable",
+                );
+                const buyable = section.items.filter(
+                  (item) => stateOf(item).status !== "unavailable",
+                );
+                return (
+                  <section
+                    key={section.kind}
+                    aria-labelledby={`cart-section-${section.kind}`}
+                  >
+                    {sections.length > 1 && (
+                      <div className="mb-4">
+                        <h2
+                          id={`cart-section-${section.kind}`}
+                          className="font-serif text-2xl text-espresso"
+                        >
+                          {SECTION_TITLES[section.kind].title}
+                        </h2>
+                        <p className="text-sm text-taupe">
+                          {SECTION_TITLES[section.kind].hint}
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+                      <ul className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
+                        {section.items.map((item) => (
+                          <CartItemRow
+                            key={cartLineKey(item)}
+                            item={item}
+                            state={stateOf(item)}
+                            onQuantityChange={(quantity) =>
+                              setQty(cartLineKey(item), quantity)
+                            }
+                            onRemove={() => removeItem(item)}
+                          />
+                        ))}
+                      </ul>
+                      <CartSummary
+                        kind={section.kind}
+                        subtotal={buyable.reduce(
+                          (sum, i) => sum + i.price * i.quantity,
+                          0,
+                        )}
+                        count={buyable.reduce((sum, i) => sum + i.quantity, 0)}
+                        unavailableCount={unavailable.length}
+                        checking={loading}
+                        onRemoveUnavailable={() =>
+                          removeUnavailable(section.items)
+                        }
+                      />
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
         </div>

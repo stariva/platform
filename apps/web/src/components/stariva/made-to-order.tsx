@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -29,16 +30,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { reachGoal } from "@/lib/analytics";
+import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { appendCampaign } from "@/lib/campaign-attribution";
+import { useCart } from "@/lib/cart/cart-context";
 import {
   COLOR_SWATCHES,
   CUSTOM_SIZE,
+  customSizeLabel,
   type MadeToOrderConfig,
   madeToOrderLeadTime,
+  madeToOrderSizes,
   PHOTO_COLOR,
 } from "@/lib/made-to-order";
 import type { Product } from "@/lib/ozon-types";
+import { formatPrice } from "@/lib/products";
 
 interface MadeToOrderProps {
   product: Product;
@@ -48,12 +53,43 @@ interface MadeToOrderProps {
 
 /** Показывает срок изготовления, выбор размера и цвета и открывает заявку. */
 export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
-  const sizes = product.sizes?.length ? product.sizes : config.defaultSizes;
+  const sizes = madeToOrderSizes(product, config);
   const isClothes = product.category === "clothes";
+  const router = useRouter();
+  const { add } = useCart();
 
   const [size, setSize] = useState<string>(CUSTOM_SIZE);
   const [color, setColor] = useState<string>(PHOTO_COLOR);
   const [open, setOpen] = useState(false);
+
+  // Цена фиксированная, из каталога: оплатить можно сразу, без согласования суммы
+  const canPay = product.currency === "RUB" && product.price > 0;
+
+  function orderAndPay() {
+    add({
+      productSlug: product.slug,
+      fulfillmentType: "made_to_order",
+      name: product.name,
+      image: product.images[0] ?? "",
+      price: Math.round(product.price * 100),
+      options: {
+        size: size === CUSTOM_SIZE ? customSizeLabel(product.category) : size,
+        color,
+        measurements: [],
+      },
+    });
+    trackProductEvent("add", [
+      {
+        id: product.slug,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        category: product.category,
+      },
+    ]);
+    reachGoal("made_to_order_add_to_cart", { category: product.category });
+    router.push("/cart");
+  }
 
   const colorOptions = [
     { id: "photo", label: PHOTO_COLOR, hex: null as string | null },
@@ -162,15 +198,37 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
         </details>
       )}
 
+      {canPay && (
+        <div className="mb-3">
+          <Button
+            type="button"
+            onClick={orderAndPay}
+            className="w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
+          >
+            Заказать и оплатить · {formatPrice(product.price)}
+          </Button>
+          <p className="text-taupe text-[11px] leading-relaxed mt-2">
+            Оплата 100% на сайте. После оплаты мастер свяжется с вами, уточнит
+            мерки, цвет и доставку — стоимость изделия при этом не меняется.
+            Доставка рассчитывается отдельно.
+          </p>
+        </div>
+      )}
+
       <Button
         type="button"
+        variant={canPay ? "outline" : "default"}
         onClick={() => {
           setOpen(true);
           reachGoal("made_to_order_open", { category: product.category });
         }}
-        className="w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
+        className={
+          canPay
+            ? "w-full py-3.5 h-auto rounded-2xl transition-colors label-caps"
+            : "w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
+        }
       >
-        {config.cta}
+        {canPay ? "Сначала обсудить с мастером" : config.cta}
       </Button>
 
       <MadeToOrderDialog

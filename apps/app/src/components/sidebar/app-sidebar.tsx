@@ -20,6 +20,7 @@ import {
   IconPlus,
   IconSchool,
   IconSettings,
+  IconShoppingBag,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -31,6 +32,8 @@ const catalog = [
   { title: "Добавить товар", url: "/products/new", icon: IconPlus },
   { title: "Отзывы", url: "/reviews", icon: IconMessageStar },
 ];
+
+const sales = [{ title: "Заказы", url: "/orders", icon: IconShoppingBag }];
 
 const learning = [
   { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
@@ -78,6 +81,23 @@ export function AppSidebar({
                         /^\/products\/(?!new)/.test(pathname)
                       : pathname === item.url
                   }
+                  render={<Link href={item.url} />}
+                >
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Продажи</SidebarGroupLabel>
+          <SidebarMenu>
+            {sales.map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  isActive={pathname.startsWith(item.url)}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />

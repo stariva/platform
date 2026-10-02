@@ -35,6 +35,8 @@ export interface MadeToOrderConfig {
 export const MADE_TO_ORDER_DAYS = "2–4 дня";
 
 export const CUSTOM_SIZE = "По меркам";
+/** Выбор «свой размер» для сумок и интерьера, где «по меркам» не говорят. */
+export const OWN_SIZE = "Свой размер";
 export const PHOTO_COLOR = "Как на фото";
 
 /** Базовая палитра хлопкового шнура. Точный оттенок согласуем перед плетением. */
@@ -123,6 +125,39 @@ export function getProductMadeToOrder(
   product: Pick<Product, "category" | "madeToOrder">,
 ): MadeToOrderConfig | null {
   return product.madeToOrder ? getMadeToOrder(product.category) : null;
+}
+
+/** Стандартные размеры изделия: свои из каталога или размеры категории. */
+export function madeToOrderSizes(
+  product: Pick<Product, "category" | "sizes">,
+  config: MadeToOrderConfig,
+): string[] {
+  return product.sizes?.length ? product.sizes : config.defaultSizes;
+}
+
+/** Как подписан выбор «свой размер»: для одежды «По меркам». */
+export function customSizeLabel(category: ProductCategory): string {
+  return category === "clothes" ? CUSTOM_SIZE : OWN_SIZE;
+}
+
+/** Размер из заказа — стандартный размер изделия или «свой размер». */
+export function isMadeToOrderSize(
+  product: Pick<Product, "category" | "sizes">,
+  config: MadeToOrderConfig,
+  size: string,
+): boolean {
+  return (
+    size === customSizeLabel(product.category) ||
+    madeToOrderSizes(product, config).includes(size)
+  );
+}
+
+/** Цвет из заказа — «как на фото» или цвет из палитры; другой оттенок пишут в комментарии. */
+export function isMadeToOrderColor(color: string): boolean {
+  return (
+    color === PHOTO_COLOR ||
+    COLOR_SWATCHES.some((swatch) => swatch.label === color)
+  );
 }
 
 /** «1 день», «2–4 дня», «5–7 дней» — склоняем по последнему числу. */

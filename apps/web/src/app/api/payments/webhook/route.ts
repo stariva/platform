@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { grantAccess } from "@/lib/account/access";
 import {
+  notifyOrderPaid,
+  notifyOzonOrderFailed,
+} from "@/lib/commerce/order-notifications";
+import {
   attachOzonOrder,
   claimProductOrderShipment,
   getProductOrderById,
@@ -124,6 +128,17 @@ async function handleProductOrderWebhook(
   }
 
   await markProductOrderPaid(orderId);
+
+  // Изделие под заказ ещё не существует: ни Ozon, ни склада, зато нужен живой
+  // разговор с покупателем — поэтому сообщаем мастеру и ждём его.
+  if (order.kind === "made_to_order") {
+    await notifyOrderPaid(orderId);
+    console.info(
+      `[payments/webhook] Заказ под заказ ${orderId} оплачен, ждёт уточнения деталей`,
+    );
+    return;
+  }
+
   const attemptId = await claimProductOrderShipment(orderId);
   if (!attemptId) return;
 
@@ -141,11 +156,12 @@ async function handleProductOrderWebhook(
           };
 
     const ozonOrder = await createOzonDeliveryOrder({
-      items: items.map((i) => ({
-        sku: i.ozonSku,
-        quantity: i.quantity,
-        price: i.price,
-      })),
+      items: items.map((i) => {
+        if (i.ozonSku === null) {
+          throw new Error(`order_item_without_ozon_sku:${i.id}`);
+        }
+        return { sku: i.ozonSku, quantity: i.quantity, price: i.price };
+      }),
       delivery,
       recipient: {
         name: order.contactName,
@@ -170,6 +186,18 @@ async function handleProductOrderWebhook(
       error,
     );
     await markProductOrderOzonFailed(orderId, attemptId);
+    await notifyOzonOrderFailed(orderId);
     throw error;
+  }
+
+  // Заказ уже создан в Ozon — сбой уведомления не должен заставлять YooKassa
+  // повторять webhook, поэтому здесь он только попадает в лог.
+  try {
+    await notifyOrderPaid(orderId);
+  } catch (error) {
+    console.error(
+      `[payments/webhook] Не удалось уведомить мастера о заказе ${orderId}:`,
+      error,
+    );
   }
 }

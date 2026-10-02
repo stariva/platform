@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
-import { useCart } from "@/lib/cart/cart-context";
+import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import {
   formatDateRange,
   localDateKey,
@@ -78,7 +78,10 @@ const unavailableItemsResponseSchema = z.object({
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
 export default function CheckoutPage() {
-  const { items, subtotal, clear, remove } = useCart();
+  const { items: cartItems, clear, remove } = useCart();
+  // Изделия под заказ оплачиваются отдельно — на /checkout/made-to-order
+  const items = cartItems.filter((item) => item.fulfillmentType === "stock");
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const [step, setStep] = useState<Step>("contact");
   const [contact, setContact] = useState<ContactFormValues | null>(null);
@@ -170,7 +173,9 @@ export default function CheckoutPage() {
     const names = items
       .filter((item) => slugs.has(item.productSlug))
       .map((item) => `«${item.name}»`);
-    for (const slug of slugs) remove(slug);
+    for (const slug of slugs) {
+      remove(cartLineKey({ productSlug: slug, fulfillmentType: "stock" }));
+    }
     setQuote(null);
     setStep("delivery");
     toast.error(
@@ -268,7 +273,7 @@ export default function CheckoutPage() {
         return;
       }
       await trackCreatedOrder(parsed.data.analytics);
-      clear();
+      clear("stock");
       window.location.href = parsed.data.confirmationUrl;
     } catch {
       toast.error("Не удалось создать заказ. Попробуйте позже.");

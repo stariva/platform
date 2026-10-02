@@ -27,7 +27,10 @@ export function AddToCartButton({
   if (!isPurchasable(product)) return null;
 
   const inCart =
-    items.find((item) => item.productSlug === product.slug)?.quantity ?? 0;
+    items.find(
+      (item) =>
+        item.fulfillmentType === "stock" && item.productSlug === product.slug,
+    )?.quantity ?? 0;
   const limit = Math.min(product.stockAvailable, MAX_CART_QUANTITY);
   const buttonClassName =
     className ??
@@ -50,6 +53,7 @@ export function AddToCartButton({
       onClick={() => {
         add({
           productSlug: product.slug,
+          fulfillmentType: "stock",
           ozonSku: product.ozonSku as number,
           name: product.name,
           image: product.images[0] ?? "",

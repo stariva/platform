@@ -9,30 +9,53 @@ import {
   useState,
 } from "react";
 import { z } from "zod";
+import { madeToOrderOptionsSchema } from "@/lib/commerce/made-to-order-options";
 
 /** Больше одного изделия в заказе сервер не примет. */
 export const MAX_CART_QUANTITY = 99;
 
+/** Готовое изделие со склада или изделие, которое сплетут после оплаты. */
+export const fulfillmentTypeSchema = z.enum(["stock", "made_to_order"]);
+export type FulfillmentType = z.infer<typeof fulfillmentTypeSchema>;
+
 const cartItemSchema = z.object({
   productSlug: z.string().min(1),
-  ozonSku: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  /** Нет у изделий под заказ: они не проходят через склад Ozon. */
+  ozonSku: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   name: z.string().min(1),
   image: z.string(),
   price: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   quantity: z.number().int().positive().max(MAX_CART_QUANTITY),
+  // Корзина из старой версии хранит только готовые изделия.
+  fulfillmentType: fulfillmentTypeSchema.default("stock"),
+  /** Размер и цвет, выбранные на карточке; только для изделий под заказ. */
+  options: madeToOrderOptionsSchema.optional(),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
 
+/**
+ * Строка корзины. Готовое изделие — по товару, изделие под заказ — ещё и по
+ * размеру и цвету: одно и то же изделие в разных вариантах — разные строки.
+ */
+export function cartLineKey(
+  item: Pick<CartItem, "productSlug" | "fulfillmentType" | "options">,
+): string {
+  if (item.fulfillmentType === "stock") return `stock:${item.productSlug}`;
+  const { size = "", color = "" } = item.options ?? {};
+  return `made_to_order:${item.productSlug}:${size}:${color}`;
+}
+
 /** Свежие данные каталога по одному товару из корзины. */
 export interface CatalogUpdate {
   productSlug: string;
-  ozonSku: number;
+  fulfillmentType: FulfillmentType;
+  ozonSku?: number;
   name: string;
   image: string;
   /** В копейках */
   price: number;
-  /** Верхняя граница количества: остаток на складе */
+  /** Верхняя граница количества: остаток на складе или лимит изделий под заказ */
   maxQuantity: number;
 }
 
@@ -41,9 +64,10 @@ interface CartContextValue {
   /** Корзина прочитана из localStorage; до этого items пуст не потому, что корзина пуста. */
   hydrated: boolean;
   add: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  remove: (productSlug: string) => void;
-  setQty: (productSlug: string, quantity: number) => void;
-  clear: () => void;
+  remove: (lineKey: string) => void;
+  setQty: (lineKey: string, quantity: number) => void;
+  /** Без аргумента очищает всю корзину, с аргументом — только готовые или только изделия под заказ. */
+  clear: (fulfillmentType?: FulfillmentType) => void;
   /** Подставляет актуальные цены и ограничивает количество остатком. */
   syncWithCatalog: (updates: CatalogUpdate[]) => void;
   subtotal: number;
@@ -65,13 +89,21 @@ function readStoredCart(): CartItem[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    const bySlug = new Map<string, CartItem>();
+    const byKey = new Map<string, CartItem>();
     for (const entry of parsed) {
       const result = cartItemSchema.safeParse(entry);
       if (!result.success) continue;
-      const existing = bySlug.get(result.data.productSlug);
-      bySlug.set(
-        result.data.productSlug,
+      // Готовое изделие без SKU нельзя заказать — пропускаем, как невалидное
+      if (
+        result.data.fulfillmentType === "stock" &&
+        result.data.ozonSku === undefined
+      ) {
+        continue;
+      }
+      const key = cartLineKey(result.data);
+      const existing = byKey.get(key);
+      byKey.set(
+        key,
         existing
           ? {
               ...existing,
@@ -80,7 +112,7 @@ function readStoredCart(): CartItem[] {
           : result.data,
       );
     }
-    return [...bySlug.values()];
+    return [...byKey.values()];
   } catch {
     return [];
   }
@@ -121,11 +153,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, hydrated]);
 
   const add = useCallback<CartContextValue["add"]>((item, quantity = 1) => {
+    const key = cartLineKey(item);
     setItems((prev) => {
-      const existing = prev.find((i) => i.productSlug === item.productSlug);
+      const existing = prev.find((i) => cartLineKey(i) === key);
       if (existing) {
         return prev.map((i) =>
-          i.productSlug === item.productSlug
+          cartLineKey(i) === key
             ? { ...i, quantity: clampQuantity(i.quantity + quantity) }
             : i,
         );
@@ -134,35 +167,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const remove = useCallback((productSlug: string) => {
-    setItems((prev) => prev.filter((i) => i.productSlug !== productSlug));
+  const remove = useCallback((lineKey: string) => {
+    setItems((prev) => prev.filter((i) => cartLineKey(i) !== lineKey));
   }, []);
 
-  const setQty = useCallback((productSlug: string, quantity: number) => {
+  const setQty = useCallback((lineKey: string, quantity: number) => {
     setItems((prev) => {
       if (quantity <= 0) {
-        return prev.filter((i) => i.productSlug !== productSlug);
+        return prev.filter((i) => cartLineKey(i) !== lineKey);
       }
       return prev.map((i) =>
-        i.productSlug === productSlug
+        cartLineKey(i) === lineKey
           ? { ...i, quantity: clampQuantity(quantity) }
           : i,
       );
     });
   }, []);
 
-  const clear = useCallback(() => setItems([]), []);
+  const clear = useCallback<CartContextValue["clear"]>((fulfillmentType) => {
+    setItems((prev) =>
+      fulfillmentType
+        ? prev.filter((i) => i.fulfillmentType !== fulfillmentType)
+        : [],
+    );
+  }, []);
 
   const syncWithCatalog = useCallback((updates: CatalogUpdate[]) => {
-    const bySlug = new Map(updates.map((u) => [u.productSlug, u]));
+    const byProduct = new Map(
+      updates.map((u) => [`${u.fulfillmentType}:${u.productSlug}`, u]),
+    );
     setItems((prev) => {
       let changed = false;
       const next = prev.map((item) => {
-        const fresh = bySlug.get(item.productSlug);
+        const fresh = byProduct.get(
+          `${item.fulfillmentType}:${item.productSlug}`,
+        );
         if (!fresh) return item;
         const merged: CartItem = {
           ...item,
-          ozonSku: fresh.ozonSku,
+          ozonSku: fresh.ozonSku ?? item.ozonSku,
           name: fresh.name,
           // Пустую картинку из каталога не подставляем поверх рабочей
           image: fresh.image || item.image,

@@ -17,7 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { trackPaidOrder } from "@/lib/analytics";
+import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { formatPrice } from "@/lib/products";
+import {
+  MadeToOrderDetails,
+  madeToOrderItemSchema,
+} from "./made-to-order-details";
 
 const statusLabels: Record<string, string> = {
   pending: "Ожидает оплаты",
@@ -28,6 +33,20 @@ const statusLabels: Record<string, string> = {
   fulfilling: "Собирается",
   shipped: "В пути",
   delivered: "Доставлен",
+  awaiting_details: "Оплачен · уточняем детали",
+  in_production: "Изготавливается",
+  ready_to_ship: "Готов к отправке",
+};
+
+/** Что дальше, для заказа под заказ: по статусу. */
+const madeToOrderHints: Record<string, string> = {
+  awaiting_details:
+    "Оплата получена. Мастер свяжется с вами, чтобы уточнить мерки, цвет и доставку. Детали можно указать ниже.",
+  in_production: "Детали согласованы — мастер плетёт ваше изделие.",
+  ready_to_ship:
+    "Изделие готово. Мастер согласует с вами доставку и отправит заказ.",
+  shipped: "Заказ отправлен — детали отправки пришлёт мастер.",
+  delivered: "Заказ получен. Спасибо!",
 };
 
 const postingStatusLabels: Record<string, string> = {
@@ -39,20 +58,18 @@ const postingStatusLabels: Record<string, string> = {
   unknown: "Статус уточняется",
 };
 
-const orderResponseSchema =z.object({
+const orderResponseSchema = z.object({
+  kind: z.enum(["stock", "made_to_order"]),
   paid: z.boolean(),
   status: z.string(),
   amountTotal: z.number().int().nonnegative(),
   amountDelivery: z.number().int().nonnegative(),
   createdAt: z.string(),
   deliveryMethod: z.string(),
-  items: z.array(
-    z.object({
-      name: z.string(),
-      quantity: z.number().int().positive(),
-      price: z.number().int().nonnegative(),
-    }),
-  ),
+  customerNotes: z.string().nullable(),
+  deliveryNote: z.string().nullable(),
+  trackingNumber: z.string().nullable(),
+  items: z.array(madeToOrderItemSchema),
   postings: z.array(
     z.object({
       postingNumber: z.string(),
@@ -72,38 +89,47 @@ type OrderLookupFormValues = z.infer<typeof orderLookupSchema>;
 export function OrderStatus({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<OrderData | null>(null);
+  // Телефон нужен и для повторной загрузки заказа, и для дополнения деталей
+  const [phone, setPhone] = useState("");
 
   const form = useForm<OrderLookupFormValues>({
     resolver: zodResolver(orderLookupSchema),
     defaultValues: { phone: "" },
   });
 
-  async function onSubmit(data: OrderLookupFormValues) {
-    setLoading(true);
+  /** Загружает заказ по телефону; возвращает false, если загрузить не удалось. */
+  async function loadOrder(phoneValue: string): Promise<boolean> {
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: data.phone }),
+        body: JSON.stringify({ phone: phoneValue }),
       });
       const resData: unknown = await res.json();
       if (!res.ok) {
         const error = z.object({ error: z.string() }).safeParse(resData);
         toast.error(error.success ? error.data.error : "Заказ не найден");
-        return;
+        return false;
       }
       const parsed = orderResponseSchema.safeParse(resData);
       if (!parsed.success) {
         toast.error("Не удалось загрузить заказ");
-        return;
+        return false;
       }
       setOrder(parsed.data);
+      setPhone(phoneValue);
       trackPaidOrder(orderId, parsed.data.amountTotal, parsed.data.paid);
+      return true;
     } catch {
       toast.error("Не удалось загрузить заказ");
-    } finally {
-      setLoading(false);
+      return false;
     }
+  }
+
+  async function onSubmit(data: OrderLookupFormValues) {
+    setLoading(true);
+    await loadOrder(data.phone);
+    setLoading(false);
   }
 
   if (!order) {
@@ -141,6 +167,10 @@ export function OrderStatus({ orderId }: { orderId: string }) {
     );
   }
 
+  const madeToOrder = order.kind === "made_to_order";
+  const canEditDetails =
+    order.status === "awaiting_details" || order.status === "in_production";
+
   return (
     <div className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto">
       <div className="flex items-center justify-between">
@@ -152,16 +182,31 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         </span>
       </div>
 
+      {madeToOrder && madeToOrderHints[order.status] && (
+        <p className="rounded-xl bg-sand px-4 py-3 text-sm text-espresso leading-relaxed">
+          {madeToOrderHints[order.status]}
+        </p>
+      )}
+
       <div className="space-y-2">
-        {order.items.map((item, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: снапшот позиций заказа, без стабильного id
-          <div key={i} className="flex items-center justify-between text-sm">
-            <span className="text-espresso">
-              {item.name} × {item.quantity}
-            </span>
-            <span className="text-espresso">
-              {formatPrice((item.price * item.quantity) / 100)}
-            </span>
+        {order.items.map((item) => (
+          <div key={item.id} className="text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-espresso">
+                {item.name} × {item.quantity}
+              </span>
+              <span className="text-espresso">
+                {formatPrice((item.price * item.quantity) / 100)}
+              </span>
+            </div>
+            {item.options && (
+              <p className="text-taupe text-xs mt-0.5">
+                {describeMadeToOrderOptions({
+                  ...item.options,
+                  comment: undefined,
+                })}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -172,6 +217,31 @@ export function OrderStatus({ orderId }: { orderId: string }) {
           {formatPrice(order.amountTotal / 100)}
         </span>
       </div>
+      {madeToOrder && (
+        <p className="-mt-2 text-right text-xs text-taupe">
+          Без учёта доставки — её согласует мастер
+        </p>
+      )}
+
+      {madeToOrder && order.trackingNumber && (
+        <div className="rounded-xl bg-sand px-4 py-3 text-sm">
+          <p className="text-taupe text-xs">Отправление</p>
+          <p className="text-espresso">{order.trackingNumber}</p>
+        </div>
+      )}
+
+      {madeToOrder && canEditDetails && (
+        <MadeToOrderDetails
+          orderId={orderId}
+          phone={phone}
+          items={order.items}
+          customerNotes={order.customerNotes}
+          deliveryNote={order.deliveryNote}
+          onSaved={async () => {
+            await loadOrder(phone);
+          }}
+        />
+      )}
 
       {order.postings.length > 0 && (
         <div className="border-t border-espresso/8 pt-3">
@@ -182,7 +252,9 @@ export function OrderStatus({ orderId }: { orderId: string }) {
               className="flex items-center justify-between text-xs text-taupe"
             >
               <span>{p.postingNumber}</span>
-              <span>{postingStatusLabels[p.status] ?? "Статус уточняется"}</span>
+              <span>
+                {postingStatusLabels[p.status] ?? "Статус уточняется"}
+              </span>
             </div>
           ))}
         </div>
