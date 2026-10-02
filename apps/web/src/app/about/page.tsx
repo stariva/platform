@@ -21,9 +21,9 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/about`,
     images: [
       {
-        url: `https://cdn.stariva.ru/site/images/about/hero-founder-editorial.webp`,
-        width: 1672,
-        height: 941,
+        url: `https://cdn.stariva.ru/site/images/about/founder-2026-editorial.webp`,
+        width: 1536,
+        height: 1024,
         alt: "Ольга Карпычева — мастер Stariva",
       },
     ],
@@ -110,12 +110,12 @@ export default function AboutPage() {
         {/* Full-bleed image */}
         <div className="absolute inset-0">
           <Image
-            src="https://cdn.stariva.ru/site/images/about/hero-founder-editorial.webp"
+            src="https://cdn.stariva.ru/site/images/about/founder-2026-editorial.webp"
             alt="Ольга Карпычева в мастерской"
             fill
             priority
             unoptimized
-            className="object-cover object-[70%_center] lg:object-center"
+            className="object-cover object-[56%_center] lg:object-center"
             sizes="100vw"
           />
           {/* Bottom-up gradient for text legibility */}
