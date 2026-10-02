@@ -45,7 +45,8 @@ const catalogNav = [
     label: "Декор интерьера",
     href: "/catalog/interior",
     desc: "Абажуры, панно, вигвамы и аксессуары для дома",
-    image: "https://cdn.stariva.ru/site/images/catalog/category-decor.jpg",
+    image:
+      "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
     items: ["Абажуры", "Панно", "Вигвамы", "Плейсменты"],
   },
 ];

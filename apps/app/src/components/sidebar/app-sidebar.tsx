@@ -21,6 +21,7 @@ import {
   IconSchool,
   IconSettings,
   IconShoppingBag,
+  IconUsers,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,6 +40,8 @@ const learning = [
   { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
   { title: "Добавить мастер-класс", url: "/workshops/new", icon: IconPlus },
 ];
+
+const customers = [{ title: "Пользователи", url: "/users", icon: IconUsers }];
 
 export function AppSidebar({
   user,
@@ -119,6 +122,25 @@ export function AppSidebar({
                       ? pathname === "/workshops" ||
                         /^\/workshops\/(?!new)/.test(pathname)
                       : pathname === item.url
+                  }
+                  render={<Link href={item.url} />}
+                >
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Клиенты</SidebarGroupLabel>
+          <SidebarMenu>
+            {customers.map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  isActive={
+                    pathname === item.url || pathname.startsWith(`${item.url}/`)
                   }
                   render={<Link href={item.url} />}
                 >

@@ -47,14 +47,15 @@ export const categories: Category[] = [
     name: "Декор интерьера",
     description:
       "Абажуры, панно, плейсменты и вигвамы — изделия, которые создают уют в вашем доме",
-    image: "https://cdn.stariva.ru/site/images/catalog/category-interior.jpg",
+    image:
+      "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
     hero: {
       image:
-        "https://cdn.stariva.ru/site/images/catalog/hero-interior-editorial.webp",
-      alt: "Хлопковый абажур и панно макраме в интерьере при дневном свете",
-      width: 2172,
-      height: 724,
-      objectPosition: "69% top",
+        "https://cdn.stariva.ru/site/images/catalog/hero-interior-macrame-v5.webp",
+      alt: "Подвесной светильник и зелёное панно-ёлка из хлопкового макраме в светлой гостиной",
+      width: 1671,
+      height: 557,
+      objectPosition: "60% top",
     },
     subcategories: [
       { slug: "lampshades", name: "Абажуры", categorySlug: "interior" },
