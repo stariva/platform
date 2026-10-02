@@ -370,7 +370,7 @@ export function CustomOrderForm() {
             >
               напишите в Telegram
             </a>
-            . Источник перехода с рекламы может быть передан вместе с заявкой.
+            .
           </p>
         </fieldset>
       </form>
