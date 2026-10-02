@@ -12,6 +12,7 @@ const slides = [
     label: "Одежда",
     number: "01",
     productType: "clothes",
+    tone: "light",
     image:
       "https://cdn.stariva.ru/site/images/home/hero-fashion-macrame-v4.webp",
     alt: "Две модели в топе, юбке и платье с бахромой из хлопкового макраме на фоне моря",
@@ -30,8 +31,9 @@ const slides = [
     label: "Декор",
     number: "02",
     productType: "panel",
-    image: "https://cdn.stariva.ru/site/images/home/hero-decor-editorial.webp",
-    alt: "Светлое панно макраме над деревянной скамьёй в интерьере с живыми растениями",
+    tone: "light",
+    image: "https://cdn.stariva.ru/site/images/home/hero-decor-macrame-v5.webp",
+    alt: "Подвесной светильник и зелёное панно-ёлка из хлопкового макраме в светлой гостиной",
     eyebrow: "Декор макраме · ручная работа",
     title: "Детали, которые",
     accent: "делают дом вашим.",
@@ -47,6 +49,7 @@ const slides = [
     label: "Абажуры",
     number: "03",
     productType: "lampshade",
+    tone: "dark",
     image:
       "https://cdn.stariva.ru/site/images/home/hero-interior-editorial.webp",
     alt: "Крупный абажур ручного плетения из светлого шнура в тёплом спокойном интерьере",
@@ -80,7 +83,7 @@ export function Hero() {
       aria-label="Изделия Stariva"
       aria-roledescription="карусель"
       className={styles.hero}
-      data-tone={active === 0 ? "light" : "dark"}
+      data-tone={currentSlide.tone}
       data-instant={instant}
     >
       <h1 className="sr-only">
