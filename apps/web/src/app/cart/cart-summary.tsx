@@ -22,6 +22,8 @@ const COPY: Record<
   {
     delivery: string;
     deliveryValue: string;
+    totalLabel: string;
+    checkoutLabel: string;
     checkoutHref: string;
     unavailable: (count: number) => string;
     perks: { Icon: typeof TruckIcon; text: string }[];
@@ -30,6 +32,8 @@ const COPY: Record<
   stock: {
     delivery: "Доставка Ozon",
     deliveryValue: "на следующем шаге",
+    totalLabel: "Итого",
+    checkoutLabel: "Перейти к оформлению",
     checkoutHref: "/checkout",
     unavailable: (count) =>
       count === 1
@@ -44,6 +48,8 @@ const COPY: Record<
   made_to_order: {
     delivery: "Доставка",
     deliveryValue: "согласует мастер",
+    totalLabel: "По каталогу",
+    checkoutLabel: "Оформить заявку",
     checkoutHref: "/checkout/made-to-order",
     unavailable: (count) =>
       count === 1
@@ -51,14 +57,17 @@ const COPY: Record<
         : `${count} ${pluralItems(count)} сняты с продажи.`,
     perks: [
       {
+        Icon: RulerIcon,
+        text: "Сейчас без оплаты: мастер свяжется и согласует мерки, цену и доставку",
+      },
+      {
+        Icon: LockKeyholeIcon,
+        text: "Предоплата 50% — после согласования, остаток — когда изделие готово",
+      },
+      {
         Icon: PackageCheckIcon,
         text: `Сплетём вручную, обычно за ${MADE_TO_ORDER_DAYS}`,
       },
-      {
-        Icon: RulerIcon,
-        text: "После оплаты мастер уточнит мерки, цвет и доставку",
-      },
-      { Icon: LockKeyholeIcon, text: "Оплата 100% на сайте через ЮKassa" },
     ],
   },
 };
@@ -109,7 +118,7 @@ export function CartSummary({
         </dl>
 
         <div className="mt-5 pt-5 border-t border-espresso/10 flex items-baseline justify-between gap-4">
-          <span className="text-espresso">Итого</span>
+          <span className="text-espresso">{copy.totalLabel}</span>
           <span className="text-espresso text-2xl font-medium tabular-nums">
             {formatPrice(subtotal / 100)}
           </span>
@@ -130,7 +139,7 @@ export function CartSummary({
 
         <div ref={ctaRef} className="mt-5">
           <CheckoutButton
-            href={copy.checkoutHref}
+            kind={kind}
             blocked={blocked}
             className="w-full h-14"
           />
@@ -178,14 +187,15 @@ export function CartSummary({
 }
 
 function CheckoutButton({
-  href,
+  kind,
   blocked,
   className,
 }: {
-  href: string;
+  kind: FulfillmentType;
   blocked: boolean;
   className?: string;
 }) {
+  const { checkoutHref, checkoutLabel } = COPY[kind];
   const classes = cn(
     "rounded-full bg-espresso text-parchment hover:bg-espresso/85 text-[15px]",
     className,
@@ -193,14 +203,14 @@ function CheckoutButton({
   if (blocked) {
     return (
       <Button type="button" disabled className={classes}>
-        Перейти к оформлению
+        {checkoutLabel}
       </Button>
     );
   }
   return (
     <Button asChild className={classes}>
-      <Link href={href}>
-        Перейти к оформлению
+      <Link href={checkoutHref}>
+        {checkoutLabel}
         <ArrowRightIcon aria-hidden="true" />
       </Link>
     </Button>
@@ -242,11 +252,7 @@ export function MobileCheckoutBar({
             {count} {pluralItems(count)}
           </p>
         </div>
-        <CheckoutButton
-          href={COPY[kind].checkoutHref}
-          blocked={blocked}
-          className="flex-1 h-12"
-        />
+        <CheckoutButton kind={kind} blocked={blocked} className="flex-1 h-12" />
       </div>
     </div>
   );

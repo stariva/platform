@@ -49,7 +49,7 @@ const SECTION_TITLES: Record<FulfillmentType, { title: string; hint: string }> =
     },
     made_to_order: {
       title: "Под заказ",
-      hint: "Сплетём после оплаты, оплачиваются отдельно",
+      hint: "Сначала заявка мастеру, оплата — после согласования",
     },
   };
 
@@ -117,7 +117,10 @@ export default function CartPage() {
       <Header variant="solid" />
       <main className="pt-24 lg:pt-32 pb-28 lg:pb-24 px-5">
         <div className="max-w-6xl mx-auto">
-          {hasItems && <CheckoutProgress current={0} />}
+          {/* Шаги оплаты — только у готовых изделий; под заказ сначала заявка */}
+          {hasItems && sections.some((section) => section.kind === "stock") && (
+            <CheckoutProgress current={0} />
+          )}
 
           <div className="flex items-end justify-between gap-4 mb-6 lg:mb-8">
             <h1 className="font-serif text-4xl lg:text-5xl text-espresso">

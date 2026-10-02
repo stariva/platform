@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -18,11 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { trackPaidOrder } from "@/lib/analytics";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
+import { recallOrderPhone } from "@/lib/commerce/order-phone";
 import { formatPrice } from "@/lib/products";
 import {
   MadeToOrderDetails,
   madeToOrderItemSchema,
 } from "./made-to-order-details";
+import {
+  MadeToOrderPayment,
+  madeToOrderTermsSchema,
+} from "./made-to-order-payment";
 
 const statusLabels: Record<string, string> = {
   pending: "Ожидает оплаты",
@@ -33,20 +38,28 @@ const statusLabels: Record<string, string> = {
   fulfilling: "Собирается",
   shipped: "В пути",
   delivered: "Доставлен",
-  awaiting_details: "Оплачен · уточняем детали",
+  requested: "Заявка отправлена",
+  awaiting_deposit: "Ждёт предоплату",
   in_production: "Изготавливается",
-  ready_to_ship: "Готов к отправке",
+  awaiting_balance: "Готово · ждёт доплату",
+  ready_to_ship: "Оплачен · готовим отправку",
+  declined: "Заявка отклонена",
 };
 
 /** Что дальше, для заказа под заказ: по статусу. */
 const madeToOrderHints: Record<string, string> = {
-  awaiting_details:
-    "Оплата получена. Мастер свяжется с вами, чтобы уточнить мерки, цвет и доставку. Детали можно указать ниже.",
-  in_production: "Детали согласованы — мастер плетёт ваше изделие.",
-  ready_to_ship:
-    "Изделие готово. Мастер согласует с вами доставку и отправит заказ.",
-  shipped: "Заказ отправлен — детали отправки пришлёт мастер.",
+  requested:
+    "Оплачивать пока ничего не нужно. Мастер свяжется с вами, чтобы уточнить мерки, цвет, цену и доставку. Мерки и пожелания можно указать ниже.",
+  awaiting_deposit:
+    "Мастер согласовал заказ. Внесите предоплату 50% — и мастер начнёт плести.",
+  in_production:
+    "Предоплата получена — мастер плетёт ваше изделие. Когда оно будет готово, здесь появится доплата.",
+  awaiting_balance:
+    "Изделие готово! Внесите доплату — и мастер отправит заказ.",
+  ready_to_ship: "Заказ оплачен полностью. Мастер готовит отправку.",
+  shipped: "Заказ отправлен.",
   delivered: "Заказ получен. Спасибо!",
+  canceled: "Заказ отменён.",
 };
 
 const postingStatusLabels: Record<string, string> = {
@@ -58,12 +71,13 @@ const postingStatusLabels: Record<string, string> = {
   unknown: "Статус уточняется",
 };
 
-const orderResponseSchema = z.object({
+const orderResponseSchema = madeToOrderTermsSchema.extend({
   kind: z.enum(["stock", "made_to_order"]),
   paid: z.boolean(),
   status: z.string(),
   amountTotal: z.number().int().nonnegative(),
   amountDelivery: z.number().int().nonnegative(),
+  declineReason: z.string().nullable(),
   createdAt: z.string(),
   deliveryMethod: z.string(),
   customerNotes: z.string().nullable(),
@@ -132,6 +146,18 @@ export function OrderStatus({ orderId }: { orderId: string }) {
     setLoading(false);
   }
 
+  // Сразу после заявки телефон уже известен — открываем заказ без формы
+  const autoLoaded = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: загружаем один раз при открытии страницы
+  useEffect(() => {
+    if (autoLoaded.current) return;
+    autoLoaded.current = true;
+    const remembered = recallOrderPhone(orderId);
+    if (!remembered) return;
+    setLoading(true);
+    void loadOrder(remembered).finally(() => setLoading(false));
+  }, [orderId]);
+
   if (!order) {
     return (
       <Form {...form}>
@@ -168,8 +194,12 @@ export function OrderStatus({ orderId }: { orderId: string }) {
   }
 
   const madeToOrder = order.kind === "made_to_order";
-  const canEditDetails =
-    order.status === "awaiting_details" || order.status === "in_production";
+  // После одобрения условия зафиксированы — изменения только через мастера
+  const canEditDetails = order.status === "requested";
+  const hint =
+    order.status === "declined"
+      ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
+      : madeToOrderHints[order.status];
 
   return (
     <div className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto">
@@ -182,9 +212,9 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         </span>
       </div>
 
-      {madeToOrder && madeToOrderHints[order.status] && (
+      {madeToOrder && hint && (
         <p className="rounded-xl bg-sand px-4 py-3 text-sm text-espresso leading-relaxed">
-          {madeToOrderHints[order.status]}
+          {hint}
         </p>
       )}
 
@@ -211,16 +241,15 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         ))}
       </div>
 
-      <div className="border-t border-espresso/8 pt-3 flex items-center justify-between font-medium">
-        <span className="text-espresso">Итого</span>
-        <span className="text-espresso">
-          {formatPrice(order.amountTotal / 100)}
-        </span>
-      </div>
-      {madeToOrder && (
-        <p className="-mt-2 text-right text-xs text-taupe">
-          Без учёта доставки — её согласует мастер
-        </p>
+      {madeToOrder ? (
+        <MadeToOrderPayment orderId={orderId} phone={phone} terms={order} />
+      ) : (
+        <div className="border-t border-espresso/8 pt-3 flex items-center justify-between font-medium">
+          <span className="text-espresso">Итого</span>
+          <span className="text-espresso">
+            {formatPrice(order.amountTotal / 100)}
+          </span>
+        </div>
       )}
 
       {madeToOrder && order.trackingNumber && (

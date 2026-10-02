@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { baseEnv, env } from "@/env";
 import { getSession } from "@/lib/auth/session";
 import {
   CatalogItemsUnavailableError,
@@ -12,10 +11,9 @@ import {
   MAX_MADE_TO_ORDER_QUANTITY,
   madeToOrderOptionsSchema,
 } from "@/lib/commerce/made-to-order-options";
-import { attachPaymentId, createMadeToOrderOrder } from "@/lib/commerce/orders";
+import { notifyMadeToOrderRequested } from "@/lib/commerce/order-notifications";
+import { createMadeToOrderOrder } from "@/lib/commerce/orders";
 import { unavailableItemsResponse } from "@/lib/commerce/unavailable-items";
-import { LEGAL_VERSION } from "@/lib/legal";
-import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 
 export const runtime = "nodejs";
 
@@ -24,43 +22,29 @@ const bodySchema = z.object({
   contactPhone: z.string().trim().min(5).max(32),
   contactEmail: z.string().trim().email().optional(),
   customerNotes: z.string().trim().max(1500).optional(),
+  deliveryNote: z.string().trim().max(1000).optional(),
   items: z
     .array(
       z.object({
         productSlug: z.string().min(1),
         quantity: z.number().int().positive().max(MAX_MADE_TO_ORDER_QUANTITY),
-        // Мерки и комментарий покупатель добавляет после оплаты.
+        // Мерки и комментарий покупатель добавляет на странице заказа.
         options: madeToOrderOptionsSchema.pick({ size: true, color: true }),
       }),
     )
     .min(1)
     .max(MAX_MADE_TO_ORDER_LINES),
-  // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ) и акцепт оферты.
+  // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ). Оферту покупатель
+  // принимает позже — при предоплате, когда мастер согласовал итоговую цену.
   personalDataConsent: z.literal(true),
-  offerAccepted: z.literal(true),
 });
 
-function siteUrl(request: NextRequest): string {
-  return (
-    env.NEXT_PUBLIC_SITE_URL ??
-    baseEnv.APP_URL ??
-    request.nextUrl.origin
-  ).replace(/\/$/, "");
-}
-
 /**
- * Заказ изделий под заказ: цена из каталога, оплата 100% на сайте, детали
- * (мерки, цвет, доставка) покупатель и мастер уточняют уже после оплаты.
- * Ozon Доставка не участвует — отправляет мастер вручную.
+ * Заявка на изделия под заказ, без оплаты: мастер связывается с покупателем,
+ * согласует цену, мерки и доставку и выставляет предоплату в админке.
+ * Цены из каталога — стартовые; Ozon Доставка не участвует.
  */
 export async function POST(request: NextRequest) {
-  if (!isYooKassaConfigured()) {
-    return NextResponse.json(
-      { error: "Приём платежей временно недоступен" },
-      { status: 503 },
-    );
-  }
-
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
@@ -89,9 +73,9 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    console.error("[checkout/made-to-order] Ошибка проверки заказа:", error);
+    console.error("[checkout/made-to-order] Ошибка проверки заявки:", error);
     return NextResponse.json(
-      { error: "Не удалось проверить заказ" },
+      { error: "Не удалось проверить заявку" },
       { status: 502 },
     );
   }
@@ -103,53 +87,15 @@ export async function POST(request: NextRequest) {
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,
     customerNotes: data.customerNotes,
+    deliveryNote: data.deliveryNote,
     items,
   });
 
-  try {
-    const payment = await createPayment({
-      amountKopecks: order.amountTotal,
-      description: `Заказ под заказ Stariva №${order.id.slice(0, 8)}`,
-      returnUrl: `${siteUrl(request)}/order/${order.id}?payment=success`,
-      metadata: {
-        orderId: order.id,
-        kind: "product",
-        // Фиксация согласия и акцепта: редакция документов на момент заказа.
-        pdConsent: LEGAL_VERSION,
-        offerAccepted: LEGAL_VERSION,
-      },
-      idempotenceKey: order.id,
-    });
+  await notifyMadeToOrderRequested(order.id);
 
-    await attachPaymentId(order.id, payment.id);
-
-    const confirmationUrl = payment.confirmation?.confirmation_url;
-    if (!confirmationUrl) {
-      return NextResponse.json(
-        { error: "Не удалось получить ссылку на оплату" },
-        { status: 502 },
-      );
-    }
-
-    return NextResponse.json({
-      confirmationUrl,
-      orderId: order.id,
-      analytics: {
-        id: order.id,
-        revenue: order.amountTotal / 100,
-        products: items.map((item) => ({
-          id: item.productSlug,
-          name: item.name,
-          price: item.price / 100,
-          quantity: item.quantity,
-        })),
-      },
-    });
-  } catch (error) {
-    console.error("[checkout/made-to-order] Ошибка создания платежа:", error);
-    return NextResponse.json(
-      { error: "Не удалось создать платёж. Попробуйте позже." },
-      { status: 502 },
-    );
-  }
+  return NextResponse.json({
+    orderId: order.id,
+    // Предварительная сумма по каталогу — для цели в аналитике, не для покупки
+    estimate: order.amountTotal / 100,
+  });
 }

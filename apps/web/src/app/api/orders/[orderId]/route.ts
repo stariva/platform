@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  isPaymentOverdue,
+  madeToOrderPaymentStep,
+} from "@/lib/commerce/made-to-order-flow";
+import {
   getProductOrderById,
   getProductOrderItems,
 } from "@/lib/commerce/orders";
@@ -86,7 +90,16 @@ export async function POST(
     status: order.status,
     paid: Boolean(order.paidAt),
     amountTotal: order.amountTotal,
+    amountProducts: order.amountProducts,
     amountDelivery: order.amountDelivery,
+    // Под заказ: условия, согласованные мастером, и что оплачивать сейчас
+    depositAmount: order.depositAmount,
+    depositPaid: Boolean(order.depositPaidAt),
+    leadTime: order.leadTime,
+    paymentDueAt: order.paymentDueAt,
+    paymentOverdue: isPaymentOverdue(order),
+    paymentStep: madeToOrderPaymentStep(order),
+    declineReason: order.declineReason,
     createdAt: order.createdAt,
     deliveryMethod: order.deliveryMethod,
     customerNotes: order.customerNotes,

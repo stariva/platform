@@ -1,11 +1,29 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
-import { productOrderItems, productOrders, products } from "@stariva/db/schema";
-import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import {
+  productOrderItems,
+  productOrderPayments,
+  productOrders,
+  products,
+} from "@stariva/db/schema";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
 } from "@/lib/ozon-delivery/types";
+import type { MadeToOrderPaymentType } from "./made-to-order-flow";
 import type { MadeToOrderOptions } from "./made-to-order-options";
 
 export interface OrderLineInput {
@@ -40,6 +58,7 @@ export interface CreateMadeToOrderOrderInput {
   contactPhone: string;
   contactEmail?: string;
   customerNotes?: string;
+  deliveryNote?: string;
   items: MadeToOrderLineInput[];
 }
 
@@ -54,8 +73,9 @@ function assertValidOrderTotal(amountTotal: number) {
 }
 
 /**
- * Заказ изделий под заказ: оплата 100% на сайте, доставку мастер согласует
- * после оплаты, поэтому ни пункта выдачи, ни расчёта Ozon здесь нет.
+ * Заявка на изделия под заказ: без оплаты. Цены из каталога — стартовые,
+ * мастер согласует с покупателем итог и доставку, а затем выставляет
+ * предоплату. Ни пункта выдачи, ни расчёта Ozon здесь нет.
  */
 export async function createMadeToOrderOrder(
   input: CreateMadeToOrderOrderInput,
@@ -74,13 +94,14 @@ export async function createMadeToOrderOrder(
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail ?? null,
-    status: "pending",
+    status: "requested",
     amountProducts,
     amountDelivery: 0,
     amountTotal: amountProducts,
     currency: "RUB",
     deliveryMethod: "manual",
     customerNotes: input.customerNotes || null,
+    deliveryNote: input.deliveryNote || null,
   });
 
   await db.insert(productOrderItems).values(
@@ -179,24 +200,24 @@ export async function getProductOrderItems(orderId: string) {
 }
 
 /**
- * Идемпотентно помечает заказ оплаченным и списывает проданное с остатка.
- * Возвращает true, если статус реально сменился. Списание идёт только при
- * смене статуса, поэтому повторный webhook остаток не трогает. Заказ под
- * заказ уходит в «ждёт уточнения» и остаток не трогает — изделие ещё не сплетено.
+ * Идемпотентно помечает заказ готовых изделий оплаченным и списывает проданное
+ * с остатка. Возвращает true, если статус реально сменился. Списание идёт
+ * только при смене статуса, поэтому повторный webhook остаток не трогает.
+ * Заказы под заказ оплачиваются по этапам — см. applyMadeToOrderPayment.
  */
 export async function markProductOrderPaid(orderId: string): Promise<boolean> {
   const result = await db
     .update(productOrders)
-    .set({
-      status: sql`case when ${productOrders.kind} = 'made_to_order' then 'awaiting_details'::product_order_status else 'paid'::product_order_status end`,
-      paidAt: new Date(),
-    })
+    .set({ status: "paid", paidAt: new Date() })
     .where(
-      and(eq(productOrders.id, orderId), eq(productOrders.status, "pending")),
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.kind, "stock"),
+        eq(productOrders.status, "pending"),
+      ),
     )
-    .returning({ id: productOrders.id, kind: productOrders.kind });
+    .returning({ id: productOrders.id });
   if (result.length === 0) return false;
-  if (result[0]?.kind === "made_to_order") return true;
 
   const items = await getProductOrderItems(orderId);
   for (const item of items) {
@@ -301,11 +322,11 @@ export async function listUserProductOrders(userId: string) {
     .where(eq(productOrders.userId, userId));
 }
 
-/** Статусы, пока покупатель может дополнять детали заказа под заказ. */
-const DETAILS_EDITABLE_STATUSES = [
-  "awaiting_details",
-  "in_production",
-] as const;
+/**
+ * Покупатель дополняет детали, пока мастер не одобрил заявку: после одобрения
+ * цена и сроки зафиксированы, и менять что-то можно только через мастера.
+ */
+const DETAILS_EDITABLE_STATUSES = ["requested"] as const;
 
 export interface MadeToOrderDetailsInput {
   /** Мерки и комментарий по позициям заказа; позиции не из заказа пропускаются. */
@@ -319,9 +340,9 @@ export interface MadeToOrderDetailsInput {
 }
 
 /**
- * Покупатель дополняет детали оплаченного заказа под заказ: мерки, пожелания,
- * куда отправить. Размер и цвет уже оплачены и здесь не меняются — их правит
- * мастер по согласованию. Возвращает false, если заказ уже нельзя дополнять.
+ * Покупатель дополняет заявку под заказ: мерки, пожелания, куда отправить.
+ * Размер и цвет выбраны в заявке и здесь не меняются — их правит мастер по
+ * согласованию. Возвращает false, если заказ уже нельзя дополнять.
  */
 export async function updateMadeToOrderDetails(
   orderId: string,
@@ -375,9 +396,9 @@ export async function updateMadeToOrderDetails(
 }
 
 /**
- * Занимает право отправить мастеру уведомление об оплаченном заказе: ровно
- * один обработчик webhook получит true. Если отправка не удалась, право
- * возвращается — повторный webhook попробует ещё раз.
+ * Занимает право отправить мастеру уведомление о заказе — оплаченном или новой
+ * заявке под заказ: ровно один обработчик получит true. Если отправка не
+ * удалась, право возвращается — следующая попытка отправит ещё раз.
  */
 export async function claimStaffNotification(
   orderId: string,
@@ -397,4 +418,171 @@ export async function releaseStaffNotification(orderId: string): Promise<void> {
     .update(productOrders)
     .set({ staffNotifiedAt: null })
     .where(eq(productOrders.id, orderId));
+}
+
+// ─── Оплата заказа под заказ по этапам ─────────────────────────────────────
+
+/** Неоплаченную ссылку на тот же этап и сумму отдаём повторно, пока она свежая. */
+const PAYMENT_LINK_REUSE_MS = 30 * 60_000;
+
+/** Свежий неоплаченный платёж на тот же этап и сумму — чтобы повторное «Оплатить» не плодило платежи. */
+export async function findReusableOrderPayment(
+  orderId: string,
+  type: MadeToOrderPaymentType,
+  amount: number,
+) {
+  const rows = await db
+    .select()
+    .from(productOrderPayments)
+    .where(
+      and(
+        eq(productOrderPayments.orderId, orderId),
+        eq(productOrderPayments.type, type),
+        eq(productOrderPayments.amount, amount),
+        eq(productOrderPayments.status, "pending"),
+        isNotNull(productOrderPayments.confirmationUrl),
+        gt(
+          productOrderPayments.createdAt,
+          new Date(Date.now() - PAYMENT_LINK_REUSE_MS),
+        ),
+      ),
+    )
+    .orderBy(desc(productOrderPayments.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Создаёт строку платежа до обращения к YooKassa: её id — ключ идемпотентности. */
+export async function createOrderPayment(
+  orderId: string,
+  type: MadeToOrderPaymentType,
+  amount: number,
+): Promise<string> {
+  const id = randomUUID();
+  await db
+    .insert(productOrderPayments)
+    .values({ id, orderId, type, amount, status: "pending" });
+  return id;
+}
+
+export async function attachOrderPaymentConfirmation(
+  id: string,
+  yookassaPaymentId: string,
+  confirmationUrl: string,
+): Promise<void> {
+  await db
+    .update(productOrderPayments)
+    .set({ yookassaPaymentId, confirmationUrl })
+    .where(eq(productOrderPayments.id, id));
+}
+
+export async function getOrderPayment(id: string) {
+  const rows = await db
+    .select()
+    .from(productOrderPayments)
+    .where(eq(productOrderPayments.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listOrderPayments(orderId: string) {
+  return db
+    .select()
+    .from(productOrderPayments)
+    .where(eq(productOrderPayments.orderId, orderId));
+}
+
+export async function markOrderPaymentCanceled(id: string): Promise<void> {
+  await db
+    .update(productOrderPayments)
+    .set({ status: "canceled" })
+    .where(
+      and(
+        eq(productOrderPayments.id, id),
+        eq(productOrderPayments.status, "pending"),
+      ),
+    );
+}
+
+/** Отмечает платёж оплаченным; true — только при первой отметке, повторный webhook получит false. */
+export async function markOrderPaymentSucceeded(id: string): Promise<boolean> {
+  const result = await db
+    .update(productOrderPayments)
+    .set({ status: "succeeded", paidAt: new Date() })
+    .where(
+      and(
+        eq(productOrderPayments.id, id),
+        ne(productOrderPayments.status, "succeeded"),
+      ),
+    )
+    .returning({ id: productOrderPayments.id });
+  return result.length > 0;
+}
+
+/**
+ * Продвигает заказ после оплаченного этапа: предоплата — в изготовление,
+ * доплата — к отправке. Сумма должна совпасть с тем, что заказ ждёт сейчас:
+ * если мастер успел изменить условия или заказ отменён, возвращает false,
+ * и оплату разбирают вручную. Срок оплаты здесь не проверяется — деньги уже
+ * пришли, а ссылка была выдана до срока.
+ */
+export async function applyMadeToOrderPayment(
+  orderId: string,
+  type: MadeToOrderPaymentType,
+  amount: number,
+): Promise<boolean> {
+  const now = new Date();
+  const result =
+    type === "deposit"
+      ? await db
+          .update(productOrders)
+          .set({
+            status: "in_production",
+            depositPaidAt: now,
+            paymentDueAt: null,
+          })
+          .where(
+            and(
+              eq(productOrders.id, orderId),
+              eq(productOrders.kind, "made_to_order"),
+              eq(productOrders.status, "awaiting_deposit"),
+              eq(productOrders.depositAmount, amount),
+            ),
+          )
+          .returning({ id: productOrders.id })
+      : await db
+          .update(productOrders)
+          .set({ status: "ready_to_ship", paidAt: now, paymentDueAt: null })
+          .where(
+            and(
+              eq(productOrders.id, orderId),
+              eq(productOrders.kind, "made_to_order"),
+              eq(productOrders.status, "awaiting_balance"),
+              sql`${productOrders.amountTotal} - ${productOrders.depositAmount} = ${amount}`,
+            ),
+          )
+          .returning({ id: productOrders.id });
+  return result.length > 0;
+}
+
+/** Право один раз сообщить мастеру об оплате этапа; при сбое отправки его возвращают. */
+export async function claimPaymentNotification(id: string): Promise<boolean> {
+  const result = await db
+    .update(productOrderPayments)
+    .set({ staffNotifiedAt: new Date() })
+    .where(
+      and(
+        eq(productOrderPayments.id, id),
+        isNull(productOrderPayments.staffNotifiedAt),
+      ),
+    )
+    .returning({ id: productOrderPayments.id });
+  return result.length > 0;
+}
+
+export async function releasePaymentNotification(id: string): Promise<void> {
+  await db
+    .update(productOrderPayments)
+    .set({ staffNotifiedAt: null })
+    .where(eq(productOrderPayments.id, id));
 }

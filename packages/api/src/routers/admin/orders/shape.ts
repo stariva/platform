@@ -1,10 +1,21 @@
-import type { productOrderItems, productOrders } from "@stariva/db/schema";
+import type {
+  productOrderItems,
+  productOrderPayments,
+  productOrders,
+} from "@stariva/db/schema";
 
 type OrderRow = typeof productOrders.$inferSelect;
 type OrderItemRow = typeof productOrderItems.$inferSelect;
+type PaymentRow = typeof productOrderPayments.$inferSelect;
+
+const rubles = (kopecks: number) => kopecks / 100;
 
 /** Заказ для админки: суммы в рублях, без технических полей Ozon и платежа. */
-export function toAdminOrder(order: OrderRow, items: OrderItemRow[]) {
+export function toAdminOrder(
+  order: OrderRow,
+  items: OrderItemRow[],
+  payments: PaymentRow[] = [],
+) {
   return {
     id: order.id,
     kind: order.kind,
@@ -12,8 +23,16 @@ export function toAdminOrder(order: OrderRow, items: OrderItemRow[]) {
     contactName: order.contactName,
     contactPhone: order.contactPhone,
     contactEmail: order.contactEmail,
-    amountTotal: order.amountTotal / 100,
-    amountDelivery: order.amountDelivery / 100,
+    amountTotal: rubles(order.amountTotal),
+    amountProducts: rubles(order.amountProducts),
+    amountDelivery: rubles(order.amountDelivery),
+    depositAmount:
+      order.depositAmount === null ? null : rubles(order.depositAmount),
+    leadTime: order.leadTime,
+    paymentDueAt: order.paymentDueAt,
+    approvedAt: order.approvedAt,
+    depositPaidAt: order.depositPaidAt,
+    declineReason: order.declineReason,
     customerNotes: order.customerNotes,
     deliveryNote: order.deliveryNote,
     masterNotes: order.masterNotes,
@@ -26,21 +45,28 @@ export function toAdminOrder(order: OrderRow, items: OrderItemRow[]) {
       productSlug: item.productSlug,
       name: item.name,
       quantity: item.quantity,
-      price: item.price / 100,
+      price: rubles(item.price),
       options: item.options,
     })),
+    // Только успешные: неоплаченные ссылки мастеру не интересны
+    payments: payments
+      .filter((payment) => payment.status === "succeeded")
+      .map((payment) => ({
+        id: payment.id,
+        type: payment.type,
+        amount: rubles(payment.amount),
+        paidAt: payment.paidAt,
+      })),
   };
 }
 
 export type AdminOrder = ReturnType<typeof toAdminOrder>;
 
 /**
- * Статусы заказа под заказ, между которыми мастер переключает вручную.
- * «Ожидает оплаты», «Отменён» и «Возврат» меняет только платёжная система.
+ * Статусы заказа под заказ после полной оплаты, между которыми мастер
+ * переключает вручную. До этого заказ двигают кнопки этапов и платежи.
  */
-export const MADE_TO_ORDER_STATUSES = [
-  "awaiting_details",
-  "in_production",
+export const MANUAL_STATUSES = [
   "ready_to_ship",
   "shipped",
   "delivered",
