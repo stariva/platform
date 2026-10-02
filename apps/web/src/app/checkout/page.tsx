@@ -99,10 +99,13 @@ export default function CheckoutPage() {
 
   const phone = contact?.phone;
   const pointId = selectedPoint?.id;
+  const quoteItemsKey = JSON.stringify(
+    items.map((item) => [item.productSlug, item.ozonSku, item.quantity]),
+  );
 
   // Стоимость доставки считаем сразу, как только выбран пункт: без отдельной
   // кнопки «Рассчитать» и заново при смене пункта, телефона или состава
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dropUnavailableItems новый на каждом рендере, quoteAttempt — повтор по кнопке
+  // biome-ignore lint/correctness/useExhaustiveDependencies: quoteItemsKey отслеживает состав корзины, dropUnavailableItems новый на каждом рендере, quoteAttempt — повтор по кнопке
   useEffect(() => {
     if (!phone || !pointId || items.length === 0) {
       setQuoteState({ status: "idle" });
@@ -146,7 +149,7 @@ export default function CheckoutPage() {
       }
     })();
     return () => controller.abort();
-  }, [phone, pointId, items, quoteAttempt]);
+  }, [phone, pointId, quoteItemsKey, quoteAttempt]);
 
   /**
    * Корзина живёт в браузере, и товар могут раскупить, пока он в ней лежит.
