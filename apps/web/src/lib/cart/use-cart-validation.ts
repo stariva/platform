@@ -44,9 +44,14 @@ export function useCartValidation() {
   );
 
   useEffect(() => {
-    if (!hydrated || !slugKey) return;
-    const slugs = slugKey.split("\n");
-    if (slugs.every((slug) => checked.current.has(slug))) return;
+    if (!hydrated) return;
+    const slugs = slugKey ? slugKey.split("\n") : [];
+    const currentSlugs = new Set(slugs);
+    for (const slug of checked.current) {
+      if (!currentSlugs.has(slug)) checked.current.delete(slug);
+    }
+    if (slugs.length === 0 || slugs.every((slug) => checked.current.has(slug)))
+      return;
 
     const controller = new AbortController();
     setLoading(true);
