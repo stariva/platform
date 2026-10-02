@@ -1,8 +1,14 @@
 "use client";
 
-import { ShoppingBagIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ShoppingBagIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { CheckoutProgress } from "@/components/stariva/checkout-progress";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -23,7 +29,7 @@ import { type CartItem, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { CartItemRow } from "./cart-item-row";
-import { CartSummary } from "./cart-summary";
+import { CartSummary, MobileCheckoutBar } from "./cart-summary";
 
 export default function CartPage() {
   const {
@@ -36,6 +42,8 @@ export default function CartPage() {
     clear,
   } = useCart();
   const { states, loading, notices, dismissNotices } = useCartValidation();
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const ctaInView = useInView(ctaRef, hydrated && items.length > 0);
 
   const isUnavailable = (item: CartItem) =>
     states.get(item.productSlug)?.status === "unavailable";
@@ -65,16 +73,20 @@ export default function CartPage() {
     for (const item of unavailable) remove(item.productSlug);
   }
 
+  const hasItems = hydrated && items.length > 0;
+
   return (
     <>
       <Header variant="solid" />
-      <main className="pt-28 lg:pt-36 pb-24 px-5">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-end justify-between gap-4 mb-8">
-            <h1 className="font-serif text-3xl lg:text-4xl text-espresso">
+      <main className="pt-24 lg:pt-32 pb-28 lg:pb-24 px-5">
+        <div className="max-w-6xl mx-auto">
+          {hasItems && <CheckoutProgress current={0} />}
+
+          <div className="flex items-end justify-between gap-4 mb-6 lg:mb-8">
+            <h1 className="font-serif text-4xl lg:text-5xl text-espresso">
               Корзина
-              {hydrated && totalCount > 0 && (
-                <span className="ml-3 align-middle font-sans text-base text-taupe">
+              {hasItems && (
+                <span className="ml-3 align-middle font-sans text-sm text-taupe">
                   {totalCount} {pluralItems(totalCount)}
                 </span>
               )}
@@ -84,7 +96,7 @@ export default function CartPage() {
                 <AlertDialogTrigger asChild>
                   <button
                     type="button"
-                    className="text-sm text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+                    className="mb-1 text-[13px] text-taupe underline-offset-4 hover:underline hover:text-espresso transition-colors"
                   >
                     Очистить корзину
                   </button>
@@ -112,15 +124,15 @@ export default function CartPage() {
           ) : items.length === 0 ? (
             <EmptyCart />
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-              <div className="space-y-4">
+            <div className="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+              <div>
                 {notices.length > 0 && (
                   <div
                     role="alert"
-                    className="flex gap-3 rounded-2xl border border-terracotta/30 bg-sand px-4 py-3 text-sm text-espresso"
+                    className="mb-6 flex gap-3 rounded-2xl border border-espresso/15 px-4 py-3 text-sm text-espresso"
                   >
                     <TriangleAlertIcon
-                      className="size-4 shrink-0 mt-0.5 text-terracotta"
+                      className="size-4 shrink-0 mt-0.5"
                       aria-hidden="true"
                     />
                     <div className="flex-1 min-w-0 space-y-1">
@@ -131,13 +143,13 @@ export default function CartPage() {
                     <button
                       type="button"
                       onClick={dismissNotices}
-                      className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+                      className="shrink-0 self-start text-taupe underline underline-offset-4 hover:text-espresso transition-colors"
                     >
                       Понятно
                     </button>
                   </div>
                 )}
-                <ul className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
+                <ul className="border-y border-espresso/10 py-6 divide-y divide-espresso/8">
                   {items.map((item) => (
                     <CartItemRow
                       key={item.productSlug}
@@ -152,6 +164,13 @@ export default function CartPage() {
                     />
                   ))}
                 </ul>
+                <Link
+                  href="/catalog"
+                  className="mt-5 inline-flex items-center gap-2 text-sm text-espresso hover:text-taupe transition-colors"
+                >
+                  <ArrowLeftIcon className="size-4" aria-hidden="true" />
+                  Продолжить покупки
+                </Link>
               </div>
               <CartSummary
                 subtotal={subtotal}
@@ -159,26 +178,57 @@ export default function CartPage() {
                 unavailableCount={unavailable.length}
                 checking={loading}
                 onRemoveUnavailable={removeUnavailable}
+                ctaRef={ctaRef}
               />
             </div>
           )}
         </div>
       </main>
+      {hasItems && (
+        <MobileCheckoutBar
+          subtotal={subtotal}
+          count={count}
+          blocked={unavailable.length > 0 || count === 0}
+          visible={!ctaInView}
+        />
+      )}
       <Footer />
     </>
   );
 }
 
+/** Виден ли элемент на экране; пока не знаем — считаем, что виден. */
+function useInView(
+  ref: React.RefObject<HTMLElement | null>,
+  enabled: boolean,
+): boolean {
+  const [inView, setInView] = useState(true);
+  useEffect(() => {
+    const node = ref.current;
+    if (!enabled || !node) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      // Кнопка уже проскролена вверх — панель внизу больше не нужна
+      setInView(
+        Boolean(entry?.isIntersecting) ||
+          (entry?.boundingClientRect.top ?? 0) < 0,
+      );
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref, enabled]);
+  return inView;
+}
+
 function CartSkeleton() {
   return (
     <div
-      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start"
+      className="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start"
       aria-busy="true"
     >
-      <div className="bg-white border border-espresso/10 rounded-2xl divide-y divide-espresso/8">
+      <div className="border-y border-espresso/10 py-6 space-y-8">
         {[0, 1].map((key) => (
-          <div key={key} className="flex gap-4 p-5">
-            <Skeleton className="size-24 rounded-xl" />
+          <div key={key} className="flex gap-5">
+            <Skeleton className="w-24 h-30 rounded-xl" />
             <div className="flex-1 space-y-3">
               <Skeleton className="h-5 w-2/3" />
               <Skeleton className="h-4 w-1/4" />
@@ -187,18 +237,22 @@ function CartSkeleton() {
           </div>
         ))}
       </div>
-      <Skeleton className="h-72 rounded-2xl" />
+      <Skeleton className="h-80 rounded-2xl" />
     </div>
   );
 }
 
 function EmptyCart() {
   return (
-    <div className="bg-white border border-espresso/10 rounded-2xl py-16 px-6 text-center">
-      <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-sand text-espresso">
-        <ShoppingBagIcon className="size-6" aria-hidden="true" />
+    <div className="border-y border-espresso/10 py-16 lg:py-24 px-6 text-center">
+      <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-sand text-espresso">
+        <ShoppingBagIcon
+          className="size-6"
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
       </div>
-      <h2 className="font-serif text-2xl text-espresso mb-2">
+      <h2 className="font-serif text-3xl text-espresso mb-3">
         В корзине пока пусто
       </h2>
       <p className="text-taupe text-sm max-w-md mx-auto mb-8 leading-relaxed">
@@ -208,17 +262,17 @@ function EmptyCart() {
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button
           asChild
-          className="bg-terracotta text-parchment hover:bg-terracotta-dark"
+          className="h-12 px-7 rounded-full bg-espresso text-parchment hover:bg-espresso/85"
         >
           <Link href={IN_STOCK_HREF}>Готовые изделия</Link>
         </Button>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="h-12 px-7 rounded-full">
           <Link href="/catalog">Весь каталог</Link>
         </Button>
       </div>
       <Link
         href="/#order"
-        className="mt-6 inline-block text-sm text-taupe underline underline-offset-4 hover:text-terracotta transition-colors"
+        className="mt-6 inline-block text-sm text-taupe underline underline-offset-4 hover:text-espresso transition-colors"
       >
         Заказать изделие под себя
       </Link>
