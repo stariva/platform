@@ -39,7 +39,7 @@ const postingStatusLabels: Record<string, string> = {
   unknown: "Статус уточняется",
 };
 
-const orderResponseSchema =z.object({
+const orderResponseSchema = z.object({
   paid: z.boolean(),
   status: z.string(),
   amountTotal: z.number().int().nonnegative(),
@@ -182,7 +182,9 @@ export function OrderStatus({ orderId }: { orderId: string }) {
               className="flex items-center justify-between text-xs text-taupe"
             >
               <span>{p.postingNumber}</span>
-              <span>{postingStatusLabels[p.status] ?? "Статус уточняется"}</span>
+              <span>
+                {postingStatusLabels[p.status] ?? "Статус уточняется"}
+              </span>
             </div>
           ))}
         </div>
