@@ -168,6 +168,24 @@
   .group:hover .film-grain::after {
     opacity: 0.5;
   }
+  /* Eased linen → transparent fade. A plain linear ramp leaves a visible
+     seam (Mach band) where it meets a flat linen field; easing the start
+     keeps the slope at zero there. */
+  .fade-linen-x {
+    background-image: linear-gradient(
+      to right,
+      var(--linen) 0%,
+      color-mix(in srgb, var(--linen) 97%, transparent) 10%,
+      color-mix(in srgb, var(--linen) 90%, transparent) 20%,
+      color-mix(in srgb, var(--linen) 78%, transparent) 30%,
+      color-mix(in srgb, var(--linen) 62%, transparent) 40%,
+      color-mix(in srgb, var(--linen) 46%, transparent) 50%,
+      color-mix(in srgb, var(--linen) 30%, transparent) 60%,
+      color-mix(in srgb, var(--linen) 16%, transparent) 70%,
+      color-mix(in srgb, var(--linen) 6%, transparent) 80%,
+      transparent 100%
+    );
+  }
   .marquee-track {
     animation: marquee 50s linear infinite;
   }
