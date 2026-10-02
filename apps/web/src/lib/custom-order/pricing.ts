@@ -1,6 +1,6 @@
 // ─── Модель ценообразования индивидуальных заказов ──────────────────────────
-// Чистые данные и функции — используются и калькулятором (клиент),
-// и AI-эндпоинтом (сервер), чтобы оценки были согласованы.
+// Чистые данные и функции — используются чат-ассистентом для оценок
+// и формой заявки для списка типов изделий.
 
 export interface PricingOption {
   id: string;
@@ -143,21 +143,4 @@ export function formatRub(value: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-/** Человекочитаемое описание выбора — для AI-промпта и текста заявки. */
-export function describeSelection(selection: Partial<PriceSelection>): string {
-  const product = PRODUCT_TYPES.find((p) => p.id === selection.productType);
-  const size = SIZES.find((s) => s.id === selection.size);
-  const color = COLORS.find((c) => c.id === selection.color);
-  const complexity = COMPLEXITIES.find((c) => c.id === selection.complexity);
-
-  return [
-    product ? `Тип: ${product.label}` : null,
-    size ? `Размер: ${size.label}${size.hint ? ` (${size.hint})` : ""}` : null,
-    color ? `Цвет: ${color.label}` : null,
-    complexity ? `Сложность: ${complexity.label}` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
 }
