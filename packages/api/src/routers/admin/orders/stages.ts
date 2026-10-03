@@ -184,6 +184,12 @@ export const requestBalance = adminProcedure
 
     const amountDelivery = toKopecks(input.amountDelivery);
     const amountTotal = order.amountProducts + amountDelivery;
+    if (amountTotal > 2_147_483_647) {
+      throw new ORPCError("BAD_REQUEST", {
+        message:
+          "Сумма заказа слишком велика — проверьте цены и стоимость доставки",
+      });
+    }
     if (order.depositAmount === null || amountTotal <= order.depositAmount) {
       throw new ORPCError("BAD_REQUEST", {
         message: "Доплачивать нечего — проверьте суммы",

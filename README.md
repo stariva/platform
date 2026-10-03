@@ -235,11 +235,18 @@ bun turbo gen init
 | `bun test` | Run unit tests (bun:test) |
 | `bun db:push` | Push database schema changes |
 | `bun db:generate` | Generate SQL migrations from schema |
-| `bun db:migrate` | Apply migrations |
+| `bun db:migrate` | Apply migrations (PostgreSQL 12+) |
 | `bun db:studio` | Open Drizzle Studio |
 | `bun auth:generate` | Generate Better Auth schema |
 | `bun ui-add` | Add new shadcn/ui component |
 | `bun clean` | Clean all node_modules |
+
+`bun db:migrate` checks the server reached through `POSTGRES_URL` for PostgreSQL
+12 or newer (PostgreSQL 12 also needs `pgcrypto` installed for the existing
+`gen_random_uuid()` defaults). Each migration and its Drizzle journal entry commit together before
+the next migration runs, so enum values added in migration `0013` are available
+to later migrations. If a migration fails, earlier migrations remain committed;
+fix the failure and rerun the command to resume.
 
 ## 🏗️ Tech Stack
 
