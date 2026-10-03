@@ -15,6 +15,7 @@ import {
   WhatsappIcon,
   YoutubeIcon,
 } from "./icons";
+import { StarivaLogo } from "./logo";
 
 type ExternalLink = {
   label: string;
@@ -129,9 +130,11 @@ export function Footer() {
         <div className="grid grid-cols-2 lg:grid-cols-12 gap-x-10 gap-y-12 lg:gap-12">
           {/* Brand + contacts */}
           <div className="col-span-2 lg:col-span-5">
-            <div className="font-serif text-5xl lg:text-6xl tracking-tight mb-3">
-              Stariva
-            </div>
+            <StarivaLogo
+              tone="light"
+              size="lg"
+              className="mb-4 !text-parchment"
+            />
             <div className="label-caps text-parchment/60 mb-10">
               Ручное плетение с 2018
             </div>

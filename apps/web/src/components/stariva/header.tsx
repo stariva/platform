@@ -17,6 +17,7 @@ import { signOut, useSession } from "@/lib/auth/client";
 import { useCart } from "@/lib/cart/cart-context";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS } from "@/lib/in-stock";
 import { CartTrigger } from "./cart-trigger";
+import { StarivaLogo } from "./logo";
 
 const catalogNav = [
   {
@@ -160,36 +161,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
             className="flex-shrink-0 group"
             aria-label="Stariva — на главную"
           >
-            <span
-              className={`flex flex-col items-start leading-none transition-colors ${isSolid ? "text-espresso" : "text-white"}`}
-            >
-              {/* Wordmark */}
-              <span
-                className="font-serif tracking-[0.12em] uppercase"
-                style={{
-                  fontSize: "clamp(17px, 2vw, 22px)",
-                  fontWeight: 500,
-                  letterSpacing: "0.14em",
-                }}
-              >
-                Stariva
-              </span>
-              {/* Decorative rule — macrame thread motif */}
-              <span
-                className="flex items-center gap-[3px] mt-[3px]"
-                aria-hidden="true"
-              >
-                <span
-                  className={`block h-px w-[38px] transition-all duration-500 group-hover:w-[52px] ${isSolid ? "bg-terracotta" : "bg-white/60"}`}
-                />
-                <span
-                  className={`block h-px w-[6px] ${isSolid ? "bg-espresso/25" : "bg-white/30"}`}
-                />
-                <span
-                  className={`block h-px w-[3px] ${isSolid ? "bg-espresso/15" : "bg-white/20"}`}
-                />
-              </span>
-            </span>
+            <StarivaLogo tone={isSolid ? "dark" : "light"} />
           </Link>
 
           {/* Desktop Nav */}
@@ -543,7 +515,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
           className={`absolute top-0 right-0 h-full w-[300px] bg-parchment shadow-2xl flex flex-col transition-transform duration-300 ${menuOpen ? "translate-x-0" : "translate-x-full"}`}
         >
           <div className="flex items-center justify-between px-6 h-[60px] border-b border-espresso/8">
-            <span className="font-serif text-xl text-espresso">Stariva</span>
+            <StarivaLogo size="sm" />
             <Button
               variant="ghost"
               size="icon-sm"
