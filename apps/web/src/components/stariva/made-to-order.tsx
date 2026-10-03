@@ -62,10 +62,10 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
   const [color, setColor] = useState<string>(PHOTO_COLOR);
   const [open, setOpen] = useState(false);
 
-  // Цена фиксированная, из каталога: оплатить можно сразу, без согласования суммы
-  const canPay = product.currency === "RUB" && product.price > 0;
+  // Есть цена в каталоге — изделие можно положить в корзину и оформить заявку
+  const canOrder = product.currency === "RUB" && product.price > 0;
 
-  function orderAndPay() {
+  function addToCart() {
     add({
       productSlug: product.slug,
       fulfillmentType: "made_to_order",
@@ -198,37 +198,37 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
         </details>
       )}
 
-      {canPay && (
+      {canOrder && (
         <div className="mb-3">
           <Button
             type="button"
-            onClick={orderAndPay}
+            onClick={addToCart}
             className="w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
           >
-            Заказать и оплатить · {formatPrice(product.price)}
+            Заказать · {formatPrice(product.price)}
           </Button>
           <p className="text-taupe text-[11px] leading-relaxed mt-2">
-            Оплата 100% на сайте. После оплаты мастер свяжется с вами, уточнит
-            мерки, цвет и доставку — стоимость изделия при этом не меняется.
-            Доставка рассчитывается отдельно.
+            Сейчас без оплаты: мастер свяжется с вами, уточнит мерки, цвет,
+            итоговую цену и доставку. Предоплата 50% — после согласования,
+            остаток — когда изделие готово.
           </p>
         </div>
       )}
 
       <Button
         type="button"
-        variant={canPay ? "outline" : "default"}
+        variant={canOrder ? "outline" : "default"}
         onClick={() => {
           setOpen(true);
           reachGoal("made_to_order_open", { category: product.category });
         }}
         className={
-          canPay
+          canOrder
             ? "w-full py-3.5 h-auto rounded-2xl transition-colors label-caps"
             : "w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
         }
       >
-        {canPay ? "Сначала обсудить с мастером" : config.cta}
+        {canOrder ? "Задать вопрос мастеру" : config.cta}
       </Button>
 
       <MadeToOrderDialog

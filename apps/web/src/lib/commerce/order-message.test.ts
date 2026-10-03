@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import type { productOrderItems, productOrders } from "@stariva/db/schema";
 import {
   formatDetailsUpdatedMessage,
+  formatMadeToOrderPaymentMessage,
+  formatMadeToOrderRequestMessage,
   formatOzonFailedMessage,
   formatPaidOrderMessage,
 } from "./order-message";
@@ -17,18 +19,24 @@ const order: OrderRow = {
   contactName: "Анна",
   contactPhone: "+7 999 123-45-67",
   contactEmail: null,
-  status: "awaiting_details",
+  status: "requested",
   amountProducts: 700000,
   amountDelivery: 0,
   amountTotal: 700000,
   currency: "RUB",
-  paymentId: "pay-1",
+  paymentId: null,
   deliveryMethod: "manual",
   deliveryPointId: null,
   deliveryAddress: null,
   checkoutSnapshot: null,
   customerNotes: null,
   deliveryNote: null,
+  depositAmount: null,
+  leadTime: null,
+  paymentDueAt: null,
+  approvedAt: null,
+  depositPaidAt: null,
+  declineReason: null,
   masterNotes: null,
   trackingNumber: null,
   staffNotifiedAt: null,
@@ -38,7 +46,7 @@ const order: OrderRow = {
   ozonShipmentAttemptId: null,
   ozonShipmentAttemptedAt: null,
   createdAt: new Date("2026-10-02T10:00:00Z"),
-  paidAt: new Date("2026-10-02T10:05:00Z"),
+  paidAt: null,
 };
 
 const item: ItemRow = {
@@ -57,10 +65,10 @@ const item: ItemRow = {
   },
 };
 
-test("made-to-order message lists the buyer, options and next step", () => {
-  const { title, message } = formatPaidOrderMessage(order, [item]);
+test("request message lists the buyer, options and the approval step", () => {
+  const { title, message } = formatMadeToOrderRequestMessage(order, [item]);
 
-  assert.match(title, /под заказ №abcd1234/);
+  assert.match(title, /Заявка под заказ №abcd1234/);
   assert.match(title, /7\s?000/);
   assert.ok(message.includes("Покупатель: Анна"));
   assert.ok(message.includes("Телефон: +7 999 123-45-67"));
@@ -70,21 +78,62 @@ test("made-to-order message lists the buyer, options and next step", () => {
       "Размер: По меркам · Цвет: Бежевый · Обхват груди: 92 см · Комментарий: Подлиннее",
     ),
   );
-  assert.ok(message.includes("уточнить мерки, цвет и способ доставки"));
+  assert.ok(message.includes("одобрить заявку в админке"));
   assert.ok(!message.includes("Email:"));
   assert.ok(!message.includes("Пожелания:"));
 });
 
-test("made-to-order message includes the buyer's wishes when given", () => {
-  const { message } = formatPaidOrderMessage(
-    { ...order, customerNotes: "К свадьбе" },
+test("request message includes wishes and delivery when given", () => {
+  const { message } = formatMadeToOrderRequestMessage(
+    { ...order, customerNotes: "К свадьбе", deliveryNote: "Казань, СДЭК" },
     [item],
   );
 
   assert.ok(message.includes("Пожелания: К свадьбе"));
+  assert.ok(message.includes("Доставка: Казань, СДЭК"));
 });
 
-test("stock order message mentions the Ozon order instead of next steps", () => {
+test("deposit message tells the master to start and then bill the balance", () => {
+  const { title, message } = formatMadeToOrderPaymentMessage(
+    order,
+    { type: "deposit", amount: 350000 },
+    "applied",
+  );
+
+  assert.match(title, /^Получена предоплата 3\s?500/);
+  assert.ok(message.includes("выставить доплату"));
+});
+
+test("balance message tells the master to ship", () => {
+  const { title, message } = formatMadeToOrderPaymentMessage(
+    order,
+    { type: "balance", amount: 380000 },
+    "applied",
+  );
+
+  assert.match(title, /^Получена доплата/);
+  assert.ok(message.includes("номер отправления"));
+});
+
+test("a duplicate or unexpected payment is flagged as critical", () => {
+  const duplicate = formatMadeToOrderPaymentMessage(
+    order,
+    { type: "deposit", amount: 350000 },
+    "duplicate",
+  );
+  assert.ok(duplicate.title.startsWith("КРИТИЧНО"));
+  assert.ok(duplicate.message.includes("двойную оплату"));
+
+  const unexpected = formatMadeToOrderPaymentMessage(
+    order,
+    { type: "balance", amount: 380000 },
+    "unexpected",
+  );
+  assert.ok(unexpected.title.startsWith("КРИТИЧНО"));
+  assert.ok(unexpected.message.includes("не ждал эту оплату"));
+});
+
+test("stock order message mentions the Ozon order", () => {
   const { title, message } = formatPaidOrderMessage(
     { ...order, kind: "stock", ozonOrderId: "OZ-1" },
     [{ ...item, ozonSku: 123, options: null }],

@@ -1,9 +1,15 @@
-import type { productOrderItems, productOrders } from "@stariva/db/schema";
+import type {
+  productOrderItems,
+  productOrderPayments,
+  productOrders,
+} from "@stariva/db/schema";
 import { formatPrice } from "@/lib/products";
+import type { PaymentOutcome } from "./made-to-order-flow";
 import { describeMadeToOrderOptions } from "./made-to-order-options";
 
 type OrderRow = typeof productOrders.$inferSelect;
 type OrderItemRow = typeof productOrderItems.$inferSelect;
+type PaymentRow = typeof productOrderPayments.$inferSelect;
 
 export interface OrderMessage {
   title: string;
@@ -33,25 +39,67 @@ function itemLines(items: OrderItemRow[]): string[] {
   ]);
 }
 
-/** Текст мастеру об оплаченном заказе: что заказали и что делать дальше. */
+/** Новая заявка под заказ: оплаты ещё нет, мастер связывается и согласует условия. */
+export function formatMadeToOrderRequestMessage(
+  order: OrderRow,
+  items: OrderItemRow[],
+): OrderMessage {
+  return {
+    title: `Заявка под заказ №${shortOrderId(order.id)} · ${money(order.amountProducts)} по каталогу`,
+    message: joinLines([
+      ...customerLines(order),
+      "",
+      "Изделия:",
+      ...itemLines(items),
+      order.customerNotes && `\nПожелания: ${order.customerNotes}`,
+      order.deliveryNote && `\nДоставка: ${order.deliveryNote}`,
+      "\nДальше: связаться с покупателем, уточнить мерки, цвет, цену и доставку,",
+      "затем одобрить заявку в админке — покупателю откроется предоплата.",
+    ]),
+  };
+}
+
+const STAGE_LABELS: Record<PaymentRow["type"], string> = {
+  deposit: "предоплата",
+  balance: "доплата",
+};
+
+/** Оплата этапа заказа под заказ: в обычном случае — что делать дальше, иначе — что проверить. */
+export function formatMadeToOrderPaymentMessage(
+  order: OrderRow,
+  payment: Pick<PaymentRow, "type" | "amount">,
+  outcome: PaymentOutcome,
+): OrderMessage {
+  const what = `${STAGE_LABELS[payment.type]} ${money(payment.amount)} по заказу №${shortOrderId(order.id)}`;
+  if (outcome === "applied") {
+    return {
+      title: `Получена ${what}`,
+      message: joinLines([
+        ...customerLines(order),
+        "",
+        payment.type === "deposit"
+          ? "Дальше: сплести изделие и в админке нажать «Готово — выставить доплату»."
+          : "Заказ оплачен полностью. Дальше: отправить и указать номер отправления в админке.",
+      ]),
+    };
+  }
+  return {
+    title: `КРИТИЧНО: ${what} не зачтена`,
+    message: joinLines([
+      ...customerLines(order),
+      "",
+      outcome === "duplicate"
+        ? "Этот этап уже был оплачен другим платежом — похоже на двойную оплату. Верните лишнее в кабинете ЮKassa."
+        : "Заказ не ждал эту оплату: условия изменились или заказ отменён. Свяжитесь с покупателем и решите — зачесть вручную или вернуть.",
+    ]),
+  };
+}
+
+/** Текст мастеру об оплаченном заказе готовых изделий. */
 export function formatPaidOrderMessage(
   order: OrderRow,
   items: OrderItemRow[],
 ): OrderMessage {
-  if (order.kind === "made_to_order") {
-    return {
-      title: `Оплачен заказ под заказ №${shortOrderId(order.id)} · ${money(order.amountTotal)}`,
-      message: joinLines([
-        ...customerLines(order),
-        "",
-        "Изделия:",
-        ...itemLines(items),
-        order.customerNotes && `\nПожелания: ${order.customerNotes}`,
-        "\nДальше: связаться с покупателем, уточнить мерки, цвет и способ доставки.",
-        "Покупатель может дополнить детали на странице заказа.",
-      ]),
-    };
-  }
   return {
     title: `Оплачен заказ №${shortOrderId(order.id)} · ${money(order.amountTotal)}`,
     message: joinLines([

@@ -3,18 +3,18 @@ import { and, eq, inArray, productOrders } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { MADE_TO_ORDER_STATUSES } from "./shape";
+import { MANUAL_STATUSES } from "./shape";
 
 /**
- * Мастер ведёт заказ под заказ: статус, номер отправления и внутренняя заметка.
- * Статус меняется только у оплаченных заказов под заказ — остальными статусами
- * управляют платёжная система и Ozon Доставка.
+ * Мастер ведёт заказ под заказ: номер отправления, внутренняя заметка и —
+ * после полной оплаты — статус отправки. Остальные статусы двигают кнопки
+ * этапов (stages.ts), платёжная система и Ozon Доставка.
  */
 export const update = adminProcedure
   .input(
     z.object({
       id: z.string().min(1),
-      status: z.enum(MADE_TO_ORDER_STATUSES).optional(),
+      status: z.enum(MANUAL_STATUSES).optional(),
       masterNotes: z.string().trim().max(2000).optional(),
       trackingNumber: z.string().trim().max(200).optional(),
     }),
@@ -31,10 +31,10 @@ export const update = adminProcedure
     if (status !== undefined) {
       if (
         order.kind !== "made_to_order" ||
-        !(MADE_TO_ORDER_STATUSES as readonly string[]).includes(order.status)
+        !(MANUAL_STATUSES as readonly string[]).includes(order.status)
       ) {
         throw new ORPCError("BAD_REQUEST", {
-          message: "Статус можно менять только у оплаченного заказа под заказ",
+          message: "Статус отправки можно менять только у оплаченного заказа",
         });
       }
     }
@@ -53,7 +53,7 @@ export const update = adminProcedure
           eq(productOrders.id, id),
           // Статус мог уйти из рабочего набора, пока мастер смотрел заказ
           status !== undefined
-            ? inArray(productOrders.status, [...MADE_TO_ORDER_STATUSES])
+            ? inArray(productOrders.status, [...MANUAL_STATUSES])
             : undefined,
         ),
       )

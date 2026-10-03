@@ -4,16 +4,23 @@ import {
   type Notification,
 } from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
+import { paymentOutcome } from "./made-to-order-flow";
 import {
   formatDetailsUpdatedMessage,
+  formatMadeToOrderPaymentMessage,
+  formatMadeToOrderRequestMessage,
   formatOzonFailedMessage,
   formatPaidOrderMessage,
   type OrderMessage,
 } from "./order-message";
 import {
+  claimPaymentNotification,
   claimStaffNotification,
+  getOrderPayment,
   getProductOrderById,
   getProductOrderItems,
+  listOrderPayments,
+  releasePaymentNotification,
   releaseStaffNotification,
 } from "./orders";
 
@@ -71,6 +78,76 @@ export async function notifyOrderPaid(orderId: string): Promise<void> {
   }
 }
 
+/**
+ * Сообщает мастеру о новой заявке под заказ. Заявка уже сохранена, поэтому
+ * сбой отправки не ломает ответ покупателю: право на уведомление
+ * возвращается, а заявка всё равно видна в админке среди «Требуют действия».
+ */
+export async function notifyMadeToOrderRequested(
+  orderId: string,
+): Promise<void> {
+  if (!notificationConfigured()) {
+    console.error(
+      `[order-notifications] Заявка под заказ ${orderId} создана, но уведомления мастеру не настроены`,
+    );
+    return;
+  }
+  if (!(await claimStaffNotification(orderId))) return;
+
+  try {
+    const order = await getProductOrderById(orderId);
+    if (!order) return;
+    const message = formatMadeToOrderRequestMessage(
+      order,
+      await getProductOrderItems(orderId),
+    );
+    if (!(await send(orderId, message, "order-request"))) {
+      throw new Error("staff_notification_failed");
+    }
+  } catch (error) {
+    await releaseStaffNotification(orderId);
+    console.error(
+      `[order-notifications] Не удалось сообщить о заявке ${orderId}:`,
+      error,
+    );
+  }
+}
+
+/**
+ * Один раз сообщает мастеру об оплате этапа заказа под заказ — или громко,
+ * если оплата не зачлась (двойная, после изменения условий). Как и для
+ * оплаченного заказа, при сбое отправки бросает ошибку, чтобы YooKassa повторила webhook.
+ */
+export async function notifyMadeToOrderPayment(
+  paymentId: string,
+): Promise<void> {
+  if (!notificationConfigured()) {
+    console.error(
+      `[order-notifications] КРИТИЧНО: платёж ${paymentId} получен, но уведомления мастеру не настроены`,
+    );
+    return;
+  }
+  if (!(await claimPaymentNotification(paymentId))) return;
+
+  try {
+    const payment = await getOrderPayment(paymentId);
+    const order = payment && (await getProductOrderById(payment.orderId));
+    if (!payment || !order) return;
+    const outcome = paymentOutcome(
+      order,
+      await listOrderPayments(order.id),
+      payment,
+    );
+    const message = formatMadeToOrderPaymentMessage(order, payment, outcome);
+    if (!(await send(paymentId, message, "order-payment"))) {
+      throw new Error("staff_notification_failed");
+    }
+  } catch (error) {
+    await releasePaymentNotification(paymentId);
+    throw error;
+  }
+}
+
 /** Оплата прошла, а отправление в Ozon не создалось — нужна ручная обработка. */
 export async function notifyOzonOrderFailed(orderId: string): Promise<void> {
   try {
@@ -87,7 +164,7 @@ export async function notifyOzonOrderFailed(orderId: string): Promise<void> {
   }
 }
 
-/** Покупатель дополнил детали заказа под заказ — сообщаем мастеру, не ломая ответ покупателю. */
+/** Покупатель дополнил заявку под заказ — сообщаем мастеру, не ломая ответ покупателю. */
 export async function notifyMadeToOrderDetailsUpdated(
   orderId: string,
 ): Promise<void> {

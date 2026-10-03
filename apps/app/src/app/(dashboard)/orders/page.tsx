@@ -1,4 +1,5 @@
 import { SiteHeader } from "~/components/layout";
+import { toOrderView } from "~/components/orders/order-meta";
 import { OrdersTable } from "~/components/orders/orders-table";
 import { api } from "~/orpc/server";
 
@@ -14,18 +15,13 @@ export default async function OrdersPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Заказы</h1>
           <p className="text-muted-foreground text-sm">
-            «Уточнить детали» — оплаченный заказ под заказ: свяжитесь с
-            покупателем, уточните мерки, цвет и доставку, затем переведите заказ
-            в работу. Готовые изделия отправляет Ozon Доставка.
+            Под заказ: «Новая заявка» — свяжитесь с покупателем, согласуйте
+            цену, мерки и доставку и одобрите заявку — откроется предоплата 50%.
+            Когда изделие готово, выставите доплату. Готовые изделия отправляет
+            Ozon Доставка.
           </p>
         </div>
-        <OrdersTable
-          orders={orders.map((order) => ({
-            ...order,
-            createdAt: order.createdAt.toISOString(),
-            paidAt: order.paidAt?.toISOString() ?? null,
-          }))}
-        />
+        <OrdersTable orders={orders.map(toOrderView)} />
       </div>
     </>
   );

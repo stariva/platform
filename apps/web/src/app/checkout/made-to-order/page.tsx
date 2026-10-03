@@ -3,13 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
   ConsentCheckbox,
-  OfferAcceptanceNote,
   PD_CONSENT_ERROR,
   PersonalDataConsentLabel,
 } from "@/components/stariva/consent-checkbox";
@@ -27,8 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
+import { reachGoal } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
+import { rememberOrderPhone } from "@/lib/commerce/order-phone";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
 
@@ -41,6 +42,7 @@ const formSchema = z.object({
     .email("Некорректный email")
     .optional()
     .or(z.literal("")),
+  delivery: z.string().trim().max(1000).optional(),
   notes: z.string().trim().max(1500).optional(),
   personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
@@ -48,19 +50,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const createResponseSchema = z.object({
-  confirmationUrl: z.url({ protocol: /^https?$/ }),
-  analytics: z.object({
-    id: z.string().min(1),
-    revenue: z.number().nonnegative(),
-    products: z.array(
-      z.object({
-        id: z.string().min(1),
-        name: z.string().min(1),
-        price: z.number().nonnegative(),
-        quantity: z.number().int().positive(),
-      }),
-    ),
-  }),
+  orderId: z.string().min(1),
+  estimate: z.number().nonnegative(),
 });
 
 const unavailableItemsResponseSchema = z.object({
@@ -68,6 +59,7 @@ const unavailableItemsResponseSchema = z.object({
 });
 
 export default function MadeToOrderCheckoutPage() {
+  const router = useRouter();
   const { items: cartItems, hydrated, clear, remove } = useCart();
   const items = cartItems.filter(
     (item) => item.fulfillmentType === "made_to_order",
@@ -81,6 +73,7 @@ export default function MadeToOrderCheckoutPage() {
       name: "",
       phone: "",
       email: "",
+      delivery: "",
       notes: "",
       personalDataConsent: false,
     },
@@ -157,6 +150,7 @@ export default function MadeToOrderCheckoutPage() {
           contactName: data.name,
           contactPhone: data.phone,
           contactEmail: data.email || undefined,
+          deliveryNote: data.delivery || undefined,
           customerNotes: data.notes || undefined,
           items: items.flatMap((item) =>
             item.options
@@ -173,7 +167,6 @@ export default function MadeToOrderCheckoutPage() {
               : [],
           ),
           personalDataConsent: data.personalDataConsent === true,
-          offerAccepted: true,
         }),
       });
       const resData: unknown = await res.json();
@@ -184,22 +177,27 @@ export default function MadeToOrderCheckoutPage() {
       if (!res.ok) {
         const error = z.object({ error: z.string() }).safeParse(resData);
         toast.error(
-          error.success ? error.data.error : "Не удалось создать заказ",
+          error.success ? error.data.error : "Не удалось отправить заявку",
         );
         setSubmitting(false);
         return;
       }
       const parsed = createResponseSchema.safeParse(resData);
       if (!parsed.success) {
-        toast.error("Не удалось создать заказ");
+        toast.error("Не удалось отправить заявку");
         setSubmitting(false);
         return;
       }
-      await trackCreatedOrder(parsed.data.analytics);
+      // Заявка — ещё не покупка: отдельная цель, без ecommerce-«purchase»
+      reachGoal("made_to_order_request", {
+        order_id: parsed.data.orderId,
+        order_price: parsed.data.estimate,
+      });
+      rememberOrderPhone(parsed.data.orderId, data.phone);
       clear("made_to_order");
-      window.location.href = parsed.data.confirmationUrl;
+      router.push(`/order/${parsed.data.orderId}`);
     } catch {
-      toast.error("Не удалось создать заказ. Попробуйте позже.");
+      toast.error("Не удалось отправить заявку. Попробуйте позже.");
       setSubmitting(false);
     }
   }
@@ -210,16 +208,24 @@ export default function MadeToOrderCheckoutPage() {
       <main className="pt-28 lg:pt-36 pb-24 px-5">
         <div className="max-w-3xl mx-auto">
           <h1 className="font-serif text-3xl lg:text-4xl text-espresso mb-8">
-            Заказ изделий под заказ
+            Заявка на изделия под заказ
           </h1>
 
-          <p className="text-taupe text-sm leading-relaxed mb-6">
-            Изделие плетётся вручную после оплаты, обычно за{" "}
-            {MADE_TO_ORDER_DAYS}. Оплата — 100% через ЮKassa. После оплаты
-            мастер свяжется с вами, уточнит мерки, цвет и способ доставки —
-            стоимость изделия при этом не меняется. Доставку рассчитаем отдельно
-            по тарифу перевозчика.
-          </p>
+          <ol className="text-taupe text-sm leading-relaxed mb-6 space-y-1.5 list-decimal pl-5">
+            <li>
+              Сейчас вы ничего не платите — мастер получит заявку и свяжется с
+              вами.
+            </li>
+            <li>
+              Вместе уточните мерки, цвет, итоговую цену и доставку. После
+              согласования на странице заказа откроется предоплата 50%.
+            </li>
+            <li>
+              Изделие плетётся вручную, обычно за {MADE_TO_ORDER_DAYS}. Когда
+              оно готово — доплата остатка и доставки, и мастер отправляет
+              заказ.
+            </li>
+          </ol>
 
           <div className="bg-white border border-espresso/10 rounded-2xl p-5 mb-8 space-y-3">
             {items.map((item) => (
@@ -249,12 +255,14 @@ export default function MadeToOrderCheckoutPage() {
               </div>
             ))}
             <div className="border-t border-espresso/8 pt-3 flex items-center justify-between font-medium">
-              <span className="text-espresso">Итого к оплате</span>
+              <span className="text-espresso">По каталогу</span>
               <span className="text-espresso">
                 {formatPrice(subtotal / 100)}
               </span>
             </div>
-            <p className="text-xs text-taupe">Без учёта доставки.</p>
+            <p className="text-xs text-taupe">
+              Итоговую цену и доставку согласует мастер.
+            </p>
           </div>
 
           <Form {...form}>
@@ -321,6 +329,23 @@ export default function MadeToOrderCheckoutPage() {
               />
               <FormField
                 control={form.control}
+                name="delivery"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Город и доставка (необязательно)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Например, Казань, пункт СДЭК"
+                        disabled={submitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
@@ -355,13 +380,8 @@ export default function MadeToOrderCheckoutPage() {
                 disabled={submitting}
                 className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6"
               >
-                {submitting ? (
-                  <Spinner />
-                ) : (
-                  `Оплатить ${formatPrice(subtotal / 100)}`
-                )}
+                {submitting ? <Spinner /> : "Отправить заявку мастеру"}
               </Button>
-              <OfferAcceptanceNote action="Оплатить" />
             </form>
           </Form>
         </div>

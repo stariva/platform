@@ -21,21 +21,22 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { orpc } from "~/orpc/react";
+import { MadeToOrderStage } from "./made-to-order-stage";
 import {
   type AdminOrderView,
   dateTime,
   KIND_LABELS,
-  MADE_TO_ORDER_STATUSES,
+  MANUAL_STATUSES,
   rubles,
   STATUS_LABELS,
   statusVariant,
 } from "./order-meta";
 
-/** Статус можно менять только у оплаченного заказа под заказ. */
+/** Вручную статус меняется только у полностью оплаченного заказа под заказ. */
 function isStatusEditable(order: AdminOrderView) {
   return (
     order.kind === "made_to_order" &&
-    (MADE_TO_ORDER_STATUSES as readonly string[]).includes(order.status)
+    (MANUAL_STATUSES as readonly string[]).includes(order.status)
   );
 }
 
@@ -77,7 +78,7 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
       id: order.id,
       ...(editableStatus &&
         status !== order.status && {
-          status: status as (typeof MADE_TO_ORDER_STATUSES)[number],
+          status: status as (typeof MANUAL_STATUSES)[number],
         }),
       trackingNumber: trackingNumber.trim(),
       masterNotes: masterNotes.trim(),
@@ -104,7 +105,13 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
               <Field label="Создан">
                 {dateTime.format(new Date(order.createdAt))}
               </Field>
-              <Field label="Оплачен">
+              <Field
+                label={
+                  order.kind === "made_to_order"
+                    ? "Оплачен полностью"
+                    : "Оплачен"
+                }
+              >
                 {order.paidAt
                   ? dateTime.format(new Date(order.paidAt))
                   : "ещё не оплачен"}
@@ -212,6 +219,8 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
           </CardContent>
         </Card>
 
+        {order.kind === "made_to_order" && <MadeToOrderStage order={order} />}
+
         <Card>
           <CardHeader>
             <CardTitle>Ведение заказа</CardTitle>
@@ -230,7 +239,7 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MADE_TO_ORDER_STATUSES.map((value) => (
+                    {MANUAL_STATUSES.map((value) => (
                       <SelectItem key={value} value={value}>
                         {STATUS_LABELS[value]}
                       </SelectItem>
@@ -243,8 +252,9 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
               </div>
             ) : (
               <p className="text-muted-foreground text-sm">
-                Статус этого заказа меняет платёжная система
-                {order.kind === "stock" && " и Ozon Доставка"}.
+                {order.kind === "stock"
+                  ? "Статус этого заказа меняют платёжная система и Ozon Доставка."
+                  : "До полной оплаты статус меняют кнопки этапа и платежи покупателя."}
               </p>
             )}
 

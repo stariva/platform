@@ -7,7 +7,14 @@ export interface AdminOrderView {
   contactPhone: string;
   contactEmail: string | null;
   amountTotal: number;
+  amountProducts: number;
   amountDelivery: number;
+  depositAmount: number | null;
+  leadTime: string | null;
+  paymentDueAt: string | null;
+  approvedAt: string | null;
+  depositPaidAt: string | null;
+  declineReason: string | null;
   customerNotes: string | null;
   deliveryNote: string | null;
   masterNotes: string | null;
@@ -28,6 +35,49 @@ export interface AdminOrderView {
       comment?: string;
     } | null;
   }[];
+  payments: {
+    id: string;
+    type: "deposit" | "balance";
+    amount: number;
+    paidAt: string | null;
+  }[];
+}
+
+type DateFields =
+  | "createdAt"
+  | "paidAt"
+  | "paymentDueAt"
+  | "approvedAt"
+  | "depositPaidAt";
+
+/** Заказ, как его возвращает API: даты ещё объекты Date. */
+export type AdminOrderData = Omit<AdminOrderView, DateFields | "payments"> & {
+  createdAt: Date;
+  paidAt: Date | null;
+  paymentDueAt: Date | null;
+  approvedAt: Date | null;
+  depositPaidAt: Date | null;
+  payments: (Omit<AdminOrderView["payments"][number], "paidAt"> & {
+    paidAt: Date | null;
+  })[];
+};
+
+const iso = (date: Date | null) => date?.toISOString() ?? null;
+
+/** Даты — строками, чтобы передать заказ в клиентский компонент. */
+export function toOrderView(order: AdminOrderData): AdminOrderView {
+  return {
+    ...order,
+    createdAt: order.createdAt.toISOString(),
+    paidAt: iso(order.paidAt),
+    paymentDueAt: iso(order.paymentDueAt),
+    approvedAt: iso(order.approvedAt),
+    depositPaidAt: iso(order.depositPaidAt),
+    payments: order.payments.map((payment) => ({
+      ...payment,
+      paidAt: iso(payment.paidAt),
+    })),
+  };
 }
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -39,15 +89,16 @@ export const STATUS_LABELS: Record<string, string> = {
   fulfilling: "Собирается",
   shipped: "Отправлен",
   delivered: "Доставлен",
-  awaiting_details: "Уточнить детали",
+  requested: "Новая заявка",
+  awaiting_deposit: "Ждёт предоплату",
   in_production: "Изготавливается",
-  ready_to_ship: "Готов к отправке",
+  awaiting_balance: "Ждёт доплату",
+  ready_to_ship: "Оплачен, к отправке",
+  declined: "Отклонена",
 };
 
-/** Статусы, в которые мастер переводит оплаченный заказ под заказ, — по порядку работы. */
-export const MADE_TO_ORDER_STATUSES = [
-  "awaiting_details",
-  "in_production",
+/** Статусы оплаченного заказа под заказ, между которыми мастер переключает вручную. */
+export const MANUAL_STATUSES = [
   "ready_to_ship",
   "shipped",
   "delivered",
@@ -55,9 +106,14 @@ export const MADE_TO_ORDER_STATUSES = [
 
 /** Заказам в этих статусах нужно действие мастера. */
 export const NEEDS_ATTENTION = new Set([
-  "awaiting_details",
+  "requested",
+  "in_production",
+  "ready_to_ship",
   "ozon_order_failed",
 ]);
+
+/** Оплачивает покупатель на странице заказа — ссылку мастер отправляет в мессенджер. */
+export const orderPageUrl = (id: string) => `https://stariva.ru/order/${id}`;
 
 export const KIND_LABELS: Record<AdminOrderView["kind"], string> = {
   stock: "Готовое",
@@ -69,7 +125,12 @@ export function statusVariant(
 ): "default" | "secondary" | "destructive" | "outline" {
   if (status === "ozon_order_failed") return "destructive";
   if (NEEDS_ATTENTION.has(status)) return "default";
-  if (status === "pending" || status === "canceled" || status === "refunded") {
+  if (
+    status === "pending" ||
+    status === "canceled" ||
+    status === "refunded" ||
+    status === "declined"
+  ) {
     return "outline";
   }
   return "secondary";
