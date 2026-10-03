@@ -71,7 +71,7 @@ const nav = [
   { label: "Блог", href: "/blog" },
   { label: "Отзывы", href: "/reviews" },
   { label: "Для бизнеса", href: "/b2b", hasB2b: true },
-  { label: "О бренде", href: "/about" },
+  { label: "Обо мне", href: "/about" },
 ];
 
 interface HeaderProps {
@@ -598,7 +598,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
               { label: "Мастер-классы", href: "/workshops" },
               { label: "Блог", href: "/blog" },
               { label: "Отзывы", href: "/reviews" },
-              { label: "О бренде", href: "/about" },
+              { label: "Обо мне", href: "/about" },
               { label: "Заказать", href: "/#order" },
             ].map((item) => (
               <Link

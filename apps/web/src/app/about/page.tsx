@@ -9,15 +9,15 @@ import { Button } from "@/components/ui/button";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
-  title: "О бренде Stariva — мастерская ручного макраме",
+  title: "Обо мне — Ольга Карпычева, мастер макраме",
   description:
-    "История Stariva — московской мастерской ручного макраме. Ольга Карпычева создаёт абажуры, одежду и декор из натурального хлопка с 2018 года.",
+    "Меня зовут Ольга Карпычева. С 2018 года я плету макраме дома в Подмосковье — абажуры, одежду и декор из натурального хлопка.",
   alternates: { canonical: `${BASE_URL}/about` },
   openGraph: {
     type: "profile",
-    title: "О бренде Stariva — мастерская ручного макраме",
+    title: "Обо мне — Ольга Карпычева, мастер макраме",
     description:
-      "История Stariva — московской мастерской ручного макраме. Ольга Карпычева создаёт абажуры, одежду и декор из натурального хлопка с 2018 года.",
+      "Меня зовут Ольга Карпычева. С 2018 года я плету макраме дома в Подмосковье — абажуры, одежду и декор из натурального хлопка.",
     url: `${BASE_URL}/about`,
     images: [
       {
@@ -48,49 +48,42 @@ const values = [
   },
   {
     number: "04",
-    title: "Мастерство, а не производство",
-    body: "У меня нет конвейера. Каждый узел завязываю я сама — с именем, историей и любовью к своему делу.",
+    title: "Всё делаю сама",
+    body: "Я работаю одна, без помощников и производства. Каждый узел в каждой вещи завязываю своими руками.",
   },
 ];
 
 const timeline = [
   {
     year: "2018",
-    event: "Основание",
+    event: "Первые узлы",
     detail:
-      "Ольга Карпычева начинает плести макраме на кухне. Первые абажуры уходят к подругам.",
+      "Начала плести макраме дома, на кухне, просто для себя. Первые абажуры раздарила подругам.",
   },
   {
     year: "2019",
-    event: "Первая мастерская",
+    event: "Первые заказы",
     detail:
-      "Первые заказы через соцсети. Обустраиваю домашнюю мастерскую и начинаю работать на постоянной основе.",
+      "Стали писать знакомые знакомых — так появились первые заказы через соцсети. Обустроила дома рабочий уголок.",
   },
   {
-    year: "2021",
-    event: "Выход на Ozon",
+    year: "2024",
+    event: "Магазин на Ozon",
     detail:
-      "Первые 100 заказов через маркетплейс. Бренд начинает получать признание по всей России.",
+      "Открыла магазин на Ozon, чтобы изделия можно было заказать из любого города.",
   },
   {
-    year: "2023",
-    event: "Собственное ателье",
+    year: "2026",
+    event: "Сейчас",
     detail:
-      "Расширение ассортимента: запуск линейки одежды и обучающих мастер-классов.",
-  },
-  {
-    year: "2025",
-    event: "Сегодня",
-    detail:
-      "Более 500 изделий по всей России. Три направления: одежда, интерьер, декор. Каждое изделие — ручная работа одного мастера.",
+      "Плету одежду, абажуры и декор, иногда провожу мастер-классы. По-прежнему всё — сама и по одному изделию.",
   },
 ];
 
 const stats = [
-  { value: "500+", label: "изделий\nсоздано" },
-  { value: "1", label: "мастер\nодного" },
-  { value: "7", label: "лет\nопыта" },
-  { value: "47", label: "регионов\nРоссии" },
+  { value: "2018", label: "плету\nс этого года" },
+  { value: "1", label: "мастер —\nвсё сама" },
+  { value: "100%", label: "натуральный\nхлопок" },
 ];
 
 export default function AboutPage() {
@@ -100,7 +93,7 @@ export default function AboutPage() {
       <BreadcrumbJsonLd
         items={[
           { name: "Главная", href: "/" },
-          { name: "О бренде", href: "/about" },
+          { name: "Обо мне", href: "/about" },
         ]}
       />
       <PersonJsonLd />
@@ -116,7 +109,7 @@ export default function AboutPage() {
         <div className="absolute inset-0 lg:left-auto lg:w-[min(66%,calc(var(--hero-h)*1.5))]">
           <Image
             src="https://cdn.stariva.ru/site/images/about/founder-2026-editorial.webp"
-            alt="Ольга Карпычева в мастерской"
+            alt="Ольга Карпычева за работой"
             fill
             priority
             unoptimized
@@ -136,7 +129,7 @@ export default function AboutPage() {
         <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-14 pb-16 pt-[400px] sm:pt-[480px] lg:py-20">
           <div className="max-w-3xl">
             <p className="label-caps text-linen/70 mb-5 tracking-widest lg:text-taupe">
-              О бренде
+              Обо мне
             </p>
             <h1 className="font-serif text-white text-[clamp(3rem,7vw,6.5rem)] leading-[0.95] tracking-tight text-balance lg:text-espresso">
               Сделано руками.
@@ -146,8 +139,8 @@ export default function AboutPage() {
               </em>
             </h1>
             <p className="mt-8 text-white/75 text-lg lg:text-xl max-w-xl leading-[1.75] lg:max-w-md xl:max-w-lg lg:text-espresso/75">
-              Stariva — мастер ручного макраме из Подмосковья. Я создаю одежду,
-              интерьерные предметы и декор из натурального хлопка с 2018 года.
+              Меня зовут Ольга Карпычева. Я плету макраме дома, в Подмосковье, —
+              одежду, абажуры и небольшой декор из натурального хлопка.
             </p>
           </div>
 
@@ -171,45 +164,56 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── Philosophy statement ── */}
+      {/* ── About me ── */}
       <section className="py-28 lg:py-40">
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
             <div className="lg:col-span-4">
               <p className="label-caps text-terracotta tracking-widest mb-4">
-                Философия
+                Обо мне
               </p>
               <div className="h-px bg-espresso/12 w-12" />
             </div>
-            <div className="lg:col-span-8">
-              <blockquote className="font-serif text-[clamp(1.8rem,4vw,3.2rem)] leading-[1.15] text-espresso text-balance">
-                &ldquo;Я верю, что вещи должны создаваться медленно — с
-                намерением, вниманием и уважением к материалу. Каждый узел — это
-                выбор. Каждое изделие — это история.&rdquo;
-              </blockquote>
+            <div className="lg:col-span-8 max-w-3xl">
+              <p className="font-serif text-[clamp(1.6rem,3vw,2.4rem)] leading-[1.25] text-espresso text-balance">
+                Макраме для меня началось как увлечение — и до сих пор им
+                остаётся, просто теперь мои вещи живут не только у меня дома.
+              </p>
+              <div className="mt-10 space-y-5 text-espresso/75 text-[15px] leading-[1.85]">
+                <p>
+                  В 2018 году я начала плести на кухне, для себя. Первые абажуры
+                  раздарила подругам, потом стали писать их знакомые — так
+                  понемногу появились заказы.
+                </p>
+                <p>
+                  Я работаю одна, дома в Подмосковье. Каждое изделие делаю от
+                  первого до последнего узла сама, поэтому вещей немного, а
+                  работу на заказ иногда приходится подождать.
+                </p>
+                <p>
+                  С 2024 года мои изделия можно найти на Ozon. А здесь, на
+                  сайте, можно ещё заказать вещь по своим меркам или прийти ко
+                  мне на мастер-класс.
+                </p>
+              </div>
               <p className="mt-8 text-taupe text-sm label-caps tracking-widest">
-                — Ольга Карпычева, мастер
+                — Ольга Карпычева
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Atelier image full-bleed ── */}
+      {/* ── Workspace image full-bleed ── */}
       <section className="relative aspect-[16/7] overflow-hidden">
         <Image
           src="https://cdn.stariva.ru/site/images/about/atelier-wide-editorial.webp"
-          alt="Мастерская Stariva"
+          alt="Рабочее место Stariva"
           fill
           className="object-cover object-center"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-espresso/10" />
-        <div className="absolute bottom-8 right-8 lg:bottom-12 lg:right-14">
-          <span className="label-caps text-white/60 text-[11px] tracking-widest">
-            Мастерская Stariva
-          </span>
-        </div>
       </section>
 
       {/* ── Brand values ── */}
@@ -221,14 +225,14 @@ export default function AboutPage() {
                 Ценности
               </p>
               <h2 className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-espresso leading-[1.05]">
-                Что меня
+                Как я
                 <br />
-                определяет
+                работаю
               </h2>
             </div>
             <p className="text-taupe text-base leading-[1.8] max-w-sm lg:text-right">
-              Четыре принципа, которым я не изменяю с первого дня и которые
-              лежат в основе каждого изделия.
+              Несколько простых вещей, которых я стараюсь держаться в каждой
+              работе.
             </p>
           </div>
 
@@ -300,7 +304,7 @@ export default function AboutPage() {
                 </p>
                 <p>
                   Один абажур диаметром 50 см требует около 40 часов работы и
-                  300 метров верёвки. Это не быстро. Зато навсегда.
+                  300 метров верёвки. Это небыстро, зато вещь прослужит долго.
                 </p>
               </div>
 

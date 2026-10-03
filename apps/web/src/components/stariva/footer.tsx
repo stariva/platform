@@ -32,7 +32,7 @@ const catalog = [
 const info = [
   { label: "Уход за изделиями", href: "/blog" },
   { label: "Для кафе и ресторанов", href: "/b2b" },
-  { label: "О бренде", href: "/about" },
+  { label: "Обо мне", href: "/about" },
   { label: "Контакты", href: "/#order" },
 ];
 
