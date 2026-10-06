@@ -30,6 +30,7 @@ const catalog = [
 ];
 
 const info = [
+  { label: "Образы для фотосессий", href: "/photoshoots" },
   { label: "Уход за изделиями", href: "/blog" },
   { label: "Для кафе и ресторанов", href: "/b2b" },
   { label: "Обо мне", href: "/about" },

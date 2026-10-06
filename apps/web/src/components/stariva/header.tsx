@@ -67,6 +67,7 @@ const b2bLinks = [
 const nav = [
   { label: "Каталог", href: "/catalog", hasMega: true },
   { label: "В наличии", href: IN_STOCK_HREF },
+  { label: "Фотосессии", href: "/photoshoots" },
   { label: "Мастер-классы", href: "/workshops" },
   { label: "Блог", href: "/blog" },
   { label: "Отзывы", href: "/reviews" },
