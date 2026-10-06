@@ -1,4 +1,5 @@
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 /**
  * JSON-LD structured data components for SEO.
  * Renders schema.org markup as <script type="application/ld+json"> tags.
@@ -309,7 +310,7 @@ export function ArticleJsonLd({
     "@type": "Article",
     headline: title,
     description,
-    image: `${BASE_URL}${image}`,
+    image: absoluteImageUrl(BASE_URL, image),
     datePublished,
     dateModified: dateModified ?? datePublished,
     url: `${BASE_URL}${url}`,

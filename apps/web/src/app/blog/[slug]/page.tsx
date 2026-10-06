@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,6 +6,8 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate, getPostBySlug } from "@/lib/blog-data";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -24,7 +25,7 @@ export async function generateMetadata({
   if (!post) return {};
 
   const url = `/blog/${slug}`;
-  const image = `${BASE_URL}${post.coverImage}`;
+  const image = absoluteImageUrl(BASE_URL, post.coverImage);
 
   return {
     title: post.title,

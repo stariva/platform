@@ -8,6 +8,7 @@ import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { categories, getProductsByCategory } from "@/lib/ozon-service";
 import { getCategoryBySlug } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 import CategoryFilters from "./category-filters";
 
 // Билд-образ не имеет боевых Ozon-креденшелов (см. Dockerfile), поэтому
@@ -44,7 +45,7 @@ export async function generateMetadata({
       url: `${BASE_URL}${url}`,
       images: [
         {
-          url: `${BASE_URL}${category.hero.image}`,
+          url: absoluteImageUrl(BASE_URL, category.hero.image),
           width: category.hero.width,
           height: category.hero.height,
           alt: category.hero.alt,
@@ -55,7 +56,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: [`${BASE_URL}${category.hero.image}`],
+      images: [absoluteImageUrl(BASE_URL, category.hero.image)],
     },
   };
 }

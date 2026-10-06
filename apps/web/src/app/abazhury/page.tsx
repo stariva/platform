@@ -6,6 +6,7 @@ import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { getProductsByCategory } from "@/lib/ozon-service";
 import { SITE_URL } from "@/lib/site-url";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 import CategoryFilters from "../catalog/[category]/category-filters";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
       "Ручное плетение для вашего интерьера. Модели, размеры и цены в каталоге.",
     images: [
       {
-        url: `${SITE_URL}${heroImage.src}`,
+        url: absoluteImageUrl(SITE_URL, heroImage.src),
         width: heroImage.width,
         height: heroImage.height,
         alt: heroImage.alt,
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    images: [`${SITE_URL}${heroImage.src}`],
+    images: [absoluteImageUrl(SITE_URL, heroImage.src)],
   },
 };
 

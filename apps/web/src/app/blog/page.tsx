@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -6,6 +5,8 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ItemListJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate } from "@/lib/blog-data";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 
 export const metadata: Metadata = {
   title: "Блог о макраме — советы, история, вдохновение",
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/blog`,
     images: [
       {
-        url: `${BASE_URL}${blogPosts[0]?.coverImage ?? ""}`,
+        url: absoluteImageUrl(BASE_URL, blogPosts[0]?.coverImage ?? ""),
         width: 1200,
         height: 630,
         alt: "Блог Stariva",
@@ -46,7 +47,7 @@ export default function BlogPage() {
         items={blogPosts.map((post) => ({
           name: post.title,
           url: `/blog/${post.slug}`,
-          image: `${BASE_URL}${post.coverImage}`,
+          image: absoluteImageUrl(BASE_URL, post.coverImage),
         }))}
       />
       <main className="pt-24 lg:pt-32 pb-20">
