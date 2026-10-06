@@ -2,7 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { type Scenario, scenarios } from "../_data";
 
-function ScenarioBlock({ scenario, index }: { scenario: Scenario; index: number }) {
+function ScenarioBlock({
+  scenario,
+  index,
+}: {
+  scenario: Scenario;
+  index: number;
+}) {
   const reversed = index % 2 === 1;
   return (
     <article
@@ -81,7 +87,10 @@ function ScenarioBlock({ scenario, index }: { scenario: Scenario; index: number 
 
 export function PhotoshootsScenarios() {
   return (
-    <section id="scenarios" className="scroll-mt-20 py-20 lg:py-28 bg-parchment">
+    <section
+      id="scenarios"
+      className="scroll-mt-20 py-20 lg:py-28 bg-parchment"
+    >
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
         <div className="max-w-2xl mb-6">
           <p className="label-caps text-terracotta text-[11px] mb-4">
@@ -95,8 +104,8 @@ export function PhotoshootsScenarios() {
           </h2>
           <p className="mt-5 text-dark-grey leading-relaxed">
             Мы собрали самые популярные сценарии съёмок наших клиенток и
-            подобрали к каждому модели из каталога. Любую можно сплести в
-            другом цвете и по вашим меркам.
+            подобрали к каждому модели из каталога. Любую можно сплести в другом
+            цвете и по вашим меркам.
           </p>
         </div>
 

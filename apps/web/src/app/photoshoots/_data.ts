@@ -139,7 +139,8 @@ export const scenarios: Scenario[] = [
       "Возьмите сандалии на завязках — они продолжают линию бахромы",
     ],
     image: "/images/photoshoots/desert-road.png",
-    imageAlt: "Винтажный кабриолет на пустынной дороге среди каньонов на закате",
+    imageAlt:
+      "Винтажный кабриолет на пустынной дороге среди каньонов на закате",
     looks: [looks.gold, looks.lurex, looks.black],
   },
 ];

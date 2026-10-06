@@ -37,9 +37,9 @@ export function PhotoshootsHero() {
             className="text-white/80 leading-relaxed mb-10 max-w-xl"
             style={{ fontSize: "clamp(15px, 1.5vw, 18px)" }}
           >
-            Марокко, свадьба у моря, греческие острова или road trip по
-            пустыне — подберём образ под локацию и сплетём платье по вашим
-            меркам к дате вылета.
+            Марокко, свадьба у моря, греческие острова или road trip по пустыне
+            — подберём образ под локацию и сплетём платье по вашим меркам к дате
+            вылета.
           </p>
 
           <div className="flex flex-wrap gap-4">
