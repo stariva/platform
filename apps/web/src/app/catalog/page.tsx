@@ -12,6 +12,7 @@ import { categories, getFeaturedProducts } from "@/lib/ozon-service";
 import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 
 // Рендерим страницу динамически на каждый запрос: сборка образа идёт без
 // боевых Ozon-креденшелов (Dockerfile копирует .env.example), поэтому
@@ -138,7 +139,7 @@ export default async function CatalogPage() {
         items={categories.map((cat) => ({
           name: cat.name,
           url: `/catalog/${cat.slug}`,
-          image: `${BASE_URL}${cat.image}`,
+          image: absoluteImageUrl(BASE_URL, cat.image),
         }))}
       />
       <main className="min-h-screen bg-parchment">
