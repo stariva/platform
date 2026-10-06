@@ -10,6 +10,7 @@ import { Hero } from "@/components/stariva/hero";
 import { HomeOrderProvider } from "@/components/stariva/home-order-context";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
+import { PhotoshootsTeaser } from "@/components/stariva/photoshoots-teaser";
 import { Process } from "@/components/stariva/process";
 import { Reviews } from "@/components/stariva/reviews";
 import { homePortfolio } from "@/lib/home-portfolio";
@@ -153,7 +154,7 @@ export default function Page() {
                   <span className="italic">что вам близко</span>
                 </h2>
                 <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
-                  Модели из каталога Stariva. Выберите основу — размер, цвет и
+                  Модели из каталога Stariva. В��берите основу — размер, цвет и
                   детали обсудим для вашего заказа.
                 </p>
               </div>
@@ -182,6 +183,7 @@ export default function Page() {
           </div>
         </section>
         <Process />
+        <PhotoshootsTeaser />
         <section className="bg-sand py-12 lg:py-16">
           <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid md:grid-cols-2 gap-6 lg:gap-16">
             <div>
