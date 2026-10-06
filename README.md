@@ -169,7 +169,8 @@ bun install
 cp .env.example .env
 
 # Edit .env with your credentials
-# - POSTGRES_URL (local docker-compose Postgres, or get one from neon.tech)
+# - POSTGRES_URL (optional: the site starts without it, but DB-backed features
+#   stay unavailable; use local docker-compose Postgres or neon.tech)
 # - AUTH_SECRET (generate with: openssl rand -base64 32)
 # - RESEND_API_KEY (optional, get from resend.com)
 ```

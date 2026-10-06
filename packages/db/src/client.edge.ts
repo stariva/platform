@@ -3,13 +3,13 @@ import { drizzle } from "drizzle-orm/neon-http";
 
 import * as schema from "./schema";
 
-if (!process.env.POSTGRES_URL) {
-  throw new Error(
-    "POSTGRES_URL environment variable is not set. Please configure it in your environment.",
-  );
-}
-
-const sql = neon(process.env.POSTGRES_URL);
+// Without POSTGRES_URL the client is still created (importing this module must
+// not crash the site); every query then fails against the placeholder URL and
+// callers handle it as "database unavailable".
+const sql = neon(
+  process.env.POSTGRES_URL ??
+    "postgres://unconfigured:unconfigured@localhost/db",
+);
 const db = drizzle(sql, {
   schema,
   casing: "snake_case",
