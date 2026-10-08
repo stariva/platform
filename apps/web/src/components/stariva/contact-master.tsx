@@ -196,6 +196,7 @@ function ContactOptions({
   onPick: () => void;
 }) {
   const [copied, setCopied] = useState<"message" | "phone" | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   useEffect(() => {
     if (!copied) return;
@@ -237,9 +238,15 @@ function ContactOptions({
     },
   ];
 
-  const pick = (channel: ContactChannel) => {
+  const pick = async (channel: ContactChannel) => {
+    setCopyFailed(false);
     if (message && (channel === "telegram" || channel === "max")) {
-      navigator.clipboard?.writeText(message).catch(() => {});
+      try {
+        await navigator.clipboard.writeText(message);
+      } catch {
+        setCopyFailed(true);
+        return;
+      }
     }
     reachGoal("contact_master", { channel, source });
     onPick();
@@ -264,9 +271,15 @@ function ContactOptions({
               {copied === "message" ? "Скопировано" : "Скопировать"}
             </button>
           </div>
-          <p className="mt-1.5 text-[14px] leading-snug text-espresso whitespace-pre-line break-words">
+          <p className="mt-1.5 text-[14px] leading-snug text-espresso whitespace-pre-line break-words select-text">
             {message}
           </p>
+          {copyFailed && (
+            <p role="alert" className="mt-2 text-[12px] text-espresso">
+              Не удалось скопировать сообщение. Выделите и скопируйте текст
+              вручную.
+            </p>
+          )}
         </div>
       )}
 
