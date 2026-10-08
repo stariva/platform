@@ -1,6 +1,6 @@
 {
-  "id": "ae18f961-a056-4b9b-aca5-367c447a2b09",
-  "prevId": "65a39625-2799-44ae-a239-afd99b5d97db",
+  "id": "db4e8964-d2c3-422e-ab8b-213eea9404dd",
+  "prevId": "ae18f961-a056-4b9b-aca5-367c447a2b09",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2016,8 +2016,13 @@
           "name": "sent_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": false
+        },
+        "lease_until": {
+          "name": "lease_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},

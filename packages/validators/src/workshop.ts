@@ -135,23 +135,24 @@ export const workshopFormSchema = z
         });
       }
       // Предзаказ: уроки и видео появятся к дате старта
-      if (value.releaseAt !== "") return;
-      if (value.lessons.length === 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["lessons"],
-          message: "Для публикации нужен хотя бы один урок",
-        });
-      }
-      value.lessons.forEach((lesson, index) => {
-        if (!lesson.videoKey) {
+      if (value.releaseAt === "") {
+        if (value.lessons.length === 0) {
           ctx.addIssue({
             code: "custom",
-            path: ["lessons", index, "videoKey"],
-            message: "Загрузите видео — иначе урок не покажется",
+            path: ["lessons"],
+            message: "Для публикации нужен хотя бы один урок",
           });
         }
-      });
+        value.lessons.forEach((lesson, index) => {
+          if (!lesson.videoKey) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["lessons", index, "videoKey"],
+              message: "Загрузите видео — иначе урок не покажется",
+            });
+          }
+        });
+      }
     }
 
     if ((value.testimonialText === "") !== (value.testimonialAuthor === "")) {

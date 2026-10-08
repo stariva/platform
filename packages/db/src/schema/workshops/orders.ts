@@ -54,10 +54,9 @@ export const orders = pgTable(
 );
 
 /**
- * Отправленные покупателю письма и сообщения по заказу мастер-класса.
- * Строка — право на одну отправку: вставляем перед отправкой, удаляем при
- * сбое. Так повторный вебхук или параллельный запуск напоминаний не пришлёт
- * письмо дважды.
+ * Отправки по заказу: sentAt заполнен только после успеха. Незавершённую
+ * отправку можно повторить после leaseUntil; id меняется при перехвате
+ * аренды, чтобы старый воркер не завершил и не удалил новую попытку.
  */
 export const workshopOrderNotifications = pgTable(
   "workshop_order_notifications",
@@ -72,7 +71,8 @@ export const workshopOrderNotifications = pgTable(
     kind: text("kind").notNull(),
     // email | telegram
     channel: text("channel").notNull(),
-    sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
   },
   (t) => [
     unique("workshop_order_notifications_uq").on(t.orderId, t.kind, t.channel),

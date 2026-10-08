@@ -92,7 +92,10 @@ export async function POST(request: NextRequest) {
   if (amountKopecks === 0) {
     await grantAccess(buyer.id, workshop.slug);
     if (!session) {
-      await sendLoginEmail(buyer.email, coursePath, request.headers);
+      await sendLoginEmail(buyer.email, coursePath, request.headers).catch(
+        (error) =>
+          console.error("[payments/create] Не удалось отправить вход:", error),
+      );
     }
     return NextResponse.json({ free: true, emailSent: !session });
   }

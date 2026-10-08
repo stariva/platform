@@ -12,6 +12,7 @@ export const resend = env.RESEND_API_KEY
   : null;
 
 export interface Emails {
+  idempotencyKey?: string;
   react: ReactNode;
   subject: string;
   to: string[];
@@ -45,12 +46,15 @@ export const sendEmail = async (email: Emails) => {
     );
     return Promise.resolve();
   }
-  const { error } = await resend.emails.send({
-    to: email.to,
-    from: email.from ?? env.EMAIL_FROM,
-    subject: email.subject,
-    react: email.react,
-  });
+  const { error } = await resend.emails.send(
+    {
+      to: email.to,
+      from: email.from ?? env.EMAIL_FROM,
+      subject: email.subject,
+      react: email.react,
+    },
+    email.idempotencyKey ? { idempotencyKey: email.idempotencyKey } : undefined,
+  );
   if (error) {
     logger.error("Resend failed to send email", error, { to: email.to });
     throw new Error(`Resend error: ${error.message}`);

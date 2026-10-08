@@ -16,6 +16,7 @@ import { and, between, eq, gte, inArray, isNotNull, or } from "drizzle-orm";
 import { baseEnv, env } from "@/env";
 import {
   claimOrderNotification,
+  completeOrderNotification,
   type NotificationChannel,
   releaseOrderNotification,
   type WorkshopOrder,
@@ -121,14 +122,16 @@ async function claimed(
   channel: NotificationChannel,
   send: () => Promise<void>,
 ): Promise<boolean> {
-  if (!(await claimOrderNotification(target.order.id, kind, channel))) {
+  const claimId = await claimOrderNotification(target.order.id, kind, channel);
+  if (!claimId) {
     return false;
   }
   try {
     await send();
+    await completeOrderNotification(claimId);
     return true;
   } catch (error) {
-    await releaseOrderNotification(target.order.id, kind, channel);
+    await releaseOrderNotification(claimId);
     throw error;
   }
 }
@@ -141,6 +144,7 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
 
   return claimed(target, kind, "email", () =>
     sendEmail({
+      idempotencyKey: `workshop:${order.id}:${kind}:email`,
       to: [target.email],
       subject: emailSubject(kind, target),
       react: StarivaWorkshopEmail({
@@ -169,6 +173,8 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
 function deliverTelegram(target: Target, kind: ReminderKind) {
   const chatId = target.order.telegramChatId;
   if (!chatId || !isClientBotConfigured()) return Promise.resolve(false);
+  // Telegram не поддерживает идемпотентность: после сбоя между отправкой и
+  // подтверждением аренды повторная попытка может продублировать сообщение.
   return claimed(target, kind, "telegram", () =>
     sendClientMessage(chatId, telegramText(kind, target), {
       text: kind === "release" ? "Смотреть уроки" : "Открыть кабинет",
@@ -207,9 +213,10 @@ export async function notifyWorkshopBooked(orderId: string): Promise<void> {
 
 /**
  * Прогон по расписанию (воркер Hatchet): дошлёт письма о покупке, которые не
- * ушли из вебхука, и разошлёт напоминания о старте. Повторный и параллельный
- * запуск безопасны — каждую отправку закрепляет строка
- * workshop_order_notifications.
+ * ушли из вебхука, и разошлёт напоминания о старте. Аренда защищает от
+ * параллельной отправки; после её истечения незавершённую попытку повторяем.
+ * Resend дедуплицирует по ключу в пределах своего окна идемпотентности;
+ * Telegram при восстановлении может получить повторное сообщение.
  */
 export async function runWorkshopReminderSweep(now = new Date()) {
   const targets = await loadTargets(
@@ -236,7 +243,9 @@ export async function runWorkshopReminderSweep(now = new Date()) {
             ),
           );
   const sent = new Set(
-    sentRows.map((row) => `${row.orderId}:${row.kind}:${row.channel}`),
+    sentRows
+      .filter((row) => row.sentAt !== null)
+      .map((row) => `${row.orderId}:${row.kind}:${row.channel}`),
   );
   const isSent = (target: Target, kind: string, channel: NotificationChannel) =>
     sent.has(`${target.order.id}:${kind}:${channel}`);

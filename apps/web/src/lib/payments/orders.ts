@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
 import { orders, workshopOrderNotifications } from "@stariva/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
 
 export interface CreateOrderInput {
   userId: string;
@@ -123,35 +123,58 @@ export async function unlinkTelegramChat(chatId: string): Promise<number> {
 export type NotificationChannel = "email" | "telegram";
 
 /**
- * Право на одну отправку письма или сообщения по заказу. false — уже
- * отправлено (или отправляется параллельно).
+ * Атомарная аренда отправки на пять минут. null — уже отправлено или занято.
+ * Новый id при перехвате защищает от завершения/удаления старым воркером.
  */
 export async function claimOrderNotification(
   orderId: string,
   kind: string,
   channel: NotificationChannel,
-): Promise<boolean> {
+): Promise<string | null> {
+  const id = randomUUID();
+  const leaseUntil = sql`now() + interval '5 minutes'`;
   const rows = await db
     .insert(workshopOrderNotifications)
-    .values({ orderId, kind, channel })
-    .onConflictDoNothing()
+    .values({ id, orderId, kind, channel, sentAt: null, leaseUntil })
+    .onConflictDoUpdate({
+      target: [
+        workshopOrderNotifications.orderId,
+        workshopOrderNotifications.kind,
+        workshopOrderNotifications.channel,
+      ],
+      set: { id, leaseUntil },
+      setWhere: and(
+        isNull(workshopOrderNotifications.sentAt),
+        lte(workshopOrderNotifications.leaseUntil, sql`now()`),
+      ),
+    })
     .returning({ id: workshopOrderNotifications.id });
-  return rows.length > 0;
+  return rows[0]?.id ?? null;
 }
 
-/** Отправка не удалась — возвращаем право, следующий запуск попробует снова. */
-export async function releaseOrderNotification(
-  orderId: string,
-  kind: string,
-  channel: NotificationChannel,
+/** Только владелец текущей аренды может подтвердить успешную отправку. */
+export async function completeOrderNotification(
+  claimId: string,
 ): Promise<void> {
+  await db
+    .update(workshopOrderNotifications)
+    .set({ sentAt: sql`now()`, leaseUntil: null })
+    .where(
+      and(
+        eq(workshopOrderNotifications.id, claimId),
+        isNull(workshopOrderNotifications.sentAt),
+      ),
+    );
+}
+
+/** Ошибка отправки — освобождаем только свою аренду для следующей попытки. */
+export async function releaseOrderNotification(claimId: string): Promise<void> {
   await db
     .delete(workshopOrderNotifications)
     .where(
       and(
-        eq(workshopOrderNotifications.orderId, orderId),
-        eq(workshopOrderNotifications.kind, kind),
-        eq(workshopOrderNotifications.channel, channel),
+        eq(workshopOrderNotifications.id, claimId),
+        isNull(workshopOrderNotifications.sentAt),
       ),
     );
 }

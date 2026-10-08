@@ -141,6 +141,23 @@ describe("workshopFormSchema", () => {
     expect(errorPaths({ ...preorder, cover: "" })).toEqual(["cover"]);
   });
 
+  test("preorders still require testimonial text and author together", () => {
+    const preorder = { ...valid, releaseAt: "2026-11-01T10:00", lessons: [] };
+    expect(errorPaths({ ...preorder, testimonialText: "Класс" })).toEqual([
+      "testimonialAuthor",
+    ]);
+    expect(errorPaths({ ...preorder, testimonialAuthor: "Анна" })).toEqual([
+      "testimonialAuthor",
+    ]);
+    expect(
+      errorPaths({
+        ...preorder,
+        testimonialText: "Класс",
+        testimonialAuthor: "Анна",
+      }),
+    ).toEqual([]);
+  });
+
   test("release date must be a real date", () => {
     expect(errorPaths({ ...valid, releaseAt: "2026-02-31T10:00" })).toEqual([
       "releaseAt",
