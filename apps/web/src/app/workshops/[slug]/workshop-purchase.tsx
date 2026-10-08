@@ -13,12 +13,20 @@ interface WorkshopPurchaseProps {
   slug: string;
   price: number;
   title: string;
+  /** Куда вернуть гостя после входа. По умолчанию — страница мастер-класса. */
+  returnPath?: string;
+  /** Подпись кнопки оплаты вместо «Купить за …». */
+  buyLabel?: string;
+  onBuyClick?: () => void;
 }
 
 export function WorkshopPurchase({
   slug,
   price,
   title,
+  returnPath = `/workshops/${slug}`,
+  buyLabel,
+  onBuyClick,
 }: WorkshopPurchaseProps) {
   const { data: session, isPending: sessionPending } = useSession();
   const [owned, setOwned] = useState<boolean | null>(null);
@@ -45,6 +53,7 @@ export function WorkshopPurchase({
   }, [session, slug]);
 
   async function handleBuy() {
+    onBuyClick?.();
     setBuying(true);
     try {
       const res = await fetch("/api/payments/create", {
@@ -98,9 +107,9 @@ export function WorkshopPurchase({
         className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6 rounded-2xl mb-3 text-base"
       >
         <Link
-          href={`/sign-in?callbackURL=${encodeURIComponent(`/workshops/${slug}`)}`}
+          href={`/sign-in?callbackURL=${encodeURIComponent(returnPath)}`}
         >
-          Войти, чтобы купить
+          {buyLabel ? "Войти и оформить предзаказ" : "Войти, чтобы купить"}
         </Link>
       </Button>
     );
@@ -135,7 +144,7 @@ export function WorkshopPurchase({
           ? "Открываем доступ…"
           : price === 0
             ? "Смотреть бесплатно"
-            : `Купить за ${formatPrice(price)}`}
+            : (buyLabel ?? `Купить за ${formatPrice(price)}`)}
       </Button>
       {price > 0 ? <OfferAcceptanceNote className="mb-3" /> : null}
     </>
