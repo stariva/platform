@@ -6,8 +6,13 @@ import {
   listAccessibleSlugs,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { categoryLabels, levelLabels } from "@/lib/workshops-data";
 import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
+import {
+  categoryLabels,
+  formatReleaseDate,
+  isPreorder,
+  levelLabels,
+} from "@/lib/workshops-data";
 
 export const dynamic = "force-dynamic";
 
@@ -97,47 +102,65 @@ export default async function AccountCoursesPage() {
                 {workshop.title}
               </h2>
 
-              <div className="mt-auto">
-                <div className="flex items-center justify-between text-xs text-taupe mb-1.5">
-                  <span>
-                    {summary.completedLessons} из {summary.totalLessons} уроков
-                  </span>
-                  <span>{summary.percent}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-espresso/10 overflow-hidden mb-4">
-                  <div
-                    className="h-full rounded-full bg-terracotta transition-all"
-                    style={{ width: `${summary.percent}%` }}
-                  />
-                </div>
-
-                <div className="flex items-center gap-3">
+              {isPreorder(workshop) && workshop.releaseAt ? (
+                <div className="mt-auto">
+                  <p className="text-sm text-dark-grey mb-4">
+                    Предзаказ оформлен · уроки откроются{" "}
+                    {formatReleaseDate(workshop.releaseAt)}
+                  </p>
                   <Button
                     asChild
                     className="bg-espresso text-parchment hover:bg-espresso/90"
                   >
-                    <Link
-                      href={
-                        summary.resumeLessonId
-                          ? `/account/workshops/${workshop.slug}/${summary.resumeLessonId}`
-                          : `/account/workshops/${workshop.slug}`
-                      }
-                    >
-                      {summary.isComplete
-                        ? "Пересмотреть"
-                        : started
-                          ? "Продолжить"
-                          : "Начать обучение"}
+                    <Link href={`/account/workshops/${workshop.slug}`}>
+                      Как подготовиться
                     </Link>
                   </Button>
-                  <Link
-                    href={`/account/workshops/${workshop.slug}`}
-                    className="text-sm text-taupe hover:text-espresso transition-colors"
-                  >
-                    Программа курса
-                  </Link>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-auto">
+                  <div className="flex items-center justify-between text-xs text-taupe mb-1.5">
+                    <span>
+                      {summary.completedLessons} из {summary.totalLessons}{" "}
+                      уроков
+                    </span>
+                    <span>{summary.percent}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-espresso/10 overflow-hidden mb-4">
+                    <div
+                      className="h-full rounded-full bg-terracotta transition-all"
+                      style={{ width: `${summary.percent}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      asChild
+                      className="bg-espresso text-parchment hover:bg-espresso/90"
+                    >
+                      <Link
+                        href={
+                          summary.resumeLessonId
+                            ? `/account/workshops/${workshop.slug}/${summary.resumeLessonId}`
+                            : `/account/workshops/${workshop.slug}`
+                        }
+                      >
+                        {summary.isComplete
+                          ? "Пересмотреть"
+                          : started
+                            ? "Продолжить"
+                            : "Начать обучение"}
+                      </Link>
+                    </Button>
+                    <Link
+                      href={`/account/workshops/${workshop.slug}`}
+                      className="text-sm text-taupe hover:text-espresso transition-colors"
+                    >
+                      Программа курса
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );

@@ -99,6 +99,20 @@
       "when": 1790974664318,
       "tag": "0013_made_to_order_two_stage",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791479644668,
+      "tag": "0014_workshop_preorders",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791482716935,
+      "tag": "0015_notification_leases",
+      "breakpoints": true
     }
   ]
 }

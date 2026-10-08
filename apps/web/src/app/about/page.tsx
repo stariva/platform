@@ -108,13 +108,15 @@ export default function AboutPage() {
       <section className="relative min-h-[90vh] flex items-end overflow-hidden lg:items-center lg:bg-linen lg:[--hero-h:clamp(640px,90vh,1080px)] lg:min-h-(--hero-h)">
         <div className="absolute inset-0 lg:left-auto lg:w-[min(66%,calc(var(--hero-h)*1.5))]">
           <Image
-            src="https://cdn.stariva.ru/site/images/about/founder-2026-editorial.webp"
+            src="https://cdn.stariva.ru/site/images/about/founder-2026-hd.webp"
             alt="Ольга Карпычева за работой"
             fill
             priority
-            unoptimized
             className="object-cover object-[56%_center] lg:object-[70%_center]"
-            sizes="(min-width: 1024px) 66vw, 100vw"
+            // object-cover in a box narrower than 3:2, so the rendered photo is
+            // ~1.5× the hero height wide. Mobile crops a slice from a ~4× wider
+            // image and needs the full-resolution source.
+            sizes="(min-width: 1024px) clamp(960px, 135vh, 1620px), 300vw"
           />
           {/* Mobile: bottom-up gradient for text legibility */}
           <div className="absolute inset-0 bg-gradient-to-t from-espresso/90 via-espresso/45 to-transparent lg:hidden" />

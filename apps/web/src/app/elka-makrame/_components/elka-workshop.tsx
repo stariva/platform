@@ -1,7 +1,11 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
-import { formatPrice, type Workshop } from "@/lib/workshops-data";
+import {
+  formatPrice,
+  formatReleaseDate,
+  type Workshop,
+} from "@/lib/workshops-data";
 import {
   WORKSHOP_INCLUDES,
   WORKSHOP_PREORDER_FALLBACK_PRICE,
@@ -15,6 +19,9 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
   const price = workshop?.price ?? WORKSHOP_PREORDER_FALLBACK_PRICE;
   const isPreorder = price < WORKSHOP_REGULAR_PRICE;
   const discount = Math.round((1 - price / WORKSHOP_REGULAR_PRICE) * 100);
+  const releaseLabel = workshop?.releaseAt
+    ? formatReleaseDate(workshop.releaseAt)
+    : WORKSHOP_RELEASE_LABEL;
 
   return (
     <section
@@ -52,7 +59,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
         <div>
           {isPreorder && (
             <p className="inline-flex items-center gap-2 rounded-full bg-terracotta text-parchment px-4 py-2 text-sm mb-6">
-              Предзаказ −{discount}% · старт {WORKSHOP_RELEASE_LABEL}
+              Предзаказ −{discount}% · старт {releaseLabel}
             </p>
           )}
           <h2
@@ -117,9 +124,25 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 Забронировать место у мастера
               </ContactMasterButton>
             )}
-            <p className="text-xs text-text-grey text-center">
-              Безопасная оплата картой или СБП через ЮKassa
-            </p>
+            {workshop ? (
+              <ol
+                aria-label="Как проходит запись"
+                className="mt-5 grid gap-3 border-t border-espresso/10 pt-5 text-sm text-dark-grey"
+              >
+                {[
+                  "Оплата картой или СБП через ЮKassa — без регистрации",
+                  "Сразу после оплаты — письмо со ссылкой на личный кабинет",
+                  `Напомним о старте ${releaseLabel}: на email и, по желанию, в Telegram`,
+                ].map((step, index) => (
+                  <li key={step} className="flex gap-2.5">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-sage-pale font-serif text-xs text-espresso">
+                      {index + 1}
+                    </span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
           </div>
         </div>
       </div>

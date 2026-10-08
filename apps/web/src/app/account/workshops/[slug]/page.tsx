@@ -6,9 +6,10 @@ import {
   hasAccess,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopLessons } from "@/lib/workshops-data";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
+import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
 import { MaterialsList } from "./materials-list";
+import { PreorderNotice } from "./preorder-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,26 @@ export default async function AccountCoursePage({
   // Нет доступа — отправляем на публичную страницу с покупкой
   if (!(await hasAccess(session.user.id, slug))) {
     redirect(`/workshops/${slug}`);
+  }
+
+  if (isPreorder(workshop) && workshop.releaseAt) {
+    return (
+      <div>
+        <Link
+          href="/account"
+          className="text-sm text-taupe hover:text-espresso transition-colors inline-flex items-center gap-1.5 mb-5"
+        >
+          ← Все мои курсы
+        </Link>
+        <div className="bg-white border border-espresso/10 rounded-2xl p-6 mb-6">
+          <h2 className="font-serif text-2xl text-espresso mb-1">
+            {workshop.title}
+          </h2>
+          <p className="text-taupe text-sm">{workshop.subtitle}</p>
+        </div>
+        <PreorderNotice workshop={workshop} releaseAt={workshop.releaseAt} />
+      </div>
+    );
   }
 
   const lessons = getWorkshopLessons(workshop);

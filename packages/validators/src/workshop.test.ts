@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   formatClock,
   formatDurationLabel,
+  formatMoscowDateTime,
   parseClock,
+  parseMoscowDateTime,
   type WorkshopFormValues,
   workshopFormSchema,
 } from "./workshop";
@@ -35,6 +37,7 @@ const valid: WorkshopFormValues = {
   sortOrder: 0,
   testimonialText: "",
   testimonialAuthor: "",
+  releaseAt: "",
 };
 
 const errorPaths = (value: WorkshopFormValues) => {
@@ -127,6 +130,61 @@ describe("workshopFormSchema", () => {
   test("slug is lowercase latin with hyphens", () => {
     expect(errorPaths({ ...valid, slug: "Абажур" })).toEqual(["slug"]);
     expect(errorPaths({ ...valid, slug: "a--b" })).toEqual(["slug"]);
+  });
+
+  test("a preorder publishes without lessons or videos", () => {
+    const preorder = { ...valid, releaseAt: "2026-11-01T10:00" };
+    expect(errorPaths({ ...preorder, lessons: [] })).toEqual([]);
+    expect(
+      errorPaths({ ...preorder, lessons: [{ ...lesson, videoKey: "" }] }),
+    ).toEqual([]);
+    expect(errorPaths({ ...preorder, cover: "" })).toEqual(["cover"]);
+  });
+
+  test("preorders still require testimonial text and author together", () => {
+    const preorder = { ...valid, releaseAt: "2026-11-01T10:00", lessons: [] };
+    expect(errorPaths({ ...preorder, testimonialText: "Класс" })).toEqual([
+      "testimonialAuthor",
+    ]);
+    expect(errorPaths({ ...preorder, testimonialAuthor: "Анна" })).toEqual([
+      "testimonialAuthor",
+    ]);
+    expect(
+      errorPaths({
+        ...preorder,
+        testimonialText: "Класс",
+        testimonialAuthor: "Анна",
+      }),
+    ).toEqual([]);
+  });
+
+  test("release date must be a real date", () => {
+    expect(errorPaths({ ...valid, releaseAt: "2026-02-31T10:00" })).toEqual([
+      "releaseAt",
+    ]);
+    expect(errorPaths({ ...valid, releaseAt: "1 ноября" })).toEqual([
+      "releaseAt",
+    ]);
+  });
+});
+
+describe("moscow date-time", () => {
+  test("round-trips through UTC+3", () => {
+    const date = parseMoscowDateTime("2026-11-01T10:00");
+    expect(date?.toISOString()).toBe("2026-11-01T07:00:00.000Z");
+    expect(formatMoscowDateTime(date as Date)).toBe("2026-11-01T10:00");
+  });
+
+  test("an early-morning Moscow time is the previous UTC day", () => {
+    expect(parseMoscowDateTime("2026-11-01T01:30")?.toISOString()).toBe(
+      "2026-10-31T22:30:00.000Z",
+    );
+  });
+
+  test("rejects overflowing values", () => {
+    expect(parseMoscowDateTime("2026-11-01T25:00")).toBeNull();
+    expect(parseMoscowDateTime("2026-13-01T10:00")).toBeNull();
+    expect(parseMoscowDateTime("")).toBeNull();
   });
 });
 
