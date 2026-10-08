@@ -154,7 +154,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
             : "bg-transparent"
         }`}
       >
-        <div className="max-w-[1440px] mx-auto px-5 lg:px-12 flex items-center justify-between h-[60px] lg:h-[68px]">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-5 xl:px-8 2xl:px-12 flex items-center justify-between gap-3 h-[60px] xl:h-[68px]">
           {/* Logo */}
           <Link
             href="/"
@@ -194,7 +194,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden xl:flex items-center 2xl:gap-1">
             {nav.map((item) =>
               item.hasB2b ? (
                 // biome-ignore lint/a11y/noStaticElementInteractions: wrapper div needs mouse events for dropdown hover
@@ -206,7 +206,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
                 >
                   <Link
                     href={item.href}
-                    className={`px-4 py-2 rounded-md label-caps-md transition-colors flex items-center gap-1.5 ${
+                    className={`px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                       isActive(item.href)
                         ? "text-terracotta"
                         : isSolid
@@ -276,7 +276,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
                 >
                   <Link
                     href={item.href}
-                    className={`px-4 py-2 rounded-md label-caps-md transition-colors flex items-center gap-1.5 ${
+                    className={`px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                       isActive(item.href)
                         ? "text-terracotta"
                         : isSolid
@@ -318,7 +318,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
                     {/* thin bridge so mouse can travel from nav link to panel */}
                     <div className="h-px" />
                     <div className="bg-white/98 backdrop-blur-xl border-b border-espresso/8 shadow-[0_24px_60px_rgba(22,21,19,0.10)]">
-                      <div className="max-w-[1440px] mx-auto px-12 py-8">
+                      <div className="max-w-[1440px] mx-auto px-8 2xl:px-12 py-8">
                         <div className="grid grid-cols-3 gap-5">
                           {catalogNav.map((cat) => (
                             <Link
@@ -427,7 +427,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-4 py-2 rounded-md label-caps-md transition-colors relative ${
+                  className={`px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors relative ${
                     isActive(item.href)
                       ? "text-terracotta"
                       : isSolid
@@ -442,14 +442,14 @@ export function Header({ variant = "solid" }: HeaderProps) {
           </nav>
 
           {/* Right: CTA + Burger */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     aria-label="Личный кабинет"
-                    className={`hidden lg:inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-medium transition-colors ${
+                    className={`hidden xl:inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-medium transition-colors ${
                       isSolid
                         ? "bg-espresso/8 text-espresso hover:bg-espresso/14"
                         : "bg-white/15 border border-white/40 text-white hover:bg-white hover:text-espresso"
@@ -481,7 +481,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
             ) : (
               <Link
                 href="/sign-in"
-                className={`hidden lg:inline-flex items-center label-caps-md px-3 py-2 rounded-full transition-colors ${
+                className={`hidden xl:inline-flex items-center label-caps-nav whitespace-nowrap px-2 2xl:px-3 py-2 rounded-full transition-colors ${
                   isSolid
                     ? "text-espresso/70 hover:text-espresso"
                     : "text-white/80 hover:text-white"
@@ -495,13 +495,15 @@ export function Header({ variant = "solid" }: HeaderProps) {
 
             <Button
               asChild
-              className={`inline-flex items-center gap-2 text-xs lg:label-caps-md px-4 lg:px-5 py-2 min-h-10 h-auto rounded-full transition-colors ${
+              className={`inline-flex items-center gap-2 text-xs whitespace-nowrap xl:label-caps-nav px-3 sm:px-4 2xl:px-5 py-2 min-h-10 h-auto rounded-full transition-colors ${
                 isSolid
                   ? "bg-terracotta text-parchment hover:bg-terracotta-dark"
                   : "bg-white/15 border border-white/40 text-white hover:bg-white hover:text-espresso"
               }`}
             >
-              <Link href="/#order">Рассчитать заказ</Link>
+              <Link href="/#order">
+                Рассчитать<span className="hidden sm:inline">&nbsp;заказ</span>
+              </Link>
             </Button>
 
             {/* Burger */}
@@ -510,7 +512,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
               size="icon"
               aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
               onClick={() => setMenuOpen((v) => !v)}
-              className={`lg:hidden w-9 h-9 rounded-full transition-colors ${
+              className={`xl:hidden w-9 h-9 rounded-full transition-colors ${
                 isSolid
                   ? "border-espresso/15 text-espresso"
                   : "border-white/30 text-white bg-transparent hover:bg-white/10"
@@ -532,7 +534,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
 
       {/* Mobile drawer */}
       <div
-        className={`fixed inset-0 z-50 lg:hidden transition-all duration-300 ${menuOpen ? "visible" : "invisible"}`}
+        className={`fixed inset-0 z-50 xl:hidden transition-all duration-300 ${menuOpen ? "visible" : "invisible"}`}
       >
         {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay closes menu on click, keyboard handled by Escape key on parent */}
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop overlay closes menu on click, keyboard handled by Escape key on parent */}
