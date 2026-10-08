@@ -2,8 +2,12 @@ import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { findWorkshopLesson } from "@/lib/workshops-data";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
+import {
+  findWorkshopLesson,
+  formatReleaseDateTime,
+  isPreorder,
+} from "@/lib/workshops-data";
 
 export const runtime = "nodejs";
 
@@ -55,6 +59,15 @@ export async function GET(request: NextRequest) {
     if (!owned) {
       return NextResponse.json(
         { error: "Нет доступа к этому уроку" },
+        { status: 403 },
+      );
+    }
+    // Предзаказ: уроки открываются в дату старта, у всех одновременно
+    if (isPreorder(workshop) && workshop.releaseAt) {
+      return NextResponse.json(
+        {
+          error: `Урок откроется ${formatReleaseDateTime(workshop.releaseAt)}`,
+        },
         { status: 403 },
       );
     }

@@ -4,6 +4,7 @@
   "exclude": ["dist", "build", "node_modules"],
   "compilerOptions": {
     "moduleResolution": "Bundler",
+    "types": ["bun", "node"],
     "jsx": "react-jsx"
   }
 }

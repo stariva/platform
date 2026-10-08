@@ -1,7 +1,13 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
-import { formatPrice, type Workshop } from "@/lib/workshops-data";
 import {
+  formatPrice,
+  formatReleaseDate,
+  type Workshop,
+} from "@/lib/workshops-data";
+import {
+  PHONE_HREF,
+  PHONE_LABEL,
   TELEGRAM_URL,
   WORKSHOP_INCLUDES,
   WORKSHOP_PREORDER_FALLBACK_PRICE,
@@ -16,6 +22,9 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
   const price = workshop?.price ?? WORKSHOP_PREORDER_FALLBACK_PRICE;
   const isPreorder = price < WORKSHOP_REGULAR_PRICE;
   const discount = Math.round((1 - price / WORKSHOP_REGULAR_PRICE) * 100);
+  const releaseLabel = workshop?.releaseAt
+    ? formatReleaseDate(workshop.releaseAt)
+    : WORKSHOP_RELEASE_LABEL;
 
   return (
     <section
@@ -53,7 +62,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
         <div>
           {isPreorder && (
             <p className="inline-flex items-center gap-2 rounded-full bg-terracotta text-parchment px-4 py-2 text-sm mb-6">
-              Предзаказ −{discount}% · старт {WORKSHOP_RELEASE_LABEL}
+              Предзаказ −{discount}% · старт {releaseLabel}
             </p>
           )}
           <h2
@@ -109,19 +118,49 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 title={workshop.title}
               />
             ) : (
-              <TrackedLink
-                href={TELEGRAM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                goal="elka_workshop_waitlist"
-                className="flex w-full items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment py-4 mb-3 transition-colors"
-              >
-                Забронировать место в Telegram
-              </TrackedLink>
+              <>
+                <TrackedLink
+                  href={PHONE_HREF}
+                  goal="elka_workshop_waitlist"
+                  goalParams={{ channel: "phone" }}
+                  className="flex w-full items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment py-4 mb-3 transition-colors"
+                >
+                  Записаться по телефону {PHONE_LABEL}
+                </TrackedLink>
+                <p className="text-sm text-text-grey text-center mb-3">
+                  или напишите в{" "}
+                  <TrackedLink
+                    href={TELEGRAM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    goal="elka_workshop_waitlist"
+                    goalParams={{ channel: "telegram" }}
+                    className="text-terracotta underline-offset-2 hover:underline"
+                  >
+                    Telegram
+                  </TrackedLink>
+                </p>
+              </>
             )}
-            <p className="text-xs text-text-grey text-center">
-              Безопасная оплата картой или СБП через ЮKassa
-            </p>
+            {workshop ? (
+              <ol
+                aria-label="Как проходит запись"
+                className="mt-5 grid gap-3 border-t border-espresso/10 pt-5 text-sm text-dark-grey"
+              >
+                {[
+                  "Оплата картой или СБП через ЮKassa — без регистрации",
+                  "Сразу письмо со ссылкой в личный кабинет",
+                  `Напомним о старте ${releaseLabel}: на email и, по желанию, в Telegram`,
+                ].map((step, index) => (
+                  <li key={step} className="flex gap-2.5">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-sage-pale font-serif text-xs text-espresso">
+                      {index + 1}
+                    </span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
           </div>
         </div>
       </div>

@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { grantAccess } from "@/lib/account/access";
 import {
   notifyMadeToOrderPayment,
   notifyOrderPaid,
@@ -20,12 +19,9 @@ import {
 } from "@/lib/commerce/orders";
 import { createOzonDeliveryOrder } from "@/lib/ozon-delivery/client";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
-import {
-  getOrderById,
-  markOrderCanceled,
-  markOrderPaid,
-} from "@/lib/payments/orders";
+import { getOrderById } from "@/lib/payments/orders";
 import { getPayment, kopecksToValue } from "@/lib/payments/yookassa";
+import { applyWorkshopPayment } from "@/lib/workshops/order-payment";
 
 export const runtime = "nodejs";
 
@@ -63,7 +59,7 @@ export async function POST(request: NextRequest) {
     if (isProductOrder) {
       await handleProductOrderWebhook(orderId, payment, canceled, succeeded);
     } else {
-      await handleWorkshopOrderWebhook(orderId, payment, canceled, succeeded);
+      await handleWorkshopOrderWebhook(orderId, payment);
     }
 
     return NextResponse.json({ ok: true });
@@ -77,36 +73,10 @@ export async function POST(request: NextRequest) {
 async function handleWorkshopOrderWebhook(
   orderId: string,
   payment: Awaited<ReturnType<typeof getPayment>>,
-  canceled: boolean,
-  succeeded: boolean,
 ) {
   const order = await getOrderById(orderId);
   if (!order) return;
-
-  if (canceled) {
-    await markOrderCanceled(orderId);
-    return;
-  }
-  if (!succeeded) return;
-
-  const expectedValue = (order.amount / 100).toFixed(2);
-  if (payment.amount.value !== expectedValue) {
-    console.error(
-      `[payments/webhook] Несовпадение суммы для заказа ${orderId}: ожидалось ${expectedValue}, получено ${payment.amount.value}`,
-    );
-    return;
-  }
-
-  const wasUpdated = await markOrderPaid(orderId);
-  // Доступ выдаём в любом случае (grantAccess идемпотентен) — на случай,
-  // если заказ уже был помечен оплаченным, а доступ не записался
-  await grantAccess(order.userId, order.workshopSlug, orderId);
-
-  if (wasUpdated) {
-    console.info(
-      `[payments/webhook] Заказ ${orderId} оплачен, доступ к «${order.workshopSlug}» выдан`,
-    );
-  }
+  await applyWorkshopPayment(order, payment);
 }
 
 async function handleProductOrderWebhook(

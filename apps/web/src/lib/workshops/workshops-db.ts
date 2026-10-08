@@ -37,6 +37,7 @@ export function workshopRowToWorkshop(row: WorkshopRow): Workshop {
       row.testimonialText && row.testimonialAuthor
         ? { text: row.testimonialText, author: row.testimonialAuthor }
         : undefined,
+    releaseAt: row.releaseAt?.toISOString(),
   };
 }
 
