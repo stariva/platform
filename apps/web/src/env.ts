@@ -49,6 +49,18 @@ export const env = createEnv({
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
 
+    // Клиентский Telegram-бот: напоминания покупателям мастер-классов, которые
+    // сами нажали «Напоминать в Telegram». Отдельный бот от TELEGRAM_BOT_TOKEN,
+    // который пишет мастеру. Вебхук: /api/telegram/webhook с секретом ниже.
+    TELEGRAM_CLIENT_BOT_TOKEN: z.string().min(1).optional(),
+    // Имя бота без @ — для ссылки t.me/<имя>?start=…
+    TELEGRAM_CLIENT_BOT_USERNAME: z.string().min(1).optional(),
+    TELEGRAM_CLIENT_WEBHOOK_SECRET: z.string().min(16).optional(),
+
+    // Общий секрет сайта и воркера Hatchet (packages/jobs): воркер по
+    // расписанию вызывает /api/workshops/reminders с Authorization: Bearer …
+    JOBS_SECRET: z.string().min(32).optional(),
+
     // Resend (HTTP API) — необязательный канал доставки заявок на email
     ORDER_EMAIL_TO: z.string().email().optional(),
     ORDER_EMAIL_FROM: z.string().min(1).optional(),
@@ -97,6 +109,10 @@ export const env = createEnv({
     LANGFUSE_BASE_URL: process.env.LANGFUSE_BASE_URL,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+    TELEGRAM_CLIENT_BOT_TOKEN: process.env.TELEGRAM_CLIENT_BOT_TOKEN,
+    TELEGRAM_CLIENT_BOT_USERNAME: process.env.TELEGRAM_CLIENT_BOT_USERNAME,
+    TELEGRAM_CLIENT_WEBHOOK_SECRET: process.env.TELEGRAM_CLIENT_WEBHOOK_SECRET,
+    JOBS_SECRET: process.env.JOBS_SECRET,
     ORDER_EMAIL_TO: process.env.ORDER_EMAIL_TO,
     ORDER_EMAIL_FROM: process.env.ORDER_EMAIL_FROM,
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,

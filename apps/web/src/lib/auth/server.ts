@@ -11,6 +11,7 @@ import {
 } from "@stariva/emails";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
+import { captureMagicLink } from "./magic-link-capture";
 
 const vercelUrl =
   env.VERCEL_ENV === "production" && env.VERCEL_PROJECT_PRODUCTION_URL
@@ -59,7 +60,8 @@ export const auth = initAuth({
   },
   extraPlugins: [
     magicLink({
-      sendMagicLink: async ({ email, url }) => {
+      sendMagicLink: async ({ email, url, metadata }) => {
+        if (captureMagicLink(metadata, url)) return;
         await sendEmail({
           to: [email],
           subject: "Вход в личный кабинет — Stariva",

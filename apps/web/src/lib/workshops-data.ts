@@ -58,6 +58,8 @@ export interface Workshop {
   featured?: boolean;
   /** Один отзыв для страницы курса (вместо общей ленты отзывов с Ozon). */
   testimonial?: { text: string; author: string };
+  /** Старт уроков (ISO). В будущем — курс продаётся как предзаказ. */
+  releaseAt?: string;
 }
 
 export const categoryLabels: Record<WorkshopCategory, string> = {
@@ -125,4 +127,34 @@ export function findWorkshopLesson(
 /** Цена мастер-класса в копейках (для платёжной системы и БД). */
 export function workshopPriceKopecks(workshop: Workshop): number {
   return Math.round(workshop.price * 100);
+}
+
+/** Уроки ещё не открылись: курс продаётся как предзаказ. */
+export function isPreorder(workshop: Workshop, now = new Date()): boolean {
+  return (
+    workshop.releaseAt !== undefined &&
+    new Date(workshop.releaseAt).getTime() > now.getTime()
+  );
+}
+
+const moscowDate = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Moscow",
+});
+const moscowTime = new Intl.DateTimeFormat("ru-RU", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Moscow",
+});
+
+/** «1 ноября» по Москве. */
+export function formatReleaseDate(iso: string): string {
+  return moscowDate.format(new Date(iso));
+}
+
+/** «1 ноября в 10:00 (мск)». */
+export function formatReleaseDateTime(iso: string): string {
+  const date = new Date(iso);
+  return `${moscowDate.format(date)} в ${moscowTime.format(date)} (мск)`;
 }

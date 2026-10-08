@@ -56,6 +56,7 @@ export const EMPTY_WORKSHOP: WorkshopFormValues = {
   sortOrder: 0,
   testimonialText: "",
   testimonialAuthor: "",
+  releaseAt: "",
 };
 
 function FieldRow({
@@ -426,6 +427,18 @@ export function WorkshopForm({
                 step="0.01"
                 min="0"
                 {...register("price", { valueAsNumber: true })}
+              />
+            </FieldRow>
+            <FieldRow
+              label="Старт уроков (предзаказ), мск"
+              htmlFor="releaseAt"
+              hint="До этой даты курс продаётся как предзаказ: видео можно загрузить позже, покупатели получат напоминания за неделю, за день и в день старта. Пусто — курс уже открыт"
+              error={errors.releaseAt?.message}
+            >
+              <Input
+                id="releaseAt"
+                type="datetime-local"
+                {...register("releaseAt")}
               />
             </FieldRow>
             <Controller

@@ -103,6 +103,15 @@ export const workshopFormSchema = z
     sortOrder: z.number().int().min(-100_000).max(100_000),
     testimonialText: z.string().trim().max(1000),
     testimonialAuthor: z.string().trim().max(100),
+    // Старт уроков по московскому времени, «2026-11-01T10:00». Пусто — курс
+    // уже открыт. С датой курс можно опубликовать без видео — как предзаказ.
+    releaseAt: z
+      .string()
+      .trim()
+      .refine(
+        (value) => value === "" || parseMoscowDateTime(value) !== null,
+        "Укажите дату и время старта",
+      ),
   })
   .superRefine((value, ctx) => {
     const ids = new Set<string>();
@@ -125,6 +134,8 @@ export const workshopFormSchema = z
           message: "Для публикации нужна обложка",
         });
       }
+      // Предзаказ: уроки и видео появятся к дате старта
+      if (value.releaseAt !== "") return;
       if (value.lessons.length === 0) {
         ctx.addIssue({
           code: "custom",
@@ -169,6 +180,29 @@ export const WORKSHOP_MATERIAL_TYPES = ["application/pdf"] as const;
 /** 4 ГБ: потолок разовой загрузки в бакет без разбиения на части. */
 export const WORKSHOP_VIDEO_MAX_BYTES = 4 * 1024 * 1024 * 1024;
 export const WORKSHOP_MATERIAL_MAX_BYTES = 50 * 1024 * 1024;
+
+const MOSCOW_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
+/**
+ * «2026-11-01T10:00» (значение input type="datetime-local") по Москве →
+ * момент времени. null — строка не разобралась или такой даты нет.
+ */
+export function parseMoscowDateTime(value: string): Date | null {
+  const match = MOSCOW_DATE_TIME.exec(value);
+  if (!match) return null;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  const date = new Date(
+    Date.UTC(year ?? 0, (month ?? 1) - 1, day, (hour ?? 0) - 3, minute),
+  );
+  // 31 февраля и 25:00 Date.UTC молча переносит — такие даты не принимаем
+  return formatMoscowDateTime(date) === value ? date : null;
+}
+
+/** Момент времени → «2026-11-01T10:00» по Москве (UTC+3 круглый год). */
+export function formatMoscowDateTime(date: Date): string {
+  const moscow = new Date(date.getTime() + 3 * 3600 * 1000);
+  return moscow.toISOString().slice(0, 16);
+}
 
 /** «83» → «1:23», «3725» → «1:02:05». */
 export function formatClock(totalSeconds: number): string {

@@ -97,6 +97,10 @@ export const workshops = pgTable(
     featured: boolean("featured").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
 
+    // Старт уроков для предзаказа. В будущем — курс продаётся без видео,
+    // а кабинет и напоминания ведут обратный отсчёт до этой даты.
+    releaseAt: timestamp("release_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

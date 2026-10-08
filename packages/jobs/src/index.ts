@@ -4,3 +4,4 @@ export { helloWorldTask } from "./workflows/hello-world";
 export type { ProcessDocumentInput } from "./workflows/multi-step";
 export { processDocumentWorkflow } from "./workflows/multi-step";
 export { scheduledWorkflow } from "./workflows/scheduled";
+export { workshopRemindersWorkflow } from "./workflows/workshop-reminders";

@@ -1,5 +1,9 @@
 import type { NewWorkshopRow, WorkshopRow } from "@stariva/db/schema";
-import type { WorkshopFormValues } from "@stariva/validators";
+import {
+  formatMoscowDateTime,
+  parseMoscowDateTime,
+  type WorkshopFormValues,
+} from "@stariva/validators";
 
 const nullIfEmpty = (value: string) => (value.trim() === "" ? null : value);
 
@@ -25,6 +29,7 @@ export function formToRow(values: WorkshopFormValues) {
     testimonialAuthor: nullIfEmpty(values.testimonialAuthor),
     featured: values.featured,
     sortOrder: values.sortOrder,
+    releaseAt: parseMoscowDateTime(values.releaseAt),
   } satisfies Partial<NewWorkshopRow>;
 }
 
@@ -50,6 +55,7 @@ export function rowToForm(row: WorkshopRow): WorkshopFormValues {
     sortOrder: row.sortOrder,
     testimonialText: row.testimonialText ?? "",
     testimonialAuthor: row.testimonialAuthor ?? "",
+    releaseAt: row.releaseAt ? formatMoscowDateTime(row.releaseAt) : "",
   };
 }
 

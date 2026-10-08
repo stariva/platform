@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCourseProgressMap, hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getWorkshopLessons } from "@/lib/workshops-data";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
+import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
 import { VideoPlayer } from "./video-player";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,8 @@ export default async function LessonPlayerPage({
   if (!(await hasAccess(session.user.id, slug))) {
     redirect(`/workshops/${slug}`);
   }
+  // Предзаказ: до старта уроки закрыты, в кабинете — дата и подготовка
+  if (isPreorder(workshop)) redirect(`/account/workshops/${slug}`);
 
   const lessons = getWorkshopLessons(workshop);
   const index = lessons.findIndex((l) => l.id === lessonId);
