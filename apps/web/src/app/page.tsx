@@ -154,7 +154,7 @@ export default function Page() {
                   <span className="italic">что вам близко</span>
                 </h2>
                 <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
-                  Модели из каталога Stariva. В��берите основу — размер, цвет и
+                  Модели из каталога Stariva. Выберите основу — размер, цвет и
                   детали обсудим для вашего заказа.
                 </p>
               </div>
