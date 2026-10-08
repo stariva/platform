@@ -1,9 +1,12 @@
 "use client";
 
+import { MessageCircleIcon } from "lucide-react";
 import Link from "next/link";
+import { CONTACTS } from "@/lib/contacts";
+import { ContactMasterButton } from "./contact-master";
 import { CustomOrderForm } from "./custom-order-form";
 import { useHomeOrder } from "./home-order-context";
-import { PhoneIcon, TelegramIcon } from "./icons";
+import { PhoneIcon } from "./icons";
 
 export function CustomOrder() {
   const { productType } = useHomeOrder();
@@ -33,21 +36,22 @@ export function CustomOrder() {
             Отвечаем в рабочее время: пн–сб, 10:00–20:00 МСК.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href="https://t.me/Olga_Stariva"
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="custom_order"
+              message={`Здравствуйте, Ольга! Хочу обсудить ${
+                clothes ? "одежду" : lampshade ? "абажур" : "изделие"
+              } на заказ.`}
               className="inline-flex items-center gap-2 rounded-full border border-espresso/20 px-5 py-3 text-sm text-espresso hover:border-terracotta"
             >
-              <TelegramIcon className="w-4 h-4" />
+              <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
               Написать Ольге
-            </a>
+            </ContactMasterButton>
             <a
-              href="tel:+79778722546"
+              href={CONTACTS.phoneHref}
               className="inline-flex items-center gap-2 px-2 py-3 text-sm text-espresso"
             >
               <PhoneIcon className="w-4 h-4" />
-              +7 977 872 25 46
+              {CONTACTS.phone}
             </a>
           </div>
           <Link

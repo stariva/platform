@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { DownloadIcon } from "./download-icon";
 
 const stats = [
@@ -59,14 +60,13 @@ export function ResortHero() {
               <DownloadIcon />
               Открыть КП
             </a>
-            <a
-              href="https://t.me/Olga_Stariva"
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="resort_hero"
+              message="Здравствуйте, Ольга! Хочу обсудить макраме для нашей базы отдыха."
               className="inline-flex items-center gap-3 bg-white/10 border border-white/25 text-white px-7 py-3.5 rounded-full label-caps-md hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
               Обсудить проект
-            </a>
+            </ContactMasterButton>
           </div>
         </div>
 

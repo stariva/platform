@@ -1,9 +1,5 @@
-import {
-  BUSINESS_POINTS,
-  PHONE_HREF,
-  PHONE_LABEL,
-  TELEGRAM_URL,
-} from "../_data";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
+import { BUSINESS_POINTS, PHONE_HREF, PHONE_LABEL } from "../_data";
 import { TrackedLink } from "./tracked-link";
 
 export function ElkaBusiness() {
@@ -30,15 +26,14 @@ export function ElkaBusiness() {
             расчёт с эскизом, сроками и стоимостью партии.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <TrackedLink
-              href={TELEGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="elka_b2b"
               goal="elka_b2b_telegram"
+              message="Здравствуйте, Ольга! Хочу получить расчёт новогоднего оформления из макраме."
               className="inline-flex items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment px-8 py-4 transition-colors"
             >
-              Получить расчёт в Telegram
-            </TrackedLink>
+              Получить расчёт у мастера
+            </ContactMasterButton>
             <TrackedLink
               href={PHONE_HREF}
               goal="elka_b2b_phone"

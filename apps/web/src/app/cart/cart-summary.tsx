@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Ref } from "react";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { FulfillmentType } from "@/lib/cart/cart-context";
@@ -173,14 +174,13 @@ export function CartSummary({
 
       <p className="px-1 text-[13px] text-taupe">
         Есть вопрос по заказу?{" "}
-        <a
-          href="https://t.me/Olga_Stariva"
-          target="_blank"
-          rel="noopener noreferrer"
+        <ContactMasterButton
+          source="cart"
+          message="Здравствуйте, Ольга! У меня вопрос по заказу."
           className="text-espresso underline underline-offset-4 hover:text-taupe transition-colors"
         >
-          Напишите в Telegram
-        </a>
+          Напишите мастеру
+        </ContactMasterButton>
       </p>
     </aside>
   );

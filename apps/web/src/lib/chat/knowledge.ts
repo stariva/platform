@@ -3,6 +3,7 @@
 // индивидуальные заказы, мастер-классы, материалы, уход, доставка и оплата.
 // Любые темы вне этого контекста — вежливо отклоняются.
 
+import { CONTACTS } from "@/lib/contacts";
 import {
   COLORS,
   COMPLEXITIES,
@@ -76,8 +77,10 @@ function buildWorkshopsBlock(workshops: Workshop[]): string {
 }
 
 const CONTACTS_BLOCK = `
-- Telegram: @Olga_Stariva (https://t.me/Olga_Stariva)
-- Телефон: +7 977 872 25 46
+- Telegram: ${CONTACTS.telegramHandle} (${CONTACTS.telegramUrl})
+- WhatsApp: ${CONTACTS.whatsappUrl}
+- MAX: ${CONTACTS.maxUrl}
+- Телефон: ${CONTACTS.phone}
 - Готовые изделия продаются на Ozon
 - Режим работы: Пн–Сб с 10:00 до 20:00, воскресенье — выходной
 - Мастер и основатель бренда — Ольга Карпычева, бренд работает с 2018 года

@@ -1,3 +1,4 @@
+import { MessageCircleIcon } from "lucide-react";
 import Link from "next/link";
 import {
   getAllReviews,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/ozon-service";
 import type { Review } from "@/lib/ozon-types";
 import { formatRating, pluralRatings, ratingSourcesLabel } from "@/lib/ratings";
-import { TelegramIcon } from "./icons";
+import { ContactMasterButton } from "./contact-master";
 import { ReviewCard, Stars } from "./review-card";
 
 /** Магазины, откуда перенесены отзывы, — ссылки под блоком. */
@@ -124,15 +125,13 @@ export async function Reviews({
           </div>
           <div className="flex flex-col gap-5 lg:items-end">
             {summary && <RatingPanel summary={summary} />}
-            <Link
-              href="https://t.me/Olga_Stariva"
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="reviews"
               className="inline-flex items-center gap-2 label-caps-md text-espresso underline underline-offset-[6px] decoration-espresso/25 hover:decoration-terracotta hover:text-terracotta transition-colors"
             >
-              <TelegramIcon className="w-4 h-4" />
+              <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
               Обсудить заказ с мастером
-            </Link>
+            </ContactMasterButton>
           </div>
         </div>
 

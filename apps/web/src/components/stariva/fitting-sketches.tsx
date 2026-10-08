@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ContactMasterButton } from "./contact-master";
 
 const steps = [
   {
@@ -166,14 +167,13 @@ export function FittingSketches() {
               >
                 Заказать эскиз
               </a>
-              <a
-                href="https://t.me/Olga_Stariva"
-                target="_blank"
-                rel="noopener noreferrer"
+              <ContactMasterButton
+                source="fitting_sketches"
+                message="Здравствуйте, Ольга! У меня вопрос про эскиз и мерки."
                 className="text-sm text-espresso underline underline-offset-4 hover:text-espresso/75 transition-colors"
               >
                 Задать вопрос мастеру
-              </a>
+              </ContactMasterButton>
             </div>
           </div>
         </div>

@@ -13,6 +13,7 @@ import {
   PD_CONSENT_ERROR,
   PersonalDataConsentLabel,
 } from "./consent-checkbox";
+import { ContactMasterButton } from "./contact-master";
 import { useHomeOrder } from "./home-order-context";
 
 const schema = z.object({
@@ -176,14 +177,13 @@ export function CustomOrderForm() {
         <p className="mt-4 text-xs text-taupe break-all">
           Номер заявки: {success}
         </p>
-        <a
-          href="https://t.me/Olga_Stariva"
-          target="_blank"
-          rel="noopener noreferrer"
+        <ContactMasterButton
+          source="custom_order_success"
+          message={`Здравствуйте, Ольга! Хочу добавить детали к заявке ${success}.`}
           className="mt-5 inline-block text-terracotta underline underline-offset-4"
         >
-          Добавить детали в Telegram
-        </a>
+          Добавить детали в мессенджере
+        </ContactMasterButton>
         <button
           type="button"
           onClick={() => {
@@ -347,9 +347,12 @@ export function CustomOrderForm() {
               className="rounded-xl bg-red-50 p-4 text-sm text-red-800"
             >
               {error}{" "}
-              <a href="https://t.me/Olga_Stariva" className="underline">
-                Написать в Telegram
-              </a>
+              <ContactMasterButton
+                source="custom_order_error"
+                className="underline"
+              >
+                Написать мастеру
+              </ContactMasterButton>
             </p>
           )}
           <button
@@ -362,14 +365,12 @@ export function CustomOrderForm() {
           <p className="text-xs leading-relaxed text-taupe">
             Заявка без оплаты. Стоимость, срок и доставку согласуем лично.
             Удобнее в переписке —{" "}
-            <a
-              href="https://t.me/Olga_Stariva"
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="custom_order_form"
               className="underline underline-offset-4"
             >
-              напишите в Telegram
-            </a>
+              напишите в мессенджер
+            </ContactMasterButton>
             .
           </p>
         </fieldset>

@@ -1,4 +1,6 @@
-import { TelegramIcon } from "@/components/stariva/icons";
+import { MessageCircleIcon } from "lucide-react";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
+import { CONTACTS } from "@/lib/contacts";
 import { DownloadIcon } from "./download-icon";
 
 export function ResortCtaDownload() {
@@ -33,24 +35,23 @@ export function ResortCtaDownload() {
               <DownloadIcon />
               Открыть КП
             </a>
-            <a
-              href="https://t.me/Olga_Stariva"
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="resort_cta"
+              message="Здравствуйте, Ольга! Хочу обсудить макраме для нашей базы отдыха."
               className="inline-flex items-center justify-center gap-3 bg-espresso text-parchment px-8 py-4 rounded-full label-caps-md text-[12px] hover:bg-near-black transition-colors"
             >
-              <TelegramIcon className="w-4 h-4" />
-              Написать в Telegram
-            </a>
+              <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
+              Написать мастеру
+            </ContactMasterButton>
           </div>
 
           <p className="text-taupe text-[12px] mt-6">
             Или позвоните:{" "}
             <a
-              href="tel:+79778722546"
+              href={CONTACTS.phoneHref}
               className="text-espresso/70 hover:text-espresso transition-colors"
             >
-              +7 977 872 25 46
+              {CONTACTS.phone}
             </a>
           </p>
         </div>

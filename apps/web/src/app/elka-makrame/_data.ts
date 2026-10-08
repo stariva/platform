@@ -1,3 +1,5 @@
+import { CONTACTS } from "@/lib/contacts";
+
 export const LANDING_PATH = "/elka-makrame";
 
 export const WORKSHOP_SLUG = "elka-makrame";
@@ -9,8 +11,7 @@ export const WORKSHOP_RELEASE_LABEL = "1 ноября";
 /** До этой даты успеем сплести и доставить к празднику. */
 export const ORDER_DEADLINE_LABEL = "20 декабря";
 
-export const TELEGRAM_URL = "https://t.me/Olga_Stariva";
-export const PHONE_HREF = "tel:+79778722546";
+export const PHONE_HREF = CONTACTS.phoneHref;
 export const PHONE_LABEL = "+7 977 872-25-46";
 
 export interface TreeModel {

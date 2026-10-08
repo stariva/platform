@@ -1,4 +1,5 @@
-import { FAQ, PHONE_HREF, PHONE_LABEL, TELEGRAM_URL } from "../_data";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
+import { FAQ, PHONE_HREF, PHONE_LABEL } from "../_data";
 import { TrackedLink } from "./tracked-link";
 
 export function ElkaFaq() {
@@ -18,15 +19,14 @@ export function ElkaFaq() {
             Не нашли ответ? Напишите — ответим в течение часа.
           </p>
           <div className="flex flex-col gap-2 text-espresso">
-            <TrackedLink
-              href={TELEGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="elka_faq"
               goal="elka_faq_telegram"
-              className="underline underline-offset-4 hover:text-terracotta"
+              message="Здравствуйте, Ольга! У меня вопрос про ёлку из макраме."
+              className="text-left underline underline-offset-4 hover:text-terracotta"
             >
-              Написать в Telegram
-            </TrackedLink>
+              Написать мастеру
+            </ContactMasterButton>
             <TrackedLink
               href={PHONE_HREF}
               goal="elka_faq_phone"

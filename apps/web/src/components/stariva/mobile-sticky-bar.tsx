@@ -1,7 +1,8 @@
 "use client";
+import { MessageCircleIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { COOKIE_CONSENT_EVENT, getCookieChoice } from "@/lib/cookie-consent";
-import { TelegramIcon } from "./icons";
+import { ContactMasterButton } from "./contact-master";
 
 export function MobileStickyBar() {
   const [show, setShow] = useState(false);
@@ -22,9 +23,12 @@ export function MobileStickyBar() {
       document.removeEventListener("focusout", update);
     };
   }, []);
-  if (!show) return null;
+  // Скрываем, но не размонтируем: иначе прокрутка закроет открытое окно выбора мессенджера.
   return (
-    <div className="lg:hidden fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 right-3 z-50">
+    <div
+      hidden={!show}
+      className="lg:hidden fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 right-3 z-50"
+    >
       <div className="bg-parchment/95 backdrop-blur-md border border-espresso/15 rounded-full p-1.5 shadow-lg flex gap-2">
         <a
           href="/#order"
@@ -33,16 +37,14 @@ export function MobileStickyBar() {
         >
           Получить расчёт
         </a>
-        <a
-          href="https://t.me/Olga_Stariva"
+        <ContactMasterButton
+          source="mobile_bar"
           data-location="mobile_bar"
-          target="_blank"
-          rel="noopener noreferrer"
           className="flex-1 flex items-center justify-center gap-2 min-h-12 px-3 rounded-full border border-espresso/20 text-espresso text-sm"
         >
-          <TelegramIcon className="w-4 h-4" />
-          Telegram
-        </a>
+          <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
+          Написать
+        </ContactMasterButton>
       </div>
     </div>
   );

@@ -1,4 +1,7 @@
-import { PhoneIcon, TelegramIcon } from "@/components/stariva/icons";
+import { MessageCircleIcon } from "lucide-react";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
+import { PhoneIcon } from "@/components/stariva/icons";
+import { CONTACTS } from "@/lib/contacts";
 
 export function ResortContactStrip() {
   return (
@@ -13,17 +16,16 @@ export function ResortContactStrip() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <a
-            href="https://t.me/Olga_Stariva"
-            target="_blank"
-            rel="noopener noreferrer"
+          <ContactMasterButton
+            source="resort_strip"
+            message="Здравствуйте, Ольга! Хочу обсудить макраме для нашей базы отдыха."
             className="inline-flex items-center gap-2.5 bg-white/10 border border-white/15 text-white px-5 py-2.5 rounded-full label-caps-md text-[11px] hover:bg-white/20 transition-colors"
           >
-            <TelegramIcon className="w-4 h-4" />
-            Telegram
-          </a>
+            <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
+            Написать
+          </ContactMasterButton>
           <a
-            href="tel:+79778722546"
+            href={CONTACTS.phoneHref}
             className="inline-flex items-center gap-2.5 bg-white/10 border border-white/15 text-white px-5 py-2.5 rounded-full label-caps-md text-[11px] hover:bg-white/20 transition-colors"
           >
             <PhoneIcon className="w-4 h-4" />

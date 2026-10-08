@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { scenarios } from "../_data";
 
 export function PhotoshootsHero() {
@@ -49,14 +50,13 @@ export function PhotoshootsHero() {
             >
               Выбрать локацию
             </a>
-            <a
-              href="https://t.me/Olga_Stariva"
-              target="_blank"
-              rel="noopener noreferrer"
+            <ContactMasterButton
+              source="photoshoots_hero"
+              message="Здравствуйте, Ольга! Хочу подобрать образ для фотосессии."
               className="inline-flex items-center gap-3 bg-white/10 border border-white/25 text-white px-7 py-3.5 rounded-full label-caps-md hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
               Подобрать образ с Ольгой
-            </a>
+            </ContactMasterButton>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { faq } from "../_data";
 
 export function PhotoshootsFaq() {
@@ -36,17 +37,17 @@ export function PhotoshootsFaq() {
               Расскажите, куда едете — подберём образ
             </h2>
             <p className="mt-3 text-parchment/70 text-[14px]">
-              Ответим в Telegram в рабочее время: пн–сб, 10:00–20:00 МСК.
+              Ответим в удобном вам мессенджере в рабочее время: пн–сб,
+              10:00–20:00 МСК.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <a
-                href="https://t.me/Olga_Stariva"
-                target="_blank"
-                rel="noopener noreferrer"
+              <ContactMasterButton
+                source="photoshoots_faq"
+                message="Здравствуйте, Ольга! Хочу подобрать образ для фотосессии."
                 className="inline-flex items-center bg-terracotta text-parchment px-7 py-3.5 rounded-full label-caps-md hover:bg-terracotta-dark transition-colors"
               >
                 Написать Ольге
-              </a>
+              </ContactMasterButton>
               <Link
                 href="/catalog/clothes"
                 className="inline-flex items-center border border-parchment/30 text-parchment px-7 py-3.5 rounded-full label-caps-md hover:bg-parchment/10 transition-colors"

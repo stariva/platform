@@ -1,15 +1,14 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { formatPrice, type Workshop } from "@/lib/workshops-data";
 import {
-  TELEGRAM_URL,
   WORKSHOP_INCLUDES,
   WORKSHOP_PREORDER_FALLBACK_PRICE,
   WORKSHOP_PROGRAM,
   WORKSHOP_REGULAR_PRICE,
   WORKSHOP_RELEASE_LABEL,
 } from "../_data";
-import { TrackedLink } from "./tracked-link";
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
 
 export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
@@ -109,15 +108,14 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 title={workshop.title}
               />
             ) : (
-              <TrackedLink
-                href={TELEGRAM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <ContactMasterButton
+                source="elka_workshop"
                 goal="elka_workshop_waitlist"
+                message="Здравствуйте, Ольга! Хочу забронировать место на мастер-классе по ёлке из макраме."
                 className="flex w-full items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment py-4 mb-3 transition-colors"
               >
-                Забронировать место в Telegram
-              </TrackedLink>
+                Забронировать место у мастера
+              </ContactMasterButton>
             )}
             <p className="text-xs text-text-grey text-center">
               Безопасная оплата картой или СБП через ЮKassa
