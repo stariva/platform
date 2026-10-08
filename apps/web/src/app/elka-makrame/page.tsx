@@ -12,7 +12,6 @@ import { Reviews } from "@/components/stariva/reviews";
 import { getProductBySlug } from "@/lib/ozon-service";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
-import { FAQ, LANDING_PATH, TREE_MODELS, WORKSHOP_SLUG } from "./_data";
 import { ElkaAudiences } from "./_components/elka-audiences";
 import { ElkaBusiness } from "./_components/elka-business";
 import { ElkaComparison } from "./_components/elka-comparison";
@@ -20,10 +19,12 @@ import { ElkaFaq } from "./_components/elka-faq";
 import { ElkaHero } from "./_components/elka-hero";
 import { ElkaModels } from "./_components/elka-models";
 import { ElkaWorkshop } from "./_components/elka-workshop";
+import { FAQ, LANDING_PATH, TREE_MODELS, WORKSHOP_SLUG } from "./_data";
 
 export const revalidate = 3600;
 
-const TITLE = "Ёлка из макраме на стену — купить новогоднюю ёлку-панно | Stariva";
+const TITLE =
+  "Ёлка из макраме на стену — купить новогоднюю ёлку-панно | Stariva";
 const DESCRIPTION =
   "Ёлка-панно из макраме ручной работы для квартиры, отеля, ресторана и офиса. Не осыпается, не занимает места, служит годами. Изготовление 2–4 дня, доставка по России. Мастер-класс по предзаказу со скидкой.";
 

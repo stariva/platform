@@ -14,6 +14,7 @@ import { WorkshopPreorderButton } from "./workshop-preorder-button";
 
 export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
   const price = workshop?.price ?? WORKSHOP_PREORDER_FALLBACK_PRICE;
+  const isPreorder = price < WORKSHOP_REGULAR_PRICE;
   const discount = Math.round((1 - price / WORKSHOP_REGULAR_PRICE) * 100);
 
   return (
@@ -39,7 +40,10 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 key={item}
                 className="flex items-start gap-2 rounded-2xl bg-white/70 p-4 text-sm text-espresso"
               >
-                <Check className="size-4 text-sage mt-0.5 shrink-0" aria-hidden />
+                <Check
+                  className="size-4 text-sage mt-0.5 shrink-0"
+                  aria-hidden
+                />
                 {item}
               </li>
             ))}
@@ -47,9 +51,11 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
         </div>
 
         <div>
-          <p className="inline-flex items-center gap-2 rounded-full bg-terracotta text-parchment px-4 py-2 text-sm mb-6">
-            Предзаказ −{discount}% · старт {WORKSHOP_RELEASE_LABEL}
-          </p>
+          {isPreorder && (
+            <p className="inline-flex items-center gap-2 rounded-full bg-terracotta text-parchment px-4 py-2 text-sm mb-6">
+              Предзаказ −{discount}% · старт {WORKSHOP_RELEASE_LABEL}
+            </p>
+          )}
           <h2
             id="workshop-title"
             className="font-serif text-espresso leading-tight text-balance mb-5"
@@ -58,10 +64,10 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
             Сплетите ёлку из макраме своими руками
           </h2>
           <p className="text-dark-grey leading-relaxed mb-8">
-            Онлайн-мастер-класс от Ольги Старивы для начинающих: от выбора
-            шнура до готовой ёлки на стене. Оплатите предзаказ сейчас —
-            зафиксируете цену со скидкой и получите уроки первыми, с запасом
-            времени до праздника.
+            Онлайн-мастер-класс от Ольги Старивы для начинающих: от выбора шнура
+            до готовой ёлки на стене. Оплатите предзаказ сейчас — зафиксируете
+            цену со скидкой и получите уроки первыми, с запасом времени до
+            праздника.
           </p>
 
           <h3 className="font-serif text-xl text-espresso mb-4">
@@ -83,13 +89,18 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               <span className="font-serif text-4xl text-espresso">
                 {formatPrice(price)}
               </span>
-              <s className="text-text-grey">
-                {formatPrice(WORKSHOP_REGULAR_PRICE)}
-              </s>
+              {isPreorder && (
+                <s className="text-text-grey">
+                  {formatPrice(WORKSHOP_REGULAR_PRICE)}
+                </s>
+              )}
             </div>
-            <p className="text-sm text-text-grey mb-6">
-              Цена предзаказа. После старта — {formatPrice(WORKSHOP_REGULAR_PRICE)}.
-            </p>
+            {isPreorder && (
+              <p className="text-sm text-text-grey mb-6">
+                Цена предзаказа. После старта —{" "}
+                {formatPrice(WORKSHOP_REGULAR_PRICE)}.
+              </p>
+            )}
 
             {workshop ? (
               <WorkshopPreorderButton

@@ -39,16 +39,28 @@ export function ElkaComparison() {
             </caption>
             <thead>
               <tr className="bg-parchment">
-                <th scope="col" className="p-4 lg:p-5 font-normal text-sm text-text-grey">
+                <th
+                  scope="col"
+                  className="p-4 lg:p-5 font-normal text-sm text-text-grey"
+                >
                   Критерий
                 </th>
-                <th scope="col" className="p-4 lg:p-5 text-center font-serif text-lg text-espresso">
+                <th
+                  scope="col"
+                  className="p-4 lg:p-5 text-center font-serif text-lg text-espresso"
+                >
                   Макраме
                 </th>
-                <th scope="col" className="p-4 lg:p-5 text-center font-normal text-sm text-text-grey">
+                <th
+                  scope="col"
+                  className="p-4 lg:p-5 text-center font-normal text-sm text-text-grey"
+                >
                   Живая ель
                 </th>
-                <th scope="col" className="p-4 lg:p-5 text-center font-normal text-sm text-text-grey">
+                <th
+                  scope="col"
+                  className="p-4 lg:p-5 text-center font-normal text-sm text-text-grey"
+                >
                   Искусственная
                 </th>
               </tr>
@@ -56,7 +68,10 @@ export function ElkaComparison() {
             <tbody>
               {COMPARISON.map((row) => (
                 <tr key={row.feature} className="border-t border-linen">
-                  <th scope="row" className="p-4 lg:p-5 font-normal text-espresso">
+                  <th
+                    scope="row"
+                    className="p-4 lg:p-5 font-normal text-espresso"
+                  >
                     {row.feature}
                   </th>
                   <td className="p-4 lg:p-5 bg-sage-pale/40">

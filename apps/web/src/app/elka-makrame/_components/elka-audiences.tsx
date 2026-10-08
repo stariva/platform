@@ -19,9 +19,9 @@ export function ElkaAudiences() {
             Для дома и для бизнеса — одна ёлка, сотни сценариев
           </h2>
           <p className="text-dark-grey leading-relaxed">
-            Ёлка из макраме уместна там, где живая ель неудобна, а
-            искусственная выглядит дёшево: в небольшой квартире, детской, у
-            стойки ресепшена или в зале ресторана.
+            Ёлка из макраме уместна там, где живая ель неудобна, а искусственная
+            выглядит дёшево: в небольшой квартире, детской, у стойки ресепшена
+            или в зале ресторана.
           </p>
         </div>
 
@@ -40,9 +40,7 @@ export function ElkaAudiences() {
                 <h3 className="font-serif text-3xl text-white mb-3">
                   {featured.title}
                 </h3>
-                <p className="text-white/85 leading-relaxed">
-                  {featured.text}
-                </p>
+                <p className="text-white/85 leading-relaxed">{featured.text}</p>
               </div>
             </article>
           ) : null}

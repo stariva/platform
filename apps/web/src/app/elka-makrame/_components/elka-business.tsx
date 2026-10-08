@@ -1,4 +1,9 @@
-import { BUSINESS_POINTS, PHONE_HREF, PHONE_LABEL, TELEGRAM_URL } from "../_data";
+import {
+  BUSINESS_POINTS,
+  PHONE_HREF,
+  PHONE_LABEL,
+  TELEGRAM_URL,
+} from "../_data";
 import { TrackedLink } from "./tracked-link";
 
 export function ElkaBusiness() {
