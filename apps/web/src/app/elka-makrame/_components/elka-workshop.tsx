@@ -149,7 +149,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               >
                 {[
                   "Оплата картой или СБП через ЮKassa — без регистрации",
-                  "Сразу письмо со ссылкой в личный кабинет",
+                  "Сразу после оплаты — письмо со ссылкой на личный кабинет",
                   `Напомним о старте ${releaseLabel}: на email и, по желанию, в Telegram`,
                 ].map((step, index) => (
                   <li key={step} className="flex gap-2.5">

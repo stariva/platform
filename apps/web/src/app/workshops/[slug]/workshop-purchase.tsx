@@ -167,7 +167,7 @@ export function WorkshopPurchase({
     } catch {
       setNotice({
         tone: "error",
-        text: "Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.",
+        text: "Не удалось связаться с сервером. Проверьте подключение к интернету и попробуйте ещё раз.",
       });
       setBuying(false);
     }
@@ -202,8 +202,8 @@ export function WorkshopPurchase({
     <form onSubmit={handleSubmit} noValidate className="mb-3">
       {session ? (
         <p className="text-sm text-text-grey mb-4">
-          Доступ откроется в кабинете{" "}
-          <span className="text-espresso">{session.user.email}</span>
+          Мастер-класс появится в вашем кабинете{" "}
+          <span className="text-espresso">({session.user.email})</span>
         </p>
       ) : (
         <div className="mb-4 space-y-3">
@@ -243,7 +243,7 @@ export function WorkshopPurchase({
             ) : null}
             {suggestion ? (
               <p className="text-[13px] text-taupe mt-1.5">
-                Может быть,{" "}
+                Возможно, вы имели в виду{" "}
                 <button
                   type="button"
                   onClick={() => setEmail(suggestion)}

@@ -10,7 +10,7 @@ const DAY = 24 * 3600 * 1000;
 
 function daysLeftLabel(releaseAt: Date, now = new Date()): string {
   const days = Math.ceil((releaseAt.getTime() - now.getTime()) / DAY);
-  if (days <= 1) return "Старт уже завтра";
+  if (days <= 1) return "Старт меньше чем через сутки";
   const mod10 = days % 10;
   const mod100 = days % 100;
   const word =
@@ -51,8 +51,8 @@ export function PreorderNotice({
           Уроки откроются {formatReleaseDateTime(releaseAt)}
         </h3>
         <p className="mb-5 text-sm leading-relaxed text-dark-grey">
-          Место за вами. Напомним письмом за неделю, за день и в момент старта —
-          уроки появятся прямо здесь.
+          Место за вами. Напомним письмом за неделю, за день и в момент старта,
+          а уроки появятся прямо здесь.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <a href={calendar.icsUrl} className={button}>

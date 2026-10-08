@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       {
         error: session
           ? "У вас уже есть доступ к этому курсу"
-          : `Этот мастер-класс уже оплачен на ${buyer.email}. Мы отправили письмо со ссылкой для входа.`,
+          : `Этот мастер-класс уже куплен на ${buyer.email}. Мы отправили на эту почту ссылку для входа.`,
         alreadyOwned: true,
       },
       { status: 409 },
