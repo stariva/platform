@@ -19,14 +19,14 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@orpc/contract": "^1.15.0",
-    "@orpc/server": "^1.15.0",
+    "@orpc/contract": "^1.15.5",
+    "@orpc/server": "^1.15.5",
     "@stariva/auth": "workspace:*",
     "@stariva/config": "workspace:*",
     "@stariva/db": "workspace:*",
     "@stariva/storage": "workspace:*",
     "@stariva/validators": "workspace:*",
-    "better-auth": "1.7.6",
+    "better-auth": "1.7.7",
     "superjson": "2.2.6",
     "zod": "4.6.5"
   },

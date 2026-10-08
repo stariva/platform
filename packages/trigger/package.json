@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@trigger.dev/sdk": "4.5.16"
+    "@trigger.dev/sdk": "4.7.3"
   },
   "devDependencies": {
     "@stariva/tsconfig": "workspace:*",

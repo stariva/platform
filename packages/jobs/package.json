@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@hatchet-dev/typescript-sdk": "1.33.1"
+    "@hatchet-dev/typescript-sdk": "1.36.0"
   },
   "devDependencies": {
     "@stariva/tsconfig": "workspace:*",
