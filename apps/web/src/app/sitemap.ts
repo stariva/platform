@@ -3,8 +3,8 @@ import { blogPosts } from "@/lib/blog-data";
 import { IN_STOCK_HREF } from "@/lib/in-stock";
 import { categories, getProducts } from "@/lib/ozon-service";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
-import { absoluteImageUrl } from "@/lib/workshops-data";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 
 export const revalidate = 3600;
 
@@ -13,6 +13,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Статические страницы ──────────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/abazhury`, changeFrequency: "weekly", priority: 0.9 },
+    {
+      url: `${BASE_URL}/elka-makrame`,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
     {
       url: BASE_URL,
       lastModified: new Date(),
@@ -125,7 +130,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "monthly" as const,
     // Новые статьи получают чуть выший приоритет
     priority: new Date(post.date) > new Date("2025-01-01") ? 0.7 : 0.6,
-    images: [`${BASE_URL}${post.coverImage}`],
+    images: [absoluteImageUrl(BASE_URL, post.coverImage)],
   }));
 
   // ── Мастер-классы ─────────────────────────────────────────────────────────

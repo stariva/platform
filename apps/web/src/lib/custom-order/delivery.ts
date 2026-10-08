@@ -4,6 +4,12 @@ export interface Notification {
   message: string;
   photoBase64: string | null;
   photoType: string | null;
+  /** Заголовок сообщения; по умолчанию «Заявка <id>». */
+  title?: string;
+  /** Тема письма; по умолчанию «Индивидуальный заказ Stariva · <id>». */
+  emailSubject?: string;
+  /** Префикс ключа идемпотентности письма; по умолчанию «custom-order». */
+  idempotencyScope?: string;
 }
 export interface DeliveryConfig {
   telegramToken?: string;
@@ -21,7 +27,7 @@ export async function deliverNotification(
   request: typeof fetch = fetch,
 ): Promise<boolean> {
   const channels: Promise<void>[] = [];
-  const message = `Заявка ${notification.id}\n${notification.message}`;
+  const message = `${notification.title ?? `Заявка ${notification.id}`}\n${notification.message}`;
   if (config.telegramToken && config.telegramChatId) {
     channels.push(
       (async () => {
@@ -73,12 +79,14 @@ export async function deliverNotification(
           headers: {
             Authorization: `Bearer ${config.emailKey}`,
             "Content-Type": "application/json",
-            "Idempotency-Key": `custom-order/${notification.id}`,
+            "Idempotency-Key": `${notification.idempotencyScope ?? "custom-order"}/${notification.id}`,
           },
           body: JSON.stringify({
             from: config.emailFrom,
             to: config.emailTo,
-            subject: `Индивидуальный заказ Stariva · ${notification.id}`,
+            subject:
+              notification.emailSubject ??
+              `Индивидуальный заказ Stariva · ${notification.id}`,
             html: `<pre>${escapeHtml(message)}</pre>`,
             attachments: notification.photoBase64
               ? [

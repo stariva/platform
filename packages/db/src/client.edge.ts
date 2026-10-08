@@ -1,15 +1,24 @@
-import { neon } from "@neondatabase/serverless";
+import { type NeonQueryFunction, neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 
 import * as schema from "./schema";
 
-if (!process.env.POSTGRES_URL) {
+// Importing without POSTGRES_URL must not crash the site. Queries fail locally
+// so callers can handle "database unavailable" without making a network request.
+function unavailable(): never {
   throw new Error(
     "POSTGRES_URL environment variable is not set. Please configure it in your environment.",
   );
 }
 
-const sql = neon(process.env.POSTGRES_URL);
+const connectionString = process.env.POSTGRES_URL;
+const sql: NeonQueryFunction<false, false> = connectionString
+  ? neon(connectionString)
+  : Object.assign(unavailable, {
+      query: unavailable,
+      unsafe: unavailable,
+      transaction: unavailable,
+    });
 const db = drizzle(sql, {
   schema,
   casing: "snake_case",

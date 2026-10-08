@@ -1,10 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { grantAccess } from "@/lib/account/access";
 import {
+  notifyMadeToOrderPayment,
+  notifyOrderPaid,
+  notifyOzonOrderFailed,
+} from "@/lib/commerce/order-notifications";
+import {
+  applyMadeToOrderPayment,
   attachOzonOrder,
   claimProductOrderShipment,
+  getOrderPayment,
   getProductOrderById,
   getProductOrderItems,
+  markOrderPaymentCanceled,
+  markOrderPaymentSucceeded,
   markProductOrderCanceled,
   markProductOrderOzonFailed,
   markProductOrderPaid,
@@ -16,7 +25,7 @@ import {
   markOrderCanceled,
   markOrderPaid,
 } from "@/lib/payments/orders";
-import { getPayment } from "@/lib/payments/yookassa";
+import { getPayment, kopecksToValue } from "@/lib/payments/yookassa";
 
 export const runtime = "nodejs";
 
@@ -109,6 +118,12 @@ async function handleProductOrderWebhook(
   const order = await getProductOrderById(orderId);
   if (!order) return;
 
+  // Изделие под заказ оплачивается по этапам: ни Ozon, ни склада
+  if (order.kind === "made_to_order") {
+    await handleMadeToOrderPayment(orderId, payment, canceled, succeeded);
+    return;
+  }
+
   if (canceled) {
     await markProductOrderCanceled(orderId);
     return;
@@ -124,6 +139,7 @@ async function handleProductOrderWebhook(
   }
 
   await markProductOrderPaid(orderId);
+
   const attemptId = await claimProductOrderShipment(orderId);
   if (!attemptId) return;
 
@@ -141,11 +157,12 @@ async function handleProductOrderWebhook(
           };
 
     const ozonOrder = await createOzonDeliveryOrder({
-      items: items.map((i) => ({
-        sku: i.ozonSku,
-        quantity: i.quantity,
-        price: i.price,
-      })),
+      items: items.map((i) => {
+        if (i.ozonSku === null) {
+          throw new Error(`order_item_without_ozon_sku:${i.id}`);
+        }
+        return { sku: i.ozonSku, quantity: i.quantity, price: i.price };
+      }),
       delivery,
       recipient: {
         name: order.contactName,
@@ -170,6 +187,73 @@ async function handleProductOrderWebhook(
       error,
     );
     await markProductOrderOzonFailed(orderId, attemptId);
+    await notifyOzonOrderFailed(orderId);
     throw error;
   }
+
+  // Заказ уже создан в Ozon — сбой уведомления не должен заставлять YooKassa
+  // повторять webhook, поэтому здесь он только попадает в лог.
+  try {
+    await notifyOrderPaid(orderId);
+  } catch (error) {
+    console.error(
+      `[payments/webhook] Не удалось уведомить мастера о заказе ${orderId}:`,
+      error,
+    );
+  }
+}
+
+/**
+ * Оплата этапа заказа под заказ. Сумму сверяем со строкой платежа — ровно
+ * столько мы запросили у YooKassa. Успешная оплата записывается всегда, даже
+ * если заказ её уже не ждёт (двойная оплата, мастер изменил условия): деньги
+ * пришли, и мастер должен об этом узнать.
+ */
+async function handleMadeToOrderPayment(
+  orderId: string,
+  payment: Awaited<ReturnType<typeof getPayment>>,
+  canceled: boolean,
+  succeeded: boolean,
+) {
+  const rowId = payment.metadata?.orderPaymentId;
+  const row = rowId ? await getOrderPayment(rowId) : null;
+  if (!row || row.orderId !== orderId) {
+    console.error(
+      `[payments/webhook] Платёж ${payment.id} по заказу под заказ ${orderId} без своей строки платежа`,
+    );
+    return;
+  }
+
+  if (canceled) {
+    await markOrderPaymentCanceled(row.id);
+    return;
+  }
+  if (!succeeded) return;
+
+  if (payment.amount.value !== kopecksToValue(row.amount)) {
+    console.error(
+      `[payments/webhook] Несовпадение суммы платежа ${row.id} по заказу ${orderId}: ожидалось ${kopecksToValue(row.amount)}, получено ${payment.amount.value}`,
+    );
+    return;
+  }
+
+  if (await markOrderPaymentSucceeded(row.id)) {
+    const applied = await applyMadeToOrderPayment(
+      orderId,
+      row.type,
+      row.amount,
+    );
+    if (applied) {
+      console.info(
+        `[payments/webhook] Заказ под заказ ${orderId}: оплачен этап ${row.type}`,
+      );
+    } else {
+      console.error(
+        `[payments/webhook] КРИТИЧНО: заказ под заказ ${orderId} не ждал оплату ${row.id} (${row.type})`,
+      );
+    }
+  }
+
+  // При сбое бросает ошибку — YooKassa повторит webhook, и мы отправим снова
+  await notifyMadeToOrderPayment(row.id);
 }

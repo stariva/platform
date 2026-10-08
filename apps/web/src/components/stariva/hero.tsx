@@ -130,7 +130,7 @@ export function Hero() {
                 alt={slide.alt}
                 fill
                 preload={index === 0}
-                sizes="(max-width: 1023px) 140vw, 100vw"
+                sizes="(max-width: 1023px) 140vw, min(100vw, 1672px)"
                 className={styles.image}
               />
             </div>

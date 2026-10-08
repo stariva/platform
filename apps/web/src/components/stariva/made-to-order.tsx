@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -29,16 +30,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { reachGoal } from "@/lib/analytics";
+import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { appendCampaign } from "@/lib/campaign-attribution";
+import { useCart } from "@/lib/cart/cart-context";
 import {
   COLOR_SWATCHES,
   CUSTOM_SIZE,
+  customSizeLabel,
   type MadeToOrderConfig,
   madeToOrderLeadTime,
+  madeToOrderSizes,
   PHOTO_COLOR,
 } from "@/lib/made-to-order";
 import type { Product } from "@/lib/ozon-types";
+import { formatPrice } from "@/lib/products";
 
 interface MadeToOrderProps {
   product: Product;
@@ -48,12 +53,43 @@ interface MadeToOrderProps {
 
 /** Показывает срок изготовления, выбор размера и цвета и открывает заявку. */
 export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
-  const sizes = product.sizes?.length ? product.sizes : config.defaultSizes;
+  const sizes = madeToOrderSizes(product, config);
   const isClothes = product.category === "clothes";
+  const router = useRouter();
+  const { add } = useCart();
 
   const [size, setSize] = useState<string>(CUSTOM_SIZE);
   const [color, setColor] = useState<string>(PHOTO_COLOR);
   const [open, setOpen] = useState(false);
+
+  // Есть цена в каталоге — изделие можно положить в корзину и оформить заявку
+  const canOrder = product.currency === "RUB" && product.price > 0;
+
+  function addToCart() {
+    add({
+      productSlug: product.slug,
+      fulfillmentType: "made_to_order",
+      name: product.name,
+      image: product.images[0] ?? "",
+      price: Math.round(product.price * 100),
+      options: {
+        size: size === CUSTOM_SIZE ? customSizeLabel(product.category) : size,
+        color,
+        measurements: [],
+      },
+    });
+    trackProductEvent("add", [
+      {
+        id: product.slug,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        category: product.category,
+      },
+    ]);
+    reachGoal("made_to_order_add_to_cart", { category: product.category });
+    router.push("/cart");
+  }
 
   const colorOptions = [
     { id: "photo", label: PHOTO_COLOR, hex: null as string | null },
@@ -162,15 +198,37 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
         </details>
       )}
 
+      {canOrder && (
+        <div className="mb-3">
+          <Button
+            type="button"
+            onClick={addToCart}
+            className="w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
+          >
+            Заказать · {formatPrice(product.price)}
+          </Button>
+          <p className="text-taupe text-[11px] leading-relaxed mt-2">
+            Сейчас без оплаты: мастер свяжется с вами, уточнит мерки, цвет,
+            итоговую цену и доставку. Предоплата 50% — после согласования,
+            остаток — когда изделие готово.
+          </p>
+        </div>
+      )}
+
       <Button
         type="button"
+        variant={canOrder ? "outline" : "default"}
         onClick={() => {
           setOpen(true);
           reachGoal("made_to_order_open", { category: product.category });
         }}
-        className="w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
+        className={
+          canOrder
+            ? "w-full py-3.5 h-auto rounded-2xl transition-colors label-caps"
+            : "w-full bg-terracotta hover:bg-espresso text-white py-3.5 h-auto rounded-2xl transition-colors label-caps"
+        }
       >
-        {config.cta}
+        {canOrder ? "Задать вопрос мастеру" : config.cta}
       </Button>
 
       <MadeToOrderDialog

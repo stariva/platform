@@ -3,15 +3,27 @@ import { z } from "zod";
 import type { CartValidationLine } from "@/lib/cart/validation";
 import {
   isCatalogProductBuyable,
+  isMadeToOrderBuyable,
   MAX_ITEM_QUANTITY,
   priceInKopecks,
 } from "@/lib/commerce/catalog";
+import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
 import { getProductsResult } from "@/lib/ozon-service";
 
 export const runtime = "nodejs";
 
+const fulfillmentTypeSchema = z.enum(["stock", "made_to_order"]);
+
 const bodySchema = z.object({
-  slugs: z.array(z.string().min(1).max(256)).min(1).max(100),
+  lines: z
+    .array(
+      z.object({
+        productSlug: z.string().min(1).max(256),
+        fulfillmentType: fulfillmentTypeSchema,
+      }),
+    )
+    .min(1)
+    .max(100),
 });
 
 /**
@@ -34,18 +46,57 @@ export async function POST(request: NextRequest) {
   }
 
   const productsBySlug = new Map(products.map((p) => [p.slug, p]));
-  const lines: CartValidationLine[] = [...new Set(parsed.data.slugs)].map(
-    (productSlug) => {
+  const requested = new Map(
+    parsed.data.lines.map((line) => [
+      `${line.fulfillmentType}:${line.productSlug}`,
+      line,
+    ]),
+  );
+  const lines: CartValidationLine[] = [...requested.values()].map(
+    ({ productSlug, fulfillmentType }) => {
       const product = productsBySlug.get(productSlug);
       if (!product) {
-        return { productSlug, available: false, reason: "missing" };
+        return {
+          productSlug,
+          fulfillmentType,
+          available: false,
+          reason: "missing",
+        };
       }
       const price = priceInKopecks(product);
+
+      if (fulfillmentType === "made_to_order") {
+        // Изделие под заказ не зависит от остатка: нужна только цена и признак «плетём под заказ»
+        if (!isMadeToOrderBuyable(product) || price === null) {
+          return {
+            productSlug,
+            fulfillmentType,
+            available: false,
+            reason: "missing",
+          };
+        }
+        return {
+          productSlug,
+          fulfillmentType,
+          available: true,
+          name: product.name,
+          image: product.images[0] ?? "",
+          price,
+          maxQuantity: MAX_MADE_TO_ORDER_QUANTITY,
+        };
+      }
+
       if (!isCatalogProductBuyable(product) || price === null) {
-        return { productSlug, available: false, reason: "sold_out" };
+        return {
+          productSlug,
+          fulfillmentType,
+          available: false,
+          reason: "sold_out",
+        };
       }
       return {
         productSlug,
+        fulfillmentType,
         available: true,
         name: product.name,
         image: product.images[0] ?? "",

@@ -3,12 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CustomOrder } from "@/components/stariva/custom-order";
+import { FittingSketches } from "@/components/stariva/fitting-sketches";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Hero } from "@/components/stariva/hero";
 import { HomeOrderProvider } from "@/components/stariva/home-order-context";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
+import { PhotoshootsTeaser } from "@/components/stariva/photoshoots-teaser";
 import { Process } from "@/components/stariva/process";
 import { Reviews } from "@/components/stariva/reviews";
 import { homePortfolio } from "@/lib/home-portfolio";
@@ -181,6 +183,7 @@ export default function Page() {
           </div>
         </section>
         <Process />
+        <PhotoshootsTeaser />
         <section className="bg-sand py-12 lg:py-16">
           <div className="max-w-[1400px] mx-auto px-5 lg:px-10 grid md:grid-cols-2 gap-6 lg:gap-16">
             <div>
@@ -244,6 +247,7 @@ export default function Page() {
             </p>
           </div>
         </section>
+        <FittingSketches />
         <CustomOrder />
       </HomeOrderProvider>
       <section className="border-t border-espresso/10 py-10 lg:py-14">

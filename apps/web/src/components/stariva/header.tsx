@@ -67,11 +67,12 @@ const b2bLinks = [
 const nav = [
   { label: "Каталог", href: "/catalog", hasMega: true },
   { label: "В наличии", href: IN_STOCK_HREF },
+  { label: "Фотосессии", href: "/photoshoots" },
   { label: "Мастер-классы", href: "/workshops" },
   { label: "Блог", href: "/blog" },
   { label: "Отзывы", href: "/reviews" },
   { label: "Для бизнеса", href: "/b2b", hasB2b: true },
-  { label: "О бренде", href: "/about" },
+  { label: "Обо мне", href: "/about" },
 ];
 
 interface HeaderProps {
@@ -595,10 +596,11 @@ export function Header({ variant = "solid" }: HeaderProps) {
               { label: "Весь каталог", href: "/catalog" },
               { label: "В наличии", href: IN_STOCK_HREF },
               { label: "Корзина", href: "/cart" },
+              { label: "Фотосессии", href: "/photoshoots" },
               { label: "Мастер-классы", href: "/workshops" },
               { label: "Блог", href: "/blog" },
               { label: "Отзывы", href: "/reviews" },
-              { label: "О бренде", href: "/about" },
+              { label: "Обо мне", href: "/about" },
               { label: "Заказать", href: "/#order" },
             ].map((item) => (
               <Link

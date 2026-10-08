@@ -4,17 +4,77 @@ import {
   ArrowRightIcon,
   LockKeyholeIcon,
   PackageCheckIcon,
+  RulerIcon,
   TruckIcon,
 } from "lucide-react";
 import Link from "next/link";
 import type { Ref } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import type { FulfillmentType } from "@/lib/cart/cart-context";
 import { IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
+import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
+const COPY: Record<
+  FulfillmentType,
+  {
+    delivery: string;
+    deliveryValue: string;
+    totalLabel: string;
+    checkoutLabel: string;
+    checkoutHref: string;
+    unavailable: (count: number) => string;
+    perks: { Icon: typeof TruckIcon; text: string }[];
+  }
+> = {
+  stock: {
+    delivery: "Доставка Ozon",
+    deliveryValue: "на следующем шаге",
+    totalLabel: "Итого",
+    checkoutLabel: "Перейти к оформлению",
+    checkoutHref: "/checkout",
+    unavailable: (count) =>
+      count === 1
+        ? "Одного изделия уже нет в наличии."
+        : `${count} ${pluralItems(count)} уже нет в наличии.`,
+    perks: [
+      { Icon: PackageCheckIcon, text: `Отправим за ${IN_STOCK_SHIP_DAYS}` },
+      { Icon: TruckIcon, text: "Доставка в пункт выдачи Ozon по всей России" },
+      { Icon: LockKeyholeIcon, text: "Безопасная онлайн-оплата через ЮKassa" },
+    ],
+  },
+  made_to_order: {
+    delivery: "Доставка",
+    deliveryValue: "согласует мастер",
+    totalLabel: "По каталогу",
+    checkoutLabel: "Оформить заявку",
+    checkoutHref: "/checkout/made-to-order",
+    unavailable: (count) =>
+      count === 1
+        ? "Одно изделие снято с продажи."
+        : `${count} ${pluralItems(count)} сняты с продажи.`,
+    perks: [
+      {
+        Icon: RulerIcon,
+        text: "Сейчас без оплаты: мастер свяжется и согласует мерки, цену и доставку",
+      },
+      {
+        Icon: LockKeyholeIcon,
+        text: "Предоплата 50% — после согласования, остаток — когда изделие готово",
+      },
+      {
+        Icon: PackageCheckIcon,
+        text: `Сплетём вручную, обычно за ${MADE_TO_ORDER_DAYS}`,
+      },
+    ],
+  },
+};
+
 interface CartSummaryProps {
+  /** Готовые изделия отправляет Ozon, изделия под заказ плетёт и отправляет мастер */
+  kind: FulfillmentType;
   /** Сумма и количество только по тем изделиям, которые можно купить */
   subtotal: number;
   count: number;
@@ -26,6 +86,7 @@ interface CartSummaryProps {
 }
 
 export function CartSummary({
+  kind,
   subtotal,
   count,
   unavailableCount,
@@ -34,6 +95,7 @@ export function CartSummary({
   ctaRef,
 }: CartSummaryProps) {
   const blocked = unavailableCount > 0 || count === 0;
+  const copy = COPY[kind];
 
   return (
     <aside className="lg:sticky lg:top-28 space-y-4">
@@ -50,13 +112,13 @@ export function CartSummary({
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-taupe">Доставка Ozon</dt>
-            <dd className="text-taupe text-right">на следующем шаге</dd>
+            <dt className="text-taupe">{copy.delivery}</dt>
+            <dd className="text-taupe text-right">{copy.deliveryValue}</dd>
           </div>
         </dl>
 
         <div className="mt-5 pt-5 border-t border-espresso/10 flex items-baseline justify-between gap-4">
-          <span className="text-espresso">Итого</span>
+          <span className="text-espresso">{copy.totalLabel}</span>
           <span className="text-espresso text-2xl font-medium tabular-nums">
             {formatPrice(subtotal / 100)}
           </span>
@@ -64,11 +126,7 @@ export function CartSummary({
 
         {unavailableCount > 0 && (
           <div className="mt-5 rounded-xl bg-parchment px-4 py-3 text-sm text-espresso">
-            <p>
-              {unavailableCount === 1
-                ? "Одного изделия уже нет в наличии."
-                : `${unavailableCount} ${pluralItems(unavailableCount)} уже нет в наличии.`}
-            </p>
+            <p>{copy.unavailable(unavailableCount)}</p>
             <button
               type="button"
               onClick={onRemoveUnavailable}
@@ -80,7 +138,11 @@ export function CartSummary({
         )}
 
         <div ref={ctaRef} className="mt-5">
-          <CheckoutButton blocked={blocked} className="w-full h-14" />
+          <CheckoutButton
+            kind={kind}
+            blocked={blocked}
+            className="w-full h-14"
+          />
         </div>
 
         <div
@@ -97,17 +159,7 @@ export function CartSummary({
       </div>
 
       <ul className="px-1 space-y-3 text-[13px] text-taupe">
-        {[
-          { Icon: PackageCheckIcon, text: `Отправим за ${IN_STOCK_SHIP_DAYS}` },
-          {
-            Icon: TruckIcon,
-            text: "Доставка в пункт выдачи Ozon по всей России",
-          },
-          {
-            Icon: LockKeyholeIcon,
-            text: "Безопасная онлайн-оплата через ЮKassa",
-          },
-        ].map(({ Icon, text }) => (
+        {copy.perks.map(({ Icon, text }) => (
           <li key={text} className="flex gap-3">
             <Icon
               className="size-4 shrink-0 mt-px text-espresso"
@@ -135,12 +187,15 @@ export function CartSummary({
 }
 
 function CheckoutButton({
+  kind,
   blocked,
   className,
 }: {
+  kind: FulfillmentType;
   blocked: boolean;
   className?: string;
 }) {
+  const { checkoutHref, checkoutLabel } = COPY[kind];
   const classes = cn(
     "rounded-full bg-espresso text-parchment hover:bg-espresso/85 text-[15px]",
     className,
@@ -148,14 +203,14 @@ function CheckoutButton({
   if (blocked) {
     return (
       <Button type="button" disabled className={classes}>
-        Перейти к оформлению
+        {checkoutLabel}
       </Button>
     );
   }
   return (
     <Button asChild className={classes}>
-      <Link href="/checkout">
-        Перейти к оформлению
+      <Link href={checkoutHref}>
+        {checkoutLabel}
         <ArrowRightIcon aria-hidden="true" />
       </Link>
     </Button>
@@ -167,11 +222,13 @@ function CheckoutButton({
  * под пальцем, пока основная кнопка не появится на экране.
  */
 export function MobileCheckoutBar({
+  kind,
   subtotal,
   count,
   blocked,
   visible,
 }: {
+  kind: FulfillmentType;
   subtotal: number;
   count: number;
   blocked: boolean;
@@ -195,7 +252,7 @@ export function MobileCheckoutBar({
             {count} {pluralItems(count)}
           </p>
         </div>
-        <CheckoutButton blocked={blocked} className="flex-1 h-12" />
+        <CheckoutButton kind={kind} blocked={blocked} className="flex-1 h-12" />
       </div>
     </div>
   );

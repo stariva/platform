@@ -7,7 +7,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { PickupPointPicker } from "@/components/checkout/pickup-point-picker";
@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
-import { useCart } from "@/lib/cart/cart-context";
+import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
 import {
   formatDateRange,
@@ -76,7 +76,13 @@ type QuoteState =
   | { status: "ready"; quote: DeliveryCheckoutResponse };
 
 export default function CheckoutPage() {
-  const { items, hydrated, subtotal, clear, remove } = useCart();
+  const { items: cartItems, hydrated, clear, remove } = useCart();
+  // Изделия под заказ оплачиваются отдельно — на /checkout/made-to-order
+  const items = useMemo(
+    () => cartItems.filter((item) => item.fulfillmentType === "stock"),
+    [cartItems],
+  );
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const { notices, dismissNotices } = useCartValidation();
 
   const [step, setStep] = useState<Step>("contact");
@@ -163,7 +169,9 @@ export default function CheckoutPage() {
     const names = items
       .filter((item) => slugs.has(item.productSlug))
       .map((item) => `«${item.name}»`);
-    for (const slug of slugs) remove(slug);
+    for (const slug of slugs) {
+      remove(cartLineKey({ productSlug: slug, fulfillmentType: "stock" }));
+    }
     toast.error(
       names.length > 1
         ? `Товаров ${names.join(", ")} уже нет в наличии — мы убрали их из корзины`
@@ -258,7 +266,7 @@ export default function CheckoutPage() {
       }
       await trackCreatedOrder(parsed.data.analytics);
       setRedirecting(true);
-      clear();
+      clear("stock");
       window.location.href = parsed.data.confirmationUrl;
     } catch {
       toast.error("Не удалось создать заказ. Попробуйте позже.");

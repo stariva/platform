@@ -17,12 +17,36 @@ import * as schema from "./schema";
  */
 export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
 
+const NOT_CONFIGURED_MESSAGE =
+  "POSTGRES_URL environment variable is not set. Please configure it in your environment.";
+
+/**
+ * Stand-in pool used while POSTGRES_URL is not set. It never opens a socket:
+ * importing `@stariva/db` must not crash the site, so the failure is deferred
+ * to the first query, where callers already handle "database unavailable"
+ * (catalog and workshops fall back to an empty state).
+ */
+class UnconfiguredPool extends Pool {
+  query(): Promise<never> {
+    return Promise.reject(new Error(NOT_CONFIGURED_MESSAGE));
+  }
+
+  connect(): Promise<never> {
+    return Promise.reject(new Error(NOT_CONFIGURED_MESSAGE));
+  }
+}
+
 function createDatabase(): Database {
   const connectionString = process.env.POSTGRES_URL;
   if (!connectionString) {
-    throw new Error(
-      "POSTGRES_URL environment variable is not set. Please configure it in your environment.",
+    console.warn(
+      "[db] POSTGRES_URL is not set: database queries will fail until it is configured.",
     );
+    return drizzlePg({
+      client: new UnconfiguredPool(),
+      schema,
+      casing: "snake_case",
+    });
   }
 
   const driver = selectDbDriver(connectionString);
