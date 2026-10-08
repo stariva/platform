@@ -50,7 +50,7 @@ export const env = createEnv({
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
 
     // Клиентский Telegram-бот: напоминания покупателям мастер-классов, которые
-    // сами нажали «Напоминать в Telegram». Отдельный бот от TELEGRAM_BOT_TOKEN,
+    // сами нажали «Получать напоминания в Telegram». Отдельный бот от TELEGRAM_BOT_TOKEN,
     // который пишет мастеру. Вебхук: /api/telegram/webhook с секретом ниже.
     TELEGRAM_CLIENT_BOT_TOKEN: z.string().min(1).optional(),
     // Имя бота без @ — для ссылки t.me/<имя>?start=…

@@ -160,10 +160,10 @@ function Paid({
         </p>
         <Heading>{preorder ? "Вы записаны!" : "Доступ открыт!"}</Heading>
         <p className="text-dark-grey leading-relaxed">
-          Мастер-класс «{workshop.title}».{" "}
+          Вы оплатили мастер-класс «{workshop.title}».{" "}
           {preorder
-            ? `Уроки откроются ${formatReleaseDateTime(preorder)}. Мы напомним за неделю, за день и в день старта.`
-            : "Смотрите в своём темпе, доступ навсегда."}
+            ? `Уроки откроются ${formatReleaseDateTime(preorder)}. Мы напомним о старте за неделю, за день и в сам день.`
+            : "Смотрите уроки когда удобно — доступ бессрочный."}
         </p>
       </div>
 
@@ -180,14 +180,14 @@ function Paid({
             <p className="text-sm leading-relaxed text-dark-grey">
               {email ? (
                 <>
-                  Отправили письмо на{" "}
+                  Мы отправили письмо на{" "}
                   <span className="text-espresso">{maskEmail(email)}</span>.
                 </>
               ) : (
-                "Отправили письмо на ваш email."
+                "Мы отправили письмо на ваш email."
               )}{" "}
-              Кнопка в письме открывает личный кабинет без пароля. Не видите
-              письмо — загляните в «Спам» или «Промоакции».
+              По кнопке из письма вы войдёте в личный кабинет без пароля. Если
+              письма нет, проверьте папки «Спам» и «Промоакции».
             </p>
           </div>
         </div>
@@ -219,7 +219,7 @@ function Paid({
             />
             <div className="min-w-0 flex-1">
               <h2 className="mb-1 font-serif text-xl text-espresso">
-                Добавьте старт в календарь
+                Добавьте дату старта в календарь
               </h2>
               <p className="mb-4 text-sm text-dark-grey">
                 Телефон сам напомнит за день и за час до начала.
@@ -254,8 +254,8 @@ function Paid({
                 Напоминания в Telegram
               </h2>
               <p className="mb-4 text-sm text-dark-grey">
-                По желанию — если Telegram у вас под рукой. Письма на email
-                придут в любом случае.
+                Если вам удобнее Telegram, подключите напоминания и там. Письма
+                на почту придут в любом случае.
               </p>
               <a
                 href={telegramUrl}
@@ -263,7 +263,7 @@ function Paid({
                 rel="noopener noreferrer"
                 className={secondaryButton}
               >
-                Напоминать в Telegram
+                Получать напоминания в Telegram
               </a>
             </div>
           </div>
@@ -323,15 +323,15 @@ function Unknown({ slug }: { slug: string }) {
     <Card>
       <Heading>Спасибо!</Heading>
       <p className="mb-6 text-dark-grey leading-relaxed">
-        Если оплата прошла, письмо со ссылкой на уроки придёт на ваш email в
-        течение пары минут. Ссылку для входа можно получить и сейчас.
+        Если оплата прошла, в течение пары минут на ваш email придёт письмо со
+        ссылкой на уроки. Ссылку для входа можно запросить и сейчас.
       </p>
       <div className="flex flex-col gap-3">
         <Link
           href={`/magic-link?callbackURL=${encodeURIComponent(`/account/workshops/${slug}`)}`}
           className={primaryButton}
         >
-          Получить ссылку для входа
+          Запросить ссылку для входа
         </Link>
         <Link href={`/workshops/${slug}`} className={secondaryButton}>
           К мастер-классу
