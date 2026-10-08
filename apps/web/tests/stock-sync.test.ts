@@ -1,6 +1,7 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 // Each fixture has its own module mocks; keep them out of other test modules.
 for (const fixture of [
@@ -12,7 +13,7 @@ for (const fixture of [
   test(`Ozon stock regression: ${fixture}`, () => {
     const result = spawnSync(
       process.execPath,
-      [new URL(`./fixtures/${fixture}.ts`, import.meta.url).pathname],
+      [fileURLToPath(new URL(`./fixtures/${fixture}.ts`, import.meta.url))],
       { encoding: "utf8", env: { ...process.env, CI: "true" } },
     );
     assert.equal(result.status, 0, result.stdout + result.stderr);

@@ -6,7 +6,13 @@ const SECRET = "s".repeat(40);
 const revalidatePath = mock((_path: string) => {});
 
 mock.module("next/cache", () => ({ revalidatePath }));
-mock.module("@/env", () => ({ baseEnv: { REVALIDATE_SECRET: SECRET } }));
+// mock.module в bun глобален для всего прогона: подменяем только baseEnv,
+// остальные экспорты (env) оставляем, иначе другие тесты ломаются.
+const actualEnv = await import("@/env");
+mock.module("@/env", () => ({
+  ...actualEnv,
+  baseEnv: { REVALIDATE_SECRET: SECRET },
+}));
 
 const { POST } = await import("./route");
 
