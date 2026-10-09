@@ -18,6 +18,10 @@ import {
 } from "../_data";
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
 
+/**
+ * Показывает программу и цену мастер-класса, а для предзаказа — подарок.
+ * Если данные курса не переданы, использует цену и дату старта из лендинга.
+ */
 export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
   const price = workshop?.price ?? WORKSHOP_PREORDER_FALLBACK_PRICE;
   const isPreorder = price < WORKSHOP_REGULAR_PRICE;

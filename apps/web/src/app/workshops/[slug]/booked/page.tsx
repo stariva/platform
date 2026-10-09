@@ -124,6 +124,10 @@ const primaryButton =
 const secondaryButton =
   "flex w-full items-center justify-center gap-2 rounded-2xl border border-espresso/15 bg-white px-5 py-3.5 text-espresso transition-colors hover:bg-sand/60";
 
+/**
+ * Показывает подтверждение оплаты, способы входа в кабинет и подготовки к
+ * старту; подарок отображается, если заказ оформлен до выхода основного курса.
+ */
 function Paid({
   workshop,
   order,

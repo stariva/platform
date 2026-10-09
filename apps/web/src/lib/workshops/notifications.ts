@@ -137,6 +137,11 @@ async function claimed(
   }
 }
 
+/**
+ * Отправляет письмо о покупке или напоминание, резервируя уведомление от дублей.
+ * Возвращает false без токена доступа или резерва, true после отправки;
+ * при ошибке освобождает резерв и пробрасывает ошибку для повторной попытки.
+ */
 function deliverEmail(target: Target, kind: WorkshopEmailKind) {
   const { order, workshop } = target;
   if (!order.accessToken) return Promise.resolve(false);

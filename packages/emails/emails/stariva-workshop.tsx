@@ -71,6 +71,11 @@ function copy({
   }
 }
 
+/**
+ * Формирует письмо о покупке или старте мастер-класса со ссылкой в кабинет.
+ * Подарок показывает только в письме о покупке; без props использует
+ * демонстрационные данные для предпросмотра шаблона.
+ */
 export default function StarivaWorkshopEmail(
   props: StarivaWorkshopEmailProps = {
     kind: "booked",
