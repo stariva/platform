@@ -60,8 +60,18 @@ export const auth = initAuth({
   },
   extraPlugins: [
     magicLink({
-      sendMagicLink: async ({ email, url, metadata }) => {
+      // Аккаунт создаётся только регистрацией: там берём согласие на
+      // обработку персональных данных. Ссылка лишь пускает в существующий.
+      disableSignUp: true,
+      sendMagicLink: async ({ email, url, metadata }, ctx) => {
         if (captureMagicLink(metadata, url)) return;
+        // Ответ одинаковый для любого email, но письмо с заведомо нерабочей
+        // ссылкой незнакомому адресу не шлём.
+        if (ctx) {
+          const existing =
+            await ctx.context.internalAdapter.findUserByEmail(email);
+          if (!existing) return;
+        }
         await sendEmail({
           to: [email],
           subject: "Вход в личный кабинет — Stariva",
