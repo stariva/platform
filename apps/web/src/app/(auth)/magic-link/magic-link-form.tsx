@@ -1,16 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import {
-  ConsentCheckbox,
-  PD_CONSENT_ERROR,
-  PersonalDataConsentLabel,
-} from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -22,11 +18,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth/client";
+import { useFormToken } from "@/lib/auth/use-form-token";
 
 const magicLinkSchema = z.object({
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
-  // Ссылка может создать новый аккаунт, поэтому согласие нужно и здесь.
-  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
 type MagicLinkFormValues = z.infer<typeof magicLinkSchema>;
@@ -43,10 +38,11 @@ export function MagicLinkForm() {
 
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
+  const formTokenOptions = useFormToken();
 
   const form = useForm<MagicLinkFormValues>({
     resolver: zodResolver(magicLinkSchema),
-    defaultValues: { email: "", personalDataConsent: false },
+    defaultValues: { email: "" },
   });
 
   async function onSubmit(data: MagicLinkFormValues) {
@@ -55,6 +51,7 @@ export function MagicLinkForm() {
       email: data.email,
       callbackURL,
       errorCallbackURL: "/magic-link",
+      fetchOptions: formTokenOptions(),
     });
     setLoading(false);
 
@@ -72,6 +69,13 @@ export function MagicLinkForm() {
         <p className="text-taupe text-sm leading-relaxed">
           Проверьте почту <span className="text-espresso">{sent}</span> и
           перейдите по ссылке, чтобы войти. Ссылка действует ограниченное время.
+        </p>
+        <p className="text-taupe text-sm leading-relaxed">
+          Письма нет? Возможно, аккаунта с этим адресом ещё нет —{" "}
+          <Link href="/sign-up" className="text-terracotta hover:underline">
+            зарегистрируйтесь
+          </Link>
+          .
         </p>
       </div>
     );
@@ -105,19 +109,6 @@ export function MagicLinkForm() {
               </FormControl>
               <FormMessage />
             </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="personalDataConsent"
-          render={({ field, fieldState }) => (
-            <ConsentCheckbox
-              checked={field.value}
-              onCheckedChange={field.onChange}
-              error={fieldState.error?.message}
-            >
-              <PersonalDataConsentLabel />
-            </ConsentCheckbox>
           )}
         />
         <Button

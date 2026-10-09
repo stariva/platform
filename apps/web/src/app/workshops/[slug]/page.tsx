@@ -1,4 +1,3 @@
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,18 +17,23 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { preorderBonusFor } from "@/lib/workshops/preorder-bonus";
+import {
+  fetchPublishedWorkshops,
+  getWorkshopBySlug,
+} from "@/lib/workshops/workshops-db";
 import {
   absoluteImageUrl,
   categoryLabels,
   formatDurationLabel,
   formatPrice,
+  formatReleaseDate,
+  formatReleaseDateTime,
+  isPreorder,
   levelColors,
   levelLabels,
 } from "@/lib/workshops-data";
-import {
-  fetchPublishedWorkshops,
-  getWorkshopBySlug,
-} from "@/lib/workshops/workshops-db";
 import { WorkshopPurchase } from "./workshop-purchase";
 
 // Страницы курсов собираются по запросу и кэшируются; админка сбрасывает кэш при сохранении
@@ -49,13 +53,19 @@ export async function generateMetadata({
   if (!workshop) return {};
 
   const title = `${workshop.title} — мастер-класс по макраме`;
-  const callToAction =
-    workshop.price === 0
+  const preorder = isPreorder(workshop) && workshop.releaseAt;
+  const callToAction = preorder
+    ? `Предзаказ на сайте Stariva: уроки откроются ${formatReleaseDate(preorder)}.`
+    : workshop.price === 0
       ? "Бесплатно на сайте Stariva."
       : workshop.ozonUrl
         ? "Купить на Ozon."
         : "Купить на сайте Stariva.";
-  const description = `${workshop.description} Уровень: ${levelLabels[workshop.level]}. ${workshop.lessonsCount} уроков, ${workshop.duration}. ${callToAction}`;
+  const lessonsInfo =
+    workshop.lessonsCount > 0
+      ? ` ${workshop.lessonsCount} уроков, ${workshop.duration}.`
+      : "";
+  const description = `${workshop.description} Уровень: ${levelLabels[workshop.level]}.${lessonsInfo} ${callToAction}`;
   const url = `/workshops/${slug}`;
   const image = absoluteImageUrl(BASE_URL, workshop.cover);
 
@@ -93,6 +103,10 @@ export default async function WorkshopDetailPage({
     .slice(0, 3);
 
   const url = `/workshops/${slug}`;
+  // Предзаказ: уроков ещё нет, они откроются в дату старта
+  const preorder = isPreorder(workshop) && workshop.releaseAt;
+  const releaseLabel = preorder ? formatReleaseDateTime(preorder) : null;
+  const bonus = preorder ? preorderBonusFor(workshop.slug) : undefined;
 
   const faqItems = [
     {
@@ -108,14 +122,30 @@ export default async function WorkshopDetailPage({
       question: "Какие материалы нужны для курса?",
       answer: `Для курса понадобятся: ${workshop.materials.join(", ")}. Полный список с рекомендациями по покупке есть в первом уроке.`,
     },
-    {
-      question:
-        workshop.price === 0 ? "Это точно бесплатно?" : "Где купить курс?",
-      answer:
-        workshop.price === 0
-          ? "Да, этот мастер-класс бесплатный. Войдите или зарегистрируйтесь на сайте — доступ к видео появится сразу, без оплаты."
-          : "Курс можно купить прямо на сайте: нажмите «Купить», оплатите онлайн через YooKassa, и доступ к видеоурокам сразу появится в вашем личном кабинете.",
-    },
+    ...(releaseLabel
+      ? [
+          {
+            question: "Когда откроются уроки?",
+            answer: `Сейчас идёт предзаказ: уроки откроются в личном кабинете ${releaseLabel}. Мы напомним о старте письмом за неделю, за день и в сам день.`,
+          },
+          {
+            question: "Как оформить предзаказ?",
+            answer:
+              "Прямо на сайте, без регистрации: укажите email и оплатите онлайн через ЮKassa — картой или по СБП. Сразу после оплаты придёт письмо со ссылкой на личный кабинет.",
+          },
+        ]
+      : [
+          {
+            question:
+              workshop.price === 0
+                ? "Это точно бесплатно?"
+                : "Где купить курс?",
+            answer:
+              workshop.price === 0
+                ? "Да, этот мастер-класс бесплатный. Войдите или зарегистрируйтесь на сайте — доступ к видео появится сразу, без оплаты."
+                : "Курс можно купить прямо на сайте: нажмите «Купить», оплатите онлайн через YooKassa, и доступ к видеоурокам сразу появится в вашем личном кабинете.",
+          },
+        ]),
   ];
 
   return (
@@ -138,6 +168,7 @@ export default async function WorkshopDetailPage({
         level={workshop.level}
         lessonsCount={workshop.lessonsCount}
         ozonUrl={workshop.ozonUrl}
+        preorder={Boolean(preorder)}
       />
       <FAQJsonLd items={faqItems} />
 
@@ -195,6 +226,11 @@ export default async function WorkshopDetailPage({
                 >
                   {levelLabels[workshop.level]}
                 </span>
+                {preorder ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-terracotta text-parchment">
+                    Предзаказ · старт {formatReleaseDate(preorder)}
+                  </span>
+                ) : null}
               </div>
               <h1 className="font-serif text-4xl md:text-5xl text-espresso mb-3 text-balance">
                 {workshop.title}
@@ -245,10 +281,12 @@ export default async function WorkshopDetailPage({
                   </div>
                   <div className="text-center">
                     <p className="text-parchment font-serif text-xl mb-1">
-                      Контент защищён
+                      {releaseLabel ? "Предзаказ" : "Контент защищён"}
                     </p>
                     <p className="text-parchment/70 text-sm">
-                      Приобретите курс, чтобы смотреть все уроки
+                      {releaseLabel
+                        ? `Уроки откроются ${releaseLabel}`
+                        : "Приобретите курс, чтобы смотреть все уроки"}
                     </p>
                   </div>
                 </div>
@@ -306,15 +344,27 @@ export default async function WorkshopDetailPage({
             {/* Lessons list */}
             <section className="mb-10">
               <h2 className="font-serif text-2xl mb-5">Программа курса</h2>
-              <div className="flex items-center gap-4 mb-4 text-sm text-taupe">
-                <span>
-                  {workshop.lessonsCount} урок
-                  {workshop.lessonsCount > 1 ? "а" : ""}
-                </span>
-                <span>·</span>
-                <span>{workshop.duration} видео</span>
-              </div>
-              <div className="border border-espresso/10 rounded-2xl overflow-hidden">
+              {workshop.lessonsCount > 0 ? (
+                <div className="flex items-center gap-4 mb-4 text-sm text-taupe">
+                  <span>
+                    {workshop.lessonsCount} урок
+                    {workshop.lessonsCount > 1 ? "а" : ""}
+                  </span>
+                  <span>·</span>
+                  <span>{workshop.duration} видео</span>
+                </div>
+              ) : null}
+              {releaseLabel && workshop.lessonsCount === 0 ? (
+                <p className="text-espresso/80 leading-relaxed">
+                  Видеоуроки появятся в личном кабинете {releaseLabel}. Что
+                  разберём по шагам — в блоке «Чему вы научитесь» выше.
+                </p>
+              ) : null}
+              <div
+                className={`border border-espresso/10 rounded-2xl overflow-hidden ${
+                  workshop.lessonsCount === 0 ? "hidden" : ""
+                }`}
+              >
                 {workshop.lessons.map((lesson, i) => (
                   <div
                     // biome-ignore lint/suspicious/noArrayIndexKey: lessons are positional, index is used for styling
@@ -508,21 +558,49 @@ export default async function WorkshopDetailPage({
                     <span className="font-serif text-4xl text-espresso">
                       {formatPrice(workshop.price)}
                     </span>
+                    {releaseLabel ? (
+                      <span className="text-sm text-taupe">предзаказ</span>
+                    ) : null}
                   </div>
+                  {bonus ? (
+                    <p className="-mt-3 mb-6 rounded-xl bg-sand px-4 py-3 text-sm leading-relaxed text-espresso">
+                      🎁 В подарок к предзаказу — {bonus.title}. Откроется{" "}
+                      {bonus.releaseLabel}.
+                    </p>
+                  ) : null}
 
                   {/* Stats */}
                   <div className="grid grid-cols-3 gap-3 mb-6">
-                    {[
-                      { label: "Уроков", value: String(workshop.lessonsCount) },
-                      {
-                        label: "Время",
-                        value: workshop.duration
-                          .split(" ")
-                          .slice(0, 2)
-                          .join(" "),
-                      },
-                      { label: "Уровень", value: levelLabels[workshop.level] },
-                    ].map((s) => (
+                    {(preorder
+                      ? [
+                          {
+                            label: "Старт",
+                            value: formatReleaseDate(preorder),
+                          },
+                          { label: "Доступ", value: "Навсегда" },
+                          {
+                            label: "Уровень",
+                            value: levelLabels[workshop.level],
+                          },
+                        ]
+                      : [
+                          {
+                            label: "Уроков",
+                            value: String(workshop.lessonsCount),
+                          },
+                          {
+                            label: "Время",
+                            value: workshop.duration
+                              .split(" ")
+                              .slice(0, 2)
+                              .join(" "),
+                          },
+                          {
+                            label: "Уровень",
+                            value: levelLabels[workshop.level],
+                          },
+                        ]
+                    ).map((s) => (
                       <div
                         key={s.label}
                         className="text-center p-3 bg-sand rounded-xl"
@@ -541,11 +619,17 @@ export default async function WorkshopDetailPage({
                     slug={workshop.slug}
                     price={workshop.price}
                     title={workshop.title}
+                    buyLabel={
+                      preorder
+                        ? `Оформить предзаказ за ${formatPrice(workshop.price)}`
+                        : undefined
+                    }
                   />
 
                   <p className="text-center text-xs text-taupe leading-relaxed">
-                    Доступ навсегда&nbsp;·&nbsp;HD-видео&nbsp;·&nbsp;Все
-                    устройства
+                    {releaseLabel
+                      ? `Уроки откроются ${releaseLabel} · доступ навсегда`
+                      : "Доступ навсегда · HD-видео · Все устройства"}
                   </p>
                 </div>
               </div>

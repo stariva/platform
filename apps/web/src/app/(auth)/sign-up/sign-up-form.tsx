@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { signUp } from "@/lib/auth/client";
+import { useFormToken } from "@/lib/auth/use-form-token";
 
 const signUpSchema = z.object({
   name: z.string().trim().min(1, "Введите имя"),
@@ -39,6 +40,7 @@ export function SignUpForm() {
 
   const [loading, setLoading] = useState(false);
   const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const formTokenOptions = useFormToken();
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
@@ -57,6 +59,7 @@ export function SignUpForm() {
       email: data.email,
       password: data.password,
       callbackURL,
+      fetchOptions: formTokenOptions(),
     });
     setLoading(false);
 
