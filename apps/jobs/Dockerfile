@@ -14,7 +14,9 @@ RUN turbo prune @stariva/jobs --docker
 FROM base AS installer
 WORKDIR /repo
 COPY --from=pruner /repo/out/json/ .
-RUN bun install --frozen-lockfile --production
+# --ignore-scripts: корневой postinstall запускает sherif (devDependency),
+# которого нет в production-установке, и сборка падает с exit 127
+RUN bun install --frozen-lockfile --production --ignore-scripts
 COPY --from=pruner /repo/out/full/ .
 
 # 3. Runtime image: a long-running Hatchet worker, no HTTP port
