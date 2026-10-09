@@ -28,14 +28,14 @@ export function ElkaComparison() {
             className="font-serif text-espresso leading-tight text-balance mb-4"
             style={{ fontSize: "clamp(30px, 4vw, 48px)" }}
           >
-            Чем ёлка из макраме лучше живой и искусственной
+            Чем макраме-ёлка лучше живой и искусственной
           </h2>
         </div>
 
         <div className="overflow-x-auto rounded-[24px] border border-linen">
           <table className="w-full min-w-[560px] text-left">
             <caption className="sr-only">
-              Сравнение ёлки из макраме с живой и искусственной елью
+              Сравнение макраме-ёлки с живой и искусственной елью
             </caption>
             <thead>
               <tr className="bg-parchment">

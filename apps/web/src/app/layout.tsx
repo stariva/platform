@@ -31,11 +31,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "Stariva — Абажуры и декор из макраме ручной работы",
+    default: "Stariva — Абажуры и декор в технике макраме ручной работы",
     template: "%s — Stariva",
   },
   description:
-    "Абажуры, одежда и декор из макраме ручной работы. Выберите изделие в каталоге Stariva и оформите заказ на сайте.",
+    "Абажуры, одежда и декор в технике макраме ручной работы. Выберите изделие в каталоге Stariva и оформите заказ на сайте.",
   keywords: [
     "макраме",
     "абажур из макраме",
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
     locale: "ru_RU",
     url: BASE_URL,
     siteName: "Stariva",
-    title: "Stariva — Абажуры и декор из макраме ручной работы",
+    title: "Stariva — Абажуры и декор в технике макраме ручной работы",
     description:
-      "Эксклюзивные абажуры, платья и декор из макраме. Ручное плетение из натурального хлопка с 2018 года.",
+      "Эксклюзивные абажуры, платья и декор в технике макраме. Ручное плетение из натурального хлопка с 2018 года.",
     images: [
       {
         url: "https://cdn.stariva.ru/site/images/about/founder-2026.jpg",
@@ -68,9 +68,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Stariva — Абажуры и декор из макраме ручной работы",
+    title: "Stariva — Абажуры и декор в технике макраме ручной работы",
     description:
-      "Эксклюзивные абажуры, платья и декор из макраме. Ручное плетение из натурального хлопка с 2018 года.",
+      "Эксклюзивные абажуры, платья и декор в технике макраме. Ручное плетение из натурального хлопка с 2018 года.",
     images: ["https://cdn.stariva.ru/site/images/about/founder-2026.jpg"],
   },
   verification: {

@@ -16,12 +16,12 @@ const points = [
 const models = [
   {
     image: "/images/elka/model-cream.png",
-    alt: "Бежевая ёлка-панно из макраме на стене",
+    alt: "Бежевая ёлка-панно в технике макраме на стене",
     label: "Бежевая · 70–75 × 150 см",
   },
   {
     image: "/images/elka/model-khaki.png",
-    alt: "Ёлка-панно из макраме цвета хаки",
+    alt: "Ёлка-панно в технике макраме цвета хаки",
     label: "Хаки · 45 × 100 см",
   },
 ];
@@ -51,9 +51,9 @@ export function ElkaTeaser() {
             id="elka-teaser-title"
             className="font-serif text-4xl lg:text-5xl leading-tight"
           >
-            Новогодняя ёлка
+            Новогодняя
             <br />
-            <span className="italic">из макраме на стену</span>
+            <span className="italic">макраме-ёлка на стену</span>
           </h2>
           <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
             Вместо живой ели — панно ручной работы, которое служит годами.

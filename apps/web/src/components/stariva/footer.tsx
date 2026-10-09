@@ -24,7 +24,7 @@ type ExternalLink = {
 };
 
 const catalog = [
-  { label: "Абажуры из макраме", href: "/catalog/interior" },
+  { label: "Абажуры в технике макраме", href: "/catalog/interior" },
   { label: "Платья макраме", href: "/catalog/clothes" },
   { label: "Декор для дома", href: "/catalog/interior" },
   { label: "Подарочные сертификаты", href: "/catalog" },

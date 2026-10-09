@@ -72,7 +72,7 @@ function copy({
 export default function StarivaWorkshopEmail(
   props: StarivaWorkshopEmailProps = {
     kind: "booked",
-    workshopTitle: "Ёлка из макраме",
+    workshopTitle: "Макраме-ёлка",
     releaseLabel: "1 ноября в 10:00 (мск)",
     accessUrl: "https://stariva.ru/api/workshops/access/abc",
     materials: ["Хлопковый шнур 5 мм — 60 м", "Деревянная палочка 50 см"],
