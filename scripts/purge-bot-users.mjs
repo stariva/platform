@@ -38,13 +38,11 @@ try {
     `users: ${before}, to delete: ${rows.length}, to keep: ${before - rows.length}`,
   );
   console.table(
-    rows
-      .slice(0, 10)
-      .map((r) => ({
-        name: r.name,
-        email: r.email,
-        created: r.created_at.toISOString(),
-      })),
+    rows.slice(0, 10).map((r) => ({
+      name: r.name,
+      email: r.email,
+      created: r.created_at.toISOString(),
+    })),
   );
 
   if (!apply) {
