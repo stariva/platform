@@ -17,7 +17,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="w-full max-w-[420px]">{children}</div>
       </main>
       <footer className="px-6 py-6 text-center text-xs text-taupe">
-        © {new Date().getFullYear()} Stariva · Изделия из макраме ручной работы
+        © {new Date().getFullYear()} Stariva · Изделия в технике макраме ручной работы
       </footer>
     </div>
   );

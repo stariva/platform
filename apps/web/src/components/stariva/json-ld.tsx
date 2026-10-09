@@ -67,21 +67,21 @@ export function OrganizationJsonLd() {
     ],
     hasOfferCatalog: {
       "@type": "OfferCatalog",
-      name: "Изделия из макраме",
+      name: "Изделия в технике макраме",
       itemListElement: [
         {
           "@type": "OfferCatalog",
-          name: "Абажуры из макраме",
+          name: "Абажуры в технике макраме",
           url: `${BASE_URL}/catalog/interior`,
         },
         {
           "@type": "OfferCatalog",
-          name: "Одежда из макраме",
+          name: "Одежда в технике макраме",
           url: `${BASE_URL}/catalog/clothes`,
         },
         {
           "@type": "OfferCatalog",
-          name: "Сумки из макраме",
+          name: "Сумки в технике макраме",
           url: `${BASE_URL}/catalog/bags`,
         },
       ],

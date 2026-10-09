@@ -2,7 +2,7 @@ import type { BlogPost } from "./types";
 
 export const makrameOsenZimniyDekor: BlogPost = {
   slug: "makrame-osen-zimniy-dekor-kak-obnovit-inter-er-k-kholodnomu-sezonu",
-  title: "Осенний декор из макраме: как обновить интерьер к холодному сезону",
+  title: "Осенний декор в технике макраме: как обновить интерьер к холодному сезону",
   excerpt:
     "Идеи для создания тёплой осенней атмосферы с помощью макраме. Какие изделия выбрать, как расставить акценты и сочетать с сезонными материалами.",
   date: "2025-10-25",

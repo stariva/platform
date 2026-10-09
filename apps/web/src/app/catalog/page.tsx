@@ -21,13 +21,13 @@ import { absoluteImageUrl } from "@/lib/workshops-data";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Каталог изделий из макраме — купить ручной работы",
+  title: "Каталог изделий в технике макраме — купить ручной работы",
   description:
     "Каталог изделий ручного макраме: абажуры, платья, сумки и декор интерьера из натурального хлопка. Купить на Ozon с доставкой по России.",
   alternates: { canonical: `${BASE_URL}/catalog` },
   openGraph: {
     type: "website",
-    title: "Каталог Stariva — изделия из макраме ручной работы",
+    title: "Каталог Stariva — изделия в технике макраме ручной работы",
     description:
       "Абажуры, платья, сумки и декор интерьера из натурального хлопка. Купить на Ozon.",
     url: `${BASE_URL}/catalog`,
@@ -134,7 +134,7 @@ export default async function CatalogPage() {
         ]}
       />
       <ItemListJsonLd
-        name="Каталог Stariva — изделия из макраме"
+        name="Каталог Stariva — изделия в технике макраме"
         url="/catalog"
         items={categories.map((cat) => ({
           name: cat.name,

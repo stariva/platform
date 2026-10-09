@@ -23,7 +23,7 @@ export function ElkaHero() {
             className="font-serif text-espresso leading-[1.08] text-balance mb-6"
             style={{ fontSize: "clamp(36px, 5.4vw, 68px)" }}
           >
-            Ёлка из макраме на стену — новогодний декор ручной работы
+            Макраме-ёлка на стену — новогодний декор ручной работы
           </h1>
 
           <p className="text-lg text-dark-grey leading-relaxed max-w-xl mb-8 text-pretty">
@@ -69,7 +69,7 @@ export function ElkaHero() {
         <div className="relative aspect-[4/5] rounded-[28px] overflow-hidden bg-linen">
           <Image
             src="/images/elka/hero.png"
-            alt="Ёлка-панно из макраме с гирляндой над деревянным комодом в скандинавской гостиной"
+            alt="Ёлка-панно в технике макраме с гирляндой над деревянным комодом в скандинавской гостиной"
             fill
             priority
             sizes="(min-width: 1024px) 45vw, 100vw"

@@ -15,7 +15,7 @@ import { ResortScenarios } from "./_components/resort-scenarios";
 export const metadata: Metadata = {
   title: "Макраме для баз отдыха и глэмпингов — Stariva",
   description:
-    "Декор из макраме для баз отдыха, глэмпингов, загородных отелей и spa. Абажуры, панно, гамак-кресла, ширмы — корпоративные заказы с документами.",
+    "Декор в технике макраме для баз отдыха, глэмпингов, загородных отелей и spa. Абажуры, панно, гамак-кресла, ширмы — корпоративные заказы с документами.",
   alternates: { canonical: `${BASE_URL}/resort` },
   openGraph: {
     type: "website",

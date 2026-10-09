@@ -2,7 +2,7 @@ import type { BlogPost } from "./types";
 
 export const uhodZaIzdeliyamiIzMakrame: BlogPost = {
   slug: "uhod-za-izdeliyami-iz-makrame",
-  title: "Уход за изделиями из макраме: простые правила долгой жизни",
+  title: "Уход за изделиями в технике макраме: простые правила долгой жизни",
   excerpt:
     "Как сохранить красоту ручной работы на долгие годы: чистка, хранение и защита от повреждений.",
   date: "2026-02-07",
