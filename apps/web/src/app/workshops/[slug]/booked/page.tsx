@@ -1,4 +1,4 @@
-import { CalendarPlus, Check, Mail, Send } from "lucide-react";
+import { CalendarPlus, Check, Gift, Mail, Send } from "lucide-react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import {
   WORKSHOP_ORDER_COOKIE,
 } from "@/lib/workshops/order-cookie";
 import { syncPendingWorkshopOrder } from "@/lib/workshops/order-payment";
+import { earnsPreorderBonus } from "@/lib/workshops/preorder-bonus";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   formatReleaseDateTime,
@@ -123,6 +124,10 @@ const primaryButton =
 const secondaryButton =
   "flex w-full items-center justify-center gap-2 rounded-2xl border border-espresso/15 bg-white px-5 py-3.5 text-espresso transition-colors hover:bg-sand/60";
 
+/**
+ * Показывает подтверждение оплаты, способы входа в кабинет и подготовки к
+ * старту; подарок отображается, если заказ оформлен до выхода основного курса.
+ */
 function Paid({
   workshop,
   order,
@@ -145,6 +150,11 @@ function Paid({
       ? clientBotStartUrl(order.telegramToken)
       : undefined;
   const email = order.contactEmail;
+  const bonus = earnsPreorderBonus({
+    workshopSlug: workshop.slug,
+    orderedAt: order.createdAt,
+    releaseAt: workshop.releaseAt ? new Date(workshop.releaseAt) : null,
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -265,6 +275,26 @@ function Paid({
               >
                 Получать напоминания в Telegram
               </a>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
+      {bonus ? (
+        <Card>
+          <div className="flex gap-4">
+            <Gift
+              className="mt-0.5 size-5 shrink-0 text-terracotta"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <h2 className="mb-1 font-serif text-xl text-espresso">
+                Подарок за предзаказ
+              </h2>
+              <p className="text-sm leading-relaxed text-dark-grey">
+                Вам бесплатно достаётся {bonus.title}. Он появится в вашем
+                кабинете {bonus.releaseLabel} — доплачивать ничего не нужно.
+              </p>
             </div>
           </div>
         </Card>

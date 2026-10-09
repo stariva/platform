@@ -7,6 +7,7 @@ import {
   type Workshop,
 } from "@/lib/workshops-data";
 import {
+  BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
   WORKSHOP_INCLUDES,
   WORKSHOP_PREORDER_FALLBACK_PRICE,
@@ -17,6 +18,10 @@ import {
 } from "../_data";
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
 
+/**
+ * Показывает программу и цену мастер-класса, а для предзаказа — подарок.
+ * Если данные курса не переданы, использует цену и дату старта из лендинга.
+ */
 export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
   const price = workshop?.price ?? WORKSHOP_PREORDER_FALLBACK_PRICE;
   const isPreorder = price < WORKSHOP_REGULAR_PRICE;
@@ -91,7 +96,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 <p className="text-sm leading-relaxed text-dark-grey">
                   Всего будет два мастер-класса по ёлке: {WORKSHOP_TREE_SIZE} и
                   большая {BONUS_TREE_SIZE}. Оформите предзаказ первого сейчас —
-                  и второй мы откроем вам бесплатно, как только он выйдет.
+                  и второй откроется вам бесплатно {BONUS_RELEASE_LABEL}.
                 </p>
               </div>
             </div>
