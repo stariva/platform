@@ -15,7 +15,7 @@ import CategoryFilters from "../[category]/category-filters";
 export const dynamic = "force-dynamic";
 
 const title = "Макраме в наличии — готовые изделия с быстрой отправкой";
-const description = `Готовые изделия из макраме ручной работы: одежда, сумки и декор интерьера. Всё уже сплетено — оформите заказ на сайте, отправим за ${IN_STOCK_SHIP_DAYS}.`;
+const description = `Готовые изделия в технике макраме ручной работы: одежда, сумки и декор интерьера. Всё уже сплетено — оформите заказ на сайте, отправим за ${IN_STOCK_SHIP_DAYS}.`;
 
 export const metadata: Metadata = {
   title,
@@ -59,7 +59,7 @@ export default async function InStockPage() {
         ]}
       />
       <ItemListJsonLd
-        name="Изделия из макраме в наличии — Stariva"
+        name="Макраме-изделия в наличии — Stariva"
         url={IN_STOCK_HREF}
         items={products.map((p) => ({
           name: p.name,

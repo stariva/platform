@@ -24,9 +24,9 @@ import { FAQ, LANDING_PATH, TREE_MODELS, WORKSHOP_SLUG } from "./_data";
 export const revalidate = 3600;
 
 const TITLE =
-  "Ёлка из макраме на стену — купить новогоднюю ёлку-панно | Stariva";
+  "Макраме-ёлка на стену — купить новогоднюю ёлку-панно | Stariva";
 const DESCRIPTION =
-  "Ёлка-панно из макраме ручной работы для квартиры, отеля, ресторана и офиса. Не осыпается, не занимает места, служит годами. Изготовление 2–4 дня, доставка по России. Мастер-класс по предзаказу со скидкой и второй — в подарок.";
+  "Ёлка-панно в технике макраме ручной работы для квартиры, отеля, ресторана и офиса. Не осыпается, не занимает места, служит годами. Изготовление 2–4 дня, доставка по России. Мастер-класс по предзаказу со скидкой и второй — в подарок.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -45,14 +45,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ru_RU",
-    title: "Ёлка из макраме на стену — Stariva",
+    title: "Макраме-ёлка на стену — Stariva",
     description:
       "Новогодняя ёлка-панно ручной работы для дома и бизнеса. Плюс мастер-класс по предзаказу со скидкой и второй — в подарок.",
     url: `${BASE_URL}${LANDING_PATH}`,
     images: [
       {
         url: "/images/elka/hero.png",
-        alt: "Ёлка из макраме на стене в скандинавской гостиной",
+        alt: "Макраме-ёлка на стене в скандинавской гостиной",
       },
     ],
   },
@@ -96,11 +96,11 @@ export default async function ElkaMakramePage() {
         items={[
           { name: "Главная", href: "/" },
           { name: "Интерьер", href: "/catalog/interior" },
-          { name: "Ёлка из макраме", href: LANDING_PATH },
+          { name: "Макраме-ёлка", href: LANDING_PATH },
         ]}
       />
       <ItemListJsonLd
-        name="Ёлки из макраме на стену"
+        name="Макраме-ёлки на стену"
         url={LANDING_PATH}
         items={items.map(({ model, product }) => ({
           name: model.name,

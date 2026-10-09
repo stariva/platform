@@ -3,7 +3,7 @@ import { buildReleaseIcs, googleCalendarUrl } from "./calendar";
 
 const event = {
   slug: "elka-makrame",
-  title: "Ёлка из макраме; своими руками, с нуля",
+  title: "Макраме-ёлка; своими руками, с нуля",
   releaseAt: new Date("2026-11-01T07:00:00Z"),
   url: "https://stariva.ru/account/workshops/elka-makrame",
 };
@@ -19,7 +19,7 @@ describe("buildReleaseIcs", () => {
 
   test("escapes text values", () => {
     expect(ics).toContain(
-      "SUMMARY:Старт мастер-класса «Ёлка из макраме\\; своими руками\\, с нуля» — Stariva",
+      "SUMMARY:Старт мастер-класса «Макраме-ёлка\\; своими руками\\, с нуля» — Stariva",
     );
   });
 

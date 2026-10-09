@@ -69,7 +69,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
             className="font-serif text-espresso leading-tight text-balance mb-5"
             style={{ fontSize: "clamp(30px, 4vw, 48px)" }}
           >
-            Сплетите ёлку из макраме своими руками
+            Сплетите макраме-ёлку своими руками
           </h2>
           <p className="text-dark-grey leading-relaxed mb-8">
             Онлайн-мастер-класс от Ольги Старивы для начинающих: от выбора шнура
@@ -140,7 +140,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               <ContactMasterButton
                 source="elka_workshop"
                 goal="elka_workshop_waitlist"
-                message="Здравствуйте, Ольга! Хочу забронировать место на мастер-классе по ёлке из макраме."
+                message="Здравствуйте, Ольга! Хочу забронировать место на мастер-классе по макраме-ёлке."
                 className="flex w-full items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment py-4 mb-3 transition-colors"
               >
                 Забронировать место у мастера

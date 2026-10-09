@@ -29,7 +29,7 @@ export function ElkaBusiness() {
             <ContactMasterButton
               source="elka_b2b"
               goal="elka_b2b_telegram"
-              message="Здравствуйте, Ольга! Хочу получить расчёт новогоднего оформления из макраме."
+              message="Здравствуйте, Ольга! Хочу получить расчёт новогоднего оформления в технике макраме."
               className="inline-flex items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment px-8 py-4 transition-colors"
             >
               Получить расчёт у мастера
