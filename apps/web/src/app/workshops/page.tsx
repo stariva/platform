@@ -11,6 +11,8 @@ import {
   absoluteImageUrl,
   categoryLabels,
   formatPrice,
+  formatReleaseDate,
+  isPreorder,
   levelColors,
   levelLabels,
   type Workshop,
@@ -61,6 +63,8 @@ function LevelBadge({ level }: { level: WorkshopLevel }) {
 }
 
 function WorkshopCard({ workshop }: { workshop: Workshop }) {
+  // Предзаказ: уроков ещё нет — вместо длительности и счётчика показываем старт
+  const preorder = isPreorder(workshop) && workshop.releaseAt;
   return (
     <Link
       href={`/workshops/${workshop.slug}`}
@@ -138,7 +142,9 @@ function WorkshopCard({ workshop }: { workshop: Workshop }) {
                 strokeLinecap="round"
               />
             </svg>
-            {workshop.duration}
+            {preorder
+              ? `Старт ${formatReleaseDate(preorder)}`
+              : workshop.duration}
           </div>
         </div>
 
@@ -151,7 +157,9 @@ function WorkshopCard({ workshop }: { workshop: Workshop }) {
 
         <div className="flex items-center justify-between pt-4 border-t border-espresso/8">
           <div className="flex items-center gap-3 text-xs text-taupe">
-            <span>{workshop.lessonsCount} уроков</span>
+            <span>
+              {preorder ? "Предзаказ" : `${workshop.lessonsCount} уроков`}
+            </span>
           </div>
           <span className="font-serif text-xl text-espresso">
             {formatPrice(workshop.price)}

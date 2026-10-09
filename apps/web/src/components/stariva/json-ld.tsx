@@ -350,6 +350,8 @@ interface CourseJsonLdProps {
   level: "beginner" | "intermediate" | "advanced";
   lessonsCount: number;
   ozonUrl?: string;
+  /** Уроки ещё не открылись — курс продаётся как предзаказ. */
+  preorder?: boolean;
 }
 
 const levelMap = {
@@ -368,6 +370,7 @@ export function CourseJsonLd({
   level,
   lessonsCount,
   ozonUrl,
+  preorder,
 }: CourseJsonLdProps) {
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -377,8 +380,9 @@ export function CourseJsonLd({
     image: image.startsWith("http") ? image : `${BASE_URL}${image}`,
     url: `${BASE_URL}${url}`,
     educationalLevel: levelMap[level],
-    numberOfCredits: lessonsCount,
-    timeRequired: duration,
+    // У предзаказа уроков ещё нет — не пишем нули и пустую длительность
+    numberOfCredits: lessonsCount > 0 ? lessonsCount : undefined,
+    timeRequired: duration || undefined,
     inLanguage: "ru-RU",
     provider: {
       "@id": `${BASE_URL}/#organization`,
@@ -387,7 +391,9 @@ export function CourseJsonLd({
       "@type": "Offer",
       price: price.toString(),
       priceCurrency: "RUB",
-      availability: "https://schema.org/InStock",
+      availability: preorder
+        ? "https://schema.org/PreOrder"
+        : "https://schema.org/InStock",
       url: ozonUrl ?? `${BASE_URL}${url}`,
     },
   };
