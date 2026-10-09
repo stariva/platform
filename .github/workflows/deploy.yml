@@ -136,3 +136,69 @@ jobs:
           fi
           kubectl set image deployment/stariva-app stariva-app=ghcr.io/stariva/platform-app:${{ needs.build-and-push-app.outputs.sha }} -n stariva
           kubectl rollout status deployment/stariva-app -n stariva --timeout=180s
+
+  # ─── Воркер фоновых заданий (apps/jobs, Hatchet) ───────────────────────────
+  build-and-push-jobs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - name: Resolve commit SHA
+        id: sha
+        run: echo "sha=${{ github.event.workflow_run.head_sha || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.sha.outputs.sha }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/jobs/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-jobs:latest
+            ghcr.io/${{ github.repository }}-jobs:${{ steps.sha.outputs.sha }}
+          cache-from: type=gha,scope=jobs
+          cache-to: type=gha,mode=max,scope=jobs
+
+  deploy-jobs:
+    needs: build-and-push-jobs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          if echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config 2>/dev/null && grep -q "apiVersion" ~/.kube/config; then
+            echo "KUBE_CONFIG decoded from base64"
+          else
+            echo "$KUBE_CONFIG" > ~/.kube/config
+          fi
+          chmod 600 ~/.kube/config
+
+      - name: Roll out new image on k3s
+        run: |
+          # Деплоймент создаётся один раз руками в stariva/infra (stariva-jobs, контейнер stariva-jobs).
+          # Пропускаем только отсутствие Deployment; ошибки доступа к API валят шаг
+          deployment="$(kubectl get deployment/stariva-jobs -n stariva --ignore-not-found -o name)" || exit 1
+          if [ -z "$deployment" ]; then
+            echo "::notice::deployment/stariva-jobs ещё не создан — пропускаю выкатку воркера"
+            exit 0
+          fi
+          kubectl set image deployment/stariva-jobs stariva-jobs=ghcr.io/stariva/platform-jobs:${{ needs.build-and-push-jobs.outputs.sha }} -n stariva
+          kubectl rollout status deployment/stariva-jobs -n stariva --timeout=120s

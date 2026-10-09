@@ -2,24 +2,19 @@
   "name": "@stariva/jobs",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    }
-  },
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
-    "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "dev": "bun run src/worker.ts",
+    "clean": "git clean -xdf .cache .turbo node_modules",
+    "dev": "bun --env-file=../../.env --watch src/index.ts",
+    "start": "bun src/index.ts",
     "format": "biome format .",
     "lint": "biome lint .",
     "check": "biome check .",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hatchet-dev/typescript-sdk": "1.36.0"
+    "@hatchet-dev/typescript-sdk": "1.36.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@stariva/tsconfig": "workspace:*",

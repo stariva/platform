@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 /**
  * Рассылка напоминаний о мастер-классах. Вызывает воркер Hatchet по
- * расписанию (packages/jobs, workshop-reminders) с общим JOBS_SECRET.
+ * расписанию (apps/jobs, workshop-reminders) с общим JOBS_SECRET.
  * Повторный вызов безопасен: уже отправленное не уходит второй раз.
  */
 export async function POST(request: Request) {

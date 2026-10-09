@@ -57,6 +57,18 @@
         "typescript": "7.0.2",
       },
     },
+    "apps/jobs": {
+      "name": "@stariva/jobs",
+      "dependencies": {
+        "@hatchet-dev/typescript-sdk": "1.36.0",
+        "zod": "4.6.5",
+      },
+      "devDependencies": {
+        "@stariva/tsconfig": "workspace:*",
+        "@types/node": "26.6.4",
+        "typescript": "7.0.2",
+      },
+    },
     "apps/web": {
       "name": "@stariva/web",
       "version": "0.1.0",
@@ -237,17 +249,6 @@
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
         "tsdown": "0.23.0",
-        "typescript": "7.0.2",
-      },
-    },
-    "packages/jobs": {
-      "name": "@stariva/jobs",
-      "dependencies": {
-        "@hatchet-dev/typescript-sdk": "1.36.0",
-      },
-      "devDependencies": {
-        "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
         "typescript": "7.0.2",
       },
     },
@@ -1083,7 +1084,7 @@
 
     "@stariva/github": ["@stariva/github@workspace:tooling/github"],
 
-    "@stariva/jobs": ["@stariva/jobs@workspace:packages/jobs"],
+    "@stariva/jobs": ["@stariva/jobs@workspace:apps/jobs"],
 
     "@stariva/storage": ["@stariva/storage@workspace:packages/storage"],
 
