@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Gift } from "lucide-react";
 import Image from "next/image";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import {
@@ -7,11 +7,13 @@ import {
   type Workshop,
 } from "@/lib/workshops-data";
 import {
+  BONUS_TREE_SIZE,
   WORKSHOP_INCLUDES,
   WORKSHOP_PREORDER_FALLBACK_PRICE,
   WORKSHOP_PROGRAM,
   WORKSHOP_REGULAR_PRICE,
   WORKSHOP_RELEASE_LABEL,
+  WORKSHOP_TREE_SIZE,
 } from "../_data";
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
 
@@ -59,7 +61,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
         <div>
           {isPreorder && (
             <p className="inline-flex items-center gap-2 rounded-full bg-terracotta text-parchment px-4 py-2 text-sm mb-6">
-              Предзаказ −{discount}% · старт {releaseLabel}
+              Предзаказ −{discount}% · второй мастер-класс в подарок
             </p>
           )}
           <h2
@@ -71,10 +73,29 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
           </h2>
           <p className="text-dark-grey leading-relaxed mb-8">
             Онлайн-мастер-класс от Ольги Старивы для начинающих: от выбора шнура
-            до готовой ёлки на стене. Оплатите предзаказ сейчас — зафиксируете
-            цену со скидкой и получите уроки первыми, с запасом времени до
-            праздника.
+            до готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите предзаказ
+            сейчас — зафиксируете цену со скидкой и получите уроки первыми, с
+            запасом времени до праздника.
           </p>
+
+          {isPreorder && (
+            <div className="mb-10 flex gap-4 rounded-[24px] border border-terracotta/30 bg-white p-6">
+              <Gift
+                className="mt-0.5 size-6 shrink-0 text-terracotta"
+                aria-hidden
+              />
+              <div>
+                <h3 className="mb-1 font-serif text-xl text-espresso">
+                  Второй мастер-класс — в подарок
+                </h3>
+                <p className="text-sm leading-relaxed text-dark-grey">
+                  Всего будет два мастер-класса по ёлке: {WORKSHOP_TREE_SIZE} и
+                  большая {BONUS_TREE_SIZE}. Оформите предзаказ первого сейчас —
+                  и второй мы откроем вам бесплатно, как только он выйдет.
+                </p>
+              </div>
+            </div>
+          )}
 
           <h3 className="font-serif text-xl text-espresso mb-4">
             Чему научитесь
@@ -103,8 +124,9 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
             </div>
             {isPreorder && (
               <p className="text-sm text-text-grey mb-6">
-                Цена предзаказа. После старта —{" "}
-                {formatPrice(WORKSHOP_REGULAR_PRICE)}.
+                Цена предзаказа — до старта {releaseLabel}. Потом —{" "}
+                {formatPrice(WORKSHOP_REGULAR_PRICE)}, а мастер-класс по большой
+                ёлке уже не будет в подарке.
               </p>
             )}
 
