@@ -1,4 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
+import { CONTACTS } from "@/lib/contacts";
 import { SELLER } from "@/lib/legal";
 import { CookieSettingsLink } from "./cookie-banner";
 import {
@@ -38,13 +39,9 @@ const info = [
 ];
 
 const messengers: ExternalLink[] = [
-  { label: "Telegram", href: "https://t.me/Olga_Stariva", Icon: TelegramIcon },
-  { label: "WhatsApp", href: "https://wa.me/79778722546", Icon: WhatsappIcon },
-  {
-    label: "MAX",
-    href: "https://max.ru/u/f9LHodD0cOKBrgW8OBs1SDxy3mN7vPE34uus8lQhO22DEoOybjJE57AQMIg",
-    Icon: MaxIcon,
-  },
+  { label: "Telegram", href: CONTACTS.telegramUrl, Icon: TelegramIcon },
+  { label: "WhatsApp", href: CONTACTS.whatsappUrl, Icon: WhatsappIcon },
+  { label: "MAX", href: CONTACTS.maxUrl, Icon: MaxIcon },
 ];
 
 const socials: ExternalLink[] = [
@@ -138,11 +135,11 @@ export function Footer() {
             </div>
 
             <a
-              href="tel:+79778722546"
+              href={CONTACTS.phoneHref}
               className="inline-flex items-center gap-3 text-2xl lg:text-3xl font-serif text-parchment hover:text-linen transition-colors"
             >
               <PhoneIcon className="w-5 h-5 text-linen" />
-              +7 977 872 25 46
+              {CONTACTS.phone}
             </a>
             <a
               href="mailto:info@stariva.ru"

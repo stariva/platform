@@ -1,3 +1,4 @@
+import { CONTACTS } from "@/lib/contacts";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 /**
@@ -89,7 +90,7 @@ export function OrganizationJsonLd() {
       "https://vk.com/stariva_macrame",
       "https://pinterest.com/stariva",
       "https://www.livemaster.ru/olga-meu",
-      "https://t.me/Olga_Stariva",
+      CONTACTS.telegramUrl,
     ],
   };
 
@@ -480,7 +481,7 @@ export function PersonJsonLd() {
     worksFor: {
       "@id": `${BASE_URL}/#organization`,
     },
-    sameAs: ["https://t.me/Olga_Stariva", "https://vk.com/stariva_macrame"],
+    sameAs: [CONTACTS.telegramUrl, "https://vk.com/stariva_macrame"],
   };
 
   return (

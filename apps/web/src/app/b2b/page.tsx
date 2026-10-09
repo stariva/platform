@@ -1,12 +1,18 @@
+import { MessageCircleIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
-import { PhoneIcon, TelegramIcon } from "@/components/stariva/icons";
+import { PhoneIcon } from "@/components/stariva/icons";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
+import { CONTACTS } from "@/lib/contacts";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+
+const B2B_MESSAGE =
+  "Здравствуйте, Ольга! Хочу обсудить макраме для нашего заведения.";
 
 export const metadata: Metadata = {
   title: "Декор для кафе и ресторанов — корпоративные заказы Stariva",
@@ -123,7 +129,7 @@ const orderSteps = [
   {
     step: "01",
     title: "Заявка",
-    desc: "Напишите в Telegram или позвоните. Расскажите про помещение: площадь, высота потолков, стиль. Приложите фото если есть.",
+    desc: "Напишите в мессенджер или позвоните. Расскажите про помещение: площадь, высота потолков, стиль. Приложите фото если есть.",
   },
   {
     step: "02",
@@ -218,15 +224,14 @@ export default function B2BPage() {
               корпоративные документы, гарантия 12 месяцев.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
-              <a
-                href="https://t.me/Olga_Stariva"
-                target="_blank"
-                rel="noopener noreferrer"
+              <ContactMasterButton
+                source="b2b_hero"
+                message={B2B_MESSAGE}
                 className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-white text-espresso label-caps-md hover:bg-linen transition-colors duration-300"
               >
-                <TelegramIcon className="w-4 h-4" />
+                <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
                 Обсудить проект
-              </a>
+              </ContactMasterButton>
               <a
                 href="#process"
                 className="inline-flex items-center gap-3 px-8 py-4 rounded-full border border-white/30 text-white label-caps-md hover:border-white/60 transition-colors duration-300"
@@ -488,24 +493,26 @@ export default function B2BPage() {
             {/* Right: contacts */}
             <div className="lg:col-span-6 bg-parchment border border-espresso/10 rounded-2xl p-8 lg:p-10 flex flex-col gap-4">
               <p className="text-espresso/60 text-[14px] leading-[1.75]">
-                Удобнее всего через Telegram — можно сразу прислать фото и
-                замеры.
+                Удобнее всего в мессенджере — Telegram, WhatsApp или MAX. Можно
+                сразу прислать фото и замеры.
               </p>
-              <a
-                href="https://t.me/Olga_Stariva"
-                target="_blank"
-                rel="noopener noreferrer"
+              <ContactMasterButton
+                source="b2b_contacts"
+                message={B2B_MESSAGE}
                 className="flex items-center gap-4 px-7 py-5 rounded-full bg-espresso text-parchment hover:bg-terracotta-dark transition-colors duration-300"
               >
-                <TelegramIcon className="w-5 h-5 shrink-0" />
-                <span className="label-caps-md">Написать в Telegram</span>
-              </a>
+                <MessageCircleIcon
+                  className="w-5 h-5 shrink-0"
+                  strokeWidth={1.3}
+                />
+                <span className="label-caps-md">Написать мастеру</span>
+              </ContactMasterButton>
               <a
-                href="tel:+79778722546"
+                href={CONTACTS.phoneHref}
                 className="flex items-center gap-4 px-7 py-5 rounded-full border border-espresso/20 text-espresso hover:border-espresso hover:bg-espresso/5 transition-colors duration-300"
               >
                 <PhoneIcon className="w-5 h-5 shrink-0" />
-                <span className="font-serif text-xl">+7 977 872 25 46</span>
+                <span className="font-serif text-xl">{CONTACTS.phone}</span>
               </a>
               <p className="text-espresso/70 text-[11px] label-caps pt-2 border-t border-espresso/8">
                 Работаем по договору — самозанятые, документы для бухгалтерии

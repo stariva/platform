@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatPrice } from "@/lib/products";
@@ -185,15 +186,14 @@ export function MadeToOrderPayment({
 
       {terms.paymentOverdue && (
         <p className="rounded-xl border border-espresso/15 px-4 py-3 text-sm text-espresso">
-          Срок оплаты истёк. Напишите мастеру в{" "}
-          <a
-            href="https://t.me/Olga_Stariva"
-            target="_blank"
-            rel="noopener noreferrer"
+          Срок оплаты истёк.{" "}
+          <ContactMasterButton
+            source="order_payment_overdue"
+            message={`Здравствуйте, Ольга! Истёк срок оплаты заказа ${orderId}, можно его продлить?`}
             className="underline underline-offset-4"
           >
-            Telegram
-          </a>{" "}
+            Напишите мастеру
+          </ContactMasterButton>{" "}
           — он продлит его.
         </p>
       )}

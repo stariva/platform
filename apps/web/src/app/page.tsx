@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { CustomOrder } from "@/components/stariva/custom-order";
 import { FittingSketches } from "@/components/stariva/fitting-sketches";
 import { Footer } from "@/components/stariva/footer";
@@ -202,14 +203,12 @@ export default function Page() {
                 <Link href="/about" className="underline underline-offset-4">
                   История мастерской
                 </Link>
-                <a
-                  href="https://t.me/Olga_Stariva"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <ContactMasterButton
+                  source="home_master"
                   className="underline underline-offset-4"
                 >
                   Написать Ольге ↗
-                </a>
+                </ContactMasterButton>
               </div>
             </div>
           </div>

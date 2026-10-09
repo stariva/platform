@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
+import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { MadeToOrder } from "@/components/stariva/made-to-order";
 import { Stars } from "@/components/stariva/review-card";
 import {
@@ -15,6 +16,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { CONTACTS } from "@/lib/contacts";
 import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
 import { getProductMadeToOrder } from "@/lib/made-to-order";
 import type { RatingSummary } from "@/lib/ozon-service";
@@ -378,13 +380,13 @@ export function ProductDetails({
                     asChild
                     className="flex items-center justify-center gap-2 w-full bg-espresso hover:bg-terracotta text-white py-4 h-auto rounded-2xl transition-colors label-caps"
                   >
-                    <a
-                      href="https://t.me/Olga_Stariva"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <ContactMasterButton
+                      source="product"
+                      message={`Здравствуйте, Ольга! Интересует «${product.name}».`}
+                      withPageLink
                     >
                       Написать мастеру
-                    </a>
+                    </ContactMasterButton>
                   </Button>
                 )}
 
@@ -393,7 +395,7 @@ export function ProductDetails({
                   variant="outline"
                   className="flex items-center justify-center gap-2 w-full border-espresso/20 text-espresso hover:bg-espresso hover:text-parchment py-3 h-auto rounded-2xl transition-colors label-caps"
                 >
-                  <a href="tel:+79778722546">
+                  <a href={CONTACTS.phoneHref}>
                     <svg
                       width="14"
                       height="14"

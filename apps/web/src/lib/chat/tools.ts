@@ -7,6 +7,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { blogPosts } from "@/lib/blog";
+import { CONTACTS } from "@/lib/contacts";
 import {
   COLORS,
   COMPLEXITIES,
@@ -17,13 +18,13 @@ import {
 } from "@/lib/custom-order/pricing";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { getProducts } from "@/lib/ozon-service";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
   levelLabels,
   type WorkshopCategory,
   type WorkshopLevel,
 } from "@/lib/workshops-data";
-import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 // ─── Типы выходных данных (используются и в UI виджета) ─────────────────────
 
@@ -343,12 +344,14 @@ export const chatTools = {
   // Контакты и режим работы мастерской.
   getContacts: tool({
     description:
-      "Получить контакты мастерской Stariva и режим работы. Используй, когда клиент хочет связаться с мастером, оформить индивидуальный заказ или спрашивает телефон/Telegram/часы работы.",
+      "Получить контакты мастерской Stariva и режим работы. Используй, когда клиент хочет связаться с мастером, оформить индивидуальный заказ или спрашивает телефон/мессенджеры/часы работы.",
     inputSchema: z.object({}),
     execute: async () => ({
-      telegram: "@Olga_Stariva",
-      telegramUrl: "https://t.me/Olga_Stariva",
-      phone: "+7 977 872 25 46",
+      telegram: CONTACTS.telegramHandle,
+      telegramUrl: CONTACTS.telegramUrl,
+      whatsappUrl: CONTACTS.whatsappUrl,
+      maxUrl: CONTACTS.maxUrl,
+      phone: CONTACTS.phone,
       schedule: "Пн–Сб с 10:00 до 20:00, воскресенье — выходной",
       master: "Ольга Карпычева, основатель бренда (с 2018 года)",
       marketplace: "Готовые изделия — на Ozon",
