@@ -29,6 +29,7 @@ import {
 } from "@/lib/telegram/client-bot";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
 import { googleCalendarUrl } from "./calendar";
+import { earnsPreorderBonus } from "./preorder-bonus";
 import {
   dueReminders,
   REMINDER_LOOKAHEAD_MS,
@@ -136,6 +137,11 @@ async function claimed(
   }
 }
 
+/**
+ * Отправляет письмо о покупке или напоминание, резервируя уведомление от дублей.
+ * Возвращает false без токена доступа или резерва, true после отправки;
+ * при ошибке освобождает резерв и пробрасывает ошибку для повторной попытки.
+ */
 function deliverEmail(target: Target, kind: WorkshopEmailKind) {
   const { order, workshop } = target;
   if (!order.accessToken) return Promise.resolve(false);
@@ -165,6 +171,11 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
           order.telegramToken
             ? clientBotStartUrl(order.telegramToken)
             : undefined,
+        bonus: earnsPreorderBonus({
+          workshopSlug: workshop.slug,
+          orderedAt: order.createdAt,
+          releaseAt: workshop.releaseAt,
+        }),
       }),
     }).then(() => undefined),
   );

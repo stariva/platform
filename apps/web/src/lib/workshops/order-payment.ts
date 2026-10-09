@@ -6,6 +6,8 @@ import {
 } from "@/lib/payments/orders";
 import { getPayment, type YooKassaPayment } from "@/lib/payments/yookassa";
 import { notifyWorkshopBooked } from "./notifications";
+import { earnsPreorderBonus } from "./preorder-bonus";
+import { getWorkshopBySlug } from "./workshops-db";
 
 /**
  * Применяет статус платежа YooKassa к заказу мастер-класса: при успехе
@@ -34,6 +36,16 @@ export async function applyWorkshopPayment(
   // Доступ выдаём в любом случае (grantAccess идемпотентен) — на случай,
   // если заказ уже был помечен оплаченным, а доступ не записался
   await grantAccess(order.userId, order.workshopSlug, order.id);
+
+  // Подарок за предзаказ: курс может ещё не существовать в базе — доступ
+  // дождётся его и появится в кабинете, когда курс опубликуют
+  const workshop = await getWorkshopBySlug(order.workshopSlug, "owned");
+  const bonus = earnsPreorderBonus({
+    workshopSlug: order.workshopSlug,
+    orderedAt: order.createdAt,
+    releaseAt: workshop?.releaseAt ? new Date(workshop.releaseAt) : null,
+  });
+  if (bonus) await grantAccess(order.userId, bonus.slug, order.id);
 
   if (wasUpdated) {
     console.info(
