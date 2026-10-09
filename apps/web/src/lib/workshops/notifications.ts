@@ -29,6 +29,7 @@ import {
 } from "@/lib/telegram/client-bot";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
 import { googleCalendarUrl } from "./calendar";
+import { earnsPreorderBonus } from "./preorder-bonus";
 import {
   dueReminders,
   REMINDER_LOOKAHEAD_MS,
@@ -165,6 +166,11 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
           order.telegramToken
             ? clientBotStartUrl(order.telegramToken)
             : undefined,
+        bonus: earnsPreorderBonus({
+          workshopSlug: workshop.slug,
+          orderedAt: order.createdAt,
+          releaseAt: workshop.releaseAt,
+        }),
       }),
     }).then(() => undefined),
   );

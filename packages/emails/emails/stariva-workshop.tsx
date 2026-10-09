@@ -19,6 +19,8 @@ export interface StarivaWorkshopEmailProps {
   calendar?: { icsUrl: string; googleUrl: string };
   /** Подписка на напоминания в Telegram, если бот настроен. */
   telegramUrl?: string;
+  /** Подарок за предзаказ — только в письме о покупке. */
+  bonus?: { title: string; releaseLabel: string };
 }
 
 const muted = { color: "#6f6253", fontSize: 14, lineHeight: "1.6" };
@@ -81,6 +83,10 @@ export default function StarivaWorkshopEmail(
       googleUrl: "https://calendar.google.com",
     },
     telegramUrl: "https://t.me/stariva_bot?start=abc",
+    bonus: {
+      title: "мастер-класс по большой ёлке 75 × 150 см",
+      releaseLabel: "3 ноября",
+    },
   },
 ) {
   const text = copy(props);
@@ -95,6 +101,22 @@ export default function StarivaWorkshopEmail(
       buttonUrl={props.accessUrl}
       footnote="Кнопка в письме открывает ваш кабинет без пароля, поэтому не пересылайте это письмо другим людям."
     >
+      {props.bonus && props.kind === "booked" && (
+        <Text
+          style={{
+            margin: "28px 0 0",
+            padding: "14px 16px",
+            borderRadius: 12,
+            background: "#f7f3ec",
+            fontSize: 14,
+            lineHeight: "1.6",
+            color: "#2c241b",
+          }}
+        >
+          🎁 Подарок за предзаказ: {props.bonus.title}. Он появится в вашем
+          кабинете {props.bonus.releaseLabel} — доплачивать ничего не нужно.
+        </Text>
+      )}
       {showMaterials && (
         <Section style={{ marginTop: 28 }}>
           <Text style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 600 }}>
