@@ -30,7 +30,7 @@ const CANDIDATES = `
 const client = new pg.Client({ connectionString: url });
 await client.connect();
 try {
-  await client.query("begin");
+  await client.query("begin isolation level read committed");
   const before = (await client.query("select count(*)::int n from users"))
     .rows[0].n;
   const { rows } = await client.query(CANDIDATES);
@@ -38,13 +38,11 @@ try {
     `users: ${before}, to delete: ${rows.length}, to keep: ${before - rows.length}`,
   );
   console.table(
-    rows
-      .slice(0, 10)
-      .map((r) => ({
-        name: r.name,
-        email: r.email,
-        created: r.created_at.toISOString(),
-      })),
+    rows.slice(0, 10).map((r) => ({
+      name: r.name,
+      email: r.email,
+      created: r.created_at.toISOString(),
+    })),
   );
 
   if (!apply) {
@@ -52,12 +50,17 @@ try {
     console.log("Dry run, nothing deleted. Pass --apply to delete.");
   } else {
     const ids = rows.map((r) => r.id);
-    const res = await client.query(
-      "delete from users where id = any($1::text[])",
+    // Block order associations, then recheck with a fresh statement snapshot.
+    await client.query(
+      "select id from users where id = any($1::text[]) for update",
       [ids],
     );
-    if (res.rowCount !== ids.length)
-      throw new Error(`expected ${ids.length}, deleted ${res.rowCount}`);
+    const res = await client.query(
+      `delete from users u
+       where u.id = any($1::text[])
+         and not exists (select 1 from product_orders o where o.user_id = u.id)`,
+      [ids],
+    );
     await client.query("commit");
     console.log(`Deleted ${res.rowCount} users.`);
   }
