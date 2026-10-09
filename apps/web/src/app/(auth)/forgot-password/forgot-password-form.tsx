@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
+import { useFormToken } from "@/lib/auth/use-form-token";
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
@@ -26,6 +27,7 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 export function ForgotPasswordForm() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
+  const formTokenOptions = useFormToken();
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -37,6 +39,7 @@ export function ForgotPasswordForm() {
     const { error } = await authClient.requestPasswordReset({
       email: data.email,
       redirectTo: "/reset-password",
+      fetchOptions: formTokenOptions(),
     });
     setLoading(false);
 

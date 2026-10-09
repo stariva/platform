@@ -2,6 +2,8 @@ import "server-only";
 
 import { initAuth } from "@stariva/auth";
 import { env } from "@stariva/config";
+import { and, count, db, eq, gt } from "@stariva/db";
+import { user } from "@stariva/db/schema";
 import {
   StarivaChangeEmailEmail,
   StarivaMagicLinkEmail,
@@ -11,7 +13,9 @@ import {
 } from "@stariva/emails";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
+import { antispam } from "./antispam-plugin";
 import { captureMagicLink } from "./magic-link-capture";
+import { verificationPageUrl } from "./verification-link";
 
 const vercelUrl =
   env.VERCEL_ENV === "production" && env.VERCEL_PROJECT_PRODUCTION_URL
@@ -30,6 +34,8 @@ const productionUrl = env.VERCEL_PROJECT_PRODUCTION_URL
  *
  * - Email + пароль с обязательным подтверждением email.
  * - Вход по магической ссылке (passwordless).
+ * - Защита от массовых регистраций без капчи: токен формы, лимиты по часу и
+ *   суткам, пауза между письмами на один ящик (см. antispam-plugin).
  * - nextCookies() должен идти последним плагином — он включает установку
  *   cookies из серверных экшенов Next.js.
  */
@@ -42,11 +48,20 @@ export const auth = initAuth({
     expiresIn: 60 * 60 * 24 * 30, // 30 дней
     updateAge: 60 * 60 * 24, // обновлять сессию раз в сутки
   },
+  // Лимиты на IP за час. Общий лимит better-auth (3 запроса за 10 секунд)
+  // не мешал рассылать сотни писем в сутки.
+  rateLimitRules: {
+    "/sign-up/email": { window: 60 * 60, max: 10 },
+    "/sign-in/magic-link": { window: 60 * 60, max: 15 },
+    "/request-password-reset": { window: 60 * 60, max: 5 },
+    "/send-verification-email": { window: 60 * 60, max: 5 },
+  },
+  // Ссылки подтверждения ведут на страницу с кнопкой (verification-link.ts).
   sendVerificationEmail: async ({ email, url }) => {
     await sendEmail({
       to: [email],
       subject: "Подтвердите email — Stariva",
-      react: StarivaVerifyEmail({ url }),
+      react: StarivaVerifyEmail({ url: verificationPageUrl(url) }),
     });
   },
   changeEmail: {
@@ -54,11 +69,20 @@ export const auth = initAuth({
       await sendEmail({
         to: [newEmail],
         subject: "Подтвердите смену email — Stariva",
-        react: StarivaChangeEmailEmail({ url }),
+        react: StarivaChangeEmailEmail({ url: verificationPageUrl(url) }),
       });
     },
   },
   extraPlugins: [
+    antispam({
+      countRecentUnverified: async (since) => {
+        const [row] = await db
+          .select({ total: count() })
+          .from(user)
+          .where(and(eq(user.emailVerified, false), gt(user.createdAt, since)));
+        return row?.total ?? 0;
+      },
+    }),
     magicLink({
       // Аккаунт создаётся только регистрацией: там берём согласие на
       // обработку персональных данных. Ссылка лишь пускает в существующий.

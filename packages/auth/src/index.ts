@@ -55,6 +55,11 @@ export function initAuth<
     /** How often the session expiry is refreshed, in seconds. */
     updateAge?: number;
   };
+  /**
+   * Более жёсткие лимиты для отдельных эндпоинтов вместо общего (на IP).
+   * Ключ — путь эндпоинта, например "/sign-up/email".
+   */
+  rateLimitRules?: Record<string, { window: number; max: number }>;
   extraPlugins?: TExtraPlugins;
 }) {
   const config = {
@@ -75,6 +80,9 @@ export function initAuth<
       enabled: true,
       window: 60,
       max: 100,
+      ...(options.rateLimitRules
+        ? { customRules: options.rateLimitRules }
+        : {}),
     },
     emailAndPassword: {
       enabled: true,

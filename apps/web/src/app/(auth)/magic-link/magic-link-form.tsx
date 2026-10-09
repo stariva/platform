@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth/client";
+import { useFormToken } from "@/lib/auth/use-form-token";
 
 const magicLinkSchema = z.object({
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
@@ -37,6 +38,7 @@ export function MagicLinkForm() {
 
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
+  const formTokenOptions = useFormToken();
 
   const form = useForm<MagicLinkFormValues>({
     resolver: zodResolver(magicLinkSchema),
@@ -49,6 +51,7 @@ export function MagicLinkForm() {
       email: data.email,
       callbackURL,
       errorCallbackURL: "/magic-link",
+      fetchOptions: formTokenOptions(),
     });
     setLoading(false);
 
