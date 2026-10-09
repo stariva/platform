@@ -5,7 +5,7 @@ RUN apk add --no-cache libc6-compat
 # 1. Prune the monorepo down to what @stariva/jobs actually needs
 FROM base AS pruner
 WORKDIR /repo
-RUN bun add -g turbo@2.11.4
+RUN bun add -g turbo@2.11.7
 COPY . .
 RUN turbo prune @stariva/jobs --docker
 
