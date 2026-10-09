@@ -9,18 +9,8 @@ import {
   useEffect,
   useState,
 } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { reachGoal } from "@/lib/analytics";
 import { CONTACTS, type ContactChannel, whatsappUrl } from "@/lib/contacts";
@@ -154,7 +144,6 @@ function ContactMasterSheet({
 
 function MasterHeader({ kind }: { kind: "drawer" | "dialog" }) {
   const Title = kind === "drawer" ? DrawerTitle : DialogTitle;
-  const Description = kind === "drawer" ? DrawerDescription : DialogDescription;
   return (
     <div className="flex items-center gap-4 pr-6">
       <span
@@ -170,9 +159,6 @@ function MasterHeader({ kind }: { kind: "drawer" | "dialog" }) {
         <Title className="font-serif text-espresso text-xl leading-tight font-normal">
           Как вам удобнее связаться?
         </Title>
-        <Description className="mt-1 text-[13px] leading-snug text-taupe">
-          {CONTACTS.master} отвечает лично, {CONTACTS.hours}
-        </Description>
       </div>
     </div>
   );
