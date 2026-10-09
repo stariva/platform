@@ -16,6 +16,11 @@ const BONUSES: Record<string, PreorderBonus> = {
   },
 };
 
+/** Курс сам является подарком за предзаказ другого курса. */
+export function isPreorderBonusSlug(slug: string): boolean {
+  return Object.values(BONUSES).some((bonus) => bonus.slug === slug);
+}
+
 /** Подарок к курсу, если он есть. */
 export function preorderBonusFor(slug: string): PreorderBonus | undefined {
   return BONUSES[slug];

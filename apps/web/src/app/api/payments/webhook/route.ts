@@ -45,7 +45,16 @@ export async function POST(request: NextRequest) {
 
   try {
     // Проверяем подлинность: запрашиваем платёж напрямую у YooKassa
-    const payment = await getPayment(paymentId);
+    const payment = await getPayment(paymentId).catch((error: unknown) => {
+      // Платежа нет в нашем магазине — подделка или уведомление из другого
+      // (например, тестового) магазина. Повтор не поможет: отвечаем 200.
+      if (String(error).includes("yookassa_get_failed_404")) return null;
+      throw error;
+    });
+    if (!payment) {
+      console.warn(`[payments/webhook] Платёж ${paymentId} не найден в ЮKassa`);
+      return NextResponse.json({ ok: true });
+    }
 
     const orderId = payment.metadata?.orderId;
     if (!orderId) {

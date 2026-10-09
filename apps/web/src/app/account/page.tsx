@@ -6,6 +6,7 @@ import {
   listAccessibleSlugs,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { isPreorderBonusSlug } from "@/lib/workshops/preorder-bonus";
 import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
@@ -105,8 +106,10 @@ export default async function AccountCoursesPage() {
               {isPreorder(workshop) && workshop.releaseAt ? (
                 <div className="mt-auto">
                   <p className="text-sm text-dark-grey mb-4">
-                    Предзаказ оформлен · уроки откроются{" "}
-                    {formatReleaseDate(workshop.releaseAt)}
+                    {isPreorderBonusSlug(workshop.slug)
+                      ? "Подарок за предзаказ"
+                      : "Предзаказ оформлен"}{" "}
+                    · уроки откроются {formatReleaseDate(workshop.releaseAt)}
                   </p>
                   <Button
                     asChild

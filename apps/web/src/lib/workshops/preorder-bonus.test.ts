@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { earnsPreorderBonus } from "./preorder-bonus";
+import { earnsPreorderBonus, isPreorderBonusSlug } from "./preorder-bonus";
+
+test("isPreorderBonusSlug recognises the gift course only", () => {
+  expect(isPreorderBonusSlug("elka-makrame-bolshaya")).toBe(true);
+  expect(isPreorderBonusSlug("elka-makrame")).toBe(false);
+});
 
 const releaseAt = new Date("2026-10-20T07:00:00Z");
 
