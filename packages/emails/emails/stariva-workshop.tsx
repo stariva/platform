@@ -19,7 +19,7 @@ export interface StarivaWorkshopEmailProps {
   calendar?: { icsUrl: string; googleUrl: string };
   /** Подписка на напоминания в Telegram, если бот настроен. */
   telegramUrl?: string;
-  /** Подарок за предзаказ — только в письме о покупке. */
+  /** Подарок за предзаказ — в письме о покупке и во всех напоминаниях. */
   bonus?: { title: string; releaseLabel: string };
 }
 
@@ -106,7 +106,7 @@ export default function StarivaWorkshopEmail(
       buttonUrl={props.accessUrl}
       footnote="Кнопка в письме открывает ваш кабинет без пароля, поэтому не пересылайте это письмо другим людям."
     >
-      {props.bonus && props.kind === "booked" && (
+      {props.bonus && (
         <Text
           style={{
             margin: "28px 0 0",
@@ -118,8 +118,9 @@ export default function StarivaWorkshopEmail(
             color: "#2c241b",
           }}
         >
-          🎁 Подарок за предзаказ: {props.bonus.title}. Он появится в вашем
-          кабинете {props.bonus.releaseLabel} — доплачивать ничего не нужно.
+          {props.kind === "booked"
+            ? `🎁 Подарок за предзаказ: ${props.bonus.title}. Он появится в вашем кабинете ${props.bonus.releaseLabel} — доплачивать ничего не нужно.`
+            : `🎁 И не забудьте о подарке за предзаказ: ${props.bonus.releaseLabel} в вашем кабинете бесплатно откроется ${props.bonus.title}.`}
         </Text>
       )}
       {showMaterials && (
