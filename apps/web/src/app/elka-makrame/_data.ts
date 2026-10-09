@@ -10,7 +10,8 @@ export const WORKSHOP_PREORDER_FALLBACK_PRICE = 1490;
 /** Подпись старта, пока у курса в админке не задана дата «Старт уроков». */
 export const WORKSHOP_RELEASE_LABEL = "1 ноября";
 /** До этой даты успеем сплести и доставить к празднику. */
-export const ORDER_DEADLINE_LABEL = "20 декабря";
+export const ORDER_DEADLINE_DAY = 20;
+export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
 
 export const PHONE_HREF = CONTACTS.phoneHref;
 export const PHONE_LABEL = "+7 977 872-25-46";

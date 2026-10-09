@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { CustomOrder } from "@/components/stariva/custom-order";
+import { ElkaTeaser } from "@/components/stariva/elka-teaser";
 import { FittingSketches } from "@/components/stariva/fitting-sketches";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
@@ -183,6 +184,7 @@ export default function Page() {
             </div>
           </div>
         </section>
+        <ElkaTeaser />
         <Process />
         <PhotoshootsTeaser />
         <section className="bg-sand py-12 lg:py-16">
