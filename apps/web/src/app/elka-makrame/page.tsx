@@ -21,7 +21,10 @@ import { ElkaModels } from "./_components/elka-models";
 import { ElkaWorkshop } from "./_components/elka-workshop";
 import { FAQ, LANDING_PATH, TREE_MODELS, WORKSHOP_SLUG } from "./_data";
 
-export const revalidate = 3600;
+// Рендер на каждый запрос: при сборке образа базы нет, и статическая
+// страница запекалась без мастер-класса (кнопка «связаться» вместо оплаты)
+// на час после каждого деплоя. Цена предзаказа и наличие ёлок тоже живые.
+export const dynamic = "force-dynamic";
 
 const TITLE = "Макраме-ёлка на стену — купить новогоднюю ёлку-панно | Stariva";
 const DESCRIPTION =
