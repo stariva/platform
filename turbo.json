@@ -60,11 +60,6 @@
     "//#db:generate": {
       "cache": false,
       "interactive": true
-    },
-    "deploy": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "interactive": true
     }
   },
   "globalEnv": [
@@ -87,11 +82,6 @@
     "AWS_SECRET_ACCESS_KEY",
     "AWS_REGION",
     "AWS_S3_BUCKET",
-    "TRIGGER_SECRET_KEY",
-    "TRIGGER_PROJECT_REF",
-    "INNGEST_EVENT_KEY",
-    "INNGEST_SIGNING_KEY",
-    "INNGEST_BASE_URL",
     "HATCHET_CLIENT_TOKEN",
     "NEXT_PUBLIC_SITE_URL",
     "OZON_CLIENT_ID",
