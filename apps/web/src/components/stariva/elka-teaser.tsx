@@ -1,7 +1,11 @@
 import Image from "next/image";
 import { NewYearCountdown } from "@/app/elka-makrame/_components/new-year-countdown";
 import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
-import { LANDING_PATH, ORDER_DEADLINE_LABEL } from "@/app/elka-makrame/_data";
+import {
+  LANDING_PATH,
+  ORDER_DEADLINE_DAY,
+  ORDER_DEADLINE_LABEL,
+} from "@/app/elka-makrame/_data";
 
 const points = [
   "Не осыпается и не занимает места на полу",
@@ -23,6 +27,15 @@ const models = [
 ];
 
 export function ElkaTeaser() {
+  const dateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Moscow",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date());
+  const month = Number(dateParts.find((part) => part.type === "month")?.value);
+  const day = Number(dateParts.find((part) => part.type === "day")?.value);
+  const deadlinePassed = month === 12 && day > ORDER_DEADLINE_DAY;
+
   return (
     <section
       aria-labelledby="elka-teaser-title"
@@ -74,8 +87,9 @@ export function ElkaTeaser() {
             </TrackedLink>
           </div>
           <p className="mt-4 text-xs text-taupe">
-            Закажите до {ORDER_DEADLINE_LABEL} — успеем сплести и доставить к
-            празднику.
+            {deadlinePassed
+              ? "Сроки изготовления и доставки уточняйте при заказе."
+              : `Закажите до ${ORDER_DEADLINE_LABEL} — успеем сплести и доставить к празднику.`}
           </p>
         </div>
 
