@@ -2,6 +2,8 @@ import { hasAnalyticsConsent } from "@/lib/cookie-consent";
 
 /** Product data only: never pass buyer contact details to analytics. */
 export const COUNTER_ID = 96190087;
+/** Пиксель VK Рекламы: просмотры и цели для оптимизации рекламных кампаний. */
+export const VK_PIXEL_ID = "3800855";
 
 export interface AnalyticsProduct {
   id: string;
@@ -49,17 +51,21 @@ type QueuedMetrika = NonNullable<Window["ym"]> & {
   l?: number;
 };
 let initialized = false;
+let vkPixelLoaded = false;
 let previousPage = "";
 const recordedOrders = new Set<string>();
 
+function analyticsAllowed() {
+  return (
+    typeof window !== "undefined" &&
+    process.env.NODE_ENV === "production" &&
+    isAnalyticsHost(window.location.hostname) &&
+    hasAnalyticsConsent()
+  );
+}
+
 function metrika() {
-  if (
-    typeof window === "undefined" ||
-    process.env.NODE_ENV !== "production" ||
-    !isAnalyticsHost(window.location.hostname) ||
-    !hasAnalyticsConsent()
-  )
-    return;
+  if (!analyticsAllowed()) return;
   try {
     if (!initialized) {
       window.dataLayer ??= [];
@@ -91,6 +97,25 @@ function metrika() {
   }
 }
 
+/** Same consent rules as Metrika: the pixel stays off after «Отказаться». */
+function vkPixel() {
+  if (!analyticsAllowed()) return;
+  try {
+    window._tmr ??= [];
+    if (!vkPixelLoaded) {
+      const script = document.createElement("script");
+      script.src = "https://top-fwz1.mail.ru/js/code.js";
+      script.async = true;
+      script.id = "tmr-code";
+      document.head.appendChild(script);
+      vkPixelLoaded = true;
+    }
+    return window._tmr;
+  } catch {
+    return;
+  }
+}
+
 export function trackPageView() {
   const ym = metrika();
   if (!ym) return;
@@ -100,12 +125,26 @@ export function trackPageView() {
     title: document.title,
     referer: previousPage || analyticsUrl(document.referrer),
   });
+  vkPixel()?.push({
+    id: VK_PIXEL_ID,
+    type: "pageView",
+    url,
+    start: Date.now(),
+  });
   previousPage = url;
 }
 
+/** Goals go to both counters; a price or order sum becomes the VK goal value. */
 export function reachGoal(goal: string, params?: Record<string, unknown>) {
   try {
     metrika()?.(COUNTER_ID, "reachGoal", goal, params);
+    const value = params?.order_price ?? params?.price;
+    vkPixel()?.push({
+      id: VK_PIXEL_ID,
+      type: "reachGoal",
+      goal,
+      ...(typeof value === "number" ? { value } : {}),
+    });
   } catch {
     /* optional */
   }
@@ -168,6 +207,12 @@ export function trackCreatedOrder(order: AnalyticsOrder): Promise<void> {
           { order_id: order.id, order_price: order.revenue, currency: "RUB" },
           done,
         );
+        vkPixel()?.push({
+          id: VK_PIXEL_ID,
+          type: "reachGoal",
+          goal: "order_created",
+          value: order.revenue,
+        });
       });
       if (!sent) done();
     } catch {
