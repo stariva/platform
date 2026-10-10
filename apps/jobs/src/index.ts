@@ -4,7 +4,8 @@ import { workflows } from "./workflows";
 
 /**
  * Воркер Hatchet — долгоживущий процесс: забирает задания у движка Hatchet
- * и выполняет их. Запускается отдельным подом (apps/jobs/Dockerfile).
+ * и выполняет их. Запускается отдельным подом (apps/jobs/Dockerfile) под Node:
+ * `bun run build` собирает dist/index.js, `bun run start` запускает его через node.
  *
  * Локально: `bun run dev --filter @stariva/jobs` (нужен HATCHET_CLIENT_TOKEN,
  * STOREFRONT_URL, JOBS_SECRET в корневом .env).
