@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth/client";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS } from "@/lib/in-stock";
+import { catalogSections } from "@/lib/products";
 import { CartTrigger } from "./cart-trigger";
 
 interface NavLink {
@@ -24,34 +25,7 @@ interface NavLink {
   desc?: string;
 }
 
-const catalogNav = [
-  {
-    label: "Абажуры",
-    href: "/abazhury",
-    desc: "Модели ручного плетения для дома и кафе",
-    image: "https://cdn.stariva.ru/site/images/catalog/category-interior.jpg",
-  },
-  {
-    label: "Одежда",
-    href: "/catalog/clothes",
-    desc: "Платья, топы и накидки из натурального хлопка ручного плетения",
-    image:
-      "https://cdn.stariva.ru/site/images/catalog/category-clothes-macrame-v4.jpg",
-  },
-  {
-    label: "Сумки",
-    href: "/catalog/bags",
-    desc: "Авторские сумки, авоськи и корзины в технике макраме",
-    image: "https://cdn.stariva.ru/site/images/catalog/category-bags.jpg",
-  },
-  {
-    label: "Декор интерьера",
-    href: "/catalog/interior",
-    desc: "Панно, вигвамы, плейсменты и аксессуары для дома",
-    image:
-      "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
-  },
-];
+const catalogNav = catalogSections;
 
 const b2bLinks: NavLink[] = [
   {
@@ -136,10 +110,15 @@ function ArrowRight({ size = 14 }: { size?: number }) {
 
 interface HeaderProps {
   variant?: "transparent" | "solid";
+  /** Раздел товара, который может отличаться от категории в URL. */
+  selectedSectionHref?: string;
 }
 
 /** Показывает адаптивную навигацию, меню аккаунта и корзину с учётом фона шапки. */
-export function Header({ variant = "solid" }: HeaderProps) {
+export function Header({
+  variant = "solid",
+  selectedSectionHref,
+}: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const lastPointer = useRef("");
@@ -163,6 +142,9 @@ export function Header({ variant = "solid" }: HeaderProps) {
     if (href.startsWith("/#")) return false;
     // «В наличии» живёт внутри /catalog, но в меню это отдельный пункт
     if (href === "/catalog" && isInStockPage) return false;
+    if (selectedSectionHref && catalogNav.some((cat) => cat.href === href)) {
+      return href === selectedSectionHref;
+    }
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 

@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
+import { catalogSections } from "@/lib/products";
 
 const links = [
   { label: "Каталог", href: "/catalog" },
-  { label: "Одежда", href: "/catalog/clothes" },
-  { label: "Сумки", href: "/catalog/bags" },
-  { label: "Декор интерьера", href: "/catalog/decor" },
+  ...catalogSections.map(({ label, href }) => ({ label, href })),
   { label: "Мастер-классы", href: "/workshops" },
   { label: "Блог", href: "/blog" },
 ];

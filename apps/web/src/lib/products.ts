@@ -1,4 +1,4 @@
-import type { Category } from "./ozon-types";
+import type { Category, Product } from "./ozon-types";
 
 export const categories: Category[] = [
   {
@@ -46,7 +46,7 @@ export const categories: Category[] = [
     slug: "interior",
     name: "Декор интерьера",
     description:
-      "Абажуры, панно, плейсменты и вигвамы — изделия, которые создают уют в вашем доме",
+      "Панно, плейсменты и вигвамы — изделия, которые создают уют в вашем доме",
     image:
       "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
     hero: {
@@ -65,6 +65,65 @@ export const categories: Category[] = [
       { slug: "planters", name: "Игрушки и прочее", categorySlug: "interior" },
     ],
   },
+];
+
+/**
+ * Разделы каталога, которые видит покупатель (меню, /catalog, 404).
+ * Абажуры — отдельный раздел со своей страницей, хотя в данных это
+ * подкатегория interior; «Декор интерьера» показывается без них.
+ */
+export const LAMPSHADES_HREF = "/abazhury";
+export const LAMPSHADE_SUBCATEGORY = "lampshades";
+
+export const catalogSections = [
+  {
+    label: "Абажуры",
+    href: LAMPSHADES_HREF,
+    desc: "Модели ручного плетения для дома и кафе",
+    image: "https://cdn.stariva.ru/site/images/catalog/category-interior.jpg",
+  },
+  {
+    label: "Одежда",
+    href: "/catalog/clothes",
+    desc: "Платья, топы и накидки из натурального хлопка ручного плетения",
+    image:
+      "https://cdn.stariva.ru/site/images/catalog/category-clothes-macrame-v4.jpg",
+  },
+  {
+    label: "Сумки",
+    href: "/catalog/bags",
+    desc: "Авторские сумки, авоськи и корзины в технике макраме",
+    image: "https://cdn.stariva.ru/site/images/catalog/category-bags.jpg",
+  },
+  {
+    label: "Декор интерьера",
+    href: "/catalog/interior",
+    desc: "Панно, вигвамы, плейсменты и аксессуары для дома",
+    image:
+      "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
+  },
+];
+
+/** Раздел каталога для хлебных крошек товара: абажуры ведут на свою страницу. */
+export function getProductSection(category: Category, subcategory: string) {
+  return subcategory === LAMPSHADE_SUBCATEGORY
+    ? { name: "Абажуры", href: LAMPSHADES_HREF }
+    : { name: category.name, href: `/catalog/${category.slug}` };
+}
+
+/** Ключ раздела товара: абажуры отдельно, остальное — по категории. */
+export function productSectionKey(
+  product: Pick<Product, "category" | "subcategory">,
+): string {
+  return product.subcategory === LAMPSHADE_SUBCATEGORY
+    ? LAMPSHADE_SUBCATEGORY
+    : product.category;
+}
+
+/** Разделы для фильтров витрины и фида, ключи — как у productSectionKey. */
+export const sectionFilters = [
+  { slug: LAMPSHADE_SUBCATEGORY, name: "Абажуры" },
+  ...categories.map((c) => ({ slug: c.slug, name: c.name })),
 ];
 
 export function getCategoryBySlug(slug: string): Category | undefined {

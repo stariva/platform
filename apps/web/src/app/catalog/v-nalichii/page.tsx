@@ -6,7 +6,8 @@ import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Button } from "@/components/ui/button";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
-import { categories, getInStockProductsResult } from "@/lib/ozon-service";
+import { getInStockProductsResult } from "@/lib/ozon-service";
+import { productSectionKey, sectionFilters } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import CategoryFilters from "../[category]/category-filters";
 
@@ -43,9 +44,9 @@ export const metadata: Metadata = {
  */
 export default async function InStockPage() {
   const { products, status } = await getInStockProductsResult();
-  // В таблетках — только категории, где сейчас что-то есть
-  const filters = categories.filter((cat) =>
-    products.some((p) => p.category === cat.slug),
+  // В таблетках — только разделы, где сейчас что-то есть (абажуры отдельно)
+  const filters = sectionFilters.filter((section) =>
+    products.some((p) => productSectionKey(p) === section.slug),
   );
 
   return (
@@ -127,7 +128,7 @@ export default async function InStockPage() {
           <CategoryFilters
             products={products}
             filters={filters}
-            filterBy="category"
+            filterBy="section"
             showAddToCart
           />
         ) : (

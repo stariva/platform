@@ -15,15 +15,25 @@ import {
 } from "@/components/ui/select";
 import { getProductMadeToOrder } from "@/lib/made-to-order";
 import type { Product } from "@/lib/ozon-types";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, productSectionKey } from "@/lib/products";
 
 interface CategoryFiltersProps {
   products: Product[];
   /** Таблетки фильтра: подкатегории внутри категории или категории на общей витрине. */
   filters: { slug: string; name: string }[];
-  filterBy?: "subcategory" | "category";
+  /** section — разделы витрины: абажуры отдельно от остального декора. */
+  filterBy?: "subcategory" | "category" | "section";
   /** Кнопка «В корзину» прямо в карточке — для витрины готовых изделий. */
   showAddToCart?: boolean;
+}
+
+function filterKey(
+  product: Product,
+  filterBy: NonNullable<CategoryFiltersProps["filterBy"]>,
+): string {
+  return filterBy === "section"
+    ? productSectionKey(product)
+    : product[filterBy];
 }
 
 /**
@@ -45,7 +55,7 @@ export default function CategoryFilters({
     let result =
       activeFilter === "all"
         ? products
-        : products.filter((p) => p[filterBy] === activeFilter);
+        : products.filter((p) => filterKey(p, filterBy) === activeFilter);
 
     if (sortBy === "price-asc")
       result = [...result].sort((a, b) => a.price - b.price);
@@ -59,7 +69,7 @@ export default function CategoryFilters({
     const counts: Record<string, number> = {};
     for (const filter of filters) {
       counts[filter.slug] = products.filter(
-        (p) => p[filterBy] === filter.slug,
+        (p) => filterKey(p, filterBy) === filter.slug,
       ).length;
     }
     return counts;

@@ -54,6 +54,7 @@ export default async function LampshadesPage() {
       <BreadcrumbJsonLd
         items={[
           { name: "Главная", href: "/" },
+          { name: "Каталог", href: "/catalog" },
           { name: "Абажуры", href: "/abazhury" },
         ]}
       />
@@ -82,13 +83,25 @@ export default async function LampshadesPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-espresso/55 via-transparent to-transparent" />
           </div>
           <div className="relative z-10 max-w-[1440px] mx-auto px-5 lg:px-12 pt-20 pb-16 lg:pt-24 lg:pb-20">
-            <Link
-              href="/catalog/interior"
-              className="text-sm text-white/70 underline underline-offset-4 hover:text-white transition-colors"
+            {/* Breadcrumb — как у остальных разделов каталога */}
+            <nav
+              className="flex items-center gap-2 text-sm text-white/75 mb-8"
+              aria-label="Breadcrumb"
             >
-              Весь декор интерьера
-            </Link>
-            <h1 className="font-serif text-5xl lg:text-7xl text-white leading-[1.0] tracking-tight mt-6 mb-6">
+              <Link href="/" className="hover:text-white/80 transition-colors">
+                Главная
+              </Link>
+              <span>/</span>
+              <Link
+                href="/catalog"
+                className="hover:text-white/80 transition-colors"
+              >
+                Каталог
+              </Link>
+              <span>/</span>
+              <span className="text-white/80">Абажуры</span>
+            </nav>
+            <h1 className="font-serif text-5xl lg:text-7xl text-white leading-[1.0] tracking-tight mb-6">
               Абажуры макраме
             </h1>
             <p className="text-lg text-white/80 max-w-xl leading-relaxed">

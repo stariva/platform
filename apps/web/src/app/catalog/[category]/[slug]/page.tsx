@@ -22,7 +22,7 @@ import {
   getReviews,
   summarizeRatings,
 } from "@/lib/ozon-service";
-import { getCategoryBySlug } from "@/lib/products";
+import { getCategoryBySlug, getProductSection } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ProductDetails } from "./product-details";
 
@@ -180,6 +180,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     .slice(0, 3);
 
   const url = `/catalog/${categorySlug}/${slug}`;
+  const section = getProductSection(category, product.subcategory);
 
   const productReviews = await getReviews({ productId: product.id });
   const rating = summarizeRatings(productReviews);
@@ -198,12 +199,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
           category: product.category,
         }}
       />
-      <Header variant="solid" />
+      <Header variant="solid" selectedSectionHref={section.href} />
       <BreadcrumbJsonLd
         items={[
           { name: "Главная", href: "/" },
           { name: "Каталог", href: "/catalog" },
-          { name: category.name, href: `/catalog/${categorySlug}` },
+          { name: section.name, href: section.href },
           { name: product.name, href: url },
         ]}
       />
@@ -219,7 +220,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         inStock={product.inStock}
         madeToOrder={product.madeToOrder}
         url={url}
-        category={category.name}
+        category={section.name}
         material={product.material}
         color={product.color}
         rating={summarizeRatings(markupReviews)}
