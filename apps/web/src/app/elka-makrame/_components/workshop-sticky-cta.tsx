@@ -56,14 +56,15 @@ export function WorkshopStickyCta({ label }: { label: string }) {
       setBannerOffset(banner ? banner.offsetHeight + 12 : 0);
     };
     updateBanner();
-    // Баннер монтируется после гидрации — перепроверяем, когда он появится.
-    const timer = window.setTimeout(updateBanner, 500);
+    // Баннер монтируется после гидрации и может открываться повторно.
+    const observer = new MutationObserver(updateBanner);
+    observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("focusin", updateEditing);
     document.addEventListener("focusout", updateEditing);
     window.addEventListener(COOKIE_CONSENT_EVENT, updateBanner);
     window.addEventListener("resize", updateBanner);
     return () => {
-      window.clearTimeout(timer);
+      observer.disconnect();
       document.removeEventListener("focusin", updateEditing);
       document.removeEventListener("focusout", updateEditing);
       window.removeEventListener(COOKIE_CONSENT_EVENT, updateBanner);
