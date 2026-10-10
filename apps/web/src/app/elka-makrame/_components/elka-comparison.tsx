@@ -32,8 +32,13 @@ export function ElkaComparison() {
           </h2>
         </div>
 
-        <div className="overflow-x-auto rounded-[24px] border border-linen">
-          <table className="w-full min-w-[560px] text-left">
+        {/* relative: sr-only внутри ячеек позиционируются absolute и без
+            него вылезают за скролл-контейнер, расширяя страницу на телефоне. */}
+        <div className="relative overflow-x-auto rounded-[24px] border border-linen">
+          {/* На телефоне все четыре колонки помещаются в экран: без
+              горизонтального скролла столбцы «Живая ель» и «Искусственная»
+              не прячутся за краем. */}
+          <table className="w-full text-left">
             <caption className="sr-only">
               Сравнение макраме-ёлки с живой и искусственной елью
             </caption>
@@ -41,27 +46,27 @@ export function ElkaComparison() {
               <tr className="bg-parchment">
                 <th
                   scope="col"
-                  className="p-4 lg:p-5 font-normal text-sm text-text-grey"
+                  className="pl-3 pr-1 py-3 sm:p-4 lg:p-5 font-normal text-xs sm:text-sm text-text-grey"
                 >
                   Критерий
                 </th>
                 <th
                   scope="col"
-                  className="p-4 lg:p-5 text-center font-serif text-lg text-espresso"
+                  className="px-1 py-3 sm:p-4 lg:p-5 text-center font-serif text-sm sm:text-lg text-espresso"
                 >
                   Макраме
                 </th>
                 <th
                   scope="col"
-                  className="p-4 lg:p-5 text-center font-normal text-sm text-text-grey"
+                  className="px-1 py-3 sm:p-4 lg:p-5 text-center font-normal text-xs sm:text-sm text-text-grey"
                 >
                   Живая ель
                 </th>
                 <th
                   scope="col"
-                  className="p-4 lg:p-5 text-center font-normal text-sm text-text-grey"
+                  className="px-1 py-3 sm:p-4 lg:p-5 text-center font-normal text-xs sm:text-sm text-text-grey"
                 >
-                  Искусственная
+                  Искус&shy;ственная
                 </th>
               </tr>
             </thead>
@@ -70,17 +75,17 @@ export function ElkaComparison() {
                 <tr key={row.feature} className="border-t border-linen">
                   <th
                     scope="row"
-                    className="p-4 lg:p-5 font-normal text-espresso"
+                    className="pl-3 pr-1 py-3 sm:p-4 lg:p-5 font-normal text-sm sm:text-base text-espresso hyphens-auto sm:hyphens-none"
                   >
                     {row.feature}
                   </th>
-                  <td className="p-4 lg:p-5 bg-sage-pale/40">
+                  <td className="px-1 py-3 sm:p-4 lg:p-5 bg-sage-pale/40">
                     <Mark value={row.macrame} />
                   </td>
-                  <td className="p-4 lg:p-5">
+                  <td className="px-1 py-3 sm:p-4 lg:p-5">
                     <Mark value={row.live} />
                   </td>
-                  <td className="p-4 lg:p-5">
+                  <td className="px-1 py-3 sm:p-4 lg:p-5">
                     <Mark value={row.artificial} />
                   </td>
                 </tr>

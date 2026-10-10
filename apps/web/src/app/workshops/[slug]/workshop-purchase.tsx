@@ -276,7 +276,7 @@ export function WorkshopPurchase({
         type="submit"
         disabled={buying}
         aria-busy={buying || undefined}
-        className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6 rounded-2xl text-base"
+        className="w-full h-auto min-h-12 whitespace-normal text-center bg-terracotta text-parchment hover:bg-terracotta-dark py-3 rounded-2xl text-base"
         aria-label={
           price === 0
             ? `Смотреть бесплатно: ${title}`

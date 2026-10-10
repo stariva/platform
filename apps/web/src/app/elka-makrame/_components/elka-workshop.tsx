@@ -71,10 +71,12 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 −{discount}%
               </span>
               <Gift className="hidden size-5 shrink-0 sm:block" aria-hidden />
-              {/* Переносим по «·», а не посреди «мастер-класс». */}
+              {/* Переносим по «·», а не посреди «мастер-класс». На узких
+                  экранах (320px) допускаем перенос и после «Предзаказ». */}
               <span className="flex flex-wrap gap-x-1.5 text-base font-medium lg:text-lg">
-                <span className="whitespace-nowrap">
-                  Предзаказ до {releaseLabel} ·
+                <span>
+                  Предзаказ{" "}
+                  <span className="whitespace-nowrap">до {releaseLabel} ·</span>
                 </span>
                 <span>второй мастер&#8209;класс в подарок</span>
               </span>
