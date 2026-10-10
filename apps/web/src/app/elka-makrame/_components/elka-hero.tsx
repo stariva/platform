@@ -29,7 +29,7 @@ export function ElkaHero() {
           <p className="text-lg text-dark-grey leading-relaxed max-w-xl mb-8 text-pretty">
             Не осыпается, не занимает места и служит годами. Подходит для
             квартиры и детской, лобби отеля, ресторана, салона и офиса. Закажите
-            готовую ёлку или сплетите её сами на мастер-классе.
+            готовую ёлку или сплетите её сами дома по нашему онлайн-мастер-классу.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
