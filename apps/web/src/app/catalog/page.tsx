@@ -8,9 +8,9 @@ import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { ProductCardImages } from "@/components/stariva/product-card-images";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { categories, getFeaturedProducts } from "@/lib/ozon-service";
+import { getFeaturedProducts } from "@/lib/ozon-service";
 import type { Product } from "@/lib/ozon-types";
-import { formatPrice } from "@/lib/products";
+import { catalogSections, formatPrice } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 
@@ -136,10 +136,10 @@ export default async function CatalogPage() {
       <ItemListJsonLd
         name="Каталог Stariva — изделия в технике макраме"
         url="/catalog"
-        items={categories.map((cat) => ({
-          name: cat.name,
-          url: `/catalog/${cat.slug}`,
-          image: absoluteImageUrl(BASE_URL, cat.image),
+        items={catalogSections.map((section) => ({
+          name: section.label,
+          url: section.href,
+          image: absoluteImageUrl(BASE_URL, section.image),
         }))}
       />
       <main className="min-h-screen bg-parchment">
@@ -162,27 +162,27 @@ export default async function CatalogPage() {
         {/* Categories Grid */}
         <section className="pb-20 px-4">
           <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-3 gap-6">
-              {categories.map((category, _i) => (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {catalogSections.map((section) => (
                 <Link
-                  key={category.slug}
-                  href={`/catalog/${category.slug}`}
+                  key={section.href}
+                  href={section.href}
                   className="group block relative aspect-[4/5] rounded-2xl overflow-hidden"
                 >
                   <Image
-                    src={category.image}
-                    alt={category.name}
+                    src={section.image}
+                    alt={section.label}
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 768px) 100vw, 33vw"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-espresso/70 via-espresso/20 to-transparent" />
                   <div className="absolute inset-0 flex flex-col justify-end p-6 text-white">
                     <h2 className="font-serif text-2xl md:text-3xl mb-2">
-                      {category.name}
+                      {section.label}
                     </h2>
                     <p className="text-white/80 text-sm line-clamp-2">
-                      {category.description}
+                      {section.desc}
                     </p>
                     <span className="mt-4 label-caps text-white/60 group-hover:text-white transition-colors">
                       Смотреть →

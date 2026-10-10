@@ -6,7 +6,11 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { categories, getProductsByCategory } from "@/lib/ozon-service";
-import { getCategoryBySlug } from "@/lib/products";
+import {
+  getCategoryBySlug,
+  LAMPSHADE_SUBCATEGORY,
+  LAMPSHADES_HREF,
+} from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 import CategoryFilters from "./category-filters";
@@ -70,7 +74,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  const products = await getProductsByCategory(categorySlug);
+  // Абажуры — отдельный раздел (/abazhury), в «Декоре интерьера» их не дублируем
+  const products = (await getProductsByCategory(categorySlug)).filter(
+    (p) => p.subcategory !== LAMPSHADE_SUBCATEGORY,
+  );
+  const subcategories = category.subcategories.filter(
+    (s) => s.slug !== LAMPSHADE_SUBCATEGORY,
+  );
 
   return (
     <>
@@ -143,7 +153,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               </div>
               {/* Sub-category quick links */}
               <div className="flex flex-wrap gap-2">
-                {category.subcategories.map((sub) => (
+                {subcategories.map((sub) => (
                   <span
                     key={sub.slug}
                     className="px-4 py-2 rounded-full border border-white/30 bg-espresso/35 backdrop-blur-sm text-white/85 label-caps text-[11px]"
@@ -157,10 +167,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         </section>
 
         {/* ── Products with Filters ── */}
-        <CategoryFilters products={products} filters={category.subcategories} />
+        <CategoryFilters products={products} filters={subcategories} />
         {categorySlug === "interior" && (
           <p className="max-w-5xl mx-auto px-5 pb-10">
-            <Link href="/abazhury" className="underline text-terracotta">
+            <Link href={LAMPSHADES_HREF} className="underline text-terracotta">
               Абажуры макраме: все модели и помощь с выбором
             </Link>
           </p>
@@ -251,8 +261,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
 const seoTexts: Record<string, { heading: string; body: string }> = {
   interior: {
-    heading: "Абажуры и декор в технике макраме ручной работы",
-    body: "Каждый абажур Stariva — это уникальное изделие, созданное вручную из натурального хлопкового шнура. Мы не используем синтетику и химические красители: только экологичные материалы, которые безопасны для вашего дома. Абажур в технике макраме создаёт мягкий рассеянный свет и уютную игру теней, превращая любую комнату в тёплое пространство. Панно, плейсменты и вигвамы дополнят интерьер в стиле бохо, скандинавском или эко-стиле. Все изделия доступны для покупки на Ozon с доставкой по всей России.",
+    heading: "Декор интерьера в технике макраме ручной работы",
+    body: "Панно, плейсменты и вигвамы Stariva создаются вручную из натурального хлопкового шнура. Мы не используем синтетику и химические красители: только экологичные материалы, которые безопасны для вашего дома. Фактурное плетение добавляет комнате тепла и дополняет интерьер в стиле бохо, скандинавском или эко-стиле. Плетёные абажуры собраны в отдельном разделе. Все изделия доступны для покупки на Ozon с доставкой по всей России.",
   },
   clothes: {
     heading: "Одежда в технике макраме ручной работы",

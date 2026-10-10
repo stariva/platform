@@ -29,6 +29,17 @@ test("feed escapes seller data and uses rubles without a kopeck conversion", () 
   assert.equal(xmlEscape('"\u0000<&'), "&quot;&lt;&amp;");
 });
 
+test("lampshades get their own feed category, other decor keeps its id", () => {
+  const xml = productFeed([
+    product,
+    { ...product, id: "panno-1", slug: "panno-1", subcategory: "pannos" },
+  ]);
+  assert.ok(xml.includes('<category id="3">Декор интерьера</category>'));
+  assert.ok(xml.includes('<category id="4">Абажуры</category>'));
+  assert.match(xml, /<offer id="lamp-1".*?<categoryId>4<\/categoryId>/);
+  assert.match(xml, /<offer id="panno-1".*?<categoryId>3<\/categoryId>/);
+});
+
 test("unavailable, unpriced and non-ruble products are not advertised", () => {
   for (const invalid of [
     { inStock: false },

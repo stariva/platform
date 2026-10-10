@@ -24,7 +24,7 @@ import {
 } from "@/lib/made-to-order";
 import type { RatingSummary } from "@/lib/ozon-service";
 import type { Category, Product } from "@/lib/ozon-types";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, getProductSection } from "@/lib/products";
 import { formatRating, pluralRatings, ratingSourcesLabel } from "@/lib/ratings";
 import { ProductGallery } from "./product-gallery";
 
@@ -145,6 +145,7 @@ export function ProductDetails({
       ? product.material
       : "Натуральные материалы";
   const specs = productSpecs(product, categorySlug);
+  const section = getProductSection(category, product.subcategory);
 
   return (
     <main className="min-h-screen bg-parchment">
@@ -167,10 +168,10 @@ export function ProductDetails({
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link
-                    href={`/catalog/${categorySlug}`}
+                    href={section.href}
                     className="hover:text-espresso transition-colors"
                   >
-                    {category.name}
+                    {section.name}
                   </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -574,7 +575,7 @@ export function ProductDetails({
                 </h2>
               </div>
               <Link
-                href={`/catalog/${categorySlug}`}
+                href={section.href}
                 className="hidden sm:inline-flex items-center gap-1.5 label-caps text-[11px] text-espresso/60 hover:text-terracotta transition-colors"
               >
                 Все товары
@@ -637,7 +638,7 @@ export function ProductDetails({
 
             <div className="mt-8 text-center sm:hidden">
               <Link
-                href={`/catalog/${categorySlug}`}
+                href={section.href}
                 className="inline-flex items-center gap-2 label-caps-md px-6 py-3 rounded-full border border-espresso/20 text-espresso hover:bg-espresso hover:text-parchment transition-colors"
               >
                 Все товары категории

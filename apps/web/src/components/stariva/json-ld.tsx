@@ -72,6 +72,11 @@ export function OrganizationJsonLd() {
         {
           "@type": "OfferCatalog",
           name: "Абажуры в технике макраме",
+          url: `${BASE_URL}/abazhury`,
+        },
+        {
+          "@type": "OfferCatalog",
+          name: "Декор интерьера в технике макраме",
           url: `${BASE_URL}/catalog/interior`,
         },
         {
