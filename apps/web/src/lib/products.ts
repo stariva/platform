@@ -71,23 +71,24 @@ export const categories: Category[] = [
  * Разделы каталога, которые видит покупатель (меню, /catalog, 404).
  * Абажуры — отдельный раздел со своей страницей, хотя в данных это
  * подкатегория interior; «Декор интерьера» показывается без них.
+ * Одежда везде идёт первой, абажуры — сразу после неё.
  */
 export const LAMPSHADES_HREF = "/abazhury";
 export const LAMPSHADE_SUBCATEGORY = "lampshades";
 
 export const catalogSections = [
   {
-    label: "Абажуры",
-    href: LAMPSHADES_HREF,
-    desc: "Модели ручного плетения для дома и кафе",
-    image: "https://cdn.stariva.ru/site/images/catalog/category-interior.jpg",
-  },
-  {
     label: "Одежда",
     href: "/catalog/clothes",
     desc: "Платья, топы и накидки из натурального хлопка ручного плетения",
     image:
       "https://cdn.stariva.ru/site/images/catalog/category-clothes-macrame-v4.jpg",
+  },
+  {
+    label: "Абажуры",
+    href: LAMPSHADES_HREF,
+    desc: "Модели ручного плетения для дома и кафе",
+    image: "https://cdn.stariva.ru/site/images/catalog/category-interior.jpg",
   },
   {
     label: "Сумки",
@@ -120,11 +121,25 @@ export function productSectionKey(
     : product.category;
 }
 
-/** Разделы для фильтров витрины и фида, ключи — как у productSectionKey. */
-export const sectionFilters = [
-  { slug: LAMPSHADE_SUBCATEGORY, name: "Абажуры" },
-  ...categories.map((c) => ({ slug: c.slug, name: c.name })),
-];
+/**
+ * Разделы для фильтров витрины и фида, ключи — как у productSectionKey.
+ * Порядок как в catalogSections: одежда, абажуры, остальные категории.
+ */
+export const sectionFilters: { slug: string; name: string }[] =
+  categories.flatMap((c) => {
+    const section = { slug: c.slug, name: c.name };
+    return c.slug === "clothes"
+      ? [section, { slug: LAMPSHADE_SUBCATEGORY, name: "Абажуры" }]
+      : [section];
+  });
+
+/** Позиция раздела товара в sectionFilters — для сортировки «одежда первой». */
+export function sectionRank(
+  product: Pick<Product, "category" | "subcategory">,
+): number {
+  const key = productSectionKey(product);
+  return sectionFilters.findIndex((s) => s.slug === key);
+}
 
 export function getCategoryBySlug(slug: string): Category | undefined {
   return categories.find((c) => c.slug === slug);
