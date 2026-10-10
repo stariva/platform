@@ -57,7 +57,8 @@ export function ElkaTeaser() {
           </h2>
           <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
             Вместо живой ели — панно ручной работы, которое служит годами.
-            Выберите готовую ёлку или сплетите её сами дома по нашему онлайн-мастер-классу.
+            Выберите готовую ёлку или сплетите её сами дома по нашему
+            онлайн-мастер-классу.
           </p>
           <ul className="mt-6 space-y-2 text-sm text-espresso/80">
             {points.map((point) => (
