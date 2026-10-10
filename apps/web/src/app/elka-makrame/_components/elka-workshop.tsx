@@ -110,8 +110,8 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
         <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-28">
           <div className="relative aspect-[4/5] rounded-[28px] overflow-hidden bg-linen mb-6">
             <Image
-              src="/images/elka/elka-green-festive.jpg"
-              alt="Готовая ёлка-панно в технике макраме из зелёного шнура — такую вы сплетёте на мастер-классе"
+              src="https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame.webp"
+              alt="Мастер Stariva украшает бусинами зелёную ёлку макраме на стене — такую вы сплетёте на мастер-классе"
               fill
               sizes="(min-width: 1024px) 45vw, 100vw"
               className="object-cover object-top"
