@@ -40,6 +40,10 @@ if (import.meta.main) {
   try {
     await client.connect();
     await migrate(client);
+    console.log("Migrations complete");
+  } catch (err) {
+    console.error("Migrations failed", err);
+    process.exit(1);
   } finally {
     await client.end();
   }
