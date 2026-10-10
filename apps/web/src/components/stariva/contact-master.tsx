@@ -14,25 +14,25 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { reachGoal } from "@/lib/analytics";
 import { CONTACTS, type ContactChannel, whatsappUrl } from "@/lib/contacts";
+import { cn } from "@/lib/utils";
 import { MaxIcon, PhoneIcon, TelegramIcon, WhatsappIcon } from "./icons";
 
-type ContactMasterButtonProps = Omit<
-  ComponentProps<"a">,
-  "href" | "target" | "rel"
-> & {
+type ContactMasterButtonProps = Omit<ComponentProps<"button">, "type"> & {
   /** Где стоит кнопка — уходит в Метрику вместе с выбранным каналом. */
   source: string;
   /** Готовый текст обращения: подставляется в WhatsApp, для остальных копируется. */
   message?: string;
   /** Добавить к тексту ссылку на текущую страницу (без UTM и прочих параметров). */
   withPageLink?: boolean;
-  /** Дополнительная цель Метрики при открытии окна, например для Директа. */
+  /** Дополнительная цель Метрики при выборе канала связи, например для Директа. */
   goal?: string;
 };
 
 /**
  * Кнопка «Написать мастеру»: открывает окно выбора мессенджера или телефона.
- * Без JavaScript и при открытии в новой вкладке остаётся обычной ссылкой на Telegram.
+ * Это именно кнопка, а не ссылка на Telegram: иначе Метрика засчитывала бы
+ * «Переход в мессенджер» за одно открытие окна. Переход считается только
+ * по ссылкам внутри окна.
  */
 export function ContactMasterButton({
   source,
@@ -40,24 +40,16 @@ export function ContactMasterButton({
   withPageLink,
   goal,
   onClick,
+  className,
   children,
   ...props
 }: ContactMasterButtonProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(message);
 
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     onClick?.(event);
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey
-    )
-      return;
-    event.preventDefault();
+    if (event.defaultPrevented) return;
     setText(
       message && withPageLink
         ? `${message}\n${window.location.origin}${window.location.pathname}`
@@ -65,25 +57,24 @@ export function ContactMasterButton({
     );
     setOpen(true);
     reachGoal("contact_master_open", { source });
-    if (goal) reachGoal(goal);
   };
 
   return (
     <>
-      <a
+      <button
         {...props}
-        href={CONTACTS.telegramUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+        type="button"
         aria-haspopup="dialog"
+        className={cn("cursor-pointer", className)}
         onClick={handleClick}
       >
         {children}
-      </a>
+      </button>
       <ContactMasterSheet
         open={open}
         onOpenChange={setOpen}
         source={source}
+        goal={goal}
         message={text}
       />
     </>
@@ -94,6 +85,7 @@ interface ContactMasterSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   source: string;
+  goal?: string;
   message?: string;
 }
 
@@ -102,12 +94,14 @@ function ContactMasterSheet({
   open,
   onOpenChange,
   source,
+  goal,
   message,
 }: ContactMasterSheetProps) {
   const isMobile = useIsMobile();
   const body = (
     <ContactOptions
       source={source}
+      goal={goal}
       message={message}
       onPick={() => onOpenChange(false)}
     />
@@ -174,10 +168,12 @@ interface ChannelOption {
 
 function ContactOptions({
   source,
+  goal,
   message,
   onPick,
 }: {
   source: string;
+  goal?: string;
   message?: string;
   onPick: () => void;
 }) {
@@ -225,6 +221,10 @@ function ContactOptions({
   ];
 
   const pick = async (channel: ContactChannel) => {
+    // Ссылка откроется в любом случае, поэтому цель отправляем сразу,
+    // не дожидаясь копирования текста.
+    reachGoal("contact_master", { channel, source });
+    if (goal) reachGoal(goal, { channel });
     setCopyFailed(false);
     if (message && (channel === "telegram" || channel === "max")) {
       try {
@@ -234,7 +234,6 @@ function ContactOptions({
         return;
       }
     }
-    reachGoal("contact_master", { channel, source });
     onPick();
   };
 
@@ -276,6 +275,7 @@ function ContactOptions({
               href={href}
               target="_blank"
               rel="noopener noreferrer"
+              data-location={source}
               onClick={() => pick(id)}
               className="group flex items-center gap-4 rounded-2xl border border-espresso/10 bg-white px-4 py-3.5 transition-colors hover:border-espresso/30 hover:bg-sand focus-visible:outline-2 focus-visible:outline-espresso"
             >
@@ -300,6 +300,7 @@ function ContactOptions({
       <div className="mt-4 flex items-center gap-3 border-t border-espresso/10 pt-4">
         <a
           href={CONTACTS.phoneHref}
+          data-location={source}
           onClick={() => pick("phone")}
           className="group flex min-w-0 flex-1 items-center gap-4 rounded-2xl px-1 py-1 focus-visible:outline-2 focus-visible:outline-espresso"
         >
