@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { ATTRIBUTION_COOKIE } from "@/lib/campaign-attribution";
 import { createOrderHandler } from "./request-handler";
 import type { OrderRequest } from "./schema";
 
 const requestId = "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff";
-function request(extra: Record<string, string | Blob | undefined> = {}) {
+const touch = {
+  utm_source: "instagram",
+  utm_campaign: "blogger",
+  landing: "/custom",
+  at: "2026-10-10T12:00:00.000Z",
+};
+/** Создаёт POST-запрос с валидной формой, переопределениями полей и необязательной cookie. */
+function request(
+  extra: Record<string, string | Blob | undefined> = {},
+  cookie?: string,
+) {
   const form = new FormData();
   const values: Record<string, string | Blob | undefined> = {
     requestId,
@@ -30,6 +41,7 @@ function request(extra: Record<string, string | Blob | undefined> = {}) {
   return new Request("http://localhost/api/custom-order", {
     method: "POST",
     body: form,
+    headers: cookie ? { cookie } : {},
   });
 }
 function setup(options: { configured?: boolean; fail?: string } = {}) {
@@ -55,24 +67,26 @@ function setup(options: { configured?: boolean; fail?: string } = {}) {
 test("acknowledges only persisted complete requests; notification is deferred", async () => {
   const api = setup();
   const response = await api.handler(
-    request({
-      measurements: "50 × 60 см",
-      measurementHelp: "true",
-      attribution: JSON.stringify({
-        utm_source: "instagram",
-        utm_campaign: "blogger",
-        token: "must-not-store",
-      }),
-      photo: new Blob(["test-image"], { type: "image/jpeg" }),
-    }),
+    request(
+      {
+        measurements: "50 × 60 см",
+        measurementHelp: "true",
+        // Поле формы не источник: подделать атрибуцию из браузера нельзя.
+        attribution: JSON.stringify({ token: "must-not-store" }),
+        photo: new Blob(["test-image"], { type: "image/jpeg" }),
+      },
+      `${ATTRIBUTION_COOKIE}=${encodeURIComponent(
+        JSON.stringify({ first: touch, last: touch, token: "must-not-store" }),
+      )}`,
+    ),
   );
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, requestId });
   assert.equal(api.saved[0]?.data.name, "");
   assert.equal(api.saved[0]?.data.measurements, "50 × 60 см");
   assert.deepEqual(api.saved[0]?.data.attribution, {
-    utm_source: "instagram",
-    utm_campaign: "blogger",
+    first: touch,
+    last: touch,
   });
   assert.equal(await api.saved[0]?.photo?.text(), "test-image");
   assert.equal(api.delivered.length, 0);
@@ -95,11 +109,18 @@ test("idempotency conflicts do not acknowledge another payload", async () => {
   const api = setup({ fail: "request_conflict" });
   assert.equal((await api.handler(request())).status, 409);
 });
-test("invalid consent, invalid campaign, empty contact and honeypot never persist", async () => {
+test("broken campaign cookie never blocks a request", async () => {
+  const api = setup();
+  const response = await api.handler(
+    request({}, `${ATTRIBUTION_COOKIE}=not-json`),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(api.saved[0]?.data.attribution, undefined);
+});
+test("invalid consent, empty contact and honeypot never persist", async () => {
   const api = setup();
   for (const extra of [
     { personalDataConsent: "false" },
-    { attribution: "not-json" },
     { contact: " " },
     { website: "spam" },
   ]) {

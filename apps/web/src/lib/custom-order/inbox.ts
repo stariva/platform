@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { customOrderRequests, db } from "@stariva/db";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { baseEnv, env } from "@/env";
+import { formatTouch } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { deliverNotification, type Notification } from "./delivery";
 import type { OrderRequest } from "./schema";
@@ -12,6 +13,11 @@ export function notificationConfigured() {
       (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_TO && env.ORDER_EMAIL_FROM),
   );
 }
+/**
+ * Сохраняет заявку, фото и текст уведомления с источником и возвращает ID.
+ * Повтор с тем же ID допустим только при совпадении данных и фото;
+ * иначе выбрасывает ошибку request_conflict.
+ */
 export async function saveRequest(data: OrderRequest, photo: File | null) {
   const id = data.requestId ?? randomUUID();
   const photoBase64 = photo
@@ -34,9 +40,10 @@ export async function saveRequest(data: OrderRequest, photo: File | null) {
     data.budget && `Бюджет: ${data.budget}`,
     data.estimateMin !== undefined &&
       `Оценка калькулятора: ${data.estimateMin}–${data.estimateMax} ₽`,
-    ...Object.entries(data.attribution ?? {}).map(
-      ([key, value]) => `${key}: ${value}`,
-    ),
+    data.attribution && `Источник: ${formatTouch(data.attribution.last)}`,
+    data.attribution &&
+      data.attribution.first.at !== data.attribution.last.at &&
+      `Первый заход: ${formatTouch(data.attribution.first)}`,
     `Согласие на обработку данных: ${LEGAL_VERSION}, ${new Date().toISOString()}`,
   ]
     .filter(Boolean)

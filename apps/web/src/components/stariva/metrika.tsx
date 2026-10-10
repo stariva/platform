@@ -3,25 +3,19 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { reachGoal, trackPageView } from "@/lib/analytics";
-import { captureCampaign } from "@/lib/campaign-attribution";
 import { COOKIE_CONSENT_EVENT } from "@/lib/cookie-consent";
 
+/** Отправляет просмотры при навигации и выборе согласия, отслеживает клики по целевым ссылкам. */
 export function Metrika() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   // biome-ignore lint/correctness/useExhaustiveDependencies: the current URL is read inside trackPageView
   useEffect(() => {
-    if (pathname) {
-      captureCampaign();
-      trackPageView();
-    }
+    if (pathname) trackPageView();
   }, [pathname, searchParams]);
   // Повторный хит после выбора в баннере; дубль отсекает trackPageView.
   useEffect(() => {
-    const onConsent = () => {
-      captureCampaign();
-      trackPageView();
-    };
+    const onConsent = () => trackPageView();
     window.addEventListener(COOKIE_CONSENT_EVENT, onConsent);
     return () => window.removeEventListener(COOKIE_CONSENT_EVENT, onConsent);
   }, []);

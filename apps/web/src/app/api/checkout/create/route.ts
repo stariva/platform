@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
 import { getSession } from "@/lib/auth/session";
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import {
   CatalogItemsUnavailableError,
   resolveCatalogItems,
@@ -46,6 +47,10 @@ function siteUrl(request: NextRequest): string {
   ).replace(/\/$/, "");
 }
 
+/**
+ * Проверяет товары и доставку, сохраняет заказ с атрибуцией из cookie
+ * и возвращает ссылку на оплату и данные для аналитики.
+ */
 export async function POST(request: NextRequest) {
   if (!isYooKassaConfigured() || !isOzonDeliveryConfigured()) {
     return NextResponse.json(
@@ -95,6 +100,7 @@ export async function POST(request: NextRequest) {
 
   const order = await createProductOrder({
     userId: session?.user.id,
+    attribution: attributionFromRequest(request),
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,

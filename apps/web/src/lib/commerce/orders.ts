@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
 import {
+  type CampaignAttribution,
   productOrderItems,
   productOrderPayments,
   productOrders,
@@ -36,6 +37,7 @@ export interface OrderLineInput {
 
 export interface CreateProductOrderInput {
   userId?: string;
+  attribution?: CampaignAttribution | null;
   contactName: string;
   contactPhone: string;
   contactEmail?: string;
@@ -54,6 +56,7 @@ export interface MadeToOrderLineInput {
 
 export interface CreateMadeToOrderOrderInput {
   userId?: string;
+  attribution?: CampaignAttribution | null;
   contactName: string;
   contactPhone: string;
   contactEmail?: string;
@@ -91,6 +94,7 @@ export async function createMadeToOrderOrder(
     id: orderId,
     kind: "made_to_order",
     userId: input.userId ?? null,
+    attribution: input.attribution ?? null,
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail ?? null,
@@ -136,6 +140,7 @@ export async function createProductOrder(
   await db.insert(productOrders).values({
     id: orderId,
     userId: input.userId ?? null,
+    attribution: input.attribution ?? null,
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail ?? null,

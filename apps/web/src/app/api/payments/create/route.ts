@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { grantAccess, hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { attachPaymentId, createOrder } from "@/lib/payments/orders";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
@@ -28,6 +29,10 @@ const bodySchema = z.object({
   personalDataConsent: z.boolean().optional(),
 });
 
+/**
+ * Оформляет доступ к мастер-классу: бесплатный выдаёт сразу, для платного
+ * создаёт заказ с атрибуцией из cookie и возвращает ссылку на оплату.
+ */
 export async function POST(request: NextRequest) {
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
@@ -112,6 +117,7 @@ export async function POST(request: NextRequest) {
     workshopSlug: workshop.slug,
     amountKopecks,
     contactEmail: buyer.email,
+    attribution: attributionFromRequest(request),
   });
 
   try {

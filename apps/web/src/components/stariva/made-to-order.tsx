@@ -31,7 +31,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
-import { appendCampaign } from "@/lib/campaign-attribution";
 import { useCart } from "@/lib/cart/cart-context";
 import {
   COLOR_SWATCHES,
@@ -352,7 +351,6 @@ function MadeToOrderDialog({
       fd.append("size", requestSize);
       fd.append("color", color);
       fd.append("personalDataConsent", String(data.personalDataConsent));
-      appendCampaign(fd);
       const signature = JSON.stringify([...fd.entries()]);
       if (submission.current?.signature !== signature)
         submission.current = { signature, id: crypto.randomUUID() };

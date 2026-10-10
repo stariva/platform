@@ -1,5 +1,6 @@
 import {
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -7,6 +8,7 @@ import {
   unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
 
 /** Статусы заказа/платежа. */
@@ -46,6 +48,8 @@ export const orders = pgTable(
     // accessToken: её видит браузер, оплативший заказ, а не владелец почты.
     telegramToken: text("telegram_token"),
     telegramChatId: text("telegram_chat_id"),
+    // UTM первого и последнего захода до заказа; null — пришли не по метке.
+    attribution: jsonb("attribution").$type<CampaignAttribution>(),
   },
   (t) => [
     uniqueIndex("orders_access_token_idx").on(t.accessToken),
