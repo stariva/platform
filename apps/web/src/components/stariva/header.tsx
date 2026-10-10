@@ -1,9 +1,10 @@
 "use client";
 
+import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,9 +15,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth/client";
-import { useCart } from "@/lib/cart/cart-context";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS } from "@/lib/in-stock";
 import { CartTrigger } from "./cart-trigger";
+
+interface NavLink {
+  label: string;
+  href: string;
+  desc?: string;
+}
 
 const catalogNav = [
   {
@@ -24,7 +30,6 @@ const catalogNav = [
     href: "/abazhury",
     desc: "Модели ручного плетения для дома и кафе",
     image: "https://cdn.stariva.ru/site/images/catalog/category-interior.jpg",
-    items: ["Размеры", "Комплектация", "Выбор модели"],
   },
   {
     label: "Одежда",
@@ -32,26 +37,23 @@ const catalogNav = [
     desc: "Платья, топы и накидки из натурального хлопка ручного плетения",
     image:
       "https://cdn.stariva.ru/site/images/catalog/category-clothes-macrame-v4.jpg",
-    items: ["Платья макраме", "Топы", "Накидки"],
   },
   {
     label: "Сумки",
     href: "/catalog/bags",
-    desc: "Авторские сумки, клатчи и шопперы в технике макраме",
+    desc: "Авторские сумки, авоськи и корзины в технике макраме",
     image: "https://cdn.stariva.ru/site/images/catalog/category-bags.jpg",
-    items: ["Шопперы", "Клатчи", "Кросс-боди"],
   },
   {
     label: "Декор интерьера",
     href: "/catalog/interior",
-    desc: "Абажуры, панно, вигвамы и аксессуары для дома",
+    desc: "Панно, вигвамы, плейсменты и аксессуары для дома",
     image:
       "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
-    items: ["Абажуры", "Панно", "Вигвамы", "Плейсменты"],
   },
 ];
 
-const b2bLinks = [
+const b2bLinks: NavLink[] = [
   {
     label: "Кафе и рестораны",
     href: "/b2b",
@@ -64,16 +66,73 @@ const b2bLinks = [
   },
 ];
 
-const nav = [
-  { label: "Каталог", href: "/catalog", hasMega: true },
-  { label: "В наличии", href: IN_STOCK_HREF },
-  { label: "Фотосессии", href: "/photoshoots" },
-  { label: "Мастер-классы", href: "/workshops" },
-  { label: "Блог", href: "/blog" },
-  { label: "Отзывы", href: "/reviews" },
-  { label: "Для бизнеса", href: "/b2b", hasB2b: true },
-  { label: "Обо мне", href: "/about" },
+const aboutLinks: NavLink[] = [
+  { label: "Обо мне", href: "/about", desc: "Кто плетёт ваши изделия" },
+  { label: "Отзывы", href: "/reviews", desc: "Что говорят покупатели" },
+  { label: "Блог", href: "/blog", desc: "Уход за изделиями и идеи для дома" },
 ];
+
+const serviceLinks: NavLink[] = [
+  { label: "Мастер-классы", href: "/workshops" },
+  { label: "Фотосессии", href: "/photoshoots" },
+];
+
+type NavItem =
+  | { kind: "link"; label: string; href: string }
+  | { kind: "catalog"; label: string; href: string }
+  | { kind: "dropdown"; label: string; href?: string; links: NavLink[] };
+
+const nav: NavItem[] = [
+  { kind: "catalog", label: "Каталог", href: "/catalog" },
+  { kind: "link", label: "В наличии", href: IN_STOCK_HREF },
+  ...serviceLinks.map((link) => ({ kind: "link" as const, ...link })),
+  { kind: "dropdown", label: "Для бизнеса", href: "/b2b", links: b2bLinks },
+  { kind: "dropdown", label: "О студии", links: aboutLinks },
+];
+
+const dropdownMotion =
+  "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 duration-200";
+
+function Chevron() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      aria-hidden="true"
+      className="transition-transform duration-200 group-data-[state=open]:rotate-180"
+    >
+      <path
+        d="M2 3.5l3 3 3-3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowRight({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 14 14"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 7h8M8 4l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 interface HeaderProps {
   variant?: "transparent" | "solid";
@@ -83,11 +142,7 @@ interface HeaderProps {
 export function Header({ variant = "solid" }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { count: cartCount } = useCart();
-  const [megaOpen, setMegaOpen] = useState(false);
-  const [b2bOpen, setB2bOpen] = useState(false);
-  const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const b2bTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPointer = useRef("");
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
@@ -103,11 +158,6 @@ export function Header({ variant = "solid" }: HeaderProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [variant]);
 
-  useEffect(() => {
-    setMenuOpen(false);
-    setMegaOpen(false);
-  }, []);
-
   /** Определяет активный раздел, исключая якоря и выделяя «В наличии» отдельно. */
   const isActive = (href: string) => {
     if (href.startsWith("/#")) return false;
@@ -116,22 +166,30 @@ export function Header({ variant = "solid" }: HeaderProps) {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const openMega = () => {
-    if (megaTimer.current) clearTimeout(megaTimer.current);
-    setMegaOpen(true);
-  };
-  const closeMega = () => {
-    if (megaTimer.current) clearTimeout(megaTimer.current);
-    megaTimer.current = setTimeout(() => setMegaOpen(false), 200);
+  /** Активен ли пункт верхнего уровня — сам раздел или любой из его подпунктов. */
+  const isItemActive = (item: NavItem) => {
+    if (item.kind === "link") return isActive(item.href);
+    if (item.kind === "catalog")
+      return (
+        isActive(item.href) || catalogNav.some((cat) => isActive(cat.href))
+      );
+    return item.links.some((link) => isActive(link.href));
   };
 
-  const openB2b = () => {
-    if (b2bTimer.current) clearTimeout(b2bTimer.current);
-    setB2bOpen(true);
-  };
-  const closeB2b = () => {
-    if (b2bTimer.current) clearTimeout(b2bTimer.current);
-    b2bTimer.current = setTimeout(() => setB2bOpen(false), 200);
+  /**
+   * Мышью выпадающее меню открывается наведением, поэтому клик по пункту
+   * ведёт в раздел, а не закрывает меню. С клавиатуры и пальцем клик
+   * по-прежнему переключает меню.
+   */
+  const handleTriggerClick = (
+    event: MouseEvent<HTMLButtonElement>,
+    href?: string,
+  ) => {
+    if (event.detail > 0 && lastPointer.current === "mouse") {
+      event.preventDefault();
+      if (href) router.push(href);
+    }
+    lastPointer.current = "";
   };
 
   const handleSignOut = async () => {
@@ -141,10 +199,51 @@ export function Header({ variant = "solid" }: HeaderProps) {
     router.refresh();
   };
 
+  const navItemClass = (active: boolean) =>
+    `group px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-terracotta/40 ${
+      active
+        ? "text-terracotta"
+        : isSolid
+          ? "text-espresso/70 hover:text-espresso data-[state=open]:text-espresso"
+          : "text-white/80 hover:text-white data-[state=open]:text-white"
+    }`;
+
   const initials = (session?.user?.name || session?.user?.email || "?")
     .trim()
     .charAt(0)
     .toUpperCase();
+
+  const mobileHeading = (label: string) => (
+    <div className="mt-4 first:mt-0 label-caps text-taupe text-[11px] px-1 mb-2">
+      {label}
+    </div>
+  );
+
+  const mobileLink = (link: NavLink & { active?: boolean }) => (
+    <Link
+      key={link.href}
+      href={link.href}
+      onClick={() => setMenuOpen(false)}
+      className={`py-3 px-1 border-b border-espresso/6 flex items-center justify-between group ${
+        (link.active ?? isActive(link.href))
+          ? "text-terracotta"
+          : "text-espresso/80"
+      }`}
+    >
+      <div>
+        <span className="font-serif text-[17px] block leading-snug">
+          {link.label}
+        </span>
+        {link.desc && (
+          <span className="text-taupe text-[11px]">{link.desc}</span>
+        )}
+      </div>
+      <span className="opacity-25 group-hover:opacity-60 transition-opacity flex-shrink-0">
+        <ArrowRight />
+      </span>
+    </Link>
+  );
+
   return (
     <>
       <header
@@ -194,252 +293,170 @@ export function Header({ variant = "solid" }: HeaderProps) {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden xl:flex items-center 2xl:gap-1">
-            {nav.map((item) =>
-              item.hasB2b ? (
-                // biome-ignore lint/a11y/noStaticElementInteractions: wrapper div needs mouse events for dropdown hover
-                <div
-                  key={item.href}
-                  className="relative"
-                  onMouseEnter={openB2b}
-                  onMouseLeave={closeB2b}
-                >
-                  <Link
-                    href={item.href}
-                    className={`px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors flex items-center gap-1.5 ${
-                      isActive(item.href)
-                        ? "text-terracotta"
-                        : isSolid
-                          ? "text-espresso/70 hover:text-espresso"
-                          : "text-white/80 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                    <svg
-                      width="10"
-                      height="10"
-                      viewBox="0 0 10 10"
-                      fill="none"
-                      aria-hidden="true"
-                      className={`transition-transform duration-200 ${b2bOpen ? "rotate-180" : ""}`}
-                    >
-                      <path
-                        d="M2 3.5l3 3 3-3"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </Link>
+          <NavigationMenuPrimitive.Root
+            aria-label="Основное меню"
+            delayDuration={80}
+            className="hidden xl:block"
+          >
+            <NavigationMenuPrimitive.List className="flex items-center 2xl:gap-1">
+              {nav.map((item) => {
+                const active = isItemActive(item);
 
-                  {/* biome-ignore lint/a11y/noStaticElementInteractions: dropdown bridge div needs mouse events for hover persistence */}
-                  <div
-                    onMouseEnter={openB2b}
-                    onMouseLeave={closeB2b}
-                    className={`absolute left-0 top-full pt-2 transition-all duration-200 ease-out z-50 ${
-                      b2bOpen
-                        ? "opacity-100 translate-y-0 pointer-events-auto"
-                        : "opacity-0 -translate-y-1 pointer-events-none"
-                    }`}
-                  >
-                    <div className="bg-white border border-espresso/8 rounded-xl shadow-[0_12px_40px_rgba(22,21,19,0.12)] overflow-hidden min-w-[220px]">
-                      {b2bLinks.map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setB2bOpen(false)}
-                          className={`flex flex-col px-5 py-3.5 hover:bg-off-white transition-colors border-b border-espresso/6 last:border-b-0 ${
-                            isActive(link.href) ? "bg-sand/60" : ""
-                          }`}
-                        >
-                          <span
-                            className={`text-[13px] font-medium leading-snug ${isActive(link.href) ? "text-terracotta" : "text-espresso"}`}
-                          >
-                            {link.label}
-                          </span>
-                          <span className="text-[11px] text-taupe mt-0.5">
-                            {link.desc}
-                          </span>
+                if (item.kind === "link") {
+                  return (
+                    <NavigationMenuPrimitive.Item key={item.href}>
+                      <NavigationMenuPrimitive.Link asChild active={active}>
+                        <Link href={item.href} className={navItemClass(active)}>
+                          {item.label}
                         </Link>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : item.hasMega ? (
-                // biome-ignore lint/a11y/noStaticElementInteractions: wrapper div needs mouse events for mega menu hover
-                <div
-                  key={item.href}
-                  className="relative"
-                  onMouseEnter={openMega}
-                  onMouseLeave={closeMega}
-                >
-                  <Link
-                    href={item.href}
-                    className={`px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors flex items-center gap-1.5 ${
-                      isActive(item.href)
-                        ? "text-terracotta"
-                        : isSolid
-                          ? "text-espresso/70 hover:text-espresso"
-                          : "text-white/80 hover:text-white"
-                    }`}
+                      </NavigationMenuPrimitive.Link>
+                    </NavigationMenuPrimitive.Item>
+                  );
+                }
+
+                const trigger = (
+                  <NavigationMenuPrimitive.Trigger
+                    className={navItemClass(active)}
+                    onPointerDown={(e) => {
+                      lastPointer.current = e.pointerType;
+                    }}
+                    onClick={(e) => handleTriggerClick(e, item.href)}
                   >
                     {item.label}
-                    <svg
-                      width="10"
-                      height="10"
-                      viewBox="0 0 10 10"
-                      fill="none"
-                      aria-hidden="true"
-                      className={`transition-transform duration-200 ${megaOpen ? "rotate-180" : ""}`}
-                    >
-                      <path
-                        d="M2 3.5l3 3 3-3"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </Link>
+                    <Chevron />
+                  </NavigationMenuPrimitive.Trigger>
+                );
 
-                  {/* Mega menu — full-width panel anchored to viewport */}
-                  {/* biome-ignore lint/a11y/noStaticElementInteractions: dropdown bridge div needs mouse events for hover persistence */}
-                  <div
-                    onMouseEnter={openMega}
-                    onMouseLeave={closeMega}
-                    className={`fixed left-0 right-0 transition-all duration-200 ease-out z-50 ${
-                      megaOpen
-                        ? "opacity-100 translate-y-0 pointer-events-auto"
-                        : "opacity-0 -translate-y-2 pointer-events-none"
-                    }`}
-                    style={{ top: "68px", paddingTop: 0 }}
-                  >
-                    {/* thin bridge so mouse can travel from nav link to panel */}
-                    <div className="h-px" />
-                    <div className="bg-white/98 backdrop-blur-xl border-b border-espresso/8 shadow-[0_24px_60px_rgba(22,21,19,0.10)]">
-                      <div className="max-w-[1440px] mx-auto px-8 2xl:px-12 py-8">
-                        <div className="grid grid-cols-3 gap-5">
-                          {catalogNav.map((cat) => (
-                            <Link
-                              key={cat.href}
-                              href={cat.href}
-                              className={`group rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-[0_8px_32px_rgba(22,21,19,0.10)] hover:-translate-y-0.5 ${
-                                pathname.startsWith(cat.href)
-                                  ? "border-espresso/20"
-                                  : "border-espresso/8 hover:border-espresso/20"
-                              }`}
-                            >
-                              {/* Photo */}
-                              <div className="relative h-44 overflow-hidden bg-off-white">
-                                <Image
-                                  src={cat.image}
-                                  alt={cat.label}
-                                  fill
-                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                  sizes="(max-width: 1440px) 33vw"
-                                />
-                                {/* subtle dark overlay on hover */}
-                                <div className="absolute inset-0 bg-near-black/0 group-hover:bg-near-black/10 transition-colors duration-300" />
-                              </div>
-
-                              {/* Text */}
-                              <div className="p-5 bg-white">
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="font-serif text-[18px] text-near-black leading-none">
-                                    {cat.label}
-                                  </span>
-                                  <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 14 14"
-                                    fill="none"
-                                    aria-hidden="true"
-                                    className="text-taupe group-hover:text-near-black transition-colors translate-x-0 group-hover:translate-x-0.5 transition-transform duration-200"
+                if (item.kind === "catalog") {
+                  return (
+                    <NavigationMenuPrimitive.Item key={item.label}>
+                      {trigger}
+                      {/* Mega menu — full-width panel anchored under the header */}
+                      <NavigationMenuPrimitive.Content
+                        className={`fixed left-0 right-0 top-[68px] z-50 ${dropdownMotion}`}
+                      >
+                        <div className="bg-white/98 backdrop-blur-xl border-y border-espresso/8 shadow-[0_24px_60px_rgba(22,21,19,0.10)]">
+                          <div className="max-w-[1440px] mx-auto px-8 2xl:px-12 py-6">
+                            <ul className="grid grid-cols-4 gap-4">
+                              {catalogNav.map((cat) => (
+                                <li key={cat.href}>
+                                  <NavigationMenuPrimitive.Link
+                                    asChild
+                                    active={isActive(cat.href)}
                                   >
-                                    <path
-                                      d="M2 7h10M8 3l4 4-4 4"
-                                      stroke="currentColor"
-                                      strokeWidth="1.3"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </div>
-                                <p className="text-taupe text-[12px] leading-relaxed mb-3">
-                                  {cat.desc}
-                                </p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {cat.items.map((item) => (
-                                    <span
-                                      key={item}
-                                      className="text-[11px] label-caps text-dark-grey bg-off-white px-2 py-1 rounded-full"
+                                    <Link
+                                      href={cat.href}
+                                      className={`group flex flex-col h-full rounded-2xl overflow-hidden border outline-none focus-visible:ring-2 focus-visible:ring-terracotta/40 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(22,21,19,0.10)] hover:-translate-y-0.5 ${
+                                        isActive(cat.href)
+                                          ? "border-espresso/20"
+                                          : "border-espresso/8 hover:border-espresso/20"
+                                      }`}
                                     >
-                                      {item}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
+                                      <div className="relative h-36 overflow-hidden bg-off-white">
+                                        <Image
+                                          src={cat.image}
+                                          alt=""
+                                          fill
+                                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                          sizes="(max-width: 1440px) 25vw, 340px"
+                                        />
+                                        <div className="absolute inset-0 bg-near-black/0 group-hover:bg-near-black/10 transition-colors duration-300" />
+                                      </div>
+                                      <div className="flex-1 p-4 bg-white">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="font-serif text-[17px] text-near-black leading-none">
+                                            {cat.label}
+                                          </span>
+                                          <span className="text-taupe group-hover:text-near-black group-hover:translate-x-0.5 transition-all duration-200">
+                                            <ArrowRight />
+                                          </span>
+                                        </div>
+                                        <p className="text-taupe text-[12px] leading-relaxed">
+                                          {cat.desc}
+                                        </p>
+                                      </div>
+                                    </Link>
+                                  </NavigationMenuPrimitive.Link>
+                                </li>
+                              ))}
+                            </ul>
 
-                        {/* Footer row */}
-                        <div className="mt-5 pt-4 border-t border-espresso/8 flex items-center justify-between">
-                          <span className="text-taupe text-[12px]">
-                            Все изделия создаются вручную из натурального
-                            хлопка.{" "}
-                            <Link
-                              href={IN_STOCK_HREF}
-                              className="text-near-black underline underline-offset-4 hover:text-terracotta transition-colors"
-                            >
-                              Готовые в наличии
-                            </Link>{" "}
-                            — отправим за {IN_STOCK_SHIP_DAYS}
-                          </span>
-                          <Link
-                            href="/catalog"
-                            className="inline-flex items-center gap-2 label-caps text-[11px] text-dark-grey hover:text-near-black transition-colors"
-                          >
-                            Смотреть весь каталог
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 12 12"
-                              fill="none"
-                              aria-hidden="true"
-                            >
-                              <path
-                                d="M2 6h8M7 3l3 3-3 3"
-                                stroke="currentColor"
-                                strokeWidth="1.2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </Link>
+                            {/* Footer row */}
+                            <div className="mt-4 pt-4 border-t border-espresso/8 flex items-center justify-between">
+                              <span className="text-taupe text-[12px]">
+                                Все изделия создаются вручную из натурального
+                                хлопка.{" "}
+                                <NavigationMenuPrimitive.Link asChild>
+                                  <Link
+                                    href={IN_STOCK_HREF}
+                                    className="text-near-black underline underline-offset-4 hover:text-terracotta transition-colors"
+                                  >
+                                    Готовые в наличии
+                                  </Link>
+                                </NavigationMenuPrimitive.Link>{" "}
+                                — отправим за {IN_STOCK_SHIP_DAYS}
+                              </span>
+                              <NavigationMenuPrimitive.Link asChild>
+                                <Link
+                                  href="/catalog"
+                                  className="inline-flex items-center gap-2 label-caps text-[11px] text-dark-grey hover:text-near-black transition-colors"
+                                >
+                                  Смотреть весь каталог
+                                  <ArrowRight size={12} />
+                                </Link>
+                              </NavigationMenuPrimitive.Link>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors relative ${
-                    isActive(item.href)
-                      ? "text-terracotta"
-                      : isSolid
-                        ? "text-espresso/70 hover:text-espresso"
-                        : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ),
-            )}
-          </nav>
+                      </NavigationMenuPrimitive.Content>
+                    </NavigationMenuPrimitive.Item>
+                  );
+                }
+
+                return (
+                  <NavigationMenuPrimitive.Item
+                    key={item.label}
+                    className="relative"
+                  >
+                    {trigger}
+                    <NavigationMenuPrimitive.Content
+                      className={`absolute left-0 top-full pt-2 z-50 ${dropdownMotion}`}
+                    >
+                      <ul className="bg-white border border-espresso/8 rounded-xl shadow-[0_12px_40px_rgba(22,21,19,0.12)] overflow-hidden min-w-[240px]">
+                        {item.links.map((link) => (
+                          <li
+                            key={link.href}
+                            className="border-b border-espresso/6 last:border-b-0"
+                          >
+                            <NavigationMenuPrimitive.Link
+                              asChild
+                              active={isActive(link.href)}
+                            >
+                              <Link
+                                href={link.href}
+                                className={`flex flex-col px-5 py-3.5 outline-none hover:bg-off-white focus-visible:bg-off-white transition-colors ${
+                                  isActive(link.href) ? "bg-sand/60" : ""
+                                }`}
+                              >
+                                <span
+                                  className={`text-[13px] font-medium leading-snug ${isActive(link.href) ? "text-terracotta" : "text-espresso"}`}
+                                >
+                                  {link.label}
+                                </span>
+                                <span className="text-[11px] text-taupe mt-0.5">
+                                  {link.desc}
+                                </span>
+                              </Link>
+                            </NavigationMenuPrimitive.Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </NavigationMenuPrimitive.Content>
+                  </NavigationMenuPrimitive.Item>
+                );
+              })}
+            </NavigationMenuPrimitive.List>
+          </NavigationMenuPrimitive.Root>
 
           {/* Right: CTA + Burger */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -572,10 +589,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-1">
-            {/* Catalog sub-links */}
-            <div className="label-caps text-taupe text-[11px] px-1 mb-2">
-              Каталог
-            </div>
+            {mobileHeading("Каталог")}
             {catalogNav.map((cat) => (
               <Link
                 key={cat.href}
@@ -585,102 +599,36 @@ export function Header({ variant = "solid" }: HeaderProps) {
               >
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-espresso/40" />
                 <div>
-                  <div className="text-espresso text-[15px]">{cat.label}</div>
+                  <div
+                    className={`text-[15px] ${isActive(cat.href) ? "text-terracotta" : "text-espresso"}`}
+                  >
+                    {cat.label}
+                  </div>
                   <div className="text-taupe text-[11px]">{cat.desc}</div>
                 </div>
               </Link>
             ))}
+            {mobileLink({
+              label: "Весь каталог",
+              href: "/catalog",
+              active: pathname === "/catalog",
+            })}
+            {mobileLink({
+              label: "В наличии",
+              href: IN_STOCK_HREF,
+              desc: `Готовые изделия, отправим за ${IN_STOCK_SHIP_DAYS}`,
+            })}
 
-            <div className="mt-4 label-caps text-taupe text-[11px] px-1 mb-2">
-              Навигация
-            </div>
-            {[
-              { label: "Весь каталог", href: "/catalog" },
-              { label: "В наличии", href: IN_STOCK_HREF },
-              { label: "Корзина", href: "/cart" },
-              { label: "Фотосессии", href: "/photoshoots" },
-              { label: "Мастер-классы", href: "/workshops" },
-              { label: "Блог", href: "/blog" },
-              { label: "Отзывы", href: "/reviews" },
-              { label: "Обо мне", href: "/about" },
-              { label: "Заказать", href: "/#order" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className={`py-3 px-1 border-b border-espresso/6 flex items-center justify-between group ${
-                  isActive(item.href) ? "text-terracotta" : "text-espresso/80"
-                }`}
-              >
-                <span className="font-serif text-[17px]">
-                  {item.label}
-                  {item.href === "/cart" && cartCount > 0 && (
-                    <span className="ml-2 font-sans text-sm text-taupe">
-                      {cartCount}
-                    </span>
-                  )}
-                </span>
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  aria-hidden="true"
-                  className="opacity-25 group-hover:opacity-60 transition-opacity"
-                >
-                  <path
-                    d="M3 7h8M8 4l3 3-3 3"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Link>
-            ))}
+            {mobileHeading("Услуги")}
+            {serviceLinks.map(mobileLink)}
 
-            <div className="mt-4 label-caps text-taupe text-[11px] px-1 mb-2">
-              Для бизнеса
-            </div>
-            {b2bLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className={`py-3 px-1 border-b border-espresso/6 flex items-center justify-between group ${
-                  isActive(link.href) ? "text-terracotta" : "text-espresso/80"
-                }`}
-              >
-                <div>
-                  <span className="font-serif text-[17px] block leading-snug">
-                    {link.label}
-                  </span>
-                  <span className="text-taupe text-[11px]">{link.desc}</span>
-                </div>
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  aria-hidden="true"
-                  className="opacity-25 group-hover:opacity-60 transition-opacity flex-shrink-0"
-                >
-                  <path
-                    d="M3 7h8M8 4l3 3-3 3"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Link>
-            ))}
+            {mobileHeading("Для бизнеса")}
+            {b2bLinks.map(mobileLink)}
 
-            {/* Account */}
-            <div className="mt-4 label-caps text-taupe text-[11px] px-1 mb-2">
-              Личный кабинет
-            </div>
+            {mobileHeading("О студии")}
+            {aboutLinks.map(mobileLink)}
+
+            {mobileHeading("Личный кабинет")}
             {session ? (
               <>
                 <div className="px-1 pb-2 text-taupe text-[12px] truncate">
