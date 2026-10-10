@@ -4,7 +4,7 @@ import { fetchPublishedProducts } from "./catalog/products-db";
 import { fetchPublishedReviews } from "./catalog/reviews-db";
 import { isPurchasable } from "./in-stock";
 import type { Product, Review } from "./ozon-types";
-import { categories } from "./products";
+import { categories, sectionRank } from "./products";
 
 export interface ProductsResult {
   products: Product[];
@@ -65,7 +65,10 @@ export async function getInStockProductsResult(): Promise<ProductsResult> {
 
 export async function getFeaturedProducts(): Promise<Product[]> {
   const products = await getProducts();
-  const featured = products.filter((p) => p.featured);
+  // Разделы по порядку (одежда первой), внутри раздела — порядок из админки
+  const featured = products
+    .filter((p) => p.featured)
+    .sort((a, b) => sectionRank(a) - sectionRank(b));
   if (featured.length > 0) return featured;
 
   const result: Product[] = [];

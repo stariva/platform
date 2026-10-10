@@ -16,7 +16,7 @@ export function OrganizationJsonLd() {
     name: "Stariva",
     alternateName: "Старива",
     description:
-      "Мастерская ручного макраме из Подмосковья. Абажуры, одежда и декор из натурального хлопка с 2018 года.",
+      "Мастерская ручного макраме из Подмосковья. Одежда, абажуры и декор из натурального хлопка с 2018 года.",
     url: BASE_URL,
     logo: {
       "@type": "ImageObject",
@@ -71,23 +71,23 @@ export function OrganizationJsonLd() {
       itemListElement: [
         {
           "@type": "OfferCatalog",
-          name: "Абажуры в технике макраме",
-          url: `${BASE_URL}/abazhury`,
-        },
-        {
-          "@type": "OfferCatalog",
-          name: "Декор интерьера в технике макраме",
-          url: `${BASE_URL}/catalog/interior`,
-        },
-        {
-          "@type": "OfferCatalog",
           name: "Одежда в технике макраме",
           url: `${BASE_URL}/catalog/clothes`,
         },
         {
           "@type": "OfferCatalog",
+          name: "Абажуры в технике макраме",
+          url: `${BASE_URL}/abazhury`,
+        },
+        {
+          "@type": "OfferCatalog",
           name: "Сумки в технике макраме",
           url: `${BASE_URL}/catalog/bags`,
+        },
+        {
+          "@type": "OfferCatalog",
+          name: "Декор интерьера в технике макраме",
+          url: `${BASE_URL}/catalog/interior`,
         },
       ],
     },
@@ -118,7 +118,7 @@ export function WebSiteJsonLd() {
     url: BASE_URL,
     name: "Stariva",
     description:
-      "Изделия ручного макраме из натурального хлопка — абажуры, одежда, декор",
+      "Изделия ручного макраме из натурального хлопка — одежда, абажуры, декор",
     inLanguage: "ru-RU",
     publisher: {
       "@id": `${BASE_URL}/#organization`,
@@ -486,7 +486,7 @@ export function PersonJsonLd() {
     alternateName: "Olga Karpycheva",
     jobTitle: "Мастер макраме",
     description:
-      "Мастер ручного макраме из Подмосковья. Создаёт абажуры, одежду и декор из натурального хлопка с 2018 года.",
+      "Мастер ручного макраме из Подмосковья. Создаёт одежду, абажуры и декор из натурального хлопка с 2018 года.",
     url: `${BASE_URL}/about`,
     image: `https://cdn.stariva.ru/site/images/about/founder-2026.jpg`,
     worksFor: {
