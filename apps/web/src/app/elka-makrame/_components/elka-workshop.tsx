@@ -10,14 +10,18 @@ import {
 import {
   BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
+  WORKSHOP_BUY_ID,
   WORKSHOP_INCLUDES,
   WORKSHOP_PREORDER_FALLBACK_PRICE,
   WORKSHOP_PROGRAM,
+  WORKSHOP_QUICK_BUY_ID,
   WORKSHOP_REGULAR_PRICE,
   WORKSHOP_RELEASE_LABEL,
+  WORKSHOP_SECTION_ID,
   WORKSHOP_TREE_SIZE,
 } from "../_data";
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
+import { WorkshopStickyCta } from "./workshop-sticky-cta";
 
 /**
  * Показывает программу и цену мастер-класса, а для предзаказа — подарок.
@@ -33,12 +37,77 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
 
   return (
     <section
-      id="workshop"
+      id={WORKSHOP_SECTION_ID}
       aria-labelledby="workshop-title"
       className="bg-sage-pale scroll-mt-24"
     >
-      <div className="max-w-[1440px] mx-auto px-5 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-        <div className="lg:sticky lg:top-28">
+      {workshop ? (
+        <WorkshopStickyCta
+          label={`${isPreorder ? "Предзаказ" : "Записаться"} за ${formatPrice(price)}`}
+        />
+      ) : null}
+      {/* На телефоне сначала оффер и цена, потом фото: из рекламы приходят
+          сразу на #workshop, и первый экран не должен быть одной картинкой.
+          На десктопе фото слева на всю высоту, текст справа. */}
+      <div className="max-w-[1440px] mx-auto px-5 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-2 gap-10 lg:gap-x-16 lg:gap-y-0 items-start">
+        <div className="lg:col-start-2">
+          {isPreorder && (
+            <p className="inline-flex items-center gap-3 rounded-2xl bg-terracotta text-parchment py-2 pl-2 pr-5 mb-6 shadow-lg shadow-terracotta/25">
+              <span className="rounded-xl bg-parchment px-3 py-2 text-xl font-semibold leading-none tabular-nums text-terracotta">
+                −{discount}%
+              </span>
+              <Gift className="hidden size-5 shrink-0 sm:block" aria-hidden />
+              {/* Переносим по «·», а не посреди «мастер-класс». На узких
+                  экранах (320px) допускаем перенос и после «Предзаказ». */}
+              <span className="flex flex-wrap gap-x-1.5 text-base font-medium lg:text-lg">
+                <span>
+                  Предзаказ{" "}
+                  <span className="whitespace-nowrap">до {releaseLabel} ·</span>
+                </span>
+                <span>второй мастер&#8209;класс в подарок</span>
+              </span>
+            </p>
+          )}
+          <h2
+            id="workshop-title"
+            className="font-serif text-espresso leading-tight text-balance mb-5"
+            style={{ fontSize: "clamp(30px, 4vw, 48px)" }}
+          >
+            Сплетите макраме-ёлку своими руками
+          </h2>
+          <p className="text-dark-grey leading-relaxed lg:mb-8">
+            Онлайн-мастер-класс от мастерской Stariva: от выбора шнура до
+            готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите предзаказ
+            сейчас — зафиксируете цену со скидкой и получите уроки первыми, с
+            запасом времени до праздника.
+          </p>
+
+          {workshop ? (
+            <div
+              id={WORKSHOP_QUICK_BUY_ID}
+              className="mt-6 flex items-center gap-4 lg:hidden"
+            >
+              <div className="shrink-0">
+                <span className="block font-serif text-3xl leading-none text-espresso">
+                  {formatPrice(price)}
+                </span>
+                {isPreorder && (
+                  <s className="text-sm text-text-grey">
+                    {formatPrice(WORKSHOP_REGULAR_PRICE)}
+                  </s>
+                )}
+              </div>
+              <a
+                href={`#${WORKSHOP_BUY_ID}`}
+                className="flex flex-1 items-center justify-center rounded-2xl bg-terracotta py-4 text-center text-parchment transition-colors hover:bg-terracotta-dark"
+              >
+                {isPreorder ? "Оформить предзаказ" : "Записаться"}
+              </a>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-28">
           <div className="relative aspect-[4/5] rounded-[28px] overflow-hidden bg-linen mb-6">
             <Image
               src="/images/elka/elka-green-festive.jpg"
@@ -64,38 +133,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
           </ul>
         </div>
 
-        <div>
-          {isPreorder && (
-            <p className="inline-flex items-center gap-3 rounded-2xl bg-terracotta text-parchment py-2 pl-2 pr-5 mb-6 shadow-lg shadow-terracotta/25">
-              <span className="rounded-xl bg-parchment px-3 py-2 text-xl font-semibold leading-none tabular-nums text-terracotta">
-                −{discount}%
-              </span>
-              <Gift className="hidden size-5 shrink-0 sm:block" aria-hidden />
-              {/* Переносим по «·», а не посреди «мастер-класс». На узких
-                  экранах (320px) допускаем перенос и после «Предзаказ». */}
-              <span className="flex flex-wrap gap-x-1.5 text-base font-medium lg:text-lg">
-                <span>
-                  Предзаказ{" "}
-                  <span className="whitespace-nowrap">до {releaseLabel} ·</span>
-                </span>
-                <span>второй мастер&#8209;класс в подарок</span>
-              </span>
-            </p>
-          )}
-          <h2
-            id="workshop-title"
-            className="font-serif text-espresso leading-tight text-balance mb-5"
-            style={{ fontSize: "clamp(30px, 4vw, 48px)" }}
-          >
-            Сплетите макраме-ёлку своими руками
-          </h2>
-          <p className="text-dark-grey leading-relaxed mb-8">
-            Онлайн-мастер-класс от мастерской Stariva: от выбора шнура до
-            готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите предзаказ
-            сейчас — зафиксируете цену со скидкой и получите уроки первыми, с
-            запасом времени до праздника.
-          </p>
-
+        <div className="lg:col-start-2">
           {isPreorder && (
             <div className="mb-10 flex gap-4 rounded-[24px] border border-terracotta/30 bg-white p-6">
               <Gift
@@ -138,7 +176,10 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
             </Link>
           </p>
 
-          <div className="rounded-[24px] bg-white p-6 lg:p-8">
+          <div
+            id={WORKSHOP_BUY_ID}
+            className="rounded-[24px] bg-white p-6 lg:p-8 scroll-mt-24"
+          >
             <div className="flex items-baseline gap-3 mb-1">
               <span className="font-serif text-4xl text-espresso">
                 {formatPrice(price)}

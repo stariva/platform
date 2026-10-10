@@ -3,6 +3,12 @@ import { CONTACTS } from "@/lib/contacts";
 export const LANDING_PATH = "/elka-makrame";
 
 export const WORKSHOP_SLUG = "elka-makrame";
+/** Якорь блока мастер-класса — на него ведёт реклама. */
+export const WORKSHOP_SECTION_ID = "workshop";
+/** Якорь карточки с формой оплаты — на неё ведут кнопки на телефоне. */
+export const WORKSHOP_BUY_ID = "workshop-buy";
+/** Цена и кнопка под заголовком блока — только на телефоне. */
+export const WORKSHOP_QUICK_BUY_ID = "workshop-quick-buy";
 /** Цена мастер-класса после выхода. Предзаказная цена берётся из базы. */
 export const WORKSHOP_REGULAR_PRICE = 990;
 /** Показываем, пока мастер-класс не опубликован в базе. */
