@@ -10,7 +10,7 @@ export function ProductThumb({ src }: { src: string | null }) {
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
   if (!src) {
-    return <div className="bg-muted size-10 rounded" />;
+    return <div className="bg-muted size-20 rounded-md" />;
   }
 
   const show = (el: HTMLElement) => {
@@ -36,7 +36,7 @@ export function ProductThumb({ src }: { src: string | null }) {
       <img
         src={src}
         alt=""
-        className="size-10 rounded object-cover"
+        className="size-20 rounded-md object-cover"
         loading="lazy"
       />
       {pos && (

@@ -250,7 +250,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-14" />
+              <TableHead className="w-24" />
               <TableHead>Название</TableHead>
               <TableHead>Категория</TableHead>
               <TableHead className="text-right">Цена</TableHead>
