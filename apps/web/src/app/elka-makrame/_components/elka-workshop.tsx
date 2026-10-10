@@ -1,5 +1,6 @@
 import { Check, Gift } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import {
   formatPrice,
@@ -111,7 +112,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
           <h3 className="font-serif text-xl text-espresso mb-4">
             Чему научитесь
           </h3>
-          <ol className="flex flex-col gap-3 mb-10">
+          <ol className="flex flex-col gap-3 mb-6">
             {WORKSHOP_PROGRAM.map((step, index) => (
               <li key={step} className="flex gap-4 items-start">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white font-serif text-espresso">
@@ -121,6 +122,15 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               </li>
             ))}
           </ol>
+          <p className="mb-10 text-sm text-dark-grey">
+            Какой шнур взять и на чём спотыкаются новички —{" "}
+            <Link
+              href="/blog/elka-iz-makrame-svoimi-rukami"
+              className="underline underline-offset-4 hover:text-terracotta"
+            >
+              читайте в блоге
+            </Link>
+          </p>
 
           <div className="rounded-[24px] bg-white p-6 lg:p-8">
             <div className="flex items-baseline gap-3 mb-1">

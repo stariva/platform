@@ -1,5 +1,11 @@
 import { Link, Section, Text } from "@react-email/components";
-import { StarivaLayout } from "./stariva-layout";
+import {
+  colors,
+  fonts,
+  labelCaps,
+  linkStyle,
+  StarivaLayout,
+} from "./stariva-layout";
 
 /**
  * booked — сразу после оплаты; week, day, release — за неделю, за день и в
@@ -23,8 +29,9 @@ export interface StarivaWorkshopEmailProps {
   bonus?: { title: string; releaseLabel: string };
 }
 
-const muted = { color: "#6f6253", fontSize: 14, lineHeight: "1.6" };
-const linkStyle = { color: "#b85c38" };
+const muted = { color: colors.darkGrey, fontSize: 14, lineHeight: "23px" };
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function copy({
   kind,
@@ -107,30 +114,60 @@ export default function StarivaWorkshopEmail(
       footnote="Кнопка в письме открывает ваш кабинет без пароля, поэтому не пересылайте это письмо другим людям."
     >
       {props.bonus && (
-        <Text
+        <Section
           style={{
-            margin: "28px 0 0",
-            padding: "14px 16px",
+            marginTop: 36,
+            padding: "20px 22px",
             borderRadius: 12,
-            background: "#f7f3ec",
-            fontSize: 14,
-            lineHeight: "1.6",
-            color: "#2c241b",
+            background: colors.offWhite,
+            border: `1px solid ${colors.lightGrey}`,
           }}
         >
-          {props.kind === "booked"
-            ? `🎁 Подарок за предзаказ: ${props.bonus.title}. Он появится в вашем кабинете ${props.bonus.releaseLabel} — доплачивать ничего не нужно.`
-            : `🎁 И не забудьте о подарке за предзаказ: ${props.bonus.releaseLabel} в вашем кабинете бесплатно откроется ${props.bonus.title}.`}
-        </Text>
+          <Text style={{ ...labelCaps, margin: "0 0 8px" }}>
+            🎁{" "}
+            {props.kind === "booked"
+              ? "Подарок за предзаказ"
+              : "Не забудьте о подарке"}
+          </Text>
+          <Text
+            style={{
+              margin: 0,
+              fontSize: 14,
+              lineHeight: "23px",
+              color: colors.nearBlack,
+            }}
+          >
+            {props.kind === "booked"
+              ? `${capitalize(props.bonus.title)}. Он появится в вашем кабинете ${props.bonus.releaseLabel} — доплачивать ничего не нужно.`
+              : `${capitalize(props.bonus.releaseLabel)} в вашем кабинете бесплатно откроется ${props.bonus.title}.`}
+          </Text>
+        </Section>
       )}
       {showMaterials && (
-        <Section style={{ marginTop: 28 }}>
-          <Text style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 600 }}>
+        <Section style={{ marginTop: 32 }}>
+          <Text
+            style={{
+              margin: "0 0 12px",
+              fontFamily: fonts.serif,
+              fontSize: 22,
+              lineHeight: "28px",
+              fontWeight: 500,
+              color: colors.nearBlack,
+            }}
+          >
             Что понадобится
           </Text>
           {props.materials.map((item) => (
-            <Text key={item} style={{ ...muted, margin: "0 0 4px" }}>
-              • {item}
+            <Text
+              key={item}
+              style={{
+                ...muted,
+                margin: 0,
+                padding: "10px 0",
+                borderTop: `1px solid ${colors.lightGrey}`,
+              }}
+            >
+              {item}
             </Text>
           ))}
         </Section>

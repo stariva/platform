@@ -43,7 +43,7 @@ export const TREE_MODELS: TreeModel[] = [
   {
     slug: "elka-panno-makrame-0687",
     href: "/catalog/interior/elka-panno-makrame-0687",
-    name: "Ёлка-панно в технике макраме, бежевая",
+    name: "Ёлка в технике макраме, бежевая",
     color: "Бежевый, натуральный, молочный",
     size: "70–75 × 150 см",
     fallbackPrice: 4500,
@@ -59,7 +59,7 @@ export const TREE_MODELS: TreeModel[] = [
   {
     slug: "elka-panno-makrame-8124",
     href: "/catalog/interior/elka-panno-makrame-8124",
-    name: "Ёлка-панно в технике макраме, хаки",
+    name: "Ёлка в технике макраме, хаки",
     color: "Хаки",
     size: "45 × 100 см",
     fallbackPrice: 3700,
