@@ -149,9 +149,8 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
             </div>
             {isPreorder && (
               <p className="text-sm text-text-grey mb-6">
-                Цена предзаказа — до старта {releaseLabel}. Потом —{" "}
-                {formatPrice(WORKSHOP_REGULAR_PRICE)}, а мастер-класс по большой
-                ёлке уже не будет в подарке.
+                Сейчас — два мастер-класса по цене предзаказа. С {releaseLabel}{" "}
+                — один, за {formatPrice(WORKSHOP_REGULAR_PRICE)}.
               </p>
             )}
 
