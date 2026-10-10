@@ -1,5 +1,5 @@
 # Build context is the monorepo root: docker build -f apps/app/Dockerfile .
-FROM oven/bun:1.4.2-alpine AS base
+FROM oven/bun:1.4.3-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 # 1. Prune the monorepo down to what @stariva/app actually needs

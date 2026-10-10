@@ -49,7 +49,7 @@
       "devDependencies": {
         "@stariva/tailwind-config": "workspace:*",
         "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
         "tailwindcss": "4.3.3",
@@ -65,7 +65,7 @@
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "typescript": "7.0.2",
       },
     },
@@ -143,7 +143,7 @@
         "@stariva/tailwind-config": "workspace:*",
         "@stariva/tsconfig": "workspace:*",
         "@types/bun": "1.4.2",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
         "@types/yandex-maps": "^2.1.36",
@@ -168,7 +168,7 @@
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "typescript": "7.0.2",
       },
     },
@@ -183,7 +183,7 @@
       "devDependencies": {
         "@better-auth/cli": "1.4.21",
         "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "typescript": "7.0.2",
       },
     },
@@ -196,7 +196,7 @@
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "tsdown": "0.23.0",
         "typescript": "7.0.2",
       },
@@ -215,7 +215,7 @@
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
         "@types/bun": "1.4.2",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "@types/pg": "^8.23.1",
         "@types/ws": "^8.18.2",
         "drizzle-kit": "^0.31.11",
@@ -244,7 +244,7 @@
         "@react-email/preview-server": "5.2.10",
         "@stariva/tsconfig": "workspace:*",
         "@types/bun": "1.4.2",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "@types/nodemailer": "^8.0.2",
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
@@ -262,7 +262,7 @@
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "tsdown": "0.23.0",
         "typescript": "7.0.2",
       },
@@ -314,7 +314,7 @@
       },
       "devDependencies": {
         "@stariva/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "typescript": "7.0.2",
       },
     },
@@ -1163,7 +1163,7 @@
 
     "@types/d3-timer": ["@types/d3-timer@3.0.2", "", {}, "sha512-Ps3T8E8dZDam6fUyNiMkekK3XUsaUEik+idO9/YjPtfj2qruF8tFBXS7XhtE4iIXBLxhmLjP3SXpLhVf21I9Lw=="],
 
-    "@types/node": ["@types/node@26.6.4", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-ldVPDCzj7fsaGZrLB0NuHuTvJcsNasysBAqMolr/cgxrLd1xbqxIr3XJiPnHHJUCxj5sNF1vnRj9aWnrVh5Jcg=="],
+    "@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
 
     "@types/nodemailer": ["@types/nodemailer@8.0.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA=="],
 
