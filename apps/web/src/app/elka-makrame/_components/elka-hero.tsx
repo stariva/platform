@@ -4,7 +4,7 @@ import { NewYearCountdown } from "./new-year-countdown";
 import { TrackedLink } from "./tracked-link";
 
 const facts = [
-  { value: "2–4 дня", label: "плетём под заказ" },
+  { value: "2–3 дня", label: "плетём под заказ" },
   { value: "100%", label: "хлопковый шнур" },
   { value: "по РФ", label: "доставка" },
 ];
@@ -68,8 +68,8 @@ export function ElkaHero() {
 
         <div className="relative aspect-[4/5] rounded-[28px] overflow-hidden bg-linen">
           <Image
-            src="/images/elka/hero.png"
-            alt="Ёлка-панно в технике макраме с гирляндой над деревянным комодом в скандинавской гостиной"
+            src="/images/elka/elka-cream-interior.jpg"
+            alt="Молочная ёлка-панно в технике макраме со звездой на тёмно-бирюзовой стене над деревянным комодом"
             fill
             priority
             sizes="(min-width: 1024px) 45vw, 100vw"

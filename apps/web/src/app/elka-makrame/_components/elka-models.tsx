@@ -63,7 +63,7 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
                   />
                   <div className="absolute top-4 left-4 flex gap-2">
                     <span className="rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs text-espresso">
-                      {ready ? "В наличии" : "Под заказ 2–4 дня"}
+                      {ready ? "В наличии" : "Под заказ 2–3 дня"}
                     </span>
                     {discount ? (
                       <span className="rounded-full bg-terracotta px-3 py-1.5 text-xs text-parchment">
