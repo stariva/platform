@@ -5,6 +5,7 @@ import {
   ATTRIBUTION_MAX_AGE,
   addTouch,
   parseAttribution,
+  serializeAttribution,
   touchFromUrl,
 } from "@/lib/campaign-attribution";
 
@@ -56,7 +57,9 @@ function rememberCampaign(request: NextRequest, response: NextResponse) {
     parseAttribution(request.cookies.get(ATTRIBUTION_COOKIE)?.value),
     touch,
   );
-  response.cookies.set(ATTRIBUTION_COOKIE, JSON.stringify(attribution), {
+  const value = serializeAttribution(attribution);
+  if (!value) return response;
+  response.cookies.set(ATTRIBUTION_COOKIE, value, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

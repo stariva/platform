@@ -19,7 +19,11 @@ export const UTM_KEYS = [
   "utm_term",
 ] as const;
 
-const utm = z.string().max(120).optional();
+const utm = z
+  .string()
+  .max(120)
+  .refine((value) => !/\p{Cc}/u.test(value))
+  .optional();
 const touchSchema = z.object({
   utm_source: utm,
   utm_medium: utm,
@@ -50,7 +54,11 @@ export function touchFromUrl(
   };
   let tagged = false;
   for (const key of UTM_KEYS) {
-    const value = url.searchParams.get(key)?.trim().slice(0, 120);
+    const value = url.searchParams
+      .get(key)
+      ?.replace(/\p{Cc}/gu, "")
+      .trim()
+      .slice(0, 120);
     if (value) {
       touch[key] = value;
       tagged = true;
@@ -72,6 +80,44 @@ export function addTouch(
   touch: CampaignTouch,
 ): CampaignAttribution {
   return { first: current?.first ?? touch, last: touch };
+}
+
+/** Next percent-encodes values as ASCII, so encoded length equals byte size. */
+export function serializeAttribution(
+  attribution: CampaignAttribution,
+): string | null {
+  const fits = (value: string) =>
+    ATTRIBUTION_COOKIE.length + 1 + encodeURIComponent(value).length <= 4096;
+  const original = JSON.stringify(attribution);
+  if (fits(original)) return original;
+
+  // Find the largest common field limit that fits; keep both touch timestamps.
+  const shorten = (touch: CampaignTouch, limit: number): CampaignTouch => {
+    const result = { ...touch };
+    for (const key of [...UTM_KEYS, "landing", "referrer"] as const) {
+      const value = result[key];
+      if (value !== undefined)
+        result[key] = Array.from(value).slice(0, limit).join("");
+    }
+    return result;
+  };
+  let low = 0;
+  let high = 200;
+  let value: string | null = null;
+  while (low <= high) {
+    const limit = Math.floor((low + high) / 2);
+    const candidate = JSON.stringify({
+      first: shorten(attribution.first, limit),
+      last: shorten(attribution.last, limit),
+    });
+    if (fits(candidate)) {
+      value = candidate;
+      low = limit + 1;
+    } else {
+      high = limit - 1;
+    }
+  }
+  return value;
 }
 
 /** Значение cookie уже декодировано; всё, что не по схеме, отбрасываем. */

@@ -6,10 +6,68 @@ import {
   attributionFromRequest,
   formatTouch,
   parseAttribution,
+  serializeAttribution,
   touchFromUrl,
+  UTM_KEYS,
 } from "./campaign-attribution";
 
 const at = new Date("2026-10-10T12:00:00.000Z");
+
+test("UTM control characters are stripped before trimming and truncation", () => {
+  const controls = Array.from({ length: 160 }, (_, i) =>
+    i < 32 || i >= 127 ? String.fromCharCode(i) : "",
+  ).join("");
+  const url = new URL("https://stariva.ru/");
+  for (const key of UTM_KEYS) {
+    url.searchParams.set(
+      key,
+      `${controls} Директ${controls}${"я".repeat(120)} `,
+    );
+  }
+  const touch = touchFromUrl(url, null, at);
+  assert.ok(touch);
+  for (const key of UTM_KEYS) {
+    assert.equal(touch[key], `Директ${"я".repeat(114)}`);
+    url.searchParams.set(key, controls);
+  }
+  assert.equal(touchFromUrl(url, null, at), null);
+});
+
+test("cookie parsing rejects every UTM control character in either touch", () => {
+  const touch = { utm_source: "vk", landing: "/", at: at.toISOString() };
+  for (let code = 0; code <= 159; code++) {
+    if (code >= 32 && code < 127) continue;
+    for (const key of UTM_KEYS) {
+      for (const position of ["first", "last"] as const) {
+        const attribution = addTouch(null, touch);
+        attribution[position] = {
+          ...touch,
+          [key]: `tag${String.fromCharCode(code)}`,
+        };
+        assert.equal(parseAttribution(JSON.stringify(attribution)), null);
+      }
+    }
+  }
+});
+
+test("serialization preserves small cookies and does not mutate large touches", () => {
+  const touch = { utm_source: "vk", landing: "/", at: at.toISOString() };
+  const small = addTouch(null, touch);
+  assert.equal(serializeAttribution(small), JSON.stringify(small));
+  const large = addTouch(null, {
+    ...touch,
+    ...Object.fromEntries(UTM_KEYS.map((key) => [key, "😀".repeat(60)])),
+  });
+  const before = structuredClone(large);
+  const value = serializeAttribution(large);
+  assert.ok(value);
+  assert.ok(parseAttribution(value));
+  assert.deepEqual(large, before);
+  assert.ok(
+    Buffer.byteLength(`${ATTRIBUTION_COOKIE}=${encodeURIComponent(value)}`) <=
+      4096,
+  );
+});
 
 test("touch keeps only bounded UTM tags, landing path and referrer host", () => {
   assert.deepEqual(
