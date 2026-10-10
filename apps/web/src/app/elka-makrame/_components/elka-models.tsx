@@ -29,7 +29,7 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
             className="font-serif text-espresso leading-tight text-balance mb-4"
             style={{ fontSize: "clamp(30px, 4vw, 48px)" }}
           >
-            Выберите свою ёлку-панно
+            Выберите ёлку для своей стены
           </h2>
           <p className="text-dark-grey leading-relaxed">
             Каждая ёлка плетётся вручную из мягкого хлопкового шнура на
