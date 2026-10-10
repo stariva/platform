@@ -40,6 +40,7 @@ type StatusFilter = "all" | AdminProduct["status"];
 type StockFilter = "all" | "inStock" | "outOfStock";
 type OrderFilter = "all" | "madeToOrder" | "ready";
 type CategoryFilter = "all" | ProductCategoryId;
+type FeaturedFilter = "all" | "featured" | "notFeatured";
 
 interface Option<T extends string> {
   id: T;
@@ -83,6 +84,12 @@ const CATEGORY_OPTIONS: Option<CategoryFilter>[] = [
   })),
 ];
 
+const FEATURED_OPTIONS: Option<FeaturedFilter>[] = [
+  { id: "all", label: "Все", match: () => true },
+  { id: "featured", label: "На главной", match: (p) => p.featured },
+  { id: "notFeatured", label: "Не на главной", match: (p) => !p.featured },
+];
+
 /** Ряд кнопок-фильтров; в скобках — сколько товаров дадут при текущих остальных фильтрах. */
 function FilterRow<T extends string>({
   label,
@@ -118,13 +125,14 @@ function FilterRow<T extends string>({
   );
 }
 
-/** Таблица товаров с поиском и фильтрами по статусу, наличию, «под заказ» и категории. */
+/** Таблица товаров с поиском и фильтрами по статусу, наличию, «под заказ», категории и показу на главной. */
 export function ProductsTable({ products }: { products: AdminProduct[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [stock, setStock] = useState<StockFilter>("all");
   const [order, setOrder] = useState<OrderFilter>("all");
   const [category, setCategory] = useState<CategoryFilter>("all");
+  const [featured, setFeatured] = useState<FeaturedFilter>("all");
 
   const needle = query.trim().toLowerCase();
   const matchesQuery = (p: AdminProduct) =>
@@ -138,30 +146,35 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
     stock: STOCK_OPTIONS.find((o) => o.id === stock),
     order: ORDER_OPTIONS.find((o) => o.id === order),
     category: CATEGORY_OPTIONS.find((o) => o.id === category),
+    featured: FEATURED_OPTIONS.find((o) => o.id === featured),
   };
 
+  type FilterKey = keyof typeof selected;
+
   /** Фильтры, кроме одного: так счётчик на кнопке показывает, что получится после клика. */
-  const matchesExcept = (
-    p: AdminProduct,
-    skip?: "status" | "stock" | "order" | "category",
-  ) =>
+  const matchesExcept = (p: AdminProduct, skip?: FilterKey) =>
     matchesQuery(p) &&
     (skip === "status" || (selected.status?.match(p) ?? true)) &&
     (skip === "stock" || (selected.stock?.match(p) ?? true)) &&
     (skip === "order" || (selected.order?.match(p) ?? true)) &&
-    (skip === "category" || (selected.category?.match(p) ?? true));
+    (skip === "category" || (selected.category?.match(p) ?? true)) &&
+    (skip === "featured" || (selected.featured?.match(p) ?? true));
 
-  function countsFor<T extends string>(
-    options: Option<T>[],
-    skip: "status" | "stock" | "order" | "category",
-  ) {
+  function countsFor<T extends string>(options: Option<T>[], skip: FilterKey) {
     const base = products.filter((p) => matchesExcept(p, skip));
     return Object.fromEntries(
       options.map((o) => [o.id, base.filter(o.match).length]),
     ) as Record<T, number>;
   }
 
-  const filtersKey = JSON.stringify([query, status, stock, order, category]);
+  const filtersKey = JSON.stringify([
+    query,
+    status,
+    stock,
+    order,
+    category,
+    featured,
+  ]);
   const [visibleRows, setVisibleRows] = useState(() => ({
     filtersKey,
     ids: products.map((p) => p.id),
@@ -185,7 +198,8 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
     status !== "all" ||
     stock !== "all" ||
     order !== "all" ||
-    category !== "all";
+    category !== "all" ||
+    featured !== "all";
 
   function reset() {
     setQuery("");
@@ -193,6 +207,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
     setStock("all");
     setOrder("all");
     setCategory("all");
+    setFeatured("all");
   }
 
   return (
@@ -233,6 +248,13 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
           value={category}
           onChange={setCategory}
           counts={countsFor(CATEGORY_OPTIONS, "category")}
+        />
+        <FilterRow
+          label="Главная"
+          options={FEATURED_OPTIONS}
+          value={featured}
+          onChange={setFeatured}
+          counts={countsFor(FEATURED_OPTIONS, "featured")}
         />
         <div className="text-muted-foreground flex items-center gap-3 text-sm">
           <span>
