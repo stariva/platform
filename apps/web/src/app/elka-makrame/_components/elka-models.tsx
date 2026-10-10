@@ -33,7 +33,7 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
           </h2>
           <p className="text-dark-grey leading-relaxed">
             Каждая ёлка плетётся вручную из мягкого хлопкового шнура на
-            деревянной основе. Любую модель сделаем в вашем цвете.
+            деревянной основе.
           </p>
         </div>
 
