@@ -7,6 +7,11 @@ interface OrderHandlerDependencies {
   dispatchRequest: (id: string) => Promise<void>;
   after: (callback: () => Promise<void>) => void;
 }
+/**
+ * Создаёт обработчик формы с внедрёнными сохранением и доставкой уведомлений.
+ * Проверяет поля и фото, берёт атрибуцию из cookie и подтверждает сохранение
+ * заявки, откладывая отправку уведомления через after.
+ */
 export function createOrderHandler({
   notificationConfigured,
   saveRequest,

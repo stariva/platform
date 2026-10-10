@@ -29,6 +29,10 @@ const bodySchema = z.object({
   personalDataConsent: z.boolean().optional(),
 });
 
+/**
+ * Оформляет доступ к мастер-классу: бесплатный выдаёт сразу, для платного
+ * создаёт заказ с атрибуцией из cookie и возвращает ссылку на оплату.
+ */
 export async function POST(request: NextRequest) {
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);

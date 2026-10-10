@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { reachGoal, trackPageView } from "@/lib/analytics";
 import { COOKIE_CONSENT_EVENT } from "@/lib/cookie-consent";
 
+/** Отправляет просмотры при навигации и выборе согласия, отслеживает клики по целевым ссылкам. */
 export function Metrika() {
   const pathname = usePathname();
   const searchParams = useSearchParams();

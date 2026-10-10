@@ -13,6 +13,11 @@ export function notificationConfigured() {
       (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_TO && env.ORDER_EMAIL_FROM),
   );
 }
+/**
+ * Сохраняет заявку, фото и текст уведомления с источником и возвращает ID.
+ * Повтор с тем же ID допустим только при совпадении данных и фото;
+ * иначе выбрасывает ошибку request_conflict.
+ */
 export async function saveRequest(data: OrderRequest, photo: File | null) {
   const id = data.requestId ?? randomUUID();
   const photoBase64 = photo

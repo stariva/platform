@@ -76,6 +76,7 @@ const defaultTip = {
   mention: "что за изделие, размер, цвет и для какого места",
 };
 
+/** Форма индивидуальной заявки с фото, проверкой полей и подтверждением сохранения. */
 export function CustomOrderForm() {
   const id = useId();
   const fileInput = useRef<HTMLInputElement>(null);

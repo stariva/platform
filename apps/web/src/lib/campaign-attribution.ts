@@ -66,6 +66,7 @@ export function touchFromUrl(
   return touch;
 }
 
+/** Сохраняет первый заход и заменяет последний; без истории оба равны новому. */
 export function addTouch(
   current: CampaignAttribution | null,
   touch: CampaignTouch,

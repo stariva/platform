@@ -47,6 +47,10 @@ function siteUrl(request: NextRequest): string {
   ).replace(/\/$/, "");
 }
 
+/**
+ * Проверяет товары и доставку, сохраняет заказ с атрибуцией из cookie
+ * и возвращает ссылку на оплату и данные для аналитики.
+ */
 export async function POST(request: NextRequest) {
   if (!isYooKassaConfigured() || !isOzonDeliveryConfigured()) {
     return NextResponse.json(

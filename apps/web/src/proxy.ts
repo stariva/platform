@@ -8,6 +8,7 @@ import {
   touchFromUrl,
 } from "@/lib/campaign-attribution";
 
+/** Применяет защиту маршрутов и добавляет cookie UTM-атрибуции к ответу. */
 export function proxy(request: NextRequest) {
   return rememberCampaign(request, guard(request));
 }
