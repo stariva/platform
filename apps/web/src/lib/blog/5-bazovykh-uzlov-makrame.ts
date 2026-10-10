@@ -70,7 +70,7 @@ export const bazovyeUzlyMakrame: BlogPost = {
     },
     {
       type: "cta",
-      text: "Ёлка из макраме своими руками: материалы, узлы и частые ошибки новичков",
+      text: "Ёлка макраме своими руками: материалы, узлы и частые ошибки новичков",
       href: "/blog/elka-iz-makrame-svoimi-rukami",
       label: "Читать про ёлку",
     },
