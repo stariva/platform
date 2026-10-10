@@ -23,11 +23,16 @@ export function ElkaHero() {
             className="font-serif text-espresso leading-[1.08] text-balance mb-6"
             style={{ fontSize: "clamp(36px, 5.4vw, 68px)" }}
           >
-            Макраме-ёлка на стену — новогодний декор ручной работы
+            Ёлка из макраме,
+            <br />
+            <em className="not-italic text-taupe">
+              которая не осыпается
+            </em>
           </h1>
 
           <p className="text-lg text-dark-grey leading-relaxed max-w-xl mb-8 text-pretty">
-            Не осыпается, не занимает места и служит годами. Подходит для
+            Сплетена вручную из хлопкового шнура, висит на стене, не занимает
+            места и радует из года в год. Подходит для
             квартиры и детской, лобби отеля, ресторана, салона и офиса. Закажите
             готовую ёлку или сплетите её сами на мастер-классе.
           </p>
