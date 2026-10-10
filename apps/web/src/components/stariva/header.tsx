@@ -524,33 +524,38 @@ export function Header({ variant = "solid" }: HeaderProps) {
             </Button>
 
             {/* Burger */}
-            <Button
-              variant="outline"
-              size="icon"
+            <button
+              type="button"
               aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
               onClick={() => setMenuOpen((v) => !v)}
-              className={`xl:hidden w-9 h-9 rounded-full transition-colors ${
+              className={`xl:hidden inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-terracotta/40 ${
                 isSolid
-                  ? "border-espresso/15 text-espresso"
-                  : "border-white/30 text-white bg-transparent hover:bg-white/10"
+                  ? "bg-espresso/8 text-espresso hover:bg-espresso/14"
+                  : "bg-white/15 border border-white/40 text-white hover:bg-white hover:text-espresso"
               }`}
             >
-              <span
-                className={`block h-px w-[18px] bg-current transition-all duration-300 ${menuOpen ? "translate-y-[7px] rotate-45" : ""}`}
-              />
-              <span
-                className={`block h-px w-[18px] bg-current transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`}
-              />
-              <span
-                className={`block h-px w-[18px] bg-current transition-all duration-300 ${menuOpen ? "-translate-y-[7px] -rotate-45" : ""}`}
-              />
-            </Button>
+              {/* Три линии друг под другом, при открытии складываются в крестик */}
+              <span className="relative block w-4 h-3" aria-hidden="true">
+                <span
+                  className={`absolute left-0 top-1/2 -mt-[0.75px] h-[1.5px] w-full rounded-full bg-current transition-transform duration-300 ${menuOpen ? "rotate-45" : "-translate-y-[5px]"}`}
+                />
+                <span
+                  className={`absolute left-0 top-1/2 -mt-[0.75px] h-[1.5px] w-full rounded-full bg-current transition-opacity duration-200 ${menuOpen ? "opacity-0" : ""}`}
+                />
+                <span
+                  className={`absolute left-0 top-1/2 -mt-[0.75px] h-[1.5px] w-full rounded-full bg-current transition-transform duration-300 ${menuOpen ? "-rotate-45" : "translate-y-[5px]"}`}
+                />
+              </span>
+            </button>
           </div>
         </div>
       </header>
 
       {/* Mobile drawer */}
       <div
+        id="mobile-menu"
         className={`fixed inset-0 z-50 xl:hidden transition-all duration-300 ${menuOpen ? "visible" : "invisible"}`}
       >
         {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay closes menu on click, keyboard handled by Escape key on parent */}
