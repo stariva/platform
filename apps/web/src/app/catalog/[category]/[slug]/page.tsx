@@ -15,6 +15,7 @@ import {
   productMetaDescription,
   productMetaTitle,
 } from "@/lib/catalog/product-seo";
+import { madeToOrderLeadTime } from "@/lib/made-to-order";
 import {
   getProductBySlug,
   getProductsByCategory,
@@ -28,9 +29,11 @@ import { ProductDetails } from "./product-details";
 // ─── FAQ per category (mirrors product-details.tsx) ──────────────────────────
 type FaqJsonLdEntry = { question: string; answer: string }[];
 
-const categoryFaqJsonLd: Record<string, FaqJsonLdEntry> & {
+const categoryFaqJsonLd = (
+  leadTime: string,
+): Record<string, FaqJsonLdEntry> & {
   interior: FaqJsonLdEntry;
-} = {
+} => ({
   interior: [
     {
       question: "Из чего сделан абажур?",
@@ -49,8 +52,7 @@ const categoryFaqJsonLd: Record<string, FaqJsonLdEntry> & {
     },
     {
       question: "Как долго ждать заказ?",
-      answer:
-        "Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ — 2–4 дня. Доставка по России через Ozon.",
+      answer: `Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ — ${leadTime}. Доставка по России через Ozon.`,
     },
   ],
   clothes: [
@@ -66,13 +68,11 @@ const categoryFaqJsonLd: Record<string, FaqJsonLdEntry> & {
     },
     {
       question: "Можно ли выбрать другой цвет?",
-      answer:
-        "Да. Любую модель сплетём в другом цвете шнура, точный оттенок согласуем перед плетением. Изготовление занимает 2–4 дня.",
+      answer: `Да. Любую модель сплетём в другом цвете шнура, точный оттенок согласуем перед плетением. Изготовление занимает ${leadTime}.`,
     },
     {
       question: "Как долго ждать заказ?",
-      answer:
-        "Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ — 2–4 дня. Доставка по России через Ozon.",
+      answer: `Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ — ${leadTime}. Доставка по России через Ozon.`,
     },
   ],
   bags: [
@@ -97,7 +97,7 @@ const categoryFaqJsonLd: Record<string, FaqJsonLdEntry> & {
         "Готовые изделия отправляем в течение 1–3 дней через Ozon. Доставка по всей России.",
     },
   ],
-};
+});
 
 export const revalidate = 3600;
 
@@ -186,6 +186,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   // Google не разрешает размечать отзывы, собранные на других площадках, —
   // отзывы с Авито показываем, но в разметку товара не отдаём
   const markupReviews = productReviews.filter((r) => r.source !== "avito");
+  const faq = categoryFaqJsonLd(madeToOrderLeadTime(product));
 
   return (
     <>
@@ -224,9 +225,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={summarizeRatings(markupReviews)}
         reviews={markupReviews}
       />
-      <FAQJsonLd
-        items={categoryFaqJsonLd[categorySlug] ?? categoryFaqJsonLd.interior}
-      />
+      <FAQJsonLd items={faq[categorySlug] ?? faq.interior} />
       <ProductDetails
         product={product}
         category={category}

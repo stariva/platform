@@ -48,12 +48,12 @@ export const TREE_MODELS: TreeModel[] = [
     size: "70–75 × 150 см",
     fallbackPrice: 4500,
     fallbackOldPrice: 11500,
-    fallbackImage: "/images/elka/model-cream.png",
+    fallbackImage: "/images/elka/elka-cream-interior.jpg",
     bestFor: "Гостиная, лобби отеля, зал ресторана",
     highlights: [
       "Заметна с порога — работает как фотозона",
       "Цвет и размер — под ваш интерьер",
-      "Плетём под заказ за 2–4 дня",
+      "Плетём под заказ за 2–3 дня",
     ],
   },
   {
@@ -64,7 +64,7 @@ export const TREE_MODELS: TreeModel[] = [
     size: "45 × 100 см",
     fallbackPrice: 3700,
     fallbackOldPrice: 10000,
-    fallbackImage: "/images/elka/model-khaki.png",
+    fallbackImage: "/images/elka/elka-green-festive.jpg",
     bestFor: "Детская, прихожая, салон, ресепшен",
     highlights: [
       "Компактная — для небольших стен",
@@ -190,7 +190,7 @@ export const WORKSHOP_INCLUDES = [
 export const FAQ = [
   {
     question: "Успеете ли вы сплести и доставить ёлку к Новому году?",
-    answer: `Да. Изготовление под заказ занимает 2–4 рабочих дня, доставка по России — 2–7 дней. Чтобы гарантированно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Готовую модель отправим уже на следующий день.`,
+    answer: `Да. Изготовление под заказ занимает 2–3 рабочих дня, доставка по России — 2–7 дней. Чтобы гарантированно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Готовую модель отправим уже на следующий день.`,
   },
   {
     question: "Как повесить макраме-ёлку на стену?",
