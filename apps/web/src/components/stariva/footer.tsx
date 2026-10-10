@@ -27,7 +27,6 @@ const catalog = [
   { label: "Абажуры в технике макраме", href: "/catalog/interior" },
   { label: "Платья макраме", href: "/catalog/clothes" },
   { label: "Декор для дома", href: "/catalog/interior" },
-  { label: "Подарочные сертификаты", href: "/catalog" },
 ];
 
 const info = [
