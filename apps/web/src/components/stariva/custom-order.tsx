@@ -44,7 +44,7 @@ export function CustomOrder() {
               className="inline-flex items-center gap-2 rounded-full border border-espresso/20 px-5 py-3 text-sm text-espresso hover:border-terracotta"
             >
               <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
-              Написать Ольге
+              Написать мастеру
             </ContactMasterButton>
             <a
               href={CONTACTS.phoneHref}

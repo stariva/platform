@@ -46,7 +46,7 @@ export function PhotoshootsFaq() {
                 message="Здравствуйте, Ольга! Хочу подобрать образ для фотосессии."
                 className="inline-flex items-center bg-terracotta text-parchment px-7 py-3.5 rounded-full label-caps-md hover:bg-terracotta-dark transition-colors"
               >
-                Написать Ольге
+                Написать мастеру
               </ContactMasterButton>
               <Link
                 href="/catalog/clothes"

@@ -209,7 +209,7 @@ export default function Page() {
                   source="home_master"
                   className="underline underline-offset-4"
                 >
-                  Написать Ольге ↗
+                  Написать мастеру ↗
                 </ContactMasterButton>
               </div>
             </div>
