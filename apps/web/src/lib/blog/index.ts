@@ -2,6 +2,7 @@ export type { BlogContent, BlogPost } from "./types";
 
 import { bazovyeUzlyMakrame } from "./5-bazovykh-uzlov-makrame";
 import { dizainMakrameSChegoNachatEsliVyNeKhudozhnik } from "./dizain-makrame-s-chego-nachat-esli-vy-ne-khudozhnik";
+import { elkaIzMakrameSvoimiRukami } from "./elka-iz-makrame-svoimi-rukami";
 import { filosofiyaSlowLivingIRuchnayaRabota } from "./filosofiya-slow-living-i-ruchnaya-rabota";
 import { istoriyaMakrameOtMoryakovDoInterera } from "./istoriya-makrame-ot-moryakov-do-interera";
 import { kakUkhazhivatZaMakrameStirkaChistkaKhranenie } from "./kak-ukhazhivat-za-makrame-stirka-chistka-khranenie";
@@ -59,6 +60,7 @@ export const blogPosts: BlogPost[] = [
   makrameAbazhurAtmosfera,
   makramePodarokKakUpak,
   makrameNaSvadbe,
+  elkaIzMakrameSvoimiRukami,
 ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
