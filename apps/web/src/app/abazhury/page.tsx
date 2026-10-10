@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 const heroImage = {
   src: "https://cdn.stariva.ru/site/images/catalog/hero-lampshades-editorial.webp",
-  alt: "Купольный абажур из хлопкового макраме в интерьере при дневном свете",
+  alt: "Купольный абажур в технике макраме из хлопкового шнура в интерьере при дневном свете",
   width: 2172,
   height: 724,
 };

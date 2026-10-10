@@ -11,7 +11,7 @@ export const categories: Category[] = [
     hero: {
       image:
         "https://cdn.stariva.ru/site/images/catalog/hero-clothes-macrame-v4.webp",
-      alt: "Две модели в топе, юбке и платье из хлопкового макраме на фоне моря",
+      alt: "Две модели на фоне моря в топе, юбке и платье в технике макраме из хлопкового шнура",
       width: 1671,
       height: 557,
       objectPosition: "72% center",
@@ -52,7 +52,7 @@ export const categories: Category[] = [
     hero: {
       image:
         "https://cdn.stariva.ru/site/images/catalog/hero-interior-macrame-v5.webp",
-      alt: "Подвесной светильник и зелёное панно-ёлка из хлопкового макраме в светлой гостиной",
+      alt: "Подвесной светильник и зелёная настенная ёлка в технике макраме из хлопкового шнура в светлой гостиной",
       width: 1671,
       height: 557,
       objectPosition: "60% top",
