@@ -199,7 +199,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           category: product.category,
         }}
       />
-      <Header variant="solid" />
+      <Header variant="solid" selectedSectionHref={section.href} />
       <BreadcrumbJsonLd
         items={[
           { name: "Главная", href: "/" },

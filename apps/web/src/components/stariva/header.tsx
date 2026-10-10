@@ -110,10 +110,15 @@ function ArrowRight({ size = 14 }: { size?: number }) {
 
 interface HeaderProps {
   variant?: "transparent" | "solid";
+  /** Раздел товара, который может отличаться от категории в URL. */
+  selectedSectionHref?: string;
 }
 
 /** Показывает адаптивную навигацию, меню аккаунта и корзину с учётом фона шапки. */
-export function Header({ variant = "solid" }: HeaderProps) {
+export function Header({
+  variant = "solid",
+  selectedSectionHref,
+}: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const lastPointer = useRef("");
@@ -137,6 +142,9 @@ export function Header({ variant = "solid" }: HeaderProps) {
     if (href.startsWith("/#")) return false;
     // «В наличии» живёт внутри /catalog, но в меню это отдельный пункт
     if (href === "/catalog" && isInStockPage) return false;
+    if (selectedSectionHref && catalogNav.some((cat) => cat.href === href)) {
+      return href === selectedSectionHref;
+    }
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
