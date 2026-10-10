@@ -12,7 +12,7 @@ export function Metrika() {
   useEffect(() => {
     if (pathname) trackPageView();
   }, [pathname, searchParams]);
-  // Счётчик стартует только после согласия в cookie-баннере.
+  // Повторный хит после выбора в баннере; дубль отсекает trackPageView.
   useEffect(() => {
     const onConsent = () => trackPageView();
     window.addEventListener(COOKIE_CONSENT_EVENT, onConsent);

@@ -17,5 +17,5 @@ export const SELLER = {
 } as const;
 
 /** Дата редакции документов. Меняйте при каждом изменении текстов. */
-export const LEGAL_VERSION = "2026-09-22";
-export const LEGAL_VERSION_LABEL = "22 сентября 2026 г.";
+export const LEGAL_VERSION = "2026-10-10";
+export const LEGAL_VERSION_LABEL = "10 октября 2026 г.";

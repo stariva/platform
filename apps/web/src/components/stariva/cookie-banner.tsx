@@ -6,6 +6,7 @@ import {
   COOKIE_SETTINGS_EVENT,
   type CookieChoice,
   getCookieChoice,
+  hasAnalyticsConsent,
   openCookieSettings,
   setCookieChoice,
 } from "@/lib/cookie-consent";
@@ -35,10 +36,10 @@ export function CookieBanner() {
   }, []);
 
   function choose(choice: CookieChoice) {
-    const wasGranted = getCookieChoice() === "granted";
+    const wasEnabled = hasAnalyticsConsent();
     setCookieChoice(choice);
     setOpen(false);
-    if (choice === "denied" && wasGranted) {
+    if (choice === "denied" && wasEnabled) {
       // Загруженный счётчик нельзя выгрузить — чистим cookie и перезагружаем.
       clearMetrikaCookies();
       window.location.reload();
@@ -55,7 +56,8 @@ export function CookieBanner() {
       className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-xl rounded-2xl border border-espresso/10 bg-parchment p-3 sm:p-4 text-espresso shadow-lg"
     >
       <p className="text-[13px] leading-relaxed text-espresso/80">
-        Cookie — для работы сайта. Яндекс.Метрика — только с вашего согласия.{" "}
+        Мы используем cookie и Яндекс.Метрику, чтобы сайт работал и становился
+        удобнее. Продолжая пользоваться сайтом, вы соглашаетесь с этим.{" "}
         <Link
           href="/privacy-policy#cookies"
           className="text-terracotta underline-offset-2 hover:underline"
@@ -70,14 +72,14 @@ export function CookieBanner() {
           onClick={() => choose("denied")}
           className="rounded-full border border-espresso/20 px-3 py-2.5 min-h-11 text-[12px] text-espresso hover:border-espresso/50 transition-colors"
         >
-          Только необходимые
+          Отказаться
         </button>
         <button
           type="button"
           onClick={() => choose("granted")}
           className="rounded-full bg-espresso px-3 py-2.5 min-h-11 text-[12px] text-parchment hover:bg-terracotta transition-colors"
         >
-          Разрешить аналитику
+          Хорошо
         </button>
       </div>
     </div>
