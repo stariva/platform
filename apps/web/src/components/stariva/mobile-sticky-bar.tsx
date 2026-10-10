@@ -39,7 +39,6 @@ export function MobileStickyBar() {
         </a>
         <ContactMasterButton
           source="mobile_bar"
-          data-location="mobile_bar"
           className="flex-1 flex items-center justify-center gap-2 min-h-12 px-3 rounded-full border border-espresso/20 text-espresso text-sm"
         >
           <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
