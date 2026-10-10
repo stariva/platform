@@ -39,13 +39,13 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
     >
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
         <div className="lg:sticky lg:top-28">
-          <div className="relative aspect-[4/3] rounded-[28px] overflow-hidden bg-linen mb-6">
+          <div className="relative aspect-[4/5] rounded-[28px] overflow-hidden bg-linen mb-6">
             <Image
-              src="/images/elka/workshop.png"
-              alt="Руки мастера плетут ёлку из хлопкового шнура в технике макраме"
+              src="/images/elka/elka-green-festive.jpg"
+              alt="Готовая ёлка-панно в технике макраме из зелёного шнура — такую вы сплетёте на мастер-классе"
               fill
               sizes="(min-width: 1024px) 45vw, 100vw"
-              className="object-cover"
+              className="object-cover object-top"
             />
           </div>
           <ul className="grid sm:grid-cols-2 gap-3">
