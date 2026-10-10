@@ -23,7 +23,7 @@ export function ElkaHero() {
             className="font-serif text-espresso leading-[1.08] text-balance mb-6"
             style={{ fontSize: "clamp(36px, 5.4vw, 68px)" }}
           >
-            Ёлка из макраме,
+            Ёлка макраме,
             <br />
             <em className="not-italic text-taupe">которая не осыпается</em>
           </h1>

@@ -64,7 +64,7 @@ export const makrameOsenZimniyDekor: BlogPost = {
     },
     {
       type: "cta",
-      text: "Какой шнур взять, какие узлы освоить и сколько времени заложить на ёлку из макраме",
+      text: "Какой шнур взять, какие узлы освоить и сколько времени заложить на ёлку макраме",
       href: "/blog/elka-iz-makrame-svoimi-rukami",
       label: "Читать про ёлку",
     },
