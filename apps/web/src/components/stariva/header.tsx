@@ -185,7 +185,7 @@ export function Header({ variant = "solid" }: HeaderProps) {
     event: MouseEvent<HTMLButtonElement>,
     href?: string,
   ) => {
-    if (lastPointer.current === "mouse") {
+    if (event.detail > 0 && lastPointer.current === "mouse") {
       event.preventDefault();
       if (href) router.push(href);
     }
@@ -219,13 +219,15 @@ export function Header({ variant = "solid" }: HeaderProps) {
     </div>
   );
 
-  const mobileLink = (link: NavLink) => (
+  const mobileLink = (link: NavLink & { active?: boolean }) => (
     <Link
       key={link.href}
       href={link.href}
       onClick={() => setMenuOpen(false)}
       className={`py-3 px-1 border-b border-espresso/6 flex items-center justify-between group ${
-        isActive(link.href) ? "text-terracotta" : "text-espresso/80"
+        (link.active ?? isActive(link.href))
+          ? "text-terracotta"
+          : "text-espresso/80"
       }`}
     >
       <div>
@@ -606,7 +608,11 @@ export function Header({ variant = "solid" }: HeaderProps) {
                 </div>
               </Link>
             ))}
-            {mobileLink({ label: "Весь каталог", href: "/catalog" })}
+            {mobileLink({
+              label: "Весь каталог",
+              href: "/catalog",
+              active: pathname === "/catalog",
+            })}
             {mobileLink({
               label: "В наличии",
               href: IN_STOCK_HREF,
