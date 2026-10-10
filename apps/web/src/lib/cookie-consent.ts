@@ -1,6 +1,7 @@
 /**
- * Согласие на аналитические cookie (Яндекс.Метрика).
- * Без явного согласия счётчик не загружается: данные Метрики — это ПДн.
+ * Аналитические cookie (Яндекс.Метрика) — модель opt-out.
+ * Счётчик работает по умолчанию и отключается, только если посетитель
+ * нажал «Отказаться» в cookie-баннере.
  */
 const STORAGE_KEY = "stariva:cookie-consent";
 export const COOKIE_CONSENT_EVENT = "stariva:cookie-consent";
@@ -22,7 +23,7 @@ export function getCookieChoice(): CookieChoice | null {
 }
 
 export function hasAnalyticsConsent(): boolean {
-  return getCookieChoice() === "granted";
+  return getCookieChoice() !== "denied";
 }
 
 export function setCookieChoice(choice: CookieChoice) {
