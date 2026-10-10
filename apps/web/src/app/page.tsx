@@ -87,7 +87,7 @@ function Examples({ products = [] }: { products?: Product[] }) {
           >
             <Link
               href={item.href}
-              className="block relative aspect-[4/3] md:aspect-[4/5] overflow-hidden"
+              className="block relative aspect-[3/4] overflow-hidden bg-white"
             >
               <Image
                 src={item.image}
