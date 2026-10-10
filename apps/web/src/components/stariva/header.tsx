@@ -352,7 +352,8 @@ export function Header({ variant = "solid" }: HeaderProps) {
                                           : "border-espresso/8 hover:border-espresso/20"
                                       }`}
                                     >
-                                      <div className="relative h-36 overflow-hidden bg-off-white">
+                                      {/* Portrait frame so clothing shows in full; capped by viewport height on short laptop screens */}
+                                      <div className="relative aspect-[4/5] max-h-[calc(100svh-330px)] overflow-hidden bg-off-white">
                                         <Image
                                           src={cat.image}
                                           alt=""
