@@ -208,12 +208,13 @@ export default async function WorkshopDetailPage({
       </div>
 
       <main className="max-w-6xl mx-auto px-6 md:px-10 py-8 md:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-12 lg:gap-16">
-          {/* Left: content */}
-          <div>
+        {/* На мобильном карточка покупки идёт сразу после обложки, на десктопе — липкая колонка справа */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-x-16 gap-y-10 lg:gap-y-0">
+          {/* Left: title + cover */}
+          <div className="lg:col-start-1 lg:row-start-1">
             {/* Title block */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="mb-6 md:mb-8">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4">
                 <Link
                   href={`/workshops?category=${workshop.category}`}
                   className="label-caps text-xs text-taupe hover:text-terracotta transition-colors"
@@ -222,12 +223,12 @@ export default async function WorkshopDetailPage({
                 </Link>
                 <span className="text-espresso/20">·</span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border-0 ${levelColors[workshop.level]}`}
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border-0 whitespace-nowrap ${levelColors[workshop.level]}`}
                 >
                   {levelLabels[workshop.level]}
                 </span>
                 {preorder ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-terracotta text-parchment">
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-terracotta text-parchment whitespace-nowrap">
                     Предзаказ · старт {formatReleaseDate(preorder)}
                   </span>
                 ) : null}
@@ -241,7 +242,7 @@ export default async function WorkshopDetailPage({
             </div>
 
             {/* Cover with lock */}
-            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-sand mb-10">
+            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-sand lg:mb-10">
               <Image
                 src={workshop.cover}
                 alt={workshop.title}
@@ -298,7 +299,10 @@ export default async function WorkshopDetailPage({
                 </div>
               )}
             </div>
+          </div>
 
+          {/* Left: content */}
+          <div className="order-last lg:order-none lg:col-start-1 lg:row-start-2">
             {/* Description */}
             <section className="mb-10">
               <h2 className="font-serif text-2xl mb-4">О курсе</h2>
@@ -435,7 +439,7 @@ export default async function WorkshopDetailPage({
             </section>
 
             {/* Materials */}
-            <section>
+            <section className="mb-10">
               <h2 className="font-serif text-2xl mb-5">Материалы</h2>
               <p className="text-taupe text-sm mb-4">
                 Что понадобится для курса:
@@ -445,9 +449,9 @@ export default async function WorkshopDetailPage({
                   <li
                     // biome-ignore lint/suspicious/noArrayIndexKey: static list, never reordered
                     key={i}
-                    className="flex items-center gap-3 text-espresso/80 text-sm"
+                    className="flex items-start gap-3 text-espresso/80 text-sm leading-relaxed"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full bg-terracotta flex-shrink-0" />
+                    <div className="w-1.5 h-1.5 mt-[0.6em] rounded-full bg-terracotta flex-shrink-0" />
                     {mat}
                   </li>
                 ))}
@@ -508,12 +512,12 @@ export default async function WorkshopDetailPage({
             </section>
           </div>
 
-          {/* Right: sticky purchase card */}
-          <div className="lg:pt-0">
-            <div className="sticky top-24">
+          {/* Right: sticky purchase card (на мобильном — между обложкой и описанием) */}
+          <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2">
+            <div className="lg:sticky lg:top-24">
               <div className="bg-parchment border border-espresso/10 rounded-2xl overflow-hidden shadow-[0_4px_30px_rgba(44,36,27,0.08)]">
-                {/* Mini cover */}
-                <div className="relative aspect-[16/9] bg-sand">
+                {/* Mini cover — на мобильном большая обложка уже прямо над карточкой */}
+                <div className="relative aspect-[16/9] bg-sand hidden lg:block">
                   <Image
                     src={workshop.cover}
                     alt={workshop.title}
@@ -553,7 +557,7 @@ export default async function WorkshopDetailPage({
                   )}
                 </div>
 
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <div className="flex items-baseline gap-2 mb-6">
                     <span className="font-serif text-4xl text-espresso">
                       {formatPrice(workshop.price)}
@@ -570,7 +574,7 @@ export default async function WorkshopDetailPage({
                   ) : null}
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
                     {(preorder
                       ? [
                           {
@@ -603,9 +607,9 @@ export default async function WorkshopDetailPage({
                     ).map((s) => (
                       <div
                         key={s.label}
-                        className="text-center p-3 bg-sand rounded-xl"
+                        className="text-center px-1 py-3 sm:p-3 bg-sand rounded-xl"
                       >
-                        <div className="font-serif text-base text-espresso">
+                        <div className="font-serif text-sm sm:text-base text-espresso">
                           {s.value}
                         </div>
                         <div className="label-caps text-[11px] text-taupe mt-0.5">
