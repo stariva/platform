@@ -10,17 +10,17 @@ import {
 const points = [
   "Не осыпается и не занимает места на полу",
   "Для квартиры, детской, отеля, кафе и офиса",
-  "Плетём под заказ за 2–4 дня, доставка по России",
+  "Плетём под заказ за 2–3 дня, доставка по России",
 ];
 
 const models = [
   {
-    image: "/images/elka/model-cream.png",
+    image: "/images/elka/elka-cream-interior.jpg",
     alt: "Бежевая ёлка-панно в технике макраме на стене",
     label: "Бежевая · 70–75 × 150 см",
   },
   {
-    image: "/images/elka/model-khaki.png",
+    image: "/images/elka/elka-green-festive.jpg",
     alt: "Ёлка-панно в технике макраме цвета хаки",
     label: "Хаки · 45 × 100 см",
   },

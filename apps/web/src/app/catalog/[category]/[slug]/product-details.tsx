@@ -18,7 +18,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { CONTACTS } from "@/lib/contacts";
 import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
-import { getProductMadeToOrder } from "@/lib/made-to-order";
+import {
+  getProductMadeToOrder,
+  madeToOrderLeadTime,
+} from "@/lib/made-to-order";
 import type { RatingSummary } from "@/lib/ozon-service";
 import type { Category, Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
@@ -36,7 +39,10 @@ interface ProductDetailsProps {
 // ─── FAQ data per category ────────────────────────────────────────────────────
 type FaqEntry = { q: string; a: string }[];
 
-const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
+/** Ответы подставляют срок изготовления самого изделия. */
+const categoryFaq = (
+  leadTime: string,
+): Record<string, FaqEntry> & { interior: FaqEntry } => ({
   interior: [
     {
       q: "Из чего сделан абажур?",
@@ -52,7 +58,7 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
     },
     {
       q: "Как долго ждать заказ?",
-      a: "Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ изготавливаются 2–4 дня в зависимости от сложности. Доставка по России через Ozon.",
+      a: `Готовые изделия отправляем в течение 1–3 дней. Изделия на заказ изготавливаются ${leadTime} в зависимости от сложности. Доставка по России через Ozon.`,
     },
   ],
   clothes: [
@@ -70,7 +76,7 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
     },
     {
       q: "Можно ли выбрать другой цвет?",
-      a: "Да. Любую модель сплетём в другом цвете шнура — выберите оттенок в карточке товара, точный цвет согласуем перед плетением. Изготовление занимает 2–4 дня.",
+      a: `Да. Любую модель сплетём в другом цвете шнура — выберите оттенок в карточке товара, точный цвет согласуем перед плетением. Изготовление занимает ${leadTime}.`,
     },
   ],
   bags: [
@@ -91,7 +97,7 @@ const categoryFaq: Record<string, FaqEntry> & { interior: FaqEntry } = {
       a: "Готовые изделия отправляем в течение 1–3 дней через Ozon. Доставка по всей России.",
     },
   ],
-};
+});
 
 interface Spec {
   label: string;
@@ -127,7 +133,8 @@ export function ProductDetails({
   relatedProducts,
   rating,
 }: ProductDetailsProps) {
-  const faqItems = categoryFaq[categorySlug] ?? categoryFaq.interior;
+  const faq = categoryFaq(madeToOrderLeadTime(product));
+  const faqItems = faq[categorySlug] ?? faq.interior;
   // Два независимых способа купить: готовое со склада и сплести под заказ
   const readyToShip = isPurchasable(product);
   const madeToOrder = getProductMadeToOrder(product);
