@@ -61,7 +61,7 @@ function ProductCard({ product }: { product: Product; index?: number }) {
       href={`/catalog/${product.category}/${product.slug}`}
       className="group block"
     >
-      <div className="relative aspect-[4/5] rounded-xl overflow-hidden mb-4 bg-cream">
+      <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-4 bg-cream">
         <ProductCardImages
           images={product.images}
           alt={product.name}
@@ -113,7 +113,7 @@ function ProductsSkeleton() {
     <div className="grid md:grid-cols-3 gap-8">
       {[1, 2, 3].map((i) => (
         <div key={i} className="space-y-3">
-          <Skeleton className="aspect-[4/5] rounded-xl bg-cream" />
+          <Skeleton className="aspect-[3/4] rounded-xl bg-cream" />
           <Skeleton className="h-6 w-3/4 bg-cream" />
           <Skeleton className="h-4 w-1/2 bg-cream" />
           <Skeleton className="h-5 w-1/4 bg-cream" />
