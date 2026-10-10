@@ -70,9 +70,13 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               <span className="rounded-xl bg-parchment px-3 py-2 text-xl font-semibold leading-none tabular-nums text-terracotta">
                 −{discount}%
               </span>
-              <span className="flex items-center gap-2 text-base font-medium lg:text-lg">
-                <Gift className="hidden size-5 shrink-0 sm:block" aria-hidden />
-                Предзаказ · второй мастер-класс в подарок
+              <Gift className="hidden size-5 shrink-0 sm:block" aria-hidden />
+              {/* Переносим по «·», а не посреди «мастер-класс». */}
+              <span className="flex flex-wrap gap-x-1.5 text-base font-medium lg:text-lg">
+                <span className="whitespace-nowrap">
+                  Предзаказ до {releaseLabel} ·
+                </span>
+                <span>второй мастер&#8209;класс в подарок</span>
               </span>
             </p>
           )}
@@ -85,9 +89,9 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
           </h2>
           <p className="text-dark-grey leading-relaxed mb-8">
             Онлайн-мастер-класс от мастерской Stariva: от выбора шнура до
-            готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите
-            предзаказ сейчас — зафиксируете цену со скидкой и получите уроки
-            первыми, с запасом времени до праздника.
+            готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите предзаказ
+            сейчас — зафиксируете цену со скидкой и получите уроки первыми, с
+            запасом времени до праздника.
           </p>
 
           {isPreorder && (
