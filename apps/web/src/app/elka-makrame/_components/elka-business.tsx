@@ -11,7 +11,7 @@ export function ElkaBusiness() {
     >
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-20">
         <div>
-          <p className="label-caps text-terracotta text-[11px] mb-4">
+          <p className="label-caps text-parchment/60 text-[11px] mb-4">
             Для бизнеса
           </p>
           <h2
@@ -30,7 +30,7 @@ export function ElkaBusiness() {
               source="elka_b2b"
               goal="elka_b2b_telegram"
               message="Здравствуйте, Ольга! Хочу получить расчёт новогоднего оформления в технике макраме."
-              className="inline-flex items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment px-8 py-4 transition-colors"
+              className="inline-flex items-center justify-center rounded-2xl bg-parchment hover:bg-parchment/90 text-espresso px-8 py-4 transition-colors"
             >
               Получить расчёт у мастера
             </ContactMasterButton>
@@ -47,7 +47,7 @@ export function ElkaBusiness() {
         <ul className="grid sm:grid-cols-2 gap-px bg-parchment/10 rounded-[24px] overflow-hidden">
           {BUSINESS_POINTS.map((point, index) => (
             <li key={point.title} className="bg-espresso p-6 lg:p-8">
-              <span className="font-serif text-terracotta text-lg">
+              <span className="font-serif text-parchment/50 text-lg">
                 0{index + 1}
               </span>
               <h3 className="font-serif text-2xl mt-3 mb-2">{point.title}</h3>
