@@ -1,32 +1,44 @@
-/** Selected from the live Stariva Ozon catalogue on 2026-09-23.
- * These are catalogue examples, not invented customer stories or fixed quotes.
- * Keep stable photos here so the landing page does not wait on the seller API.
+import type { Product } from "./ozon-types";
+import { productSectionKey } from "./products";
+
+interface HomeCopy {
+  title: string;
+  details: string;
+}
+
+/**
+ * Подписи карточек «Изделия мастерской» на главной. Сами товары отмечаются
+ * в админке переключателем «Показывать на главной», а заголовок и текст
+ * берутся по разделу каталога (ключи — как у productSectionKey).
  */
-export const homePortfolio = [
-  {
+const sectionCopy: Record<string, HomeCopy> = {
+  clothes: {
     title: "Одежда по вашим меркам",
-    name: "Туника из хлопкового шнура",
-    image: "https://ir.ozone.ru/s3/multimedia-1-a/10606179790.jpg",
-    href: "/catalog/clothes/stariva-makrame-tunika-iz-khlopkovogo-shnura-ruchnoy-raboty-4312",
-    source: "https://www.ozon.ru/product/3755978564",
     details: "Подберём длину и посадку. Поможем снять мерки и выбрать цвет.",
   },
-  {
+  lampshades: {
     title: "Абажур для вашего пространства",
-    name: "Абажур макраме ручной работы",
-    image: "https://ir.ozone.ru/s3/multimedia-1-7/10180737439.jpg",
-    href: "/catalog/interior/abazhur-dlya-svetilnika-makrame-bez-patrona-i-provoda-ruchnoy-raboty-6774",
-    source: "https://www.ozon.ru/product/3534728835",
     details:
-      "Обсудим диаметр, высоту, оттенок и крепление. Патрон и провод в эту модель не входят.",
+      "Обсудим диаметр, высоту, оттенок и крепление. Комплектацию уточним до изготовления.",
   },
-  {
+  bags: {
     title: "Сумка под ваш ритм",
-    name: "Сумка из хлопкового шнура",
-    image: "https://ir.ozone.ru/s3/multimedia-1-5/10421262077.jpg",
-    href: "/catalog/bags/sumka-ruchnoy-raboty-iz-khlopkovogo-shnura-8974",
-    source: "https://www.ozon.ru/product/3584137694",
     details:
       "Согласуем размер, цвет и длину ремня. Фурнитуру уточним до изготовления.",
   },
-] as const;
+  interior: {
+    title: "Декор для вашего дома",
+    details: "Подберём размер и оттенок под ваш интерьер.",
+  },
+};
+
+export function getHomeCopy(
+  product: Pick<Product, "category" | "subcategory">,
+): HomeCopy {
+  return (
+    sectionCopy[productSectionKey(product)] ?? {
+      title: "Сплетём для вас",
+      details: "Размер, цвет и детали обсудим для вашего заказа.",
+    }
+  );
+}

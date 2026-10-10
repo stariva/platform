@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
@@ -14,9 +13,10 @@ import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { PhotoshootsTeaser } from "@/components/stariva/photoshoots-teaser";
 import { Process } from "@/components/stariva/process";
+import { ProductCardImages } from "@/components/stariva/product-card-images";
 import { Reviews } from "@/components/stariva/reviews";
-import { homePortfolio } from "@/lib/home-portfolio";
-import { getProducts } from "@/lib/ozon-service";
+import { getHomeCopy } from "@/lib/home-portfolio";
+import { getFeaturedProducts } from "@/lib/ozon-service";
 import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 import { SITE_URL } from "@/lib/site-url";
@@ -75,52 +75,43 @@ const homeFaq = [
   },
 ];
 
-function Examples({ products = [] }: { products?: Product[] }) {
+function Examples({ products }: { products: Product[] }) {
   return (
     <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-      {homePortfolio.map((item) => {
-        const product = products.find((p) => item.href.endsWith(`/${p.slug}`));
+      {products.map((product) => {
+        const href = `/catalog/${product.category}/${product.slug}`;
+        const copy = getHomeCopy(product);
         return (
           <article
-            key={item.href}
-            className="overflow-hidden rounded-2xl border border-espresso/10 bg-parchment"
+            key={product.id}
+            className="group overflow-hidden rounded-2xl border border-espresso/10 bg-parchment"
           >
             <Link
-              href={item.href}
+              href={href}
               className="block relative aspect-[3/4] overflow-hidden bg-white"
             >
-              <Image
-                src={item.image}
-                alt={item.name}
-                fill
+              <ProductCardImages
+                images={product.images}
+                alt={product.name}
                 sizes="(max-width: 768px) 100vw, 33vw"
-                className="object-cover"
               />
             </Link>
             <div className="p-5 lg:p-6">
               <h3 className="font-serif text-2xl text-espresso">
-                {item.title}
+                {copy.title}
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-espresso/75">
-                {item.details}
+                {copy.details}
               </p>
               <div className="mt-4 min-h-14 text-sm text-taupe">
-                {product ? (
-                  <>
-                    <p className="text-espresso font-medium">
-                      Модель в каталоге —{" "}
-                      {formatPrice(product.price, product.currency)}
-                    </p>
-                    <p className="mt-1 text-xs">
-                      Ваш размер рассчитаем отдельно.
-                    </p>
-                  </>
-                ) : (
-                  <p>Актуальная цена и параметры — в карточке изделия.</p>
-                )}
+                <p className="text-espresso font-medium">
+                  Модель в каталоге —{" "}
+                  {formatPrice(product.price, product.currency)}
+                </p>
+                <p className="mt-1 text-xs">Ваш размер рассчитаем отдельно.</p>
               </div>
               <Link
-                href={item.href}
+                href={href}
                 className="inline-block mt-3 text-sm text-espresso underline underline-offset-4"
               >
                 Рассмотреть модель ↗
@@ -132,8 +123,20 @@ function Examples({ products = [] }: { products?: Product[] }) {
     </div>
   );
 }
+function ExamplesSkeleton() {
+  return (
+    <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="aspect-[3/4] rounded-2xl bg-sand animate-pulse"
+        />
+      ))}
+    </div>
+  );
+}
 async function LiveExamples() {
-  return <Examples products={await getProducts()} />;
+  return <Examples products={await getFeaturedProducts()} />;
 }
 
 export default function Page() {
@@ -167,7 +170,7 @@ export default function Page() {
                 Весь каталог ↗
               </Link>
             </div>
-            <Suspense fallback={<Examples />}>
+            <Suspense fallback={<ExamplesSkeleton />}>
               <LiveExamples />
             </Suspense>
             <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-sand p-5 lg:p-6">

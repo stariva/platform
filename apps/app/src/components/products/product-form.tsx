@@ -466,7 +466,13 @@ export function ProductForm({
               name="featured"
               render={({ field }) => (
                 <div className="flex items-center justify-between gap-4">
-                  <Label htmlFor="featured">Показывать на главной</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="featured">Показывать на главной</Label>
+                    <p className="text-muted-foreground text-xs">
+                      В блоке «Изделия мастерской» и в «Хитах продаж» каталога.
+                      Подпись карточки берётся по разделу товара
+                    </p>
+                  </div>
                   <Switch
                     id="featured"
                     checked={field.value}
