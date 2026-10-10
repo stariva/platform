@@ -139,7 +139,7 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
     },
     {
       type: "cta",
-      text: `Онлайн-мастер-класс: ёлка ${WORKSHOP_TREE_SIZE} для начинающих. По предзаказу — со скидкой и вторым мастер-классом в подарок`,
+      text: `Онлайн-мастер-класс: ёлка ${WORKSHOP_TREE_SIZE}. По предзаказу — со скидкой и вторым мастер-классом в подарок`,
       href: `${LANDING_PATH}#workshop`,
       label: "Записаться на мастер-класс",
     },

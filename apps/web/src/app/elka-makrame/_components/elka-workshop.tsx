@@ -66,8 +66,14 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
 
         <div>
           {isPreorder && (
-            <p className="inline-flex items-center gap-2 rounded-full bg-terracotta text-parchment px-4 py-2 text-sm mb-6">
-              Предзаказ −{discount}% · второй мастер-класс в подарок
+            <p className="inline-flex items-center gap-3 rounded-2xl bg-terracotta text-parchment py-2 pl-2 pr-5 mb-6 shadow-lg shadow-terracotta/25">
+              <span className="rounded-xl bg-parchment px-3 py-2 text-xl font-semibold leading-none tabular-nums text-terracotta">
+                −{discount}%
+              </span>
+              <span className="flex items-center gap-2 text-base font-medium lg:text-lg">
+                <Gift className="hidden size-5 shrink-0 sm:block" aria-hidden />
+                Предзаказ · второй мастер-класс в подарок
+              </span>
             </p>
           )}
           <h2
@@ -78,8 +84,8 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
             Сплетите макраме-ёлку своими руками
           </h2>
           <p className="text-dark-grey leading-relaxed mb-8">
-            Онлайн-мастер-класс от мастерской Stariva для начинающих: от выбора
-            шнура до готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите
+            Онлайн-мастер-класс от мастерской Stariva: от выбора шнура до
+            готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите
             предзаказ сейчас — зафиксируете цену со скидкой и получите уроки
             первыми, с запасом времени до праздника.
           </p>

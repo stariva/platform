@@ -22,8 +22,8 @@ export function ElkaBusiness() {
             Новогоднее оформление для отелей, ресторанов и офисов
           </h2>
           <p className="text-parchment/75 leading-relaxed mb-8 max-w-lg">
-            Пришлите фото стены и пожелания по цвету — в течение дня подготовим
-            расчёт с эскизом, сроками и стоимостью партии.
+            Напишите, какая модель и сколько ёлок нужно, — в течение дня
+            подготовим расчёт со сроками и стоимостью партии.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <ContactMasterButton
