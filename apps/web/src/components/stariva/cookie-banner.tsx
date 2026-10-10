@@ -11,13 +11,13 @@ import {
   setCookieChoice,
 } from "@/lib/cookie-consent";
 
-/** Удаляет cookie Метрики (_ym_*) после отзыва согласия. */
-function clearMetrikaCookies() {
+/** Удаляет cookie Метрики (_ym_*) и пикселя VK (tmr_*) после отзыва согласия. */
+function clearAnalyticsCookies() {
   const host = window.location.hostname;
   const domains = ["", host, `.${host.replace(/^www\./, "")}`];
   for (const entry of document.cookie.split(";")) {
     const name = entry.split("=")[0]?.trim();
-    if (!name?.startsWith("_ym")) continue;
+    if (!name?.startsWith("_ym") && !name?.startsWith("tmr_")) continue;
     for (const domain of domains) {
       // biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API есть не во всех браузерах
       document.cookie = `${name}=; Max-Age=0; path=/${domain ? `; domain=${domain}` : ""}`;
@@ -41,7 +41,7 @@ export function CookieBanner() {
     setOpen(false);
     if (choice === "denied" && wasEnabled) {
       // Загруженный счётчик нельзя выгрузить — чистим cookie и перезагружаем.
-      clearMetrikaCookies();
+      clearAnalyticsCookies();
       window.location.reload();
     }
   }
@@ -57,7 +57,7 @@ export function CookieBanner() {
     >
       {/* На телефоне — короче: баннер не должен закрывать четверть экрана. */}
       <p className="text-[12px] sm:text-[13px] leading-snug sm:leading-relaxed text-espresso/80">
-        Мы используем cookie и Яндекс.Метрику
+        Мы используем cookie, Яндекс.Метрику и пиксель VK Рекламы
         <span className="hidden sm:inline">
           , чтобы сайт работал и становился удобнее. Продолжая пользоваться
           сайтом, вы соглашаетесь с этим
