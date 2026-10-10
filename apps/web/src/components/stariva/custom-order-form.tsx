@@ -5,7 +5,6 @@ import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { reachGoal } from "@/lib/analytics";
-import { appendCampaign } from "@/lib/campaign-attribution";
 import { PRODUCT_TYPES } from "@/lib/custom-order/pricing";
 import { validatePhoto } from "@/lib/custom-order/schema";
 import {
@@ -123,7 +122,6 @@ export function CustomOrderForm() {
       )?.label;
       if (productLabel) fd.append("productType", productLabel);
       if (photo) fd.append("photo", photo);
-      appendCampaign(fd);
       const signature = JSON.stringify({
         fields: [...fd.entries()].filter(([key]) => key !== "photo"),
         photo: photo ? [photo.name, photo.size, photo.lastModified] : null,

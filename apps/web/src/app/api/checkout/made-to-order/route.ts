@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import {
   CatalogItemsUnavailableError,
   MadeToOrderOptionsError,
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   const order = await createMadeToOrderOrder({
     userId: session?.user.id,
+    attribution: attributionFromRequest(request),
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,

@@ -3,7 +3,6 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { reachGoal, trackPageView } from "@/lib/analytics";
-import { captureCampaign } from "@/lib/campaign-attribution";
 import { COOKIE_CONSENT_EVENT } from "@/lib/cookie-consent";
 
 export function Metrika() {
@@ -11,17 +10,11 @@ export function Metrika() {
   const searchParams = useSearchParams();
   // biome-ignore lint/correctness/useExhaustiveDependencies: the current URL is read inside trackPageView
   useEffect(() => {
-    if (pathname) {
-      captureCampaign();
-      trackPageView();
-    }
+    if (pathname) trackPageView();
   }, [pathname, searchParams]);
   // Счётчик стартует только после согласия в cookie-баннере.
   useEffect(() => {
-    const onConsent = () => {
-      captureCampaign();
-      trackPageView();
-    };
+    const onConsent = () => trackPageView();
     window.addEventListener(COOKIE_CONSENT_EVENT, onConsent);
     return () => window.removeEventListener(COOKIE_CONSENT_EVENT, onConsent);
   }, []);

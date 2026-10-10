@@ -1,18 +1,7 @@
 import { z } from "zod";
+import { attributionSchema } from "@/lib/campaign-attribution";
 
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
-export const ATTRIBUTION_KEYS = [
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_content",
-  "utm_term",
-] as const;
-export const attributionSchema = z.object(
-  Object.fromEntries(
-    ATTRIBUTION_KEYS.map((key) => [key, z.string().trim().max(120).optional()]),
-  ),
-);
 export const orderRequestSchema = z.object({
   requestId: z.uuid().optional(),
   name: z.string().trim().max(120).optional().default(""),

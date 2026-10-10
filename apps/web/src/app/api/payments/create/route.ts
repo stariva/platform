@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { grantAccess, hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { attachPaymentId, createOrder } from "@/lib/payments/orders";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
     workshopSlug: workshop.slug,
     amountKopecks,
     contactEmail: buyer.email,
+    attribution: attributionFromRequest(request),
   });
 
   try {

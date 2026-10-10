@@ -1,6 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
-import { orders, workshopOrderNotifications } from "@stariva/db/schema";
+import {
+  type CampaignAttribution,
+  orders,
+  workshopOrderNotifications,
+} from "@stariva/db/schema";
 import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
 
 export interface CreateOrderInput {
@@ -8,6 +12,7 @@ export interface CreateOrderInput {
   workshopSlug: string;
   amountKopecks: number;
   contactEmail: string;
+  attribution?: CampaignAttribution | null;
 }
 
 /** 32 символа base64url: годится и для URL, и для t.me/<бот>?start=… */
@@ -27,6 +32,7 @@ export async function createOrder(input: CreateOrderInput) {
       currency: "RUB",
       status: "pending",
       contactEmail: input.contactEmail,
+      attribution: input.attribution ?? null,
       accessToken: secretToken(),
       telegramToken: secretToken(),
     })

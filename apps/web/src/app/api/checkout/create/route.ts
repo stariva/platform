@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { baseEnv, env } from "@/env";
 import { getSession } from "@/lib/auth/session";
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import {
   CatalogItemsUnavailableError,
   resolveCatalogItems,
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
 
   const order = await createProductOrder({
     userId: session?.user.id,
+    attribution: attributionFromRequest(request),
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,

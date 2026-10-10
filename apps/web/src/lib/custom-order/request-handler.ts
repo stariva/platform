@@ -1,3 +1,4 @@
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { type OrderRequest, orderRequestSchema, validatePhoto } from "./schema";
 
 interface OrderHandlerDependencies {
@@ -29,20 +30,10 @@ export function createOrderHandler({
         { error: "Не удалось принять заявку" },
         { status: 400 },
       );
-    let attribution: unknown;
-    try {
-      attribution = form.has("attribution")
-        ? JSON.parse(String(form.get("attribution")))
-        : undefined;
-    } catch {
-      return Response.json(
-        { error: "Некорректный источник заявки" },
-        { status: 400 },
-      );
-    }
+    // Источник — только из нашей cookie, поле формы с тем же именем игнорируем.
     const parsed = orderRequestSchema.safeParse({
       ...Object.fromEntries(form),
-      attribution,
+      attribution: attributionFromRequest(request) ?? undefined,
     });
     if (!parsed.success)
       return Response.json(

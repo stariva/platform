@@ -19,7 +19,10 @@ test("durable inbox: atomic duplicate protection, lease and retry after failure"
     contact: "test@example.test",
     description: "Тестовый абажур, не отправлять",
     personalDataConsent: "true",
-    attribution: { utm_source: "test" },
+    attribution: {
+      first: { utm_source: "test", landing: "/", at: new Date().toISOString() },
+      last: { utm_source: "test", landing: "/", at: new Date().toISOString() },
+    },
   });
   const photo = new File(["synthetic-photo"], "test.jpg", {
     type: "image/jpeg",

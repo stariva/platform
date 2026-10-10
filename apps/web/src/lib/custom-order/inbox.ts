@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { customOrderRequests, db } from "@stariva/db";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { baseEnv, env } from "@/env";
+import { formatTouch } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { deliverNotification, type Notification } from "./delivery";
 import type { OrderRequest } from "./schema";
@@ -34,9 +35,10 @@ export async function saveRequest(data: OrderRequest, photo: File | null) {
     data.budget && `Бюджет: ${data.budget}`,
     data.estimateMin !== undefined &&
       `Оценка калькулятора: ${data.estimateMin}–${data.estimateMax} ₽`,
-    ...Object.entries(data.attribution ?? {}).map(
-      ([key, value]) => `${key}: ${value}`,
-    ),
+    data.attribution && `Источник: ${formatTouch(data.attribution.last)}`,
+    data.attribution &&
+      data.attribution.first.at !== data.attribution.last.at &&
+      `Первый заход: ${formatTouch(data.attribution.first)}`,
     `Согласие на обработку данных: ${LEGAL_VERSION}, ${new Date().toISOString()}`,
   ]
     .filter(Boolean)
