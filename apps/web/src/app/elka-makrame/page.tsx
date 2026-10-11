@@ -1,5 +1,5 @@
-import { logger } from "@stariva/config";
 import type { Metadata } from "next";
+import { ElkaFaq } from "@/components/stariva/elka-faq";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -8,15 +8,13 @@ import {
   FAQJsonLd,
 } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
-import { getProductBySlug } from "@/lib/ozon-service";
+import { WORKSHOP_PATH } from "@/lib/elka/data";
+import { loadElkaData } from "@/lib/elka/load";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
-import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
-import { ElkaFaq } from "./_components/elka-faq";
 import { ElkaReadyTrees } from "./_components/elka-ready-trees";
 import { ElkaWorkshop } from "./_components/elka-workshop";
 import { LegacyModelsRedirect } from "./_components/legacy-models-redirect";
-import { TREE_MODELS } from "@/app/elka-makrame-na-stenu/_data";
-import { FAQ, LANDING_PATH, WORKSHOP_SLUG } from "./_data";
+import { FAQ } from "./_data";
 
 // Рендер на каждый запрос: при сборке образа базы нет, и статическая
 // страница запекалась без мастер-класса (кнопка «связаться» вместо оплаты)
@@ -42,14 +40,14 @@ export const metadata: Metadata = {
     "ёлка макраме на стену",
     "новогоднее панно макраме",
   ],
-  alternates: { canonical: `${BASE_URL}${LANDING_PATH}` },
+  alternates: { canonical: `${BASE_URL}${WORKSHOP_PATH}` },
   openGraph: {
     type: "website",
     locale: "ru_RU",
     title: "Ёлка макраме своими руками — мастер-класс Stariva",
     description:
       "Сплетите настенную ёлку макраме по пошаговым видеоурокам. Предзаказ со скидкой и второй мастер-класс — в подарок.",
-    url: `${BASE_URL}${LANDING_PATH}`,
+    url: `${BASE_URL}${WORKSHOP_PATH}`,
     images: [
       {
         url: COVER,
@@ -59,36 +57,8 @@ export const metadata: Metadata = {
   },
 };
 
-async function loadData() {
-  const [products, workshop] = await Promise.all([
-    Promise.all(
-      TREE_MODELS.map((model) =>
-        getProductBySlug(model.slug).catch((error) => {
-          logger.warn("elka.product.unavailable", {
-            slug: model.slug,
-            error: String(error),
-          });
-          return undefined;
-        }),
-      ),
-    ),
-    getWorkshopBySlug(WORKSHOP_SLUG).catch((error) => {
-      logger.warn("elka.workshop.unavailable", { error: String(error) });
-      return undefined;
-    }),
-  ]);
-
-  return {
-    items: TREE_MODELS.map((model, index) => ({
-      model,
-      product: products[index],
-    })),
-    workshop,
-  };
-}
-
 export default async function ElkaMakramePage() {
-  const { items, workshop } = await loadData();
+  const { items, workshop } = await loadElkaData("elka_workshop");
   const reviewProductId = items.find((item) => item.product)?.product?.id;
 
   return (
@@ -97,7 +67,7 @@ export default async function ElkaMakramePage() {
         items={[
           { name: "Главная", href: "/" },
           { name: "Мастер-классы", href: "/workshops" },
-          { name: "Ёлка макраме", href: LANDING_PATH },
+          { name: "Ёлка макраме", href: WORKSHOP_PATH },
         ]}
       />
       <FAQJsonLd items={FAQ} />
@@ -107,7 +77,7 @@ export default async function ElkaMakramePage() {
           description={workshop.subtitle}
           image={workshop.cover}
           price={workshop.price}
-          url={LANDING_PATH}
+          url={WORKSHOP_PATH}
           duration={workshop.duration}
           level={workshop.level}
           lessonsCount={workshop.lessonsCount}

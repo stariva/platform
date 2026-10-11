@@ -1,10 +1,11 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
+import { TrackedLink } from "@/components/stariva/tracked-link";
+import type { ModelWithProduct } from "@/lib/elka/data";
 import { isPurchasable } from "@/lib/in-stock";
 import { formatPrice } from "@/lib/workshops-data";
-import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
-import { type ModelWithProduct, TREES_MODELS_ID } from "../_data";
+import { TREES_MODELS_ID } from "../_data";
 
 export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
   return (

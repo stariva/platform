@@ -1,14 +1,12 @@
 import {
   BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
-  LANDING_PATH,
-  WORKSHOP_RELEASE_LABEL,
-  WORKSHOP_TREE_SIZE,
-} from "@/app/elka-makrame/_data";
-import {
   ORDER_DEADLINE_LABEL,
   TREES_PATH,
-} from "@/app/elka-makrame-na-stenu/_data";
+  WORKSHOP_PATH,
+  WORKSHOP_RELEASE_LABEL,
+  WORKSHOP_TREE_SIZE,
+} from "@/lib/elka/data";
 import type { BlogPost } from "./types";
 
 export const elkaIzMakrameSvoimiRukami: BlogPost = {
@@ -143,7 +141,7 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
     {
       type: "cta",
       text: `Онлайн-мастер-класс: ёлка ${WORKSHOP_TREE_SIZE}. По предзаказу — со скидкой и вторым мастер-классом в подарок`,
-      href: `${LANDING_PATH}#workshop`,
+      href: `${WORKSHOP_PATH}#workshop`,
       label: "Записаться на мастер-класс",
     },
     {

@@ -2,8 +2,9 @@
 
 import { WorkshopPurchase } from "@/app/workshops/[slug]/workshop-purchase";
 import { reachGoal } from "@/lib/analytics";
+import { WORKSHOP_PATH } from "@/lib/elka/data";
 import { formatPrice } from "@/lib/workshops-data";
-import { LANDING_PATH } from "../_data";
+import { WORKSHOP_SECTION_ID } from "../_data";
 
 export function WorkshopPreorderButton({
   slug,
@@ -19,7 +20,7 @@ export function WorkshopPreorderButton({
       slug={slug}
       price={price}
       title={title}
-      returnPath={`${LANDING_PATH}#workshop`}
+      returnPath={`${WORKSHOP_PATH}#${WORKSHOP_SECTION_ID}`}
       buyLabel={`Оформить предзаказ за ${formatPrice(price)}`}
       onBuyClick={() => reachGoal("elka_workshop_preorder", { price })}
     />

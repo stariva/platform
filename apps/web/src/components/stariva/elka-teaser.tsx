@@ -1,12 +1,12 @@
 import Image from "next/image";
-import { NewYearCountdown } from "@/app/elka-makrame/_components/new-year-countdown";
-import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
-import { LANDING_PATH } from "@/app/elka-makrame/_data";
+import { NewYearCountdown } from "@/components/stariva/new-year-countdown";
+import { TrackedLink } from "@/components/stariva/tracked-link";
 import {
   ORDER_DEADLINE_DAY,
   ORDER_DEADLINE_LABEL,
   TREES_PATH,
-} from "@/app/elka-makrame-na-stenu/_data";
+  WORKSHOP_PATH,
+} from "@/lib/elka/data";
 
 const points = [
   "Не осыпается и не занимает места на полу",
@@ -81,7 +81,7 @@ export function ElkaTeaser() {
               Выбрать ёлку ↗
             </TrackedLink>
             <TrackedLink
-              href={LANDING_PATH}
+              href={WORKSHOP_PATH}
               goal="home_elka_workshop"
               className="inline-flex items-center justify-center rounded-full border border-espresso/25 hover:border-espresso text-espresso px-6 py-3 text-sm transition-colors"
             >
