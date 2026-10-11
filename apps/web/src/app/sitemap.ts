@@ -19,6 +19,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${BASE_URL}/elka-makrame-na-stenu`,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: BASE_URL,
       lastModified: new Date(),
       changeFrequency: "weekly",

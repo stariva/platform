@@ -2,10 +2,13 @@ import {
   BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
   LANDING_PATH,
-  ORDER_DEADLINE_LABEL,
   WORKSHOP_RELEASE_LABEL,
   WORKSHOP_TREE_SIZE,
 } from "@/app/elka-makrame/_data";
+import {
+  ORDER_DEADLINE_LABEL,
+  TREES_PATH,
+} from "@/app/elka-makrame-na-stenu/_data";
 import type { BlogPost } from "./types";
 
 export const elkaIzMakrameSvoimiRukami: BlogPost = {
@@ -161,7 +164,7 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
     {
       type: "cta",
       text: `Готовые ёлки-панно ручной работы для дома и бизнеса. Заказ к Новому году — до ${ORDER_DEADLINE_LABEL}`,
-      href: `${LANDING_PATH}#models`,
+      href: TREES_PATH,
       label: "Выбрать готовую ёлку",
     },
     {

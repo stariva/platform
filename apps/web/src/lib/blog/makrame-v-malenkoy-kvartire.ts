@@ -71,7 +71,7 @@ export const makrameVMalenkoyKvartire: BlogPost = {
     {
       type: "cta",
       text: "Настенные ёлки макраме — от компактных 45 см до больших панно",
-      href: "/elka-makrame#models",
+      href: "/elka-makrame-na-stenu",
       label: "Смотреть ёлки",
     },
     {

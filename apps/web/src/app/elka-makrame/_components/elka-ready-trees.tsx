@@ -1,7 +1,8 @@
 import Image from "next/image";
 import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/workshops-data";
-import { READY_TREES_ID, type TreeModel } from "../_data";
+import { TREES_PATH, type TreeModel } from "@/app/elka-makrame-na-stenu/_data";
+import { READY_TREES_ID } from "../_data";
 import { TrackedLink } from "./tracked-link";
 
 export interface ModelWithProduct {
@@ -28,8 +29,15 @@ export function ElkaReadyTrees({ items }: { items: ModelWithProduct[] }) {
           Нет времени плести?
         </h2>
         <p className="text-dark-grey mb-6">
-          Готовые ёлки ручной работы — сплетём под заказ за 2–3 дня и доставим
-          по России.
+          Закажите готовую ёлку ручной работы — под заказ за 2–3 дня, с
+          доставкой по России.{" "}
+          <TrackedLink
+            href={TREES_PATH}
+            goal="elka_ready_trees_page"
+            className="underline underline-offset-4 hover:text-terracotta"
+          >
+            Все о готовых ёлках
+          </TrackedLink>
         </p>
         <ul className="grid sm:grid-cols-2 gap-3">
           {items.map(({ model, product }) => (

@@ -1,16 +1,17 @@
 import Image from "next/image";
 import { NewYearCountdown } from "@/app/elka-makrame/_components/new-year-countdown";
 import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
+import { LANDING_PATH } from "@/app/elka-makrame/_data";
 import {
-  LANDING_PATH,
   ORDER_DEADLINE_DAY,
   ORDER_DEADLINE_LABEL,
-} from "@/app/elka-makrame/_data";
+  TREES_PATH,
+} from "@/app/elka-makrame-na-stenu/_data";
 
 const points = [
   "Не осыпается и не занимает места на полу",
   "Для квартиры, детской, отеля, кафе и офиса",
-  "Плетём под заказ за 2–3 дня, доставка по России",
+  "Под заказ за 2–3 дня, доставка по России",
 ];
 
 const models = [
@@ -53,7 +54,7 @@ export function ElkaTeaser() {
           >
             Новогодняя
             <br />
-            <span className="italic">макраме-ёлка на стену</span>
+            <span className="italic">ёлка макраме на стену</span>
           </h2>
           <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
             Вместо живой ели — панно ручной работы, которое служит годами.
@@ -73,14 +74,14 @@ export function ElkaTeaser() {
           </ul>
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <TrackedLink
-              href={`${LANDING_PATH}#models`}
+              href={TREES_PATH}
               goal="home_elka_models"
               className="inline-flex items-center justify-center rounded-full bg-espresso text-parchment px-6 py-3 text-sm"
             >
               Выбрать ёлку ↗
             </TrackedLink>
             <TrackedLink
-              href={`${LANDING_PATH}#workshop`}
+              href={LANDING_PATH}
               goal="home_elka_workshop"
               className="inline-flex items-center justify-center rounded-full border border-espresso/25 hover:border-espresso text-espresso px-6 py-3 text-sm transition-colors"
             >
@@ -90,7 +91,7 @@ export function ElkaTeaser() {
           <p className="mt-4 text-xs text-taupe">
             {deadlinePassed
               ? "Сроки изготовления и доставки уточняйте при заказе."
-              : `Закажите до ${ORDER_DEADLINE_LABEL} — успеем сплести и доставить к празднику.`}
+              : `Закажите до ${ORDER_DEADLINE_LABEL} — ёлка успеет к празднику.`}
           </p>
         </div>
 
@@ -101,7 +102,7 @@ export function ElkaTeaser() {
               className={index === 1 ? "mt-8 lg:mt-12" : ""}
             >
               <TrackedLink
-                href={`${LANDING_PATH}#models`}
+                href={TREES_PATH}
                 goal="home_elka_image"
                 className="group relative block aspect-[4/5] overflow-hidden rounded-xl bg-linen"
               >

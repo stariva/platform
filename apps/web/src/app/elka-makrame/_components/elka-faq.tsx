@@ -1,8 +1,18 @@
 import { ContactMasterButton } from "@/components/stariva/contact-master";
-import { FAQ, PHONE_HREF, PHONE_LABEL } from "../_data";
+import { PHONE_HREF, PHONE_LABEL } from "../_data";
 import { TrackedLink } from "./tracked-link";
 
-export function ElkaFaq() {
+/** Вопросы и ответы — общий блок для страниц мастер-класса и готовых ёлок. */
+export function ElkaFaq({
+  items,
+  title,
+  message,
+}: {
+  items: { question: string; answer: string }[];
+  title: string;
+  /** Первое сообщение в WhatsApp при «Написать мастеру». */
+  message: string;
+}) {
   return (
     <section aria-labelledby="faq-title" className="bg-parchment">
       <div className="max-w-[1100px] mx-auto px-5 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-[1fr_1.6fr] gap-10">
@@ -13,16 +23,16 @@ export function ElkaFaq() {
             className="font-serif text-espresso leading-tight text-balance mb-5"
             style={{ fontSize: "clamp(30px, 4vw, 44px)" }}
           >
-            Частые вопросы о мастер-классе
+            {title}
           </h2>
           <p className="text-dark-grey mb-6">
-            Не нашли ответ? Напишите — ответим в течение часа.
+            Не нашли ответ? Напишите — Ольга ответит в течение часа.
           </p>
           <div className="flex flex-col gap-2 text-espresso">
             <ContactMasterButton
               source="elka_faq"
               goal="elka_faq_telegram"
-              message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по ёлке макраме."
+              message={message}
               className="text-left underline underline-offset-4 hover:text-terracotta"
             >
               Написать мастеру
@@ -38,7 +48,7 @@ export function ElkaFaq() {
         </div>
 
         <div className="divide-y divide-espresso/10 border-y border-espresso/10">
-          {FAQ.map((item) => (
+          {items.map((item) => (
             <details key={item.question} className="group py-5">
               <summary className="flex cursor-pointer list-none items-start justify-between gap-6 font-serif text-lg text-espresso [&::-webkit-details-marker]:hidden">
                 {item.question}

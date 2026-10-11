@@ -7,7 +7,8 @@ export const WORKSHOP_SLUG = "elka-makrame";
 export const WORKSHOP_SECTION_ID = "workshop";
 /**
  * Якорь блока с готовыми ёлками. «models» — со времён витрины на этой
- * странице: на него ведут главная, блог и старые объявления.
+ * странице: на него ещё ведут старые ссылки и объявления. Сама витрина
+ * теперь на /elka-makrame-na-stenu.
  */
 export const READY_TREES_ID = "models";
 /** Якорь карточки с формой оплаты — на неё ведут кнопки на телефоне. */
@@ -30,43 +31,9 @@ export const BONUS_TREE_SIZE = "75 × 150 см";
 export const WORKSHOP_RELEASE_LABEL = "20 октября";
 /** Выход мастер-класса по большой ёлке. */
 export const BONUS_RELEASE_LABEL = "3 ноября";
-/** До этой даты успеем сплести и доставить к празднику. */
-export const ORDER_DEADLINE_DAY = 20;
-export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
 
 export const PHONE_HREF = CONTACTS.phoneHref;
 export const PHONE_LABEL = "+7 977 872-25-46";
-
-export interface TreeModel {
-  slug: string;
-  href: string;
-  name: string;
-  color: string;
-  size: string;
-  fallbackPrice: number;
-  fallbackImage: string;
-}
-
-export const TREE_MODELS: TreeModel[] = [
-  {
-    slug: "elka-panno-makrame-0687",
-    href: "/catalog/interior/elka-panno-makrame-0687",
-    name: "Ёлка в технике макраме, бежевая",
-    color: "Бежевый, натуральный, молочный",
-    size: "70–75 × 150 см",
-    fallbackPrice: 4500,
-    fallbackImage: "/images/elka/elka-cream-interior.jpg",
-  },
-  {
-    slug: "elka-panno-makrame-8124",
-    href: "/catalog/interior/elka-panno-makrame-8124",
-    name: "Ёлка в технике макраме, хаки",
-    color: "Хаки",
-    size: "45 × 100 см",
-    fallbackPrice: 3700,
-    fallbackImage: "/images/elka/elka-green-festive.jpg",
-  },
-];
 
 export const WORKSHOP_PROGRAM = [
   "Подбор шнура и расчёт метража под нужный размер ёлки",

@@ -63,7 +63,7 @@ export const makrameDlyaKafeIRestoranov: BlogPost = {
     {
       type: "cta",
       text: "Ёлки-панно для кафе, ресторанов и отелей — под размер стены и цвет бренда",
-      href: "/elka-makrame#models",
+      href: "/elka-makrame-na-stenu",
       label: "Новогодняя ёлка для бизнеса",
     },
     {
