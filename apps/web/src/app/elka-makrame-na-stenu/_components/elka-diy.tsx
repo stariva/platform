@@ -7,7 +7,7 @@ import {
 import { formatPrice, type Workshop } from "@/lib/workshops-data";
 
 /**
- * Небольшой блок в конце страницы — для тех, кто хочет сплести ёлку сам.
+ * Небольшой блок перед вопросами — для тех, кто хочет сплести ёлку сам.
  * Страница про готовые ёлки, поэтому только короткая ссылка на мастер-класс.
  */
 export function ElkaDiy({ workshop }: { workshop?: Workshop }) {

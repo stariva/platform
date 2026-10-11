@@ -5,12 +5,13 @@ export const LANDING_PATH = "/elka-makrame";
 export const WORKSHOP_SLUG = "elka-makrame";
 /** Якорь блока мастер-класса — на него ведёт реклама. */
 export const WORKSHOP_SECTION_ID = "workshop";
+/** Якорь небольшого блока с готовыми ёлками внизу страницы. */
+export const READY_TREES_ID = "ready-trees";
 /**
- * Якорь блока с готовыми ёлками. «models» — со времён витрины на этой
- * странице: на него ещё ведут старые ссылки и объявления. Сама витрина
- * теперь на /elka-makrame-na-stenu.
+ * Якорь бывшей витрины на этой странице: на него ведут старые ссылки и
+ * объявления. Витрина теперь на /elka-makrame-na-stenu — туда и уводим.
  */
-export const READY_TREES_ID = "models";
+export const LEGACY_MODELS_HASH = "#models";
 /** Якорь карточки с формой оплаты — на неё ведут кнопки на телефоне. */
 export const WORKSHOP_BUY_ID = "workshop-buy";
 /** Цена и кнопка под заголовком блока — только на телефоне. */

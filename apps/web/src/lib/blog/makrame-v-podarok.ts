@@ -1,3 +1,4 @@
+import { TREES_PATH } from "@/app/elka-makrame-na-stenu/_data";
 import type { BlogPost } from "./types";
 
 export const makrameVPodarok: BlogPost = {
@@ -51,7 +52,7 @@ export const makrameVPodarok: BlogPost = {
     {
       type: "cta",
       text: "Ёлки-панно ручной работы в подарок — бежевая и хаки, в наличии и под заказ",
-      href: "/elka-makrame-na-stenu",
+      href: TREES_PATH,
       label: "Выбрать ёлку",
     },
     {

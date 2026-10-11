@@ -1,3 +1,5 @@
+import type { Product } from "@/lib/ozon-types";
+
 /** Страница готовых ёлок. Мастер-класс — отдельно, на /elka-makrame. */
 export const TREES_PATH = "/elka-makrame-na-stenu";
 /** Якорь витрины моделей. */
@@ -5,7 +7,7 @@ export const TREES_MODELS_ID = "models";
 /** Якорь блока для бизнеса. */
 export const TREES_BUSINESS_ID = "business";
 
-/** До этой даты успеем сплести и доставить к празднику. */
+/** Заказ до этой даты успевает к празднику: 2–3 дня плетения и доставка. */
 export const ORDER_DEADLINE_DAY = 20;
 export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
 
@@ -22,6 +24,12 @@ export interface TreeModel {
   highlights: string[];
 }
 
+/** Модель и её карточка на Ozon — карточки может не быть, тогда цена и фото из модели. */
+export interface ModelWithProduct {
+  model: TreeModel;
+  product?: Product;
+}
+
 export const TREE_MODELS: TreeModel[] = [
   {
     slug: "elka-panno-makrame-0687",
@@ -36,7 +44,7 @@ export const TREE_MODELS: TreeModel[] = [
     highlights: [
       "Заметна с порога — работает как фотозона",
       "Три оттенка: бежевый, натуральный, молочный",
-      "Плетётся под заказ за 2–3 дня",
+      "Вешается за звезду на один крючок — без сверления",
     ],
   },
   {
@@ -52,7 +60,7 @@ export const TREE_MODELS: TreeModel[] = [
     highlights: [
       "Компактная — для небольших стен",
       "Глубокий природный оттенок",
-      "Готова к отправке",
+      "Вешается за звезду на один крючок — без сверления",
     ],
   },
 ];
@@ -158,7 +166,7 @@ export const BUSINESS_POINTS = [
 export const FAQ = [
   {
     question: "Ёлка успеет к Новому году?",
-    answer: `Да. Под заказ ёлку плетут 2–3 рабочих дня, доставка по России — 2–7 дней. Чтобы точно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Ёлка из наличия уходит в доставку на следующий день.`,
+    answer: `Да. Под заказ ёлка плетётся 2–3 рабочих дня, доставка по России — 2–7 дней. Чтобы точно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Ёлка из наличия уходит в доставку на следующий день.`,
   },
   {
     question: "Как повесить ёлку макраме на стену?",

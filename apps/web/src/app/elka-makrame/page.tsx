@@ -14,6 +14,7 @@ import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { ElkaFaq } from "./_components/elka-faq";
 import { ElkaReadyTrees } from "./_components/elka-ready-trees";
 import { ElkaWorkshop } from "./_components/elka-workshop";
+import { LegacyModelsRedirect } from "./_components/legacy-models-redirect";
 import { TREE_MODELS } from "@/app/elka-makrame-na-stenu/_data";
 import { FAQ, LANDING_PATH, WORKSHOP_SLUG } from "./_data";
 
@@ -125,8 +126,10 @@ export default async function ElkaMakramePage() {
           items={FAQ}
           title="Частые вопросы о мастер-классе"
           message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по ёлке макраме."
+          source="elka_faq"
         />
         <ElkaReadyTrees items={items} />
+        <LegacyModelsRedirect />
       </main>
       <Footer />
     </>

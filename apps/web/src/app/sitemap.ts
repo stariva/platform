@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { TREES_PATH } from "@/app/elka-makrame-na-stenu/_data";
 import { blogPosts } from "@/lib/blog-data";
 import { IN_STOCK_HREF } from "@/lib/in-stock";
 import { categories, getProducts } from "@/lib/ozon-service";
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${BASE_URL}/elka-makrame-na-stenu`,
+      url: `${BASE_URL}${TREES_PATH}`,
       changeFrequency: "weekly",
       priority: 0.9,
     },
