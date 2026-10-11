@@ -11,7 +11,8 @@ import { WORKSHOP_AD_CAMPAIGNS, WORKSHOP_SECTION_ID } from "../_data";
 export function WorkshopAdScroll() {
   useEffect(() => {
     const url = new URL(window.location.href);
-    const campaign = url.searchParams.get("utm_campaign");
+    // Как в touchFromUrl: метка с пробелами по краям — та же кампания.
+    const campaign = url.searchParams.get("utm_campaign")?.trim();
     if (url.hash || !campaign || !WORKSHOP_AD_CAMPAIGNS.includes(campaign))
       return;
     const section = document.getElementById(WORKSHOP_SECTION_ID);
