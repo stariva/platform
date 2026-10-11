@@ -35,11 +35,12 @@ export interface MadeToOrderConfig {
 export const MADE_TO_ORDER_DAYS = "2–4 дня";
 
 export const CUSTOM_SIZE = "По меркам";
-/** Выбор «свой размер» для сумок и интерьера, где «по меркам» не говорят. */
+/** Прежний выбор «свой размер» для сумок и интерьера — в карточке его больше нет. */
 export const OWN_SIZE = "Свой размер";
+export const PHOTO_SIZE = "Как на фото";
 export const PHOTO_COLOR = "Как на фото";
 
-/** Базовая палитра хлопкового шнура. Точный оттенок согласуем перед плетением. */
+/** Прежняя палитра шнура — в карточке её больше нет, нужна для старых корзин. */
 export const COLOR_SWATCHES: ColorSwatch[] = [
   { id: "natural", label: "Натуральный", hex: "#e9dfcc" },
   { id: "milk", label: "Молочный", hex: "#f6f1e7" },
@@ -95,7 +96,7 @@ export const madeToOrder: Record<ProductCategory, MadeToOrderConfig> = {
       { id: "diameter", label: "Диаметр", hint: "Желаемый диаметр изделия" },
       { id: "height", label: "Высота", hint: "Желаемая высота изделия" },
     ],
-    cta: "Заказать свой размер",
+    cta: "Заказать свой вариант",
   },
   bags: {
     badge: "Размер и цвет на выбор",
@@ -135,24 +136,24 @@ export function madeToOrderSizes(
   return product.sizes?.length ? product.sizes : config.defaultSizes;
 }
 
-/** Как подписан выбор «свой размер»: для одежды «По меркам». */
-export function customSizeLabel(category: ProductCategory): string {
-  return category === "clothes" ? CUSTOM_SIZE : OWN_SIZE;
-}
-
-/** Размер из заказа — стандартный размер изделия или «свой размер». */
+/**
+ * Размер из заказа — стандартный размер изделия, «по меркам» (одежда) или
+ * «как на фото». «Свой размер» больше не предлагаем, но принимаем из старых корзин.
+ */
 export function isMadeToOrderSize(
   product: Pick<Product, "category" | "sizes">,
   config: MadeToOrderConfig,
   size: string,
 ): boolean {
   return (
-    size === customSizeLabel(product.category) ||
+    size === PHOTO_SIZE ||
+    size === CUSTOM_SIZE ||
+    size === OWN_SIZE ||
     madeToOrderSizes(product, config).includes(size)
   );
 }
 
-/** Цвет из заказа — «как на фото» или цвет из палитры; другой оттенок пишут в комментарии. */
+/** Цвет из заказа — «как на фото»; цвета из старой палитры принимаем из прежних корзин. */
 export function isMadeToOrderColor(color: string): boolean {
   return (
     color === PHOTO_COLOR ||
