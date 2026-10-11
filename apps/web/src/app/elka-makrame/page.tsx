@@ -19,6 +19,7 @@ import { ElkaFaq } from "./_components/elka-faq";
 import { ElkaHero } from "./_components/elka-hero";
 import { ElkaModels } from "./_components/elka-models";
 import { ElkaWorkshop } from "./_components/elka-workshop";
+import { WorkshopAdScroll } from "./_components/workshop-ad-scroll";
 import { FAQ, LANDING_PATH, TREE_MODELS, WORKSHOP_SLUG } from "./_data";
 
 // Рендер на каждый запрос: при сборке образа базы нет, и статическая
@@ -132,6 +133,7 @@ export default async function ElkaMakramePage() {
         <ElkaComparison />
         <ElkaBusiness />
         <ElkaWorkshop workshop={workshop} />
+        <WorkshopAdScroll />
         <Reviews
           limit={3}
           productId={reviewProductId}

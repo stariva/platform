@@ -5,6 +5,12 @@ export const LANDING_PATH = "/elka-makrame";
 export const WORKSHOP_SLUG = "elka-makrame";
 /** Якорь блока мастер-класса — на него ведёт реклама. */
 export const WORKSHOP_SECTION_ID = "workshop";
+/**
+ * Кампании VK Рекламы про мастер-класс (utm_campaign = ID кампании). Ссылку
+ * в опубликованном объявлении VK менять не даёт — она ведёт на верх страницы,
+ * поэтому к блоку мастер-класса прокручиваем сами.
+ */
+export const WORKSHOP_AD_CAMPAIGNS = ["35009789"];
 /** Якорь карточки с формой оплаты — на неё ведут кнопки на телефоне. */
 export const WORKSHOP_BUY_ID = "workshop-buy";
 /** Цена и кнопка под заголовком блока — только на телефоне. */
