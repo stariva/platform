@@ -325,10 +325,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
                     <PriceCell id={product.id} price={product.price} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <OldPriceCell
-                      id={product.id}
-                      oldPrice={product.oldPrice}
-                    />
+                    <OldPriceCell id={product.id} oldPrice={product.oldPrice} />
                   </TableCell>
                   <TableCell>
                     <AvailabilitySwitches
