@@ -1,3 +1,4 @@
+import { adminChatsRouter } from "./chats";
 import { adminOrdersRouter } from "./orders";
 import { adminProductsRouter } from "./products";
 import { adminReviewsRouter } from "./reviews";
@@ -12,4 +13,5 @@ export const adminRouter = {
   workshops: adminWorkshopsRouter,
   users: adminUsersRouter,
   stats: adminStatsRouter,
+  chats: adminChatsRouter,
 };

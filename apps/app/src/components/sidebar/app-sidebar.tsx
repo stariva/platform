@@ -15,6 +15,7 @@ import {
 } from "@stariva/ui";
 import {
   IconExternalLink,
+  IconMessageChatbot,
   IconMessageStar,
   IconPackage,
   IconPlus,
@@ -41,7 +42,10 @@ const learning = [
   { title: "Добавить мастер-класс", url: "/workshops/new", icon: IconPlus },
 ];
 
-const customers = [{ title: "Пользователи", url: "/users", icon: IconUsers }];
+const customers = [
+  { title: "Пользователи", url: "/users", icon: IconUsers },
+  { title: "Чат с Никой", url: "/chats", icon: IconMessageChatbot },
+];
 
 export function AppSidebar({
   user,
