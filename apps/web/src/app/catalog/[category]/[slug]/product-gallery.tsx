@@ -271,6 +271,7 @@ function ThumbnailGrid({
             variant="ghost"
             type="button"
             aria-label={`Ещё ${images.length - shown} фото — открыть все на весь экран`}
+            aria-pressed={restActive}
             onClick={() => onOpenRest(restIndex)}
             className={`${THUMB_CLASS} group ${restActive ? THUMB_ACTIVE : ""}`}
           >
