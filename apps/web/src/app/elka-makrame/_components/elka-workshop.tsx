@@ -2,25 +2,27 @@ import { Check, Gift } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
+import { TrackedLink } from "@/components/stariva/tracked-link";
+import {
+  BONUS_RELEASE_LABEL,
+  BONUS_TREE_SIZE,
+  WORKSHOP_PREORDER_FALLBACK_PRICE,
+  WORKSHOP_REGULAR_PRICE,
+  WORKSHOP_RELEASE_LABEL,
+  WORKSHOP_TREE_SIZE,
+} from "@/lib/elka/data";
 import {
   formatPrice,
   formatReleaseDate,
   type Workshop,
 } from "@/lib/workshops-data";
 import {
-  BONUS_RELEASE_LABEL,
-  BONUS_TREE_SIZE,
   WORKSHOP_BUY_ID,
   WORKSHOP_INCLUDES,
-  WORKSHOP_PREORDER_FALLBACK_PRICE,
   WORKSHOP_PROGRAM,
   WORKSHOP_QUICK_BUY_ID,
-  WORKSHOP_REGULAR_PRICE,
-  WORKSHOP_RELEASE_LABEL,
   WORKSHOP_SECTION_ID,
-  WORKSHOP_TREE_SIZE,
 } from "../_data";
-import { TrackedLink } from "./tracked-link";
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
 import { WorkshopStickyCta } from "./workshop-sticky-cta";
 

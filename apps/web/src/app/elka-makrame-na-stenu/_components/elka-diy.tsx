@@ -1,9 +1,9 @@
-import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
+import { TrackedLink } from "@/components/stariva/tracked-link";
 import {
-  LANDING_PATH,
+  WORKSHOP_PATH,
   WORKSHOP_PREORDER_FALLBACK_PRICE,
   WORKSHOP_TREE_SIZE,
-} from "@/app/elka-makrame/_data";
+} from "@/lib/elka/data";
 import { formatPrice, type Workshop } from "@/lib/workshops-data";
 
 /**
@@ -31,7 +31,7 @@ export function ElkaDiy({ workshop }: { workshop?: Workshop }) {
             </p>
           </div>
           <TrackedLink
-            href={LANDING_PATH}
+            href={WORKSHOP_PATH}
             goal="elka_trees_workshop"
             className="inline-flex shrink-0 items-center justify-center rounded-2xl border border-espresso/20 hover:border-espresso text-espresso px-6 py-3 transition-colors"
           >

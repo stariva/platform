@@ -1,11 +1,8 @@
 import Image from "next/image";
-import { NewYearCountdown } from "@/app/elka-makrame/_components/new-year-countdown";
-import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
-import {
-  ORDER_DEADLINE_LABEL,
-  TREES_BUSINESS_ID,
-  TREES_MODELS_ID,
-} from "../_data";
+import { NewYearCountdown } from "@/components/stariva/new-year-countdown";
+import { TrackedLink } from "@/components/stariva/tracked-link";
+import { ORDER_DEADLINE_LABEL } from "@/lib/elka/data";
+import { TREES_BUSINESS_ID, TREES_MODELS_ID } from "../_data";
 
 const facts = [
   { value: "2–3 дня", label: "под заказ" },

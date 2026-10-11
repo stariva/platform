@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { TREES_PATH } from "@/app/elka-makrame-na-stenu/_data";
+import { TREES_PATH } from "@/lib/elka/data";
 import { LEGACY_MODELS_HASH } from "../_data";
 
 /**

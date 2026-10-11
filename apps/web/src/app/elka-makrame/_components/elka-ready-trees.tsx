@@ -1,11 +1,8 @@
 import Image from "next/image";
-import {
-  type ModelWithProduct,
-  TREES_PATH,
-} from "@/app/elka-makrame-na-stenu/_data";
+import { TrackedLink } from "@/components/stariva/tracked-link";
+import { type ModelWithProduct, TREES_PATH } from "@/lib/elka/data";
 import { formatPrice } from "@/lib/workshops-data";
 import { READY_TREES_ID } from "../_data";
-import { TrackedLink } from "./tracked-link";
 
 /**
  * Небольшой блок в конце страницы — для тех, кто не хочет плести сам.

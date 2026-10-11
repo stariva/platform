@@ -1,6 +1,6 @@
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import type { FAQItem } from "@/components/stariva/json-ld";
-import { PHONE_HREF, PHONE_LABEL } from "../_data";
+import { CONTACTS } from "@/lib/contacts";
 import { TrackedLink } from "./tracked-link";
 
 /** Вопросы и ответы — общий блок для страниц мастер-класса и готовых ёлок. */
@@ -42,11 +42,11 @@ export function ElkaFaq({
               Написать мастеру
             </ContactMasterButton>
             <TrackedLink
-              href={PHONE_HREF}
+              href={CONTACTS.phoneHref}
               goal={`${source}_phone`}
               className="underline underline-offset-4 hover:text-terracotta"
             >
-              {PHONE_LABEL}
+              {CONTACTS.phone}
             </TrackedLink>
           </div>
         </div>

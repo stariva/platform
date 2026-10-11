@@ -1,69 +1,11 @@
-import type { Product } from "@/lib/ozon-types";
+import { ORDER_DEADLINE_LABEL } from "@/lib/elka/data";
 
-/** Страница готовых ёлок. Мастер-класс — отдельно, на /elka-makrame. */
-export const TREES_PATH = "/elka-makrame-na-stenu";
+/** Своё у страницы готовых ёлок; общее с мастер-классом — в lib/elka. */
+
 /** Якорь витрины моделей. */
 export const TREES_MODELS_ID = "models";
 /** Якорь блока для бизнеса. */
 export const TREES_BUSINESS_ID = "business";
-
-/** Заказ до этой даты успевает к празднику: 2–3 дня плетения и доставка. */
-export const ORDER_DEADLINE_DAY = 20;
-export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
-
-export interface TreeModel {
-  slug: string;
-  href: string;
-  name: string;
-  color: string;
-  size: string;
-  fallbackPrice: number;
-  fallbackOldPrice?: number;
-  fallbackImage: string;
-  bestFor: string;
-  highlights: string[];
-}
-
-/** Модель и её карточка на Ozon — карточки может не быть, тогда цена и фото из модели. */
-export interface ModelWithProduct {
-  model: TreeModel;
-  product?: Product;
-}
-
-export const TREE_MODELS: TreeModel[] = [
-  {
-    slug: "elka-panno-makrame-0687",
-    href: "/catalog/interior/elka-panno-makrame-0687",
-    name: "Ёлка в технике макраме, бежевая",
-    color: "Бежевый, натуральный, молочный",
-    size: "70–75 × 150 см",
-    fallbackPrice: 4500,
-    fallbackOldPrice: 11500,
-    fallbackImage: "/images/elka/elka-cream-interior.jpg",
-    bestFor: "Гостиная, лобби отеля, зал ресторана",
-    highlights: [
-      "Заметна с порога — работает как фотозона",
-      "Три оттенка: бежевый, натуральный, молочный",
-      "Вешается за звезду на один крючок — без сверления",
-    ],
-  },
-  {
-    slug: "elka-panno-makrame-8124",
-    href: "/catalog/interior/elka-panno-makrame-8124",
-    name: "Ёлка в технике макраме, хаки",
-    color: "Хаки",
-    size: "45 × 100 см",
-    fallbackPrice: 3700,
-    fallbackOldPrice: 10000,
-    fallbackImage: "/images/elka/elka-green-festive.jpg",
-    bestFor: "Детская, прихожая, салон, ресепшен",
-    highlights: [
-      "Компактная — для небольших стен",
-      "Глубокий природный оттенок",
-      "Вешается за звезду на один крючок — без сверления",
-    ],
-  },
-];
 
 export interface Audience {
   title: string;
