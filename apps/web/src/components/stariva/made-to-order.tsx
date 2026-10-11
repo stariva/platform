@@ -33,13 +33,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
 import {
-  COLOR_SWATCHES,
   CUSTOM_SIZE,
-  customSizeLabel,
   type MadeToOrderConfig,
   madeToOrderLeadTime,
   madeToOrderSizes,
   PHOTO_COLOR,
+  PHOTO_SIZE,
 } from "@/lib/made-to-order";
 import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
@@ -57,9 +56,12 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
   const router = useRouter();
   const { add } = useCart();
 
-  const [size, setSize] = useState<string>(CUSTOM_SIZE);
-  const [color, setColor] = useState<string>(PHOTO_COLOR);
+  const [size, setSize] = useState<string>(
+    isClothes ? CUSTOM_SIZE : (sizes[0] ?? PHOTO_SIZE),
+  );
   const [open, setOpen] = useState(false);
+  // Оттенок шнура не выбираем в карточке — согласуем с мастером перед плетением
+  const color = PHOTO_COLOR;
 
   // Есть цена в каталоге — изделие можно положить в корзину и оформить заявку
   const canOrder = product.currency === "RUB" && product.price > 0;
@@ -72,7 +74,7 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
       image: product.images[0] ?? "",
       price: Math.round(product.price * 100),
       options: {
-        size: size === CUSTOM_SIZE ? customSizeLabel(product.category) : size,
+        size,
         color,
         measurements: [],
       },
@@ -90,11 +92,6 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
     router.push("/cart");
   }
 
-  const colorOptions = [
-    { id: "photo", label: PHOTO_COLOR, hex: null as string | null },
-    ...COLOR_SWATCHES,
-  ];
-
   return (
     <div className="mb-8 rounded-xl border border-espresso/8 bg-sand p-5">
       <div className="flex items-center gap-2 label-caps text-[11px] text-terracotta mb-2">
@@ -108,73 +105,45 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
         {config.lead}
       </p>
 
-      {/* Размер */}
-      <fieldset className="mb-4">
-        <legend className="label-caps text-[11px] text-taupe mb-2">
-          Размер
-        </legend>
-        <div className="flex flex-wrap gap-1.5">
-          {sizes.map((s) => (
-            <Chip key={s} active={size === s} onClick={() => setSize(s)}>
-              {s}
-            </Chip>
-          ))}
-          <Chip
-            active={size === CUSTOM_SIZE}
-            onClick={() => setSize(CUSTOM_SIZE)}
-            accent
-          >
-            {isClothes ? "По вашим меркам" : "Свой размер"}
-          </Chip>
-        </div>
-        {product.dimensions && (
-          <p className="text-taupe text-[11px] mt-2">
-            На фото: {product.dimensions}
-          </p>
-        )}
-      </fieldset>
-
-      {/* Цвет */}
-      <fieldset className="mb-5">
-        <legend className="label-caps text-[11px] text-taupe mb-2">
-          Цвет шнура
-          <span className="normal-case tracking-normal text-espresso/70 ml-1.5">
-            — {color}
-          </span>
-        </legend>
-        <div className="flex flex-wrap items-center gap-2">
-          {colorOptions.map((c) =>
-            c.hex ? (
-              <button
-                key={c.id}
-                type="button"
-                title={c.label}
-                aria-label={c.label}
-                aria-pressed={color === c.label}
-                onClick={() => setColor(c.label)}
-                className={`size-7 rounded-full border border-espresso/15 transition-shadow ${
-                  color === c.label
-                    ? "ring-2 ring-terracotta ring-offset-2 ring-offset-sand"
-                    : "hover:ring-1 hover:ring-espresso/30 hover:ring-offset-2 hover:ring-offset-sand"
-                }`}
-                style={{ backgroundColor: c.hex }}
-              />
-            ) : (
-              <Chip
-                key={c.id}
-                active={color === c.label}
-                onClick={() => setColor(c.label)}
-              >
-                {c.label}
+      {/* Размер: для одежды — стандартные или по меркам, для остальных — только если заданы в каталоге */}
+      {(isClothes || sizes.length > 0) && (
+        <fieldset className="mb-4">
+          <legend className="label-caps text-[11px] text-taupe mb-2">
+            Размер
+          </legend>
+          <div className="flex flex-wrap gap-1.5">
+            {sizes.map((s) => (
+              <Chip key={s} active={size === s} onClick={() => setSize(s)}>
+                {s}
               </Chip>
-            ),
+            ))}
+            {isClothes && (
+              <Chip
+                active={size === CUSTOM_SIZE}
+                onClick={() => setSize(CUSTOM_SIZE)}
+                accent
+              >
+                По вашим меркам
+              </Chip>
+            )}
+          </div>
+          {product.dimensions && (
+            <p className="text-taupe text-[11px] mt-2">
+              На фото: {product.dimensions}
+            </p>
           )}
-        </div>
-        <p className="text-taupe text-[11px] mt-2">
-          {product.color ? `На фото: ${product.color}. ` : ""}
-          Другой оттенок — тоже можно, согласуем перед плетением.
+        </fieldset>
+      )}
+      {!isClothes && sizes.length === 0 && product.dimensions && (
+        <p className="text-taupe text-[11px] mb-4">
+          Размер: {product.dimensions}
         </p>
-      </fieldset>
+      )}
+
+      <p className="text-taupe text-[11px] mb-5">
+        {product.color ? `Цвет шнура на фото: ${product.color}. ` : ""}
+        Другой оттенок — тоже можно, согласуем перед плетением.
+      </p>
 
       {isClothes && (
         <details className="group mb-5 rounded-lg border border-espresso/10 bg-parchment/60">
@@ -287,8 +256,7 @@ function MadeToOrderDialog({
   const [submitting, setSubmitting] = useState(false);
   const submission = useRef<{ signature: string; id: string } | null>(null);
   const customSize = size === CUSTOM_SIZE;
-  const requestSize =
-    customSize && product.category !== "clothes" ? "Свой размер" : size;
+  const requestSize = size;
 
   const form = useForm<RequestValues>({
     resolver: zodResolver(requestSchema),
