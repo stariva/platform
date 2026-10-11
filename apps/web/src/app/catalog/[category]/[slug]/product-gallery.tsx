@@ -27,6 +27,8 @@ const SWIPE_DISTANCE = 50;
 const TAP_SLOP = 6;
 
 const PLACEHOLDER = "/placeholder.jpg";
+/** Ячеек в ряду миниатюр под фото; лишние снимки прячутся за плиткой «+N». */
+const THUMB_SLOTS = 6;
 
 interface ProductGalleryProps {
   images: string[];
@@ -180,36 +182,15 @@ export function ProductGallery({ images, name, badge }: ProductGalleryProps) {
       </div>
 
       {list.length > 1 && (
-        <div className="-m-1 flex gap-3 overflow-x-auto scroll-p-1 p-1 pb-2">
-          {list.map((img, i) => (
-            <Button
-              // biome-ignore lint/suspicious/noArrayIndexKey: image thumbnails are positional, index is the correct key
-              key={i}
-              variant="ghost"
-              size="icon"
-              type="button"
-              aria-label={`Показать фото ${i + 1} из ${list.length}`}
-              aria-pressed={index === i}
-              onClick={() => setActive(i)}
-              className={`size-20 shrink-0 scroll-m-1 rounded-lg border-2 bg-sand p-1 transition-colors duration-150 active:scale-[0.97] focus-visible:border-espresso focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 focus-visible:ring-offset-parchment focus-visible:transition-none motion-reduce:transition-none motion-reduce:active:scale-100 ${
-                index === i
-                  ? "border-espresso"
-                  : "border-espresso/20 hover:border-espresso/50"
-              }`}
-            >
-              <span className="relative block size-full overflow-hidden rounded-sm">
-                <Image
-                  src={img}
-                  alt=""
-                  fill
-                  className="object-contain"
-                  sizes="68px"
-                  unoptimized={isRemote(img)}
-                />
-              </span>
-            </Button>
-          ))}
-        </div>
+        <ThumbnailGrid
+          images={list}
+          index={index}
+          onSelect={setActive}
+          onOpenRest={(i) => {
+            setActive(i);
+            setOpen(true);
+          }}
+        />
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -226,6 +207,88 @@ export function ProductGallery({ images, name, badge }: ProductGalleryProps) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+interface ThumbnailGridProps {
+  images: string[];
+  index: number;
+  onSelect: (index: number) => void;
+  /** Клик по плитке «+N»: показать это фото в полноэкранном просмотре. */
+  onOpenRest: (index: number) => void;
+}
+
+const THUMB_CLASS =
+  "relative aspect-[3/4] h-auto w-full overflow-hidden rounded-lg bg-sand p-0 transition-[box-shadow,opacity] duration-150 active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2 focus-visible:ring-offset-parchment motion-reduce:transition-none motion-reduce:active:scale-100";
+const THUMB_ACTIVE = "ring-2 ring-espresso ring-offset-2 ring-offset-parchment";
+const THUMB_IDLE = "opacity-70 hover:opacity-100";
+
+/**
+ * Миниатюры всегда ровно по ширине фото — без горизонтальной прокрутки.
+ * Если фото больше, чем ячеек, последняя ячейка превращается в «+N»:
+ * она показывает текущее фото из «хвоста» (или первое из него) и открывает
+ * полноэкранный просмотр, где видны все снимки.
+ */
+function ThumbnailGrid({
+  images,
+  index,
+  onSelect,
+  onOpenRest,
+}: ThumbnailGridProps) {
+  const overflow = images.length > THUMB_SLOTS;
+  const shown = overflow ? THUMB_SLOTS - 1 : images.length;
+  const restIndex = Math.max(index, shown);
+  const restActive = overflow && index >= shown;
+
+  return (
+    <ul className="grid grid-cols-6 gap-2 sm:gap-3">
+      {images.slice(0, shown).map((img, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: image thumbnails are positional, index is the correct key
+        <li key={i}>
+          <Button
+            variant="ghost"
+            type="button"
+            aria-label={`Показать фото ${i + 1} из ${images.length}`}
+            aria-pressed={index === i}
+            onClick={() => onSelect(i)}
+            className={`${THUMB_CLASS} ${index === i ? THUMB_ACTIVE : THUMB_IDLE}`}
+          >
+            <Image
+              src={img}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 16vw, 96px"
+              unoptimized={isRemote(img)}
+            />
+          </Button>
+        </li>
+      ))}
+
+      {overflow && (
+        <li>
+          <Button
+            variant="ghost"
+            type="button"
+            aria-label={`Ещё ${images.length - shown} фото — открыть все на весь экран`}
+            onClick={() => onOpenRest(restIndex)}
+            className={`${THUMB_CLASS} group ${restActive ? THUMB_ACTIVE : ""}`}
+          >
+            <Image
+              src={images[restIndex] ?? PLACEHOLDER}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 16vw, 96px"
+              unoptimized={isRemote(images[restIndex] ?? PLACEHOLDER)}
+            />
+            <span className="absolute inset-0 flex items-center justify-center bg-espresso/45 text-sm font-medium tabular-nums text-parchment backdrop-blur-[1px] transition-colors duration-150 group-hover:bg-espresso/55 motion-reduce:transition-none sm:text-base">
+              +{images.length - shown}
+            </span>
+          </Button>
+        </li>
+      )}
+    </ul>
   );
 }
 
@@ -420,7 +483,7 @@ function Lightbox({ images, name, index, onIndexChange }: LightboxProps) {
       </div>
 
       {images.length > 1 && (
-        <div className="flex justify-start gap-2 overflow-x-auto px-4 py-3 sm:justify-center sm:px-6">
+        <div className="flex justify-start gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] sm:justify-center sm:px-6 [&::-webkit-scrollbar]:hidden">
           {images.map((img, i) => (
             <Button
               // biome-ignore lint/suspicious/noArrayIndexKey: image thumbnails are positional, index is the correct key
