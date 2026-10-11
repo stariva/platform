@@ -41,7 +41,7 @@ export const setPrice = adminProcedure
     }
     if (current.oldPrice !== null && current.oldPrice <= price) {
       throw new ORPCError("BAD_REQUEST", {
-        message: `Цена должна быть меньше старой (${current.oldPrice / 100} ₽). Старую цену меняют в карточке товара`,
+        message: `Цена должна быть меньше старой (${current.oldPrice / 100} ₽). Сначала измените или уберите старую цену`,
       });
     }
 

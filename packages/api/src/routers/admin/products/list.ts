@@ -13,6 +13,7 @@ export const list = adminProcedure.handler(async ({ context }) => {
       subcategory: products.subcategory,
       status: products.status,
       price: products.price,
+      oldPrice: products.oldPrice,
       images: products.images,
       madeToOrder: products.madeToOrder,
       stockAvailable: products.stockAvailable,
@@ -24,9 +25,10 @@ export const list = adminProcedure.handler(async ({ context }) => {
     .from(products)
     .orderBy(asc(products.sortOrder), asc(products.createdAt));
 
-  return rows.map(({ images, price, ...row }) => ({
+  return rows.map(({ images, price, oldPrice, ...row }) => ({
     ...row,
     price: price / 100,
+    oldPrice: oldPrice === null ? null : oldPrice / 100,
     image: images[0] ?? null,
   }));
 });
