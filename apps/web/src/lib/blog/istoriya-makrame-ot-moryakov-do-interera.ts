@@ -61,9 +61,9 @@ export const istoriyaMakrameOtMoryakovDoInterera: BlogPost = {
     },
     {
       type: "cta",
-      text: "Узнайте больше о нашей мастерской и философии ручной работы",
+      text: "Как Ольга пришла к макраме и почему плетёт только вручную",
       href: "/about",
-      label: "О мастерской",
+      label: "Об Ольге",
     },
   ],
 };
