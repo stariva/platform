@@ -27,7 +27,8 @@ export async function deliverNotification(
   request: typeof fetch = fetch,
 ): Promise<boolean> {
   const channels: Promise<void>[] = [];
-  const message = `${notification.title ?? `Заявка ${notification.id}`}\n${notification.message}`;
+  const title = notification.title ?? `Заявка ${notification.id}`;
+  const message = `${title}\n${notification.message}`;
   if (config.telegramToken && config.telegramChatId) {
     channels.push(
       (async () => {
@@ -52,7 +53,7 @@ export async function deliverNotification(
         if (notification.photoBase64) {
           const form = new FormData();
           form.append("chat_id", config.telegramChatId ?? "");
-          form.append("caption", `Фото к заявке ${notification.id}`);
+          form.append("caption", `Фото · ${title}`);
           form.append(
             "document",
             new Blob([Buffer.from(notification.photoBase64, "base64")], {

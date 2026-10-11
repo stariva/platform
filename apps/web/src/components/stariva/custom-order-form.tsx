@@ -135,7 +135,7 @@ export function CustomOrderForm() {
         body: fd,
       });
       const data = await response.json();
-      if (!response.ok || !data.ok || !data.requestId) {
+      if (!response.ok || !data.ok || !data.requestNumber) {
         if (response.status === 409) request.current = null;
         setError(
           data.error ??
@@ -144,7 +144,7 @@ export function CustomOrderForm() {
         reachGoal("custom_order_error", { reason: "server" });
         return;
       }
-      setSuccess(data.requestId);
+      setSuccess(`№${data.requestNumber}`);
       reachGoal("custom_order_submitted", { location: "homepage" });
       form.reset(defaults);
       setPhoto(null);
@@ -173,8 +173,8 @@ export function CustomOrderForm() {
           Мы сохранили заявку. Мастер свяжется с вами по указанному контакту в
           рабочее время: пн–сб, 10:00–20:00 МСК.
         </p>
-        <p className="mt-4 text-xs text-taupe break-all">
-          Номер заявки: {success}
+        <p className="mt-4 text-sm text-espresso/75">
+          Номер заявки: <span className="font-medium">{success}</span>
         </p>
         <ContactMasterButton
           source="custom_order_success"

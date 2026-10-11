@@ -1,0 +1,75 @@
+import { Card, CardContent } from "@stariva/ui";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { SiteHeader } from "~/components/layout";
+import { DeliveryBadge } from "~/components/requests/requests-table";
+import { api } from "~/orpc/server";
+
+export const dynamic = "force-dynamic";
+
+const dateFormat = new Intl.DateTimeFormat("ru-RU", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+export default async function RequestPage({
+  params,
+}: {
+  params: Promise<{ number: string }>;
+}) {
+  const number = Number((await params).number);
+  if (!Number.isSafeInteger(number) || number < 1) notFound();
+  const request = await api.admin.requests
+    .byNumber({ number })
+    .catch((error) => {
+      if ((error as { code?: string }).code === "NOT_FOUND") notFound();
+      throw error;
+    });
+
+  return (
+    <>
+      <SiteHeader title="Заявки" />
+      <div className="max-w-3xl space-y-4 px-4 pb-10 lg:px-6">
+        <div>
+          <Link
+            href="/requests"
+            className="text-muted-foreground text-sm hover:underline"
+          >
+            ← Все заявки
+          </Link>
+          <h1 className="mt-1 flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight">
+            Заявка №{request.number}
+            <DeliveryBadge deliveredAt={request.deliveredAt} />
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            {dateFormat.format(request.createdAt)}
+            {request.deliveredAt
+              ? ` · ушла в Telegram или на почту ${dateFormat.format(request.deliveredAt)}`
+              : ` · попыток отправить уведомление: ${request.attempts}`}
+          </p>
+        </div>
+
+        <Card>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap break-words">
+              {request.message}
+            </p>
+          </CardContent>
+        </Card>
+
+        {request.photoUrl && (
+          <Card>
+            <CardContent>
+              {/* biome-ignore lint/performance/noImgElement: фото лежит в базе как data URL, оптимизатору Next отдать нечего */}
+              <img
+                src={request.photoUrl}
+                alt={`Фото к заявке №${request.number}`}
+                className="max-h-[640px] rounded-lg object-contain"
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </>
+  );
+}

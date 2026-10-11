@@ -3,7 +3,10 @@ import { type OrderRequest, orderRequestSchema, validatePhoto } from "./schema";
 
 interface OrderHandlerDependencies {
   notificationConfigured: () => boolean;
-  saveRequest: (data: OrderRequest, photo: File | null) => Promise<string>;
+  saveRequest: (
+    data: OrderRequest,
+    photo: File | null,
+  ) => Promise<{ id: string; number: number }>;
   dispatchRequest: (id: string) => Promise<void>;
   after: (callback: () => Promise<void>) => void;
 }
@@ -60,7 +63,10 @@ export function createOrderHandler({
         { status: 503 },
       );
     try {
-      const requestId = await saveRequest(parsed.data, photo);
+      const { id: requestId, number: requestNumber } = await saveRequest(
+        parsed.data,
+        photo,
+      );
       after(async () => {
         try {
           await dispatchRequest(requestId);
@@ -68,7 +74,7 @@ export function createOrderHandler({
           console.error("[custom-order] delivery_deferred", { requestId });
         }
       });
-      return Response.json({ ok: true, requestId });
+      return Response.json({ ok: true, requestId, requestNumber });
     } catch (error) {
       if (error instanceof Error && error.message === "request_conflict")
         return Response.json(

@@ -13,12 +13,18 @@ export function notificationConfigured() {
       (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_TO && env.ORDER_EMAIL_FROM),
   );
 }
+/** Номер заявки, как его видят покупатель и мастер. */
+export const requestTitle = (number: number) => `Заявка №${number}`;
 /**
- * Сохраняет заявку, фото и текст уведомления с источником и возвращает ID.
- * Повтор с тем же ID допустим только при совпадении данных и фото;
- * иначе выбрасывает ошибку request_conflict.
+ * Сохраняет заявку, фото и текст уведомления с источником и возвращает ID
+ * и порядковый номер. Повтор с тем же ID допустим только при совпадении
+ * данных и фото и возвращает тот же номер; иначе выбрасывает ошибку
+ * request_conflict.
  */
-export async function saveRequest(data: OrderRequest, photo: File | null) {
+export async function saveRequest(
+  data: OrderRequest,
+  photo: File | null,
+): Promise<{ id: string; number: number }> {
   const id = data.requestId ?? randomUUID();
   const photoBase64 = photo
     ? Buffer.from(await photo.arrayBuffer()).toString("base64")
@@ -59,17 +65,19 @@ export async function saveRequest(data: OrderRequest, photo: File | null) {
       photoType: photo?.type,
     })
     .onConflictDoNothing()
-    .returning({ id: customOrderRequests.id });
-  if (!inserted.length) {
-    const [existing] = await db
-      .select({ fingerprint: customOrderRequests.fingerprint })
-      .from(customOrderRequests)
-      .where(eq(customOrderRequests.id, id))
-      .limit(1);
-    if (existing?.fingerprint !== fingerprint)
-      throw new Error("request_conflict");
-  }
-  return id;
+    .returning({ number: customOrderRequests.number });
+  if (inserted[0]) return { id, number: inserted[0].number };
+  const [existing] = await db
+    .select({
+      fingerprint: customOrderRequests.fingerprint,
+      number: customOrderRequests.number,
+    })
+    .from(customOrderRequests)
+    .where(eq(customOrderRequests.id, id))
+    .limit(1);
+  if (!existing || existing.fingerprint !== fingerprint)
+    throw new Error("request_conflict");
+  return { id, number: existing.number };
 }
 async function notify(item: Notification) {
   return deliverNotification(item, {
@@ -106,7 +114,12 @@ export async function dispatchRequest(
   if (!item) return;
   let delivered = false;
   try {
-    delivered = await deliver(item);
+    const title = requestTitle(item.number);
+    delivered = await deliver({
+      ...item,
+      title,
+      emailSubject: `Индивидуальный заказ Stariva · ${title}`,
+    });
   } finally {
     await db
       .update(customOrderRequests)

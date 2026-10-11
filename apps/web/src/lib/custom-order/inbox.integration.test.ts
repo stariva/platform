@@ -27,10 +27,14 @@ test("durable inbox: atomic duplicate protection, lease and retry after failure"
   const photo = new File(["synthetic-photo"], "test.jpg", {
     type: "image/jpeg",
   });
-  assert.deepEqual(
-    await Promise.all([saveRequest(data, photo), saveRequest(data, photo)]),
-    [id, id],
-  );
+  const [first, second] = await Promise.all([
+    saveRequest(data, photo),
+    saveRequest(data, photo),
+  ]);
+  assert.equal(first.id, id);
+  assert.ok(Number.isInteger(first.number));
+  // Повтор той же отправки получает тот же номер, а не следующий.
+  assert.deepEqual(second, first);
   const read = async () =>
     (
       await db

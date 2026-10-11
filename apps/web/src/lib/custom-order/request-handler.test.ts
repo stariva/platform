@@ -5,6 +5,7 @@ import { createOrderHandler } from "./request-handler";
 import type { OrderRequest } from "./schema";
 
 const requestId = "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff";
+const requestNumber = 1042;
 const touch = {
   utm_source: "instagram",
   utm_campaign: "blogger",
@@ -53,7 +54,7 @@ function setup(options: { configured?: boolean; fail?: string } = {}) {
     saveRequest: async (data, photo) => {
       if (options.fail) throw new Error(options.fail);
       saved.push({ data, photo });
-      return requestId;
+      return { id: requestId, number: requestNumber };
     },
     dispatchRequest: async (id) => {
       delivered.push(id);
@@ -81,7 +82,11 @@ test("acknowledges only persisted complete requests; notification is deferred", 
     ),
   );
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, requestId });
+  assert.deepEqual(await response.json(), {
+    ok: true,
+    requestId,
+    requestNumber,
+  });
   assert.equal(api.saved[0]?.data.name, "");
   assert.equal(api.saved[0]?.data.measurements, "50 × 60 см");
   assert.deepEqual(api.saved[0]?.data.attribution, {
