@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@stariva/ui";
 import { notFound } from "next/navigation";
+import { ChatsTable } from "~/components/chats/chats-table";
 import { SiteHeader } from "~/components/layout";
 import { UserAccess } from "~/components/users/user-access";
 import { UserAvatar } from "~/components/users/user-avatar";
@@ -120,12 +121,13 @@ export default async function UserPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [user, workshops] = await Promise.all([
+  const [user, workshops, chats] = await Promise.all([
     api.admin.users.byId({ id }).catch((error) => {
       if ((error as { code?: string }).code === "NOT_FOUND") notFound();
       throw error;
     }),
     api.admin.workshops.list(),
+    api.admin.chats.list({ userId: id, limit: 20 }),
   ]);
 
   return (
@@ -190,6 +192,19 @@ export default async function UserPage({
             createdAt: order.createdAt,
           }))}
         />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Чат с Никой
+              {chats.total > chats.items.length &&
+                ` · последние ${chats.items.length} из ${chats.total}`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChatsTable rows={chats.items} showUser={false} />
+          </CardContent>
+        </Card>
 
         <UserDangerZone
           id={user.id}

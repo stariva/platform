@@ -18,13 +18,15 @@ import type { NextRequest } from "next/server";
 import { after, NextResponse } from "next/server";
 import { env } from "@/env";
 import { langfuseSpanProcessor } from "@/instrumentation";
+import { getSession } from "@/lib/auth/session";
 import {
   createFallbackModel,
   type FallbackEntry,
 } from "@/lib/chat/fallback-model";
+import { saveAssistantMessage, saveUserMessage } from "@/lib/chat/history";
 import { buildSystemPrompt } from "@/lib/chat/knowledge";
-import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import { chatTools } from "@/lib/chat/tools";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -79,6 +81,18 @@ function stripNulls(value: unknown): unknown {
   return value;
 }
 
+/** Путь страницы, с которой написали, — без query, там бывают метки и токены. */
+function refererPath(request: NextRequest): string | null {
+  const referer = request.headers.get("referer");
+  if (!referer) return null;
+  try {
+    const url = new URL(referer);
+    return url.host === request.nextUrl.host ? url.pathname : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Основной обработчик ─────────────────────────────────────────────────────
 
 async function handler(request: NextRequest) {
@@ -103,10 +117,13 @@ async function handler(request: NextRequest) {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
 
-  // sessionId для группировки трейсов одного чата в Langfuse
+  // sessionId группирует трейсы одного чата в Langfuse и диалог в админке.
+  // Приходит из браузера, поэтому пропускаем только короткий безопасный id.
+  const rawSessionId = (body as { sessionId?: unknown })?.sessionId;
   const sessionId =
-    (body as { sessionId?: string })?.sessionId ??
-    `anon-${Date.now().toString(36)}`;
+    typeof rawSessionId === "string" && /^[\w-]{1,100}$/.test(rawSessionId)
+      ? rawSessionId
+      : `anon-${Date.now().toString(36)}`;
 
   let messages: UIMessage[];
   try {
@@ -127,6 +144,19 @@ async function handler(request: NextRequest) {
         : part,
     ),
   }));
+
+  // В историю для админки пишем только новый вопрос: остальное браузер
+  // присылает сам и мог подделать, а ответы Ники сохраняем ниже, из стрима.
+  const lastMessage = messages.at(-1);
+  if (lastMessage?.role === "user") {
+    await saveUserMessage({
+      conversationId: sessionId,
+      // Сбой авторизации не должен ломать чат: тогда диалог просто гостевой
+      userId: (await getSession().catch(() => null))?.user.id ?? null,
+      page: refererPath(request),
+      message: trimmed.at(-1) ?? lastMessage,
+    });
+  }
 
   const modelMessages = await convertToModelMessages(trimmed);
 
@@ -231,6 +261,13 @@ async function handler(request: NextRequest) {
           console.error("[ai/chat] ui stream error:", error);
           return "Не удалось получить ответ. Попробуйте ещё раз.";
         },
+        // Срабатывает и когда посетитель остановил ответ: сохраняем то,
+        // что Ника успела написать.
+        onEnd: ({ responseMessage }) =>
+          saveAssistantMessage({
+            conversationId: sessionId,
+            message: responseMessage,
+          }),
       }),
     });
 
