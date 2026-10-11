@@ -137,6 +137,10 @@ function umami(send: (umami: NonNullable<Window["umami"]>) => void) {
     script.dataset.websiteId = UMAMI_WEBSITE_ID;
     script.dataset.autoTrack = "false";
     script.onload = () => {
+      if (!analyticsAllowed()) {
+        umamiQueue.length = 0;
+        return;
+      }
       const { umami } = window;
       if (umami) for (const queued of umamiQueue.splice(0)) queued(umami);
     };
