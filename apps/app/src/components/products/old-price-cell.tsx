@@ -59,12 +59,14 @@ export function OldPriceCell({
   const commit = () => {
     if (mutation.isPending || cancelled.current) return;
     const text = draft.trim();
-    const value = text === "" ? null : Number(text.replace(",", "."));
-    if (value !== null && !Number.isFinite(value)) {
+    const parsed = text === "" ? null : Number(text.replace(",", "."));
+    if (parsed !== null && !Number.isFinite(parsed)) {
       toast.error("Введите цену числом");
       setEditing(false);
       return;
     }
+    // Пусто или 0 — убрать старую цену.
+    const value = parsed === 0 ? null : parsed;
     if (value === shown) {
       setEditing(false);
       return;
@@ -100,7 +102,7 @@ export function OldPriceCell({
       min="0"
       value={draft}
       disabled={mutation.isPending}
-      placeholder="Пусто — убрать"
+      placeholder="Пусто или 0 — убрать"
       aria-label="Старая цена, ₽"
       className="ml-auto h-8 w-32 text-right tabular-nums"
       onChange={(event) => setDraft(event.target.value)}

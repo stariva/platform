@@ -51,12 +51,21 @@ export function BulkOldPrice({
       return;
     }
     const value = Number(draft.replace(",", "."));
-    if (draft.trim() === "" || !Number.isFinite(value) || value <= 0) {
+    if (draft.trim() === "" || !Number.isFinite(value) || value < 0) {
       toast.error(
         mode === "fixed"
-          ? "Введите старую цену числом больше нуля"
+          ? "Введите старую цену числом (0 — убрать)"
           : "Введите процент числом больше нуля",
       );
+      return;
+    }
+    if (value === 0) {
+      // 0 в «Задать цену» — то же, что «Убрать»; нулевая наценка смысла не имеет.
+      if (mode === "markup") {
+        toast.error("Введите процент числом больше нуля");
+        return;
+      }
+      mutation.mutate({ ids, change: { type: "clear" } });
       return;
     }
     mutation.mutate({
