@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth/client";
+import { reachGoal } from "@/lib/analytics";
 import { suggestEmailFix } from "@/lib/email-typo";
 import { formatPrice } from "@/lib/workshops-data";
 
@@ -24,6 +25,8 @@ interface WorkshopPurchaseProps {
   /** Подпись кнопки оплаты вместо «Купить за …». */
   buyLabel?: string;
   onBuyClick?: () => void;
+  /** Цель аналитики для серверных страниц, где функцию в onBuyClick не передать. */
+  buyGoal?: string;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,6 +61,7 @@ export function WorkshopPurchase({
   returnPath = `/workshops/${slug}`,
   buyLabel,
   onBuyClick,
+  buyGoal,
 }: WorkshopPurchaseProps) {
   const { data: session, isPending: sessionPending } = useSession();
   const [owned, setOwned] = useState<boolean | null>(null);
@@ -111,6 +115,7 @@ export function WorkshopPurchase({
     if (!validate()) return;
 
     onBuyClick?.();
+    if (buyGoal) reachGoal(buyGoal, { slug, price });
     setBuying(true);
     const guestEmail = email.trim().toLowerCase();
     if (!session) saveEmailDraft(guestEmail);

@@ -628,6 +628,7 @@ export default async function WorkshopDetailPage({
                         ? `Оформить предзаказ за ${formatPrice(workshop.price)}`
                         : undefined
                     }
+                    buyGoal={preorder ? "workshop_preorder" : undefined}
                   />
 
                   <p className="text-center text-xs text-taupe leading-relaxed">

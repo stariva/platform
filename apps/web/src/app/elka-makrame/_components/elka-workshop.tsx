@@ -20,6 +20,7 @@ import {
   WORKSHOP_SECTION_ID,
   WORKSHOP_TREE_SIZE,
 } from "../_data";
+import { TrackedLink } from "./tracked-link";
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
 import { WorkshopStickyCta } from "./workshop-sticky-cta";
 
@@ -97,12 +98,13 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                   </s>
                 )}
               </div>
-              <a
+              <TrackedLink
                 href={`#${WORKSHOP_BUY_ID}`}
+                goal="elka_quick_buy_cta"
                 className="flex flex-1 items-center justify-center rounded-2xl bg-terracotta py-4 text-center text-parchment transition-colors hover:bg-terracotta-dark"
               >
                 {isPreorder ? "Оформить предзаказ" : "Записаться"}
-              </a>
+              </TrackedLink>
             </div>
           ) : null}
         </div>
