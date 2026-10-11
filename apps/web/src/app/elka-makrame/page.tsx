@@ -6,56 +6,51 @@ import {
   BreadcrumbJsonLd,
   CourseJsonLd,
   FAQJsonLd,
-  ItemListJsonLd,
 } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
 import { getProductBySlug } from "@/lib/ozon-service";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
-import { ElkaAudiences } from "./_components/elka-audiences";
-import { ElkaBusiness } from "./_components/elka-business";
-import { ElkaComparison } from "./_components/elka-comparison";
 import { ElkaFaq } from "./_components/elka-faq";
-import { ElkaHero } from "./_components/elka-hero";
-import { ElkaModels } from "./_components/elka-models";
+import { ElkaReadyTrees } from "./_components/elka-ready-trees";
 import { ElkaWorkshop } from "./_components/elka-workshop";
-import { WorkshopAdScroll } from "./_components/workshop-ad-scroll";
 import { FAQ, LANDING_PATH, TREE_MODELS, WORKSHOP_SLUG } from "./_data";
 
 // Рендер на каждый запрос: при сборке образа базы нет, и статическая
 // страница запекалась без мастер-класса (кнопка «связаться» вместо оплаты)
-// на час после каждого деплоя. Цена предзаказа и наличие ёлок тоже живые.
+// на час после каждого деплоя. Цена предзаказа и цены ёлок тоже живые.
 export const dynamic = "force-dynamic";
 
-const TITLE = "Макраме-ёлка на стену — купить новогоднюю ёлку-панно | Stariva";
+const TITLE = "Ёлка макраме своими руками — онлайн-мастер-класс | Stariva";
 const DESCRIPTION =
-  "Ёлка-панно в технике макраме ручной работы для квартиры, отеля, ресторана и офиса. Не осыпается, не занимает места, служит годами. Изготовление 2–3 дня, доставка по России. Мастер-класс по предзаказу со скидкой и второй — в подарок.";
+  "Онлайн-мастер-класс: сплетите настенную ёлку макраме 50 × 110 см по пошаговым видеоурокам — схема и расчёт шнура, доступ навсегда, обратная связь от мастера. Предзаказ со скидкой и второй мастер-класс — в подарок.";
+const COVER =
+  "https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame.webp";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
   keywords: [
+    "мастер-класс ёлка макраме",
+    "ёлка макраме своими руками",
+    "ёлка из макраме своими руками",
+    "онлайн-мастер-класс макраме",
     "ёлка из макраме",
     "ёлка макраме на стену",
     "новогоднее панно макраме",
-    "ёлка на стену",
-    "настенная ёлка",
-    "новогодний декор для отеля",
-    "новогоднее оформление ресторана",
-    "мастер-класс ёлка макраме",
   ],
   alternates: { canonical: `${BASE_URL}${LANDING_PATH}` },
   openGraph: {
     type: "website",
     locale: "ru_RU",
-    title: "Макраме-ёлка на стену — Stariva",
+    title: "Ёлка макраме своими руками — мастер-класс Stariva",
     description:
-      "Новогодняя ёлка-панно ручной работы для дома и бизнеса. Плюс мастер-класс по предзаказу со скидкой и второй — в подарок.",
+      "Сплетите настенную ёлку макраме по пошаговым видеоурокам. Предзаказ со скидкой и второй мастер-класс — в подарок.",
     url: `${BASE_URL}${LANDING_PATH}`,
     images: [
       {
-        url: "/images/elka/elka-cream-interior.jpg",
-        alt: "Макраме-ёлка со звездой на стене над комодом",
+        url: COVER,
+        alt: "Мастер Stariva украшает зелёную ёлку макраме на стене",
       },
     ],
   },
@@ -98,18 +93,9 @@ export default async function ElkaMakramePage() {
       <BreadcrumbJsonLd
         items={[
           { name: "Главная", href: "/" },
-          { name: "Интерьер", href: "/catalog/interior" },
-          { name: "Макраме-ёлка", href: LANDING_PATH },
+          { name: "Мастер-классы", href: "/workshops" },
+          { name: "Ёлка макраме", href: LANDING_PATH },
         ]}
-      />
-      <ItemListJsonLd
-        name="Макраме-ёлки на стену"
-        url={LANDING_PATH}
-        items={items.map(({ model, product }) => ({
-          name: model.name,
-          url: model.href,
-          image: product?.images[0] ?? `${BASE_URL}${model.fallbackImage}`,
-        }))}
       />
       <FAQJsonLd items={FAQ} />
       {workshop ? (
@@ -127,19 +113,14 @@ export default async function ElkaMakramePage() {
 
       <Header variant="solid" />
       <main>
-        <ElkaHero />
-        <ElkaModels items={items} />
-        <ElkaAudiences />
-        <ElkaComparison />
-        <ElkaBusiness />
         <ElkaWorkshop workshop={workshop} />
-        <WorkshopAdScroll />
         <Reviews
           limit={3}
           productId={reviewProductId}
           heading="Отзывы покупателей Stariva"
         />
         <ElkaFaq />
+        <ElkaReadyTrees items={items} />
       </main>
       <Footer />
     </>
