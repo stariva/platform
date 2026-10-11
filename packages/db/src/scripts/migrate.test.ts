@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "pg";
-import { migrate } from "./migrate";
+import { fixOwnership, migrate } from "./migrate";
 
 test.each(["110022", "90624", "invalid"])(
   "rejects server version %s before any schema writes",
@@ -94,3 +94,60 @@ test.skipIf(!process.env.MIGRATION_TEST_POSTGRES_URL)(
     }
   },
 );
+
+test("fixOwnership does nothing when the app role does not exist", async () => {
+  const client = new Client();
+  const query = spyOn(client, "query").mockResolvedValue({ rows: [] });
+  try {
+    expect(await fixOwnership(client)).toEqual([]);
+    expect(query).toHaveBeenCalledTimes(1);
+  } finally {
+    query.mockRestore();
+  }
+});
+
+test("fixOwnership does nothing when already connected as the app role", async () => {
+  const client = new Client();
+  const query = spyOn(client, "query").mockResolvedValue({
+    rows: [{ is_self: true }],
+  });
+  try {
+    expect(await fixOwnership(client)).toEqual([]);
+    expect(query).toHaveBeenCalledTimes(1);
+  } finally {
+    query.mockRestore();
+  }
+});
+
+test("fixOwnership transfers foreign objects in one transaction", async () => {
+  const client = new Client();
+  const query = spyOn(client, "query").mockImplementation((async (
+    sql: string,
+  ) => {
+    if (sql.includes("FROM pg_roles")) return { rows: [{ is_self: false }] };
+    if (sql.includes("pg_get_userbyid")) {
+      return {
+        rows: [
+          { kind: "TABLE", name: "chat_messages" },
+          { kind: "TYPE", name: "chat_message_role" },
+        ],
+      };
+    }
+    return { rows: [] };
+  }) as never);
+  try {
+    expect(await fixOwnership(client)).toEqual([
+      "table chat_messages",
+      "type chat_message_role",
+    ]);
+    const statements = query.mock.calls.map(([sql]) => String(sql));
+    expect(statements.slice(2)).toEqual([
+      "BEGIN",
+      'ALTER TABLE public."chat_messages" OWNER TO "stariva"',
+      'ALTER TYPE public."chat_message_role" OWNER TO "stariva"',
+      "COMMIT",
+    ]);
+  } finally {
+    query.mockRestore();
+  }
+});
