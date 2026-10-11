@@ -46,10 +46,10 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
           label={`${isPreorder ? "Предзаказ" : "Записаться"} за ${formatPrice(price)}`}
         />
       ) : null}
-      {/* На телефоне сначала оффер и цена, потом фото: из рекламы приходят
-          сразу на #workshop, и первый экран не должен быть одной картинкой.
-          На десктопе фото слева на всю высоту, текст справа. */}
-      <div className="max-w-[1440px] mx-auto px-5 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-2 gap-10 lg:gap-x-16 lg:gap-y-0 items-start">
+      {/* Первый экран страницы. На телефоне сначала оффер и цена, потом фото:
+          первый экран не должен быть одной картинкой. На десктопе фото слева
+          на всю высоту, текст справа. Сверху — отступ под фиксированную шапку. */}
+      <div className="max-w-[1440px] mx-auto px-5 lg:px-12 pt-28 pb-16 lg:pt-36 lg:pb-24 grid lg:grid-cols-2 gap-10 lg:gap-x-16 lg:gap-y-0 items-start">
         <div className="lg:col-start-2">
           {isPreorder && (
             <p className="inline-flex items-center gap-3 rounded-2xl bg-terracotta text-parchment py-2 pl-2 pr-5 mb-6 shadow-lg shadow-terracotta/25">
@@ -68,18 +68,18 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               </span>
             </p>
           )}
-          <h2
+          <h1
             id="workshop-title"
             className="font-serif text-espresso leading-tight text-balance mb-5"
-            style={{ fontSize: "clamp(30px, 4vw, 48px)" }}
+            style={{ fontSize: "clamp(32px, 4.6vw, 56px)" }}
           >
-            Сплетите макраме-ёлку своими руками
-          </h2>
+            Сплетите ёлку макраме своими руками
+          </h1>
           <p className="text-dark-grey leading-relaxed lg:mb-8">
-            Онлайн-мастер-класс от мастерской Stariva: от выбора шнура до
-            готовой ёлки {WORKSHOP_TREE_SIZE} на стене. Оплатите предзаказ
-            сейчас — зафиксируете цену со скидкой и получите уроки первыми, с
-            запасом времени до праздника.
+            Ольга покажет в видеоуроках, как шаг за шагом сплести ёлку{" "}
+            {WORKSHOP_TREE_SIZE} — от выбора шнура до готового панно на стене.
+            Оплатите предзаказ сейчас — зафиксируете цену со скидкой и получите
+            уроки первыми, с запасом времени до праздника.
           </p>
 
           {workshop ? (
@@ -113,6 +113,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               src="https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame.webp"
               alt="Мастер Stariva украшает бусинами зелёную ёлку макраме на стене — такую вы сплетёте на мастер-классе"
               fill
+              priority
               sizes="(min-width: 1024px) 45vw, 100vw"
               className="object-cover object-top"
             />

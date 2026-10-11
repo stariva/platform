@@ -13,7 +13,7 @@ export function ElkaFaq() {
             className="font-serif text-espresso leading-tight text-balance mb-5"
             style={{ fontSize: "clamp(30px, 4vw, 44px)" }}
           >
-            Частые вопросы о макраме-ёлке
+            Частые вопросы о мастер-классе
           </h2>
           <p className="text-dark-grey mb-6">
             Не нашли ответ? Напишите — ответим в течение часа.
@@ -22,7 +22,7 @@ export function ElkaFaq() {
             <ContactMasterButton
               source="elka_faq"
               goal="elka_faq_telegram"
-              message="Здравствуйте, Ольга! У меня вопрос про макраме-ёлку."
+              message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по ёлке макраме."
               className="text-left underline underline-offset-4 hover:text-terracotta"
             >
               Написать мастеру

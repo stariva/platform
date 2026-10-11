@@ -161,7 +161,7 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
     {
       type: "cta",
       text: `Готовые ёлки-панно ручной работы для дома и бизнеса. Заказ к Новому году — до ${ORDER_DEADLINE_LABEL}`,
-      href: LANDING_PATH,
+      href: `${LANDING_PATH}#models`,
       label: "Выбрать готовую ёлку",
     },
     {
