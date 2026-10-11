@@ -210,7 +210,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               <ContactMasterButton
                 source="elka_workshop"
                 goal="elka_workshop_waitlist"
-                message="Здравствуйте, Ольга! Хочу забронировать место на мастер-классе по макраме-ёлке."
+                message="Здравствуйте, Ольга! Хочу забронировать место на мастер-классе по ёлке макраме."
                 className="flex w-full items-center justify-center rounded-2xl bg-terracotta hover:bg-terracotta-dark text-parchment py-4 mb-3 transition-colors"
               >
                 Забронировать место у мастера

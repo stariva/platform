@@ -63,7 +63,7 @@ async function loadData() {
     Promise.all(
       TREE_MODELS.map((model) =>
         getProductBySlug(model.slug).catch((error) => {
-          logger.warn("elka.product.unavailable", {
+          logger.warn("elka_trees.product.unavailable", {
             slug: model.slug,
             error: String(error),
           });
@@ -72,7 +72,9 @@ async function loadData() {
       ),
     ),
     getWorkshopBySlug(WORKSHOP_SLUG).catch((error) => {
-      logger.warn("elka.workshop.unavailable", { error: String(error) });
+      logger.warn("elka_trees.workshop.unavailable", {
+        error: String(error),
+      });
       return undefined;
     }),
   ]);
@@ -122,12 +124,13 @@ export default async function ElkaTreesPage() {
           productId={reviewProductId}
           heading="Отзывы покупателей Stariva"
         />
+        <ElkaDiy workshop={workshop} />
         <ElkaFaq
           items={FAQ}
           title="Частые вопросы о ёлке макраме"
           message="Здравствуйте, Ольга! У меня вопрос про ёлку макраме."
+          source="elka_trees_faq"
         />
-        <ElkaDiy workshop={workshop} />
       </main>
       <Footer />
     </>

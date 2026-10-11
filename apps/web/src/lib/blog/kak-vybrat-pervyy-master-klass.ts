@@ -66,7 +66,7 @@ export const kakVybratPervyyMasterKlass: BlogPost = {
     },
     {
       type: "cta",
-      text: "Онлайн-мастер-класс по макраме-ёлке — видеоуроки, схема и расчёт материалов",
+      text: "Мастер-класс по ёлке макраме в видеоуроках — со схемой и расчётом материалов",
       href: "/elka-makrame#workshop",
       label: "Мастер-класс по ёлке",
     },
