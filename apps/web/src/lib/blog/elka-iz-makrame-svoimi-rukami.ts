@@ -2,10 +2,13 @@ import {
   BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
   LANDING_PATH,
-  ORDER_DEADLINE_LABEL,
   WORKSHOP_RELEASE_LABEL,
   WORKSHOP_TREE_SIZE,
 } from "@/app/elka-makrame/_data";
+import {
+  ORDER_DEADLINE_LABEL,
+  TREES_PATH,
+} from "@/app/elka-makrame-na-stenu/_data";
 import type { BlogPost } from "./types";
 
 export const elkaIzMakrameSvoimiRukami: BlogPost = {
@@ -145,11 +148,11 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
     },
     {
       type: "heading",
-      text: "Нет времени плести? Сплетём за вас",
+      text: "Нет времени плести? Закажите готовую",
     },
     {
       type: "paragraph",
-      text: `Если декабрь обещает быть плотным, закажите готовую ёлку. Компактная хаки 45 × 100 см готова к отправке, большую бежевую 70–75 × 150 см плетём под заказ за 2–3 дня. Можем сплести и в вашем цвете и размере — от 45 см до 2 метров. Чтобы ёлка точно успела к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}.`,
+      text: `Если декабрь обещает быть плотным, закажите готовую ёлку. Компактная хаки 45 × 100 см готова к отправке, большая бежевая 70–75 × 150 см плетётся под заказ за 2–3 дня — в бежевом, натуральном или молочном оттенке. Чтобы ёлка точно успела к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}.`,
     },
     {
       type: "image",
@@ -161,7 +164,7 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
     {
       type: "cta",
       text: `Готовые ёлки-панно ручной работы для дома и бизнеса. Заказ к Новому году — до ${ORDER_DEADLINE_LABEL}`,
-      href: `${LANDING_PATH}#models`,
+      href: TREES_PATH,
       label: "Выбрать готовую ёлку",
     },
     {

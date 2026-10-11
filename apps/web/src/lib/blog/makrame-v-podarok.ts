@@ -50,8 +50,8 @@ export const makrameVPodarok: BlogPost = {
     },
     {
       type: "cta",
-      text: "Ёлки-панно ручной работы в подарок — готовые и под заказ в нужном цвете и размере",
-      href: "/elka-makrame#models",
+      text: "Ёлки-панно ручной работы в подарок — бежевая и хаки, в наличии и под заказ",
+      href: "/elka-makrame-na-stenu",
       label: "Выбрать ёлку",
     },
     {
