@@ -1,3 +1,4 @@
+import { TREES_PATH } from "@/app/elka-makrame-na-stenu/_data";
 import type { BlogPost } from "./types";
 
 export const makrameVMalenkoyKvartire: BlogPost = {
@@ -70,8 +71,8 @@ export const makrameVMalenkoyKvartire: BlogPost = {
     },
     {
       type: "cta",
-      text: "Настенные ёлки макраме — от компактных 45 см до больших панно",
-      href: "/elka-makrame-na-stenu",
+      text: "Настенные ёлки макраме — компактная 45 × 100 см и большая 70–75 × 150 см",
+      href: TREES_PATH,
       label: "Смотреть ёлки",
     },
     {

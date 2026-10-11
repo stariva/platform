@@ -1,4 +1,5 @@
 import { ContactMasterButton } from "@/components/stariva/contact-master";
+import type { FAQItem } from "@/components/stariva/json-ld";
 import { PHONE_HREF, PHONE_LABEL } from "../_data";
 import { TrackedLink } from "./tracked-link";
 
@@ -7,11 +8,14 @@ export function ElkaFaq({
   items,
   title,
   message,
+  source,
 }: {
-  items: { question: string; answer: string }[];
+  items: FAQItem[];
   title: string;
   /** Первое сообщение в WhatsApp при «Написать мастеру». */
   message: string;
+  /** Откуда клик — источник заявки и префикс целей Метрики (`${source}_telegram`). */
+  source: string;
 }) {
   return (
     <section aria-labelledby="faq-title" className="bg-parchment">
@@ -30,8 +34,8 @@ export function ElkaFaq({
           </p>
           <div className="flex flex-col gap-2 text-espresso">
             <ContactMasterButton
-              source="elka_faq"
-              goal="elka_faq_telegram"
+              source={source}
+              goal={`${source}_telegram`}
               message={message}
               className="text-left underline underline-offset-4 hover:text-terracotta"
             >
@@ -39,7 +43,7 @@ export function ElkaFaq({
             </ContactMasterButton>
             <TrackedLink
               href={PHONE_HREF}
-              goal="elka_faq_phone"
+              goal={`${source}_phone`}
               className="underline underline-offset-4 hover:text-terracotta"
             >
               {PHONE_LABEL}

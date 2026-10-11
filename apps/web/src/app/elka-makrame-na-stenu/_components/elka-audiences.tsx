@@ -16,7 +16,7 @@ export function ElkaAudiences() {
             className="font-serif text-espresso leading-tight text-balance mb-4"
             style={{ fontSize: "clamp(30px, 4vw, 48px)" }}
           >
-            Для дома и для бизнеса — одна ёлка, сотни сценариев
+            Для дома и для бизнеса
           </h2>
           <p className="text-dark-grey leading-relaxed">
             Ёлка макраме уместна там, где живая ель неудобна, а искусственная
