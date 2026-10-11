@@ -4,6 +4,8 @@ import { hasAnalyticsConsent } from "@/lib/cookie-consent";
 export const COUNTER_ID = 96190087;
 /** Пиксель VK Рекламы: просмотры и цели для оптимизации рекламных кампаний. */
 export const VK_PIXEL_ID = "3800855";
+/** Umami Cloud — запасная аналитика на случай блокировки Метрики. */
+export const UMAMI_WEBSITE_ID = "49773ca8-3f5e-426e-8276-fe833b9b13ba";
 
 export interface AnalyticsProduct {
   id: string;
@@ -52,6 +54,8 @@ type QueuedMetrika = NonNullable<Window["ym"]> & {
 };
 let initialized = false;
 let vkPixelLoaded = false;
+let umamiLoaded = false;
+const umamiQueue: Array<(umami: NonNullable<Window["umami"]>) => void> = [];
 let previousPage = "";
 const recordedOrders = new Set<string>();
 
@@ -116,6 +120,37 @@ function vkPixel() {
   }
 }
 
+/**
+ * Запасная аналитика. Тот же consent, что у Метрики. Автотрекинг выключен:
+ * иначе в Umami уйдёт сырой путь /order/<token>, поэтому хиты шлём вручную.
+ * Вызовы до загрузки скрипта ждут в очереди.
+ */
+function umami(send: (umami: NonNullable<Window["umami"]>) => void) {
+  if (!analyticsAllowed()) return;
+  try {
+    if (window.umami) return send(window.umami);
+    umamiQueue.push(send);
+    if (umamiLoaded) return;
+    const script = document.createElement("script");
+    script.src = "https://cloud.umami.is/script.js";
+    script.defer = true;
+    script.dataset.websiteId = UMAMI_WEBSITE_ID;
+    script.dataset.autoTrack = "false";
+    script.onload = () => {
+      if (!analyticsAllowed()) {
+        umamiQueue.length = 0;
+        return;
+      }
+      const { umami } = window;
+      if (umami) for (const queued of umamiQueue.splice(0)) queued(umami);
+    };
+    document.head.appendChild(script);
+    umamiLoaded = true;
+  } catch {
+    /* optional */
+  }
+}
+
 export function trackPageView() {
   const ym = metrika();
   if (!ym) return;
@@ -125,6 +160,16 @@ export function trackPageView() {
     title: document.title,
     referer: previousPage || analyticsUrl(document.referrer),
   });
+  const referrer = previousPage || analyticsUrl(document.referrer);
+  const { pathname, search } = new URL(url);
+  umami((u) =>
+    u.track((props: object) => ({
+      ...props,
+      url: pathname + search,
+      referrer,
+      title: document.title,
+    })),
+  );
   vkPixel()?.push({
     id: VK_PIXEL_ID,
     type: "pageView",
@@ -138,6 +183,7 @@ export function trackPageView() {
 export function reachGoal(goal: string, params?: Record<string, unknown>) {
   try {
     metrika()?.(COUNTER_ID, "reachGoal", goal, params);
+    umami((u) => u.track(goal, params));
     const value = params?.order_price ?? params?.price;
     vkPixel()?.push({
       id: VK_PIXEL_ID,

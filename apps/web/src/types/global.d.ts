@@ -7,6 +7,8 @@ declare global {
     dataLayer?: Record<string, unknown>[];
     // Пиксель VK Рекламы (Top.Mail.Ru)
     _tmr?: Record<string, unknown>[];
+    // Umami — запасная аналитика
+    umami?: { track: (...args: unknown[]) => void };
   }
 }
 
