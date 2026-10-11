@@ -1,39 +1,25 @@
-import { CONTACTS } from "@/lib/contacts";
+import {
+  BONUS_RELEASE_LABEL,
+  BONUS_TREE_SIZE,
+  WORKSHOP_RELEASE_LABEL,
+  WORKSHOP_TREE_SIZE,
+} from "@/lib/elka/data";
 
-export const LANDING_PATH = "/elka-makrame";
+/** Своё у страницы мастер-класса; общее с готовыми ёлками — в lib/elka. */
 
-export const WORKSHOP_SLUG = "elka-makrame";
 /** Якорь блока мастер-класса — на него ведёт реклама. */
 export const WORKSHOP_SECTION_ID = "workshop";
+/** Якорь небольшого блока с готовыми ёлками внизу страницы. */
+export const READY_TREES_ID = "ready-trees";
 /**
- * Якорь блока с готовыми ёлками. «models» — со времён витрины на этой
- * странице: на него ещё ведут старые ссылки и объявления. Сама витрина
- * теперь на /elka-makrame-na-stenu.
+ * Якорь бывшей витрины на этой странице: на него ведут старые ссылки и
+ * объявления. Витрина теперь на /elka-makrame-na-stenu — туда и уводим.
  */
-export const READY_TREES_ID = "models";
+export const LEGACY_MODELS_HASH = "#models";
 /** Якорь карточки с формой оплаты — на неё ведут кнопки на телефоне. */
 export const WORKSHOP_BUY_ID = "workshop-buy";
 /** Цена и кнопка под заголовком блока — только на телефоне. */
 export const WORKSHOP_QUICK_BUY_ID = "workshop-quick-buy";
-/** Цена мастер-класса после выхода. Предзаказная цена берётся из базы. */
-export const WORKSHOP_REGULAR_PRICE = 990;
-/** Показываем, пока мастер-класс не опубликован в базе. */
-export const WORKSHOP_PREORDER_FALLBACK_PRICE = 690;
-/** Ёлка из этого мастер-класса. Неразрывные пробелы — размер не рвётся переносом. */
-export const WORKSHOP_TREE_SIZE = "50 × 110 см";
-/**
- * Подарок за предзаказ: второй мастер-класс — большая ёлка. Доступ выдаётся
- * сам при оплате предзаказа (lib/workshops/preorder-bonus.ts) и появится в
- * кабинете, когда курс elka-makrame-bolshaya опубликуют в админке.
- */
-export const BONUS_TREE_SIZE = "75 × 150 см";
-/** Подпись старта, пока у курса в админке не задана дата «Старт уроков». */
-export const WORKSHOP_RELEASE_LABEL = "20 октября";
-/** Выход мастер-класса по большой ёлке. */
-export const BONUS_RELEASE_LABEL = "3 ноября";
-
-export const PHONE_HREF = CONTACTS.phoneHref;
-export const PHONE_LABEL = "+7 977 872-25-46";
 
 export const WORKSHOP_PROGRAM = [
   "Подбор шнура и расчёт метража под нужный размер ёлки",

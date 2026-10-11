@@ -1,16 +1,11 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
+import { TrackedLink } from "@/components/stariva/tracked-link";
+import type { ModelWithProduct } from "@/lib/elka/data";
 import { isPurchasable } from "@/lib/in-stock";
-import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/workshops-data";
-import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
-import { TREES_MODELS_ID, type TreeModel } from "../_data";
-
-export interface ModelWithProduct {
-  model: TreeModel;
-  product?: Product;
-}
+import { TREES_MODELS_ID } from "../_data";
 
 export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
   return (
@@ -42,7 +37,9 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
             const price = product?.price ?? model.fallbackPrice;
             const oldPrice = product?.oldPrice ?? model.fallbackOldPrice;
             const image = product?.images[0] ?? model.fallbackImage;
-            const ready = product ? isPurchasable(product) : false;
+            // Товар, который можно положить в корзину; иначе — заказ у мастера.
+            const purchasable =
+              product && isPurchasable(product) ? product : undefined;
             const discount =
               oldPrice && oldPrice > price
                 ? Math.round((1 - price / oldPrice) * 100)
@@ -63,7 +60,7 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
                   />
                   <div className="absolute top-4 left-4 flex gap-2">
                     <span className="rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs text-espresso">
-                      {ready ? "В наличии" : "Под заказ 2–3 дня"}
+                      {purchasable ? "В наличии" : "Под заказ 2–3 дня"}
                     </span>
                     {discount ? (
                       <span className="rounded-full bg-terracotta px-3 py-1.5 text-xs text-parchment">
@@ -112,22 +109,20 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
                       ) : null}
                     </p>
                     <div className="flex flex-col gap-3">
-                      {product && ready ? (
-                        <AddToCartButton product={product} />
+                      {purchasable ? (
+                        <AddToCartButton product={purchasable} />
                       ) : null}
                       <TrackedLink
                         href={model.href}
                         goal="elka_model_click"
                         goalParams={{ slug: model.slug }}
                         className={
-                          product && ready
+                          purchasable
                             ? "inline-flex items-center justify-center rounded-2xl border border-espresso/20 hover:border-espresso text-espresso py-4 transition-colors"
                             : "inline-flex items-center justify-center rounded-2xl bg-espresso hover:bg-terracotta text-parchment py-4 transition-colors"
                         }
                       >
-                        {product && ready
-                          ? "Подробнее о модели"
-                          : "Заказать ёлку"}
+                        {purchasable ? "Подробнее о модели" : "Заказать ёлку"}
                       </TrackedLink>
                     </div>
                   </div>

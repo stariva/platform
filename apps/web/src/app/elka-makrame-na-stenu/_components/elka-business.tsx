@@ -1,6 +1,6 @@
 import { ContactMasterButton } from "@/components/stariva/contact-master";
-import { TrackedLink } from "@/app/elka-makrame/_components/tracked-link";
-import { PHONE_HREF, PHONE_LABEL } from "@/app/elka-makrame/_data";
+import { TrackedLink } from "@/components/stariva/tracked-link";
+import { CONTACTS } from "@/lib/contacts";
 import { BUSINESS_POINTS, TREES_BUSINESS_ID } from "../_data";
 
 export function ElkaBusiness() {
@@ -36,11 +36,11 @@ export function ElkaBusiness() {
               Получить расчёт у мастера
             </ContactMasterButton>
             <TrackedLink
-              href={PHONE_HREF}
+              href={CONTACTS.phoneHref}
               goal="elka_b2b_phone"
               className="inline-flex items-center justify-center rounded-2xl border border-parchment/25 hover:border-parchment px-8 py-4 transition-colors"
             >
-              {PHONE_LABEL}
+              {CONTACTS.phone}
             </TrackedLink>
           </div>
         </div>

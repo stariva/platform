@@ -447,7 +447,7 @@ export function ItemListJsonLd({ name, url, items }: ItemListJsonLdProps) {
 
 // ─── FAQPage ──────────────────────────────────────────────────────────────────
 
-interface FAQItem {
+export interface FAQItem {
   question: string;
   answer: string;
 }

@@ -1,61 +1,11 @@
-/** Страница готовых ёлок. Мастер-класс — отдельно, на /elka-makrame. */
-export const TREES_PATH = "/elka-makrame-na-stenu";
+import { ORDER_DEADLINE_LABEL } from "@/lib/elka/data";
+
+/** Своё у страницы готовых ёлок; общее с мастер-классом — в lib/elka. */
+
 /** Якорь витрины моделей. */
 export const TREES_MODELS_ID = "models";
 /** Якорь блока для бизнеса. */
 export const TREES_BUSINESS_ID = "business";
-
-/** До этой даты успеем сплести и доставить к празднику. */
-export const ORDER_DEADLINE_DAY = 20;
-export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
-
-export interface TreeModel {
-  slug: string;
-  href: string;
-  name: string;
-  color: string;
-  size: string;
-  fallbackPrice: number;
-  fallbackOldPrice?: number;
-  fallbackImage: string;
-  bestFor: string;
-  highlights: string[];
-}
-
-export const TREE_MODELS: TreeModel[] = [
-  {
-    slug: "elka-panno-makrame-0687",
-    href: "/catalog/interior/elka-panno-makrame-0687",
-    name: "Ёлка в технике макраме, бежевая",
-    color: "Бежевый, натуральный, молочный",
-    size: "70–75 × 150 см",
-    fallbackPrice: 4500,
-    fallbackOldPrice: 11500,
-    fallbackImage: "/images/elka/elka-cream-interior.jpg",
-    bestFor: "Гостиная, лобби отеля, зал ресторана",
-    highlights: [
-      "Заметна с порога — работает как фотозона",
-      "Три оттенка: бежевый, натуральный, молочный",
-      "Плетётся под заказ за 2–3 дня",
-    ],
-  },
-  {
-    slug: "elka-panno-makrame-8124",
-    href: "/catalog/interior/elka-panno-makrame-8124",
-    name: "Ёлка в технике макраме, хаки",
-    color: "Хаки",
-    size: "45 × 100 см",
-    fallbackPrice: 3700,
-    fallbackOldPrice: 10000,
-    fallbackImage: "/images/elka/elka-green-festive.jpg",
-    bestFor: "Детская, прихожая, салон, ресепшен",
-    highlights: [
-      "Компактная — для небольших стен",
-      "Глубокий природный оттенок",
-      "Готова к отправке",
-    ],
-  },
-];
 
 export interface Audience {
   title: string;
@@ -158,7 +108,7 @@ export const BUSINESS_POINTS = [
 export const FAQ = [
   {
     question: "Ёлка успеет к Новому году?",
-    answer: `Да. Под заказ ёлку плетут 2–3 рабочих дня, доставка по России — 2–7 дней. Чтобы точно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Ёлка из наличия уходит в доставку на следующий день.`,
+    answer: `Да. Под заказ ёлка плетётся 2–3 рабочих дня, доставка по России — 2–7 дней. Чтобы точно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Ёлка из наличия уходит в доставку на следующий день.`,
   },
   {
     question: "Как повесить ёлку макраме на стену?",

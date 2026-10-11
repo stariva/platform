@@ -1,7 +1,5 @@
-import { logger } from "@stariva/config";
 import type { Metadata } from "next";
-import { ElkaFaq } from "@/app/elka-makrame/_components/elka-faq";
-import { WORKSHOP_SLUG } from "@/app/elka-makrame/_data";
+import { ElkaFaq } from "@/components/stariva/elka-faq";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -10,16 +8,16 @@ import {
   ItemListJsonLd,
 } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
-import { getProductBySlug } from "@/lib/ozon-service";
+import { TREES_PATH } from "@/lib/elka/data";
+import { loadElkaData } from "@/lib/elka/load";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
-import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { ElkaAudiences } from "./_components/elka-audiences";
 import { ElkaBusiness } from "./_components/elka-business";
 import { ElkaComparison } from "./_components/elka-comparison";
 import { ElkaDiy } from "./_components/elka-diy";
 import { ElkaHero } from "./_components/elka-hero";
 import { ElkaModels } from "./_components/elka-models";
-import { FAQ, TREE_MODELS, TREES_PATH } from "./_data";
+import { FAQ } from "./_data";
 
 // Цены и наличие ёлок живые (Ozon), цена мастер-класса — из базы.
 export const dynamic = "force-dynamic";
@@ -58,36 +56,8 @@ export const metadata: Metadata = {
   },
 };
 
-async function loadData() {
-  const [products, workshop] = await Promise.all([
-    Promise.all(
-      TREE_MODELS.map((model) =>
-        getProductBySlug(model.slug).catch((error) => {
-          logger.warn("elka.product.unavailable", {
-            slug: model.slug,
-            error: String(error),
-          });
-          return undefined;
-        }),
-      ),
-    ),
-    getWorkshopBySlug(WORKSHOP_SLUG).catch((error) => {
-      logger.warn("elka.workshop.unavailable", { error: String(error) });
-      return undefined;
-    }),
-  ]);
-
-  return {
-    items: TREE_MODELS.map((model, index) => ({
-      model,
-      product: products[index],
-    })),
-    workshop,
-  };
-}
-
 export default async function ElkaTreesPage() {
-  const { items, workshop } = await loadData();
+  const { items, workshop } = await loadElkaData("elka_trees");
   const reviewProductId = items.find((item) => item.product)?.product?.id;
 
   return (
@@ -122,12 +92,13 @@ export default async function ElkaTreesPage() {
           productId={reviewProductId}
           heading="Отзывы покупателей Stariva"
         />
+        <ElkaDiy workshop={workshop} />
         <ElkaFaq
           items={FAQ}
           title="Частые вопросы о ёлке макраме"
           message="Здравствуйте, Ольга! У меня вопрос про ёлку макраме."
+          source="elka_trees_faq"
         />
-        <ElkaDiy workshop={workshop} />
       </main>
       <Footer />
     </>

@@ -1,3 +1,4 @@
+import { TREES_PATH } from "@/lib/elka/data";
 import type { BlogPost } from "./types";
 
 export const makrameDlyaKafeIRestoranov: BlogPost = {
@@ -63,7 +64,7 @@ export const makrameDlyaKafeIRestoranov: BlogPost = {
     {
       type: "cta",
       text: "Ёлки-панно для кафе, ресторанов и отелей — два размера и партии для сетей",
-      href: "/elka-makrame-na-stenu",
+      href: TREES_PATH,
       label: "Новогодняя ёлка для бизнеса",
     },
     {
