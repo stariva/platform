@@ -646,7 +646,7 @@ export function ChatWidget() {
               <div className="min-w-0">
                 <p className="font-serif text-[17px] leading-tight">Ника</p>
                 <p className="text-parchment/65 text-[11px] leading-tight">
-                  Цифровой помощник мастерской · онлайн
+                  Цифровая помощница Stariva · онлайн
                 </p>
               </div>
               <button
