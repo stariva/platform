@@ -24,15 +24,15 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Мастер-классы по макраме онлайн — видеокурсы Stariva",
+  title: "Мастер-классы по макраме онлайн — видеокурсы",
   description:
-    "Видео-мастер-классы по макраме: одежда, абажуры и декор интерьера. Пошаговые инструкции от мастера Stariva. Доступ навсегда, HD-видео.",
+    "Мастер-классы по макраме в видеоуроках: одежда, абажуры и декор интерьера. Ольга показывает каждый шаг. Доступ навсегда, видео в HD.",
   alternates: { canonical: `${BASE_URL}/workshops` },
   openGraph: {
     type: "website",
     title: "Мастер-классы по макраме онлайн — Stariva",
     description:
-      "Видео-мастер-классы по макраме: одежда, абажуры и декор интерьера. Пошаговые инструкции от мастера Stariva.",
+      "Мастер-классы по макраме в видеоуроках: одежда, абажуры и декор интерьера. Ольга показывает каждый шаг.",
     url: `${BASE_URL}/workshops`,
     images: [
       {
@@ -209,7 +209,7 @@ export default async function WorkshopsPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-espresso/70 via-espresso/10 to-transparent md:from-espresso/30 md:via-transparent" />
         <div className="absolute inset-0 flex flex-col justify-end pb-14 md:pb-20 px-6 md:px-12 lg:px-20 max-w-5xl">
           <p className="label-caps text-linen/70 mb-4 tracking-widest">
-            Видео-курсы
+            Видеокурсы
           </p>
           <h1 className="font-serif text-4xl md:text-6xl text-parchment leading-tight text-balance mb-4">
             Мастер-классы
@@ -217,7 +217,7 @@ export default async function WorkshopsPage() {
             <em className="not-italic text-linen">по макраме</em>
           </h1>
           <p className="text-parchment/80 max-w-lg leading-relaxed text-lg">
-            Пошаговые видео-уроки от мастера Stariva — от первого узла до
+            Ольга шаг за шагом показывает на видео всё — от первого узла до
             готового изделия.
           </p>
         </div>
