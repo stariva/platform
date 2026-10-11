@@ -55,6 +55,10 @@ const config: NextConfig = {
     "@t3-oss/env-core",
   ],
   images: {
+    // `quality` props are snapped to this list, so anything not listed
+    // silently falls back to 75. 90 is used by the about hero and the
+    // product gallery.
+    qualities: [75, 90],
     remotePatterns: [
       // Ozon CDN domains for product images
       { protocol: "https", hostname: "cdn1.ozon.ru" },
