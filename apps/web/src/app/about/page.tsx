@@ -113,11 +113,12 @@ export default function AboutPage() {
             fill
             priority
             className="object-cover object-[56%_center] lg:object-[70%_center]"
-            // object-cover in a box narrower than 3:2, so the rendered photo is
-            // ~1.5× the hero height wide. Mobile crops a slice from a ~4× wider
-            // image and needs the full-resolution source.
-            sizes="(min-width: 1024px) clamp(960px, 135vh, 1620px), 300vw"
-            quality={100}
+            // Served byte-for-byte from the CDN. The source is already a lossy
+            // 2000px WebP, so the optimizer could only add a second round of
+            // compression: `quality` is snapped to `images.qualities` (just 75
+            // by default), and even q100 comes out larger than the original
+            // without looking any better.
+            unoptimized
           />
           {/* Mobile: bottom-up gradient for text legibility */}
           <div className="absolute inset-0 bg-gradient-to-t from-espresso/90 via-espresso/45 to-transparent lg:hidden" />
