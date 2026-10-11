@@ -2,6 +2,7 @@ import { byId } from "./by-id";
 import { list } from "./list";
 import { save } from "./save";
 import { setAvailability } from "./set-availability";
+import { setOldPrice } from "./set-old-price";
 import { setPrice } from "./set-price";
 import { setStock } from "./set-stock";
 import { uploadImage } from "./upload-image";
@@ -12,6 +13,7 @@ export const adminProductsRouter = {
   save,
   setAvailability,
   setPrice,
+  setOldPrice,
   setStock,
   uploadImage,
 };

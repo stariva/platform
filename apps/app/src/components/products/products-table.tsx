@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { AvailabilitySwitches } from "./availability-switches";
+import { OldPriceCell } from "./old-price-cell";
 import { PriceCell } from "./price-cell";
 import { ProductThumb } from "./product-thumb";
 
@@ -28,6 +29,7 @@ export interface AdminProduct {
   subcategory: string;
   status: "draft" | "published" | "archived";
   price: number;
+  oldPrice: number | null;
   image: string | null;
   madeToOrder: boolean;
   stockAvailable: number;
@@ -276,6 +278,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
               <TableHead>Название</TableHead>
               <TableHead>Категория</TableHead>
               <TableHead className="text-right">Цена</TableHead>
+              <TableHead className="text-right">Старая цена</TableHead>
               <TableHead>Продажа</TableHead>
               <TableHead className="text-right">Порядок</TableHead>
             </TableRow>
@@ -284,7 +287,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
             {visible.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Ничего не найдено
@@ -320,6 +323,12 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
                   </TableCell>
                   <TableCell className="text-right">
                     <PriceCell id={product.id} price={product.price} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <OldPriceCell
+                      id={product.id}
+                      oldPrice={product.oldPrice}
+                    />
                   </TableCell>
                   <TableCell>
                     <AvailabilitySwitches
