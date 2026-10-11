@@ -3,6 +3,7 @@ import { list } from "./list";
 import { save } from "./save";
 import { setAvailability } from "./set-availability";
 import { setOldPrice } from "./set-old-price";
+import { setOldPriceBulk } from "./set-old-price-bulk";
 import { setPrice } from "./set-price";
 import { setStock } from "./set-stock";
 import { uploadImage } from "./upload-image";
@@ -14,6 +15,7 @@ export const adminProductsRouter = {
   setAvailability,
   setPrice,
   setOldPrice,
+  setOldPriceBulk,
   setStock,
   uploadImage,
 };

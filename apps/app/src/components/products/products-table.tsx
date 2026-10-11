@@ -2,6 +2,7 @@
 
 import {
   Button,
+  Checkbox,
   Input,
   Table,
   TableBody,
@@ -17,6 +18,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { AvailabilitySwitches } from "./availability-switches";
+import { BulkOldPrice } from "./bulk-old-price";
 import { OldPriceCell } from "./old-price-cell";
 import { PriceCell } from "./price-cell";
 import { ProductThumb } from "./product-thumb";
@@ -135,6 +137,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
   const [order, setOrder] = useState<OrderFilter>("all");
   const [category, setCategory] = useState<CategoryFilter>("all");
   const [featured, setFeatured] = useState<FeaturedFilter>("all");
+  const [checked, setChecked] = useState<Set<string>>(() => new Set());
 
   const needle = query.trim().toLowerCase();
   const matchesQuery = (p: AdminProduct) =>
@@ -195,6 +198,24 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
     const product = productsById.get(id);
     return product ? [product] : [];
   });
+  // Массовые действия касаются только отмеченных строк, которые сейчас видны.
+  const checkedVisible = visible.filter((p) => checked.has(p.id));
+  const allChecked =
+    visible.length > 0 && checkedVisible.length === visible.length;
+
+  function toggleChecked(id: string, value: boolean) {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (value) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleAll(value: boolean) {
+    setChecked(value ? new Set(visible.map((p) => p.id)) : new Set());
+  }
+
   const filtersActive =
     needle !== "" ||
     status !== "all" ||
@@ -270,10 +291,25 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
         </div>
       </div>
 
+      {checkedVisible.length > 0 && (
+        <BulkOldPrice
+          ids={checkedVisible.map((p) => p.id)}
+          onDone={() => setChecked(new Set())}
+        />
+      )}
+
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allChecked}
+                  indeterminate={checkedVisible.length > 0 && !allChecked}
+                  onCheckedChange={(value) => toggleAll(!!value)}
+                  aria-label="Выбрать все показанные товары"
+                />
+              </TableHead>
               <TableHead className="w-24" />
               <TableHead>Название</TableHead>
               <TableHead>Категория</TableHead>
@@ -287,7 +323,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
             {visible.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Ничего не найдено
@@ -300,6 +336,15 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
                 productCategory.subcategories;
               return (
                 <TableRow key={product.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={checked.has(product.id)}
+                      onCheckedChange={(value) =>
+                        toggleChecked(product.id, !!value)
+                      }
+                      aria-label={`Выбрать: ${product.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <ProductThumb src={product.image} />
                   </TableCell>

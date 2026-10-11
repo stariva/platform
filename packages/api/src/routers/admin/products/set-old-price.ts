@@ -9,21 +9,22 @@ import { storefrontPaths } from "./mapping";
 /** Максимум для integer в PostgreSQL, цена хранится в копейках. */
 const MAX_RUBLES = 21_474_836;
 
-/** Правка старой цены прямо из таблицы товаров; `null` убирает скидку. */
+/** Правка старой цены прямо из таблицы товаров; `null` или 0 убирают скидку. */
 export const setOldPrice = adminProcedure
   .input(
     z.object({
       id: z.string().min(1),
       oldPrice: z
         .number({ error: "Укажите старую цену" })
-        .positive("Старая цена должна быть больше нуля")
+        .min(0, "Старая цена не может быть отрицательной")
         .max(MAX_RUBLES)
         .nullable(),
     }),
   )
   .handler(async ({ context, input }) => {
-    const oldPrice =
-      input.oldPrice === null ? null : Math.round(input.oldPrice * 100);
+    const kopecks =
+      input.oldPrice === null ? 0 : Math.round(input.oldPrice * 100);
+    const oldPrice = kopecks === 0 ? null : kopecks;
 
     const [current] = await context.db
       .select({
