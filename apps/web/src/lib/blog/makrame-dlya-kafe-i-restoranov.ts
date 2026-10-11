@@ -1,4 +1,4 @@
-import { TREES_PATH } from "@/app/elka-makrame-na-stenu/_data";
+import { TREES_PATH } from "@/lib/elka/data";
 import type { BlogPost } from "./types";
 
 export const makrameDlyaKafeIRestoranov: BlogPost = {

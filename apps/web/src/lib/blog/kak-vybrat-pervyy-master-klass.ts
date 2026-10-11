@@ -1,3 +1,4 @@
+import { WORKSHOP_PATH } from "@/lib/elka/data";
 import type { BlogPost } from "./types";
 
 export const kakVybratPervyyMasterKlass: BlogPost = {
@@ -67,7 +68,7 @@ export const kakVybratPervyyMasterKlass: BlogPost = {
     {
       type: "cta",
       text: "Мастер-класс по ёлке макраме в видеоуроках — со схемой и расчётом материалов",
-      href: "/elka-makrame#workshop",
+      href: `${WORKSHOP_PATH}#workshop`,
       label: "Мастер-класс по ёлке",
     },
     {
