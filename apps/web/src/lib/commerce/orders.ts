@@ -6,6 +6,7 @@ import {
   productOrderPayments,
   productOrders,
   products,
+  type VisitorInfo,
 } from "@stariva/db/schema";
 import {
   and,
@@ -38,6 +39,7 @@ export interface OrderLineInput {
 export interface CreateProductOrderInput {
   userId?: string;
   attribution?: CampaignAttribution | null;
+  visitor?: VisitorInfo | null;
   contactName: string;
   contactPhone: string;
   contactEmail?: string;
@@ -57,6 +59,7 @@ export interface MadeToOrderLineInput {
 export interface CreateMadeToOrderOrderInput {
   userId?: string;
   attribution?: CampaignAttribution | null;
+  visitor?: VisitorInfo | null;
   contactName: string;
   contactPhone: string;
   contactEmail?: string;
@@ -95,6 +98,7 @@ export async function createMadeToOrderOrder(
     kind: "made_to_order",
     userId: input.userId ?? null,
     attribution: input.attribution ?? null,
+    visitor: input.visitor ?? null,
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail ?? null,
@@ -141,6 +145,7 @@ export async function createProductOrder(
     id: orderId,
     userId: input.userId ?? null,
     attribution: input.attribution ?? null,
+    visitor: input.visitor ?? null,
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail ?? null,

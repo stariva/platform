@@ -38,6 +38,7 @@ const order: OrderRow = {
   depositPaidAt: null,
   declineReason: null,
   attribution: null,
+  visitor: null,
   masterNotes: null,
   trackingNumber: null,
   staffNotifiedAt: null,

@@ -1,4 +1,6 @@
+import type { VisitorInfo } from "@stariva/db/schema";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
+import { collectVisitor } from "@/lib/visitor";
 import { type OrderRequest, orderRequestSchema, validatePhoto } from "./schema";
 
 interface OrderHandlerDependencies {
@@ -6,6 +8,7 @@ interface OrderHandlerDependencies {
   saveRequest: (
     data: OrderRequest,
     photo: File | null,
+    visitor: VisitorInfo,
   ) => Promise<{ id: string; number: number }>;
   dispatchRequest: (id: string) => Promise<void>;
   after: (callback: () => Promise<void>) => void;
@@ -66,6 +69,7 @@ export function createOrderHandler({
       const { id: requestId, number: requestNumber } = await saveRequest(
         parsed.data,
         photo,
+        await collectVisitor(request),
       );
       after(async () => {
         try {

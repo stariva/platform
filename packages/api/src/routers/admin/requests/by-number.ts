@@ -18,6 +18,7 @@ export const byNumber = adminProcedure
       .select({
         ...requestFields,
         message: customOrderRequests.message,
+        visitor: customOrderRequests.visitor,
         photoBase64: customOrderRequests.photoBase64,
         photoType: customOrderRequests.photoType,
       })

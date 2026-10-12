@@ -15,6 +15,7 @@ import {
 import { notifyMadeToOrderRequested } from "@/lib/commerce/order-notifications";
 import { createMadeToOrderOrder } from "@/lib/commerce/orders";
 import { unavailableItemsResponse } from "@/lib/commerce/unavailable-items";
+import { collectVisitor } from "@/lib/visitor";
 
 export const runtime = "nodejs";
 
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
   const order = await createMadeToOrderOrder({
     userId: session?.user.id,
     attribution: attributionFromRequest(request),
+    visitor: await collectVisitor(request),
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,

@@ -12,6 +12,7 @@ import { unavailableItemsResponse } from "@/lib/commerce/unavailable-items";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { checkout, isOzonDeliveryConfigured } from "@/lib/ozon-delivery/client";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
+import { collectVisitor } from "@/lib/visitor";
 
 export const runtime = "nodejs";
 
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
   const order = await createProductOrder({
     userId: session?.user.id,
     attribution: attributionFromRequest(request),
+    visitor: await collectVisitor(request),
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,

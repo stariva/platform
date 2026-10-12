@@ -40,6 +40,7 @@ export function toAdminOrder(
     ozonOrderId: order.ozonOrderId,
     createdAt: order.createdAt,
     paidAt: order.paidAt,
+    visitor: order.visitor,
     items: items.map((item) => ({
       id: item.id,
       productSlug: item.productSlug,

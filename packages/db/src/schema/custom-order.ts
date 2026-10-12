@@ -7,6 +7,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { VisitorInfo } from "./visitor";
 
 /** Durable inbox/outbox; no public read API. */
 export const customOrderRequests = pgTable(
@@ -21,6 +22,9 @@ export const customOrderRequests = pgTable(
     fingerprint: text("fingerprint").notNull(),
     data: jsonb("data").$type<Record<string, unknown>>().notNull(),
     message: text("message").notNull(),
+    // IP, город, устройство и язык отправителя. Вне data: оно участвует в
+    // fingerprint, а повтор формы с другого IP не должен давать конфликт.
+    visitor: jsonb("visitor").$type<VisitorInfo>(),
     photoBase64: text("photo_base64"),
     photoType: text("photo_type"),
     createdAt: timestamp("created_at", { withTimezone: true })

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "~/components/layout";
 import { OrderEditor } from "~/components/orders/order-editor";
 import { toOrderView } from "~/components/orders/order-meta";
+import { VisitorCard } from "~/components/visitors/visitor-card";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export default async function OrderPage({
           ].join(":")}
           order={toOrderView(order)}
         />
+        <VisitorCard visitor={order.visitor} />
       </div>
     </>
   );

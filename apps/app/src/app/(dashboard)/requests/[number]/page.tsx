@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "~/components/layout";
 import { DeliveryBadge } from "~/components/requests/requests-table";
+import { VisitorCard } from "~/components/visitors/visitor-card";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +61,8 @@ export default async function RequestPage({
             </p>
           </CardContent>
         </Card>
+
+        <VisitorCard visitor={request.visitor} />
 
         {request.photoUrl && (
           <Card>

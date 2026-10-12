@@ -6,6 +6,7 @@ import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { attachPaymentId, createOrder } from "@/lib/payments/orders";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
+import { collectVisitor } from "@/lib/visitor";
 import { findOrCreateBuyer, sendLoginEmail } from "@/lib/workshops/buyer";
 import { siteUrl } from "@/lib/workshops/notifications";
 import {
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
     amountKopecks,
     contactEmail: buyer.email,
     attribution: attributionFromRequest(request),
+    visitor: await collectVisitor(request),
   });
 
   try {
