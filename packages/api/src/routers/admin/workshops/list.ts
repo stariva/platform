@@ -1,4 +1,4 @@
-import { asc, workshops } from "@stariva/db";
+import { asc, orders, sql, workshops } from "@stariva/db";
 
 import { adminProcedure } from "../../../orpc";
 
@@ -18,6 +18,7 @@ export const list = adminProcedure.handler(async ({ context }) => {
       featured: workshops.featured,
       sortOrder: workshops.sortOrder,
       updatedAt: workshops.updatedAt,
+      paidOrders: sql<number>`(select count(*)::int from ${orders} where ${orders}.workshop_slug = ${workshops}.slug and ${orders}.status = 'paid')`,
     })
     .from(workshops)
     .orderBy(asc(workshops.sortOrder), asc(workshops.createdAt));

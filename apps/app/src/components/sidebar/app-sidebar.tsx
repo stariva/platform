@@ -23,6 +23,7 @@ import {
   IconSchool,
   IconSettings,
   IconShoppingBag,
+  IconTicket,
   IconUsers,
 } from "@tabler/icons-react";
 import Link from "next/link";
@@ -43,6 +44,7 @@ const sales = [
 
 const learning = [
   { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
+  { title: "Записи", url: "/workshop-orders", icon: IconTicket },
   { title: "Добавить мастер-класс", url: "/workshops/new", icon: IconPlus },
 ];
 
