@@ -19,42 +19,62 @@ import {
   toast,
 } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { orpc } from "~/orpc/react";
 import { MadeToOrderStage } from "./made-to-order-stage";
 import {
+  Field,
+  OrderAttributionCard,
+  OrderDeliveryCard,
+  OrderItemsCard,
+  OrderPaymentsCard,
+} from "./order-details";
+import {
   type AdminOrderView,
   dateTime,
-  isDeletable,
+  isSafeToDelete,
   KIND_LABELS,
-  MANUAL_STATUSES,
+  PAYMENT_STATUSES,
   rubles,
   STATUS_LABELS,
+  STATUSES_BY_KIND,
   statusVariant,
 } from "./order-meta";
 
-/** Вручную статус меняется только у полностью оплаченного заказа под заказ. */
-function isStatusEditable(order: AdminOrderView) {
-  return (
-    order.kind === "made_to_order" &&
-    (MANUAL_STATUSES as readonly string[]).includes(order.status)
-  );
+type UpdateInput = Parameters<typeof orpc.admin.orders.update.call>[0];
+type OrderStatus = NonNullable<UpdateInput["status"]>;
+
+/** Чем опасно удаление — мастер видит это перед подтверждением. */
+function deleteRisks(order: AdminOrderView): string[] {
+  const risks: string[] = [];
+  if (
+    order.paidAt ||
+    order.depositPaidAt ||
+    order.payments.some((payment) => payment.status === "succeeded")
+  ) {
+    risks.push(
+      "по заказу есть оплата — деньги останутся в ЮKassa, вернуть их можно только там",
+    );
+  }
+  if (
+    order.payments.some((payment) => payment.status === "pending") ||
+    PAYMENT_STATUSES.has(order.status)
+  ) {
+    risks.push(
+      "покупатель ещё может заплатить по ссылке — такая оплата не найдёт заказ",
+    );
+  }
+  if (order.ozonOrderId) {
+    risks.push("заказ в Ozon Доставка не отменится — отмените его в Ozon");
+  }
+  return risks;
 }
 
-function Field({ label, children }: { label: string; children: string }) {
-  return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="text-sm whitespace-pre-line">{children}</dd>
-    </div>
-  );
-}
-
-/** Карточка заказа: что и кем заказано, пожелания покупателя и ведение заказа мастером. */
+/** Карточка заказа: что и кем заказано, доставка, оплаты и ведение заказа мастером. */
 export function OrderEditor({ order }: { order: AdminOrderView }) {
   const router = useRouter();
-  const editableStatus = isStatusEditable(order);
   const [status, setStatus] = useState(order.status);
   const [trackingNumber, setTrackingNumber] = useState(
     order.trackingNumber ?? "",
@@ -88,14 +108,45 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
   function save() {
     update.mutate({
       id: order.id,
-      ...(editableStatus &&
-        status !== order.status && {
-          status: status as (typeof MANUAL_STATUSES)[number],
-        }),
+      ...(status !== order.status && {
+        status: status as OrderStatus,
+        fromStatus: order.status as OrderStatus,
+      }),
       trackingNumber: trackingNumber.trim(),
       masterNotes: masterNotes.trim(),
     });
   }
+
+  function confirmRemove() {
+    const risks = deleteRisks(order);
+    if (isSafeToDelete(order) && risks.length === 0) {
+      if (
+        window.confirm(`Удалить заказ №${order.number}? Это нельзя отменить.`)
+      ) {
+        remove.mutate({ id: order.id });
+      }
+      return;
+    }
+    const typed = window.prompt(
+      [
+        `Удалить заказ №${order.number} вместе с историей оплат? Это нельзя отменить.`,
+        ...risks.map((risk) => `• ${risk}`),
+        "",
+        "Чтобы подтвердить, введите номер заказа:",
+      ].join("\n"),
+    );
+    if (typed === null) return;
+    if (typed.replace(/\D/g, "") !== String(order.number)) {
+      toast.error("Номер не совпал — заказ не удалён");
+      return;
+    }
+    remove.mutate({ id: order.id, force: true });
+  }
+
+  const kindStatuses = STATUSES_BY_KIND[order.kind];
+  const statusOptions = kindStatuses.includes(order.status)
+    ? kindStatuses
+    : [order.status, ...kindStatuses];
 
   const phoneDigits = order.contactPhone.replace(/[^\d+]/g, "");
 
@@ -129,70 +180,52 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
                   : "ещё не оплачен"}
               </Field>
               <Field label="Сумма">{rubles.format(order.amountTotal)}</Field>
-              {order.ozonOrderId && (
-                <Field label="Заказ Ozon Доставка">{order.ozonOrderId}</Field>
+              {order.kind === "made_to_order" && (
+                <>
+                  <Field label="Одобрен">
+                    {order.approvedAt &&
+                      dateTime.format(new Date(order.approvedAt))}
+                  </Field>
+                  <Field label="Предоплата получена">
+                    {order.depositPaidAt &&
+                      dateTime.format(new Date(order.depositPaidAt))}
+                  </Field>
+                  <Field label="Срок изготовления">{order.leadTime}</Field>
+                </>
+              )}
+              <Field label="Оплатить до">
+                {order.paymentDueAt &&
+                  dateTime.format(new Date(order.paymentDueAt))}
+              </Field>
+              <Field label="Мастер уведомлён">
+                {order.staffNotifiedAt &&
+                  dateTime.format(new Date(order.staffNotifiedAt))}
+              </Field>
+              {order.declineReason && (
+                <div className="sm:col-span-2">
+                  <Field label="Причина отказа">{order.declineReason}</Field>
+                </div>
               )}
             </dl>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Изделия</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {order.items.map((item) => (
-              <div key={item.id} className="rounded-lg border p-3 text-sm">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium">
-                    {item.name} × {item.quantity}
-                  </span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {rubles.format(item.price * item.quantity)}
-                  </span>
-                </div>
-                {item.options && (
-                  <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <Field label="Размер">{item.options.size}</Field>
-                    <Field label="Цвет">{item.options.color}</Field>
-                    {item.options.measurements.map((m) => (
-                      <Field key={m.label} label={m.label}>
-                        {`${m.value} см`}
-                      </Field>
-                    ))}
-                    {item.options.comment && (
-                      <div className="sm:col-span-2">
-                        <Field label="Комментарий к изделию">
-                          {item.options.comment}
-                        </Field>
-                      </div>
-                    )}
-                  </dl>
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <OrderItemsCard order={order} />
+        <OrderDeliveryCard order={order} />
 
-        {(order.customerNotes || order.deliveryNote) && (
+        {order.customerNotes && (
           <Card>
             <CardHeader>
               <CardTitle>Пожелания покупателя</CardTitle>
             </CardHeader>
-            <CardContent>
-              <dl className="space-y-3">
-                {order.customerNotes && (
-                  <Field label="Общие пожелания">{order.customerNotes}</Field>
-                )}
-                {order.deliveryNote && (
-                  <Field label="Куда и как отправить">
-                    {order.deliveryNote}
-                  </Field>
-                )}
-              </dl>
+            <CardContent className="text-sm whitespace-pre-line">
+              {order.customerNotes}
             </CardContent>
           </Card>
         )}
+
+        <OrderPaymentsCard order={order} />
+        <OrderAttributionCard order={order} />
       </div>
 
       <div className="space-y-4">
@@ -203,30 +236,36 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
           <CardContent>
             <dl className="space-y-3">
               <Field label="Имя">{order.contactName}</Field>
-              <div>
-                <dt className="text-muted-foreground text-xs">Телефон</dt>
-                <dd className="text-sm">
+              <Field label="Телефон">
+                <a
+                  href={`tel:${phoneDigits}`}
+                  className="underline-offset-4 hover:underline"
+                >
+                  {order.contactPhone}
+                </a>
+              </Field>
+              {order.contactEmail && (
+                <Field label="Email">
                   <a
-                    href={`tel:${phoneDigits}`}
+                    href={`mailto:${order.contactEmail}`}
                     className="underline-offset-4 hover:underline"
                   >
-                    {order.contactPhone}
+                    {order.contactEmail}
                   </a>
-                </dd>
-              </div>
-              {order.contactEmail && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">Email</dt>
-                  <dd className="text-sm">
-                    <a
-                      href={`mailto:${order.contactEmail}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {order.contactEmail}
-                    </a>
-                  </dd>
-                </div>
+                </Field>
               )}
+              <Field label="Аккаунт">
+                {order.userId ? (
+                  <Link
+                    href={`/users/${order.userId}`}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    открыть профиль
+                  </Link>
+                ) : (
+                  "оформлен без входа"
+                )}
+              </Field>
             </dl>
           </CardContent>
         </Card>
@@ -238,37 +277,40 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
             <CardTitle>Ведение заказа</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {editableStatus ? (
-              <div className="space-y-1.5">
-                <Label>Статус</Label>
-                <Select
-                  value={status}
-                  onValueChange={(value) => {
-                    if (value) setStatus(value);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MANUAL_STATUSES.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {STATUS_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-muted-foreground text-xs">
-                  Покупатель видит статус на странице заказа.
-                </p>
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                {order.kind === "stock"
-                  ? "Статус этого заказа меняют платёжная система и Ozon Доставка."
-                  : "До полной оплаты статус меняют кнопки этапа и платежи покупателя."}
+            <div className="space-y-1.5">
+              <Label>Статус</Label>
+              <Select
+                value={status}
+                onValueChange={(value) => {
+                  if (value) setStatus(value);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(value: string) => STATUS_LABELS[value] ?? value}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((value) => (
+                    <SelectItem
+                      key={value}
+                      value={value}
+                      disabled={
+                        PAYMENT_STATUSES.has(value) && value !== order.status
+                      }
+                    >
+                      {STATUS_LABELS[value] ?? value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Покупатель видит статус на странице заказа. Смена статуса не
+                двигает деньги: возврат — в кабинете ЮKassa
+                {order.kind === "stock" ? ", отмена доставки — в Ozon" : ""}.
+                Ожидание оплаты ставится только кнопками этапа.
               </p>
-            )}
+            </div>
 
             {order.kind === "made_to_order" && (
               <div className="space-y-1.5">
@@ -308,35 +350,25 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
           </CardContent>
         </Card>
 
-        {isDeletable(order) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Удаление</CardTitle>
-              <CardDescription>
-                Для спама, дублей и тестовых заказов. Заказ пропадёт из админки
-                и из кабинета покупателя.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                className="w-full"
-                variant="destructive"
-                disabled={remove.isPending}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Удалить заказ №${order.number}? Это нельзя отменить.`,
-                    )
-                  ) {
-                    remove.mutate({ id: order.id });
-                  }
-                }}
-              >
-                {remove.isPending ? "Удаляем…" : "Удалить заказ"}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Удаление</CardTitle>
+            <CardDescription>
+              Для спама, дублей и тестовых заказов. Заказ пропадёт из админки и
+              из кабинета покупателя вместе с историей оплат.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full"
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={confirmRemove}
+            >
+              {remove.isPending ? "Удаляем…" : "Удалить заказ"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -24,6 +24,7 @@ import {
 import type {
   DeliveryCheckoutResponse,
   DeliverySelection,
+  PickupPoint,
 } from "@/lib/ozon-delivery/types";
 import type { MadeToOrderPaymentType } from "./made-to-order-flow";
 import type { MadeToOrderOptions } from "./made-to-order-options";
@@ -45,6 +46,8 @@ export interface CreateProductOrderInput {
   contactEmail?: string;
   items: OrderLineInput[];
   delivery: DeliverySelection;
+  /** Выбранный пункт выдачи — чтобы мастер видел его адрес, а не только id. */
+  pickupPoint?: PickupPoint | null;
   checkout: DeliveryCheckoutResponse;
 }
 
@@ -170,7 +173,16 @@ export async function createProductOrder(
               lat: input.delivery.latitude,
               lng: input.delivery.longitude,
             }
-          : null,
+          : input.pickupPoint
+            ? {
+                address: input.pickupPoint.address,
+                title: input.pickupPoint.title,
+                locality: input.pickupPoint.locality,
+                kind: input.pickupPoint.kind,
+                lat: input.pickupPoint.latitude,
+                lng: input.pickupPoint.longitude,
+              }
+            : null,
       checkoutSnapshot: input.checkout,
     })
     .returning({ number: productOrders.number });

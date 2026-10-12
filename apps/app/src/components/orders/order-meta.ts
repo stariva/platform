@@ -1,9 +1,12 @@
+import type { CampaignAttribution, VisitorInfo } from "@stariva/db/schema";
+
 /** Заказ в том виде, в каком его отдаёт `admin.orders.*` (даты уже строками). */
 export interface AdminOrderView {
   id: string;
   number: number;
   kind: "stock" | "made_to_order";
   status: string;
+  userId: string | null;
   contactName: string;
   contactPhone: string;
   contactEmail: string | null;
@@ -17,15 +20,37 @@ export interface AdminOrderView {
   depositPaidAt: string | null;
   declineReason: string | null;
   customerNotes: string | null;
+  deliveryMethod: "pickup" | "courier" | "manual";
+  deliveryPointId: string | null;
+  deliveryAddress: {
+    address: string | null;
+    title: string | null;
+    locality: string | null;
+    coordinates: { lat: number; lng: number } | null;
+  };
+  ozonDelivery: {
+    type: string | null;
+    dateFrom: string | null;
+    dateTo: string | null;
+  } | null;
   deliveryNote: string | null;
   masterNotes: string | null;
   trackingNumber: string | null;
+  paymentId: string | null;
   ozonOrderId: string | null;
+  ozonPostingNumbers: string[];
+  ozonShipmentStatus: "pending" | "creating" | "failed" | "created";
+  staffNotifiedAt: string | null;
   createdAt: string;
   paidAt: string | null;
+  attribution: CampaignAttribution | null;
+  visitor: VisitorInfo | null;
   items: {
     id: string;
     productSlug: string;
+    productId: string | null;
+    image: string | null;
+    ozonSku: number | null;
     name: string;
     quantity: number;
     price: number;
@@ -39,7 +64,10 @@ export interface AdminOrderView {
   payments: {
     id: string;
     type: "deposit" | "balance";
+    status: "pending" | "succeeded" | "canceled";
     amount: number;
+    yookassaPaymentId: string | null;
+    createdAt: string;
     paidAt: string | null;
   }[];
 }
@@ -49,7 +77,10 @@ type DateFields =
   | "paidAt"
   | "paymentDueAt"
   | "approvedAt"
-  | "depositPaidAt";
+  | "depositPaidAt"
+  | "staffNotifiedAt";
+
+type PaymentView = AdminOrderView["payments"][number];
 
 /** Заказ, как его возвращает API: даты ещё объекты Date. */
 export type AdminOrderData = Omit<AdminOrderView, DateFields | "payments"> & {
@@ -58,7 +89,9 @@ export type AdminOrderData = Omit<AdminOrderView, DateFields | "payments"> & {
   paymentDueAt: Date | null;
   approvedAt: Date | null;
   depositPaidAt: Date | null;
-  payments: (Omit<AdminOrderView["payments"][number], "paidAt"> & {
+  staffNotifiedAt: Date | null;
+  payments: (Omit<PaymentView, "createdAt" | "paidAt"> & {
+    createdAt: Date;
     paidAt: Date | null;
   })[];
 };
@@ -74,8 +107,10 @@ export function toOrderView(order: AdminOrderData): AdminOrderView {
     paymentDueAt: iso(order.paymentDueAt),
     approvedAt: iso(order.approvedAt),
     depositPaidAt: iso(order.depositPaidAt),
+    staffNotifiedAt: iso(order.staffNotifiedAt),
     payments: order.payments.map((payment) => ({
       ...payment,
+      createdAt: payment.createdAt.toISOString(),
       paidAt: iso(payment.paidAt),
     })),
   };
@@ -98,12 +133,38 @@ export const STATUS_LABELS: Record<string, string> = {
   declined: "Отклонена",
 };
 
-/** Статусы оплаченного заказа под заказ, между которыми мастер переключает вручную. */
-export const MANUAL_STATUSES = [
-  "ready_to_ship",
-  "shipped",
-  "delivered",
-] as const;
+/** Статусы каждого вида заказа в порядке жизни заказа — как на сервере. */
+export const STATUSES_BY_KIND: Record<AdminOrderView["kind"], string[]> = {
+  stock: [
+    "pending",
+    "paid",
+    "fulfilling",
+    "shipped",
+    "delivered",
+    "ozon_order_failed",
+    "canceled",
+    "refunded",
+  ],
+  made_to_order: [
+    "requested",
+    "awaiting_deposit",
+    "in_production",
+    "awaiting_balance",
+    "ready_to_ship",
+    "shipped",
+    "delivered",
+    "declined",
+    "canceled",
+    "refunded",
+  ],
+};
+
+/** В них покупатель платит — вручную не ставятся, только оформлением и кнопками этапов. */
+export const PAYMENT_STATUSES = new Set([
+  "pending",
+  "awaiting_deposit",
+  "awaiting_balance",
+]);
 
 /** Заказам в этих статусах нужно действие мастера. */
 export const NEEDS_ATTENTION = new Set([
@@ -114,20 +175,57 @@ export const NEEDS_ATTENTION = new Set([
 ]);
 
 /**
- * Удалить можно заявку, отклонённый или отменённый заказ без оплат. Открытую
- * ссылку на оплату видит только сервер — он откажет, если она есть.
+ * Удалить без оговорок можно заявку, отклонённый или отменённый заказ без
+ * оплат и открытых ссылок на оплату. Остальные — только с подтверждением:
+ * сервер проверит то же самое и без `force` откажет.
  */
-export function isDeletable(order: AdminOrderView) {
+export function isSafeToDelete(order: AdminOrderView) {
   return (
     ["requested", "declined", "canceled"].includes(order.status) &&
     !order.paidAt &&
     !order.depositPaidAt &&
-    order.payments.length === 0
+    order.payments.every((payment) => payment.status === "canceled")
   );
 }
 
 /** Оплачивает покупатель на странице заказа — ссылку мастер отправляет в мессенджер. */
 export const orderPageUrl = (id: string) => `https://stariva.ru/order/${id}`;
+
+export const DELIVERY_METHOD_LABELS: Record<
+  AdminOrderView["deliveryMethod"],
+  string
+> = {
+  pickup: "Пункт выдачи Ozon",
+  courier: "Курьер Ozon",
+  manual: "Согласует мастер",
+};
+
+/** Вид доставки из ответа Ozon при оформлении. */
+export const OZON_DELIVERY_TYPE_LABELS: Record<string, string> = {
+  PVZ: "пункт выдачи",
+  POSTAMAT: "постамат",
+  COURIER: "курьер",
+};
+
+export const SHIPMENT_STATUS_LABELS: Record<
+  AdminOrderView["ozonShipmentStatus"],
+  string
+> = {
+  pending: "ещё не создан",
+  creating: "создаётся",
+  failed: "не удалось создать",
+  created: "создан",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentView["status"], string> = {
+  pending: "ссылка открыта",
+  succeeded: "оплачено",
+  canceled: "не оплачено",
+};
+
+/** Страница товара на сайте: короткий адрес сам переведёт в нужную категорию. */
+export const productSiteUrl = (slug: string) =>
+  `https://stariva.ru/catalog/product/${slug}`;
 
 export const KIND_LABELS: Record<AdminOrderView["kind"], string> = {
   stock: "Готовое",

@@ -8,6 +8,7 @@ import {
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { loadItemProducts } from "./item-products";
 import { toAdminOrder } from "./shape";
 
 /** Столько последних заказов хватит для ручной работы; старее — через БД. */
@@ -37,10 +38,17 @@ export const list = adminProcedure
               ),
             );
 
+    const products = await loadItemProducts(
+      context.db,
+      items.map((item) => item.productSlug),
+    );
+
     return orders.map((order) =>
       toAdminOrder(
         order,
         items.filter((item) => item.orderId === order.id),
+        [],
+        products,
       ),
     );
   });
