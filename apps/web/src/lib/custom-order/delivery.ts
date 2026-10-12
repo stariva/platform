@@ -29,6 +29,12 @@ export async function deliverNotification(
   const channels: Promise<void>[] = [];
   const title = notification.title ?? `Заявка ${notification.id}`;
   const message = `${title}\n${notification.message}`;
+  const missingEmail = missingEmailSettings(config);
+  if (missingEmail.length > 0) {
+    console.warn(
+      `[notifications] ${title}: на почту не отправлено — не заданы ${missingEmail.join(", ")}`,
+    );
+  }
   if (config.telegramToken && config.telegramChatId) {
     channels.push(
       (async () => {
@@ -103,7 +109,25 @@ export async function deliverNotification(
       })(),
     );
   }
-  return (await Promise.allSettled(channels)).some(
-    (result) => result.status === "fulfilled",
-  );
+  const results = await Promise.allSettled(channels);
+  // Один канал может упасть, пока другой доставил: сообщение не потеряно,
+  // но канал сломан — без лога этого не заметить.
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error(
+        `[notifications] ${title}: канал не доставил —`,
+        result.reason,
+      );
+    }
+  }
+  return results.some((result) => result.status === "fulfilled");
+}
+
+/** Переменные, без которых уведомления не уходят на почту. */
+export function missingEmailSettings(config: DeliveryConfig): string[] {
+  return [
+    !config.emailKey && "RESEND_API_KEY",
+    !config.emailFrom && "ORDER_EMAIL_FROM",
+    !config.emailTo && "ORDER_EMAIL_TO",
+  ].filter((name): name is string => Boolean(name));
 }
