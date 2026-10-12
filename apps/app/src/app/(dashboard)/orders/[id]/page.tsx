@@ -19,7 +19,7 @@ export default async function OrderPage({
 
   return (
     <>
-      <SiteHeader title={`Заказ ${order.id.slice(0, 8)}`} />
+      <SiteHeader title={`Заказ №${order.number}`} />
       <div className="space-y-4 px-4 pb-10 lg:px-6">
         {/* key: после сохранения форма берёт свежие данные с сервера */}
         <OrderEditor

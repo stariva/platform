@@ -1,6 +1,7 @@
 /** Заказ в том виде, в каком его отдаёт `admin.orders.*` (даты уже строками). */
 export interface AdminOrderView {
   id: string;
+  number: number;
   kind: "stock" | "made_to_order";
   status: string;
   contactName: string;
@@ -159,6 +160,3 @@ export const dateTime = new Intl.DateTimeFormat("ru-RU", {
   dateStyle: "medium",
   timeStyle: "short",
 });
-
-/** Номер заказа для разговора с покупателем и поиска в уведомлениях. */
-export const shortId = (id: string) => id.slice(0, 8);

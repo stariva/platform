@@ -98,7 +98,7 @@ export async function POST(
   try {
     const payment = await createPayment({
       amountKopecks: step.amount,
-      description: `${STAGE_DESCRIPTIONS[step.type]} по заказу Stariva №${orderId.slice(0, 8)}`,
+      description: `${STAGE_DESCRIPTIONS[step.type]} по заказу Stariva №${order.number}`,
       returnUrl: `${siteUrl(request)}/order/${orderId}?payment=success`,
       metadata: {
         orderId,

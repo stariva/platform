@@ -14,6 +14,7 @@ type ItemRow = typeof productOrderItems.$inferSelect;
 
 const order: OrderRow = {
   id: "abcd1234-0000-0000-0000-000000000000",
+  number: 1042,
   kind: "made_to_order",
   userId: null,
   contactName: "Анна",
@@ -69,7 +70,7 @@ const item: ItemRow = {
 test("request message lists the buyer, options and the approval step", () => {
   const { title, message } = formatMadeToOrderRequestMessage(order, [item]);
 
-  assert.match(title, /Заявка под заказ №abcd1234/);
+  assert.match(title, /Заявка под заказ №1042/);
   assert.match(title, /7\s?000/);
   assert.ok(message.includes("Покупатель: Анна"));
   assert.ok(message.includes("Телефон: +7 999 123-45-67"));
@@ -151,7 +152,7 @@ test("details-updated message carries the delivery note", () => {
     [item],
   );
 
-  assert.match(title, /дополнил детали заказа №abcd1234/);
+  assert.match(title, /дополнил детали заказа №1042/);
   assert.ok(message.includes("Доставка: Казань, ПВЗ СДЭК"));
 });
 

@@ -26,6 +26,7 @@ export const madeToOrderTermsSchema = z.object({
 });
 
 type Terms = z.infer<typeof madeToOrderTermsSchema> & {
+  number: number;
   status: string;
   paid: boolean;
   amountTotal: number;
@@ -189,7 +190,7 @@ export function MadeToOrderPayment({
           Срок оплаты истёк.{" "}
           <ContactMasterButton
             source="order_payment_overdue"
-            message={`Здравствуйте, Ольга! Истёк срок оплаты заказа ${orderId}, можно его продлить?`}
+            message={`Здравствуйте, Ольга! Истёк срок оплаты заказа №${terms.number}, можно его продлить?`}
             className="underline underline-offset-4"
           >
             Напишите мастеру
