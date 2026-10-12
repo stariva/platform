@@ -80,10 +80,13 @@ export function MadeToOrderPayment({
   orderId,
   phone,
   terms,
+  returnTo = "order",
 }: {
   orderId: string;
   phone: string;
   terms: Terms;
+  /** Куда вернуть покупателя после оплаты: на гостевую страницу или в кабинет. */
+  returnTo?: "order" | "account";
 }) {
   const [paying, setPaying] = useState(false);
 
@@ -109,7 +112,7 @@ export function MadeToOrderPayment({
       const res = await fetch(`/api/orders/${orderId}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, offerAccepted: true }),
+        body: JSON.stringify({ phone, offerAccepted: true, returnTo }),
       });
       const data: unknown = await res.json();
       const parsed = payResponseSchema.safeParse(data);

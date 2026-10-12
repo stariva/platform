@@ -1,81 +1,159 @@
+import { PackageIcon } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { listAccountOrders } from "@/lib/account/orders";
 import { getSession } from "@/lib/auth/session";
-import { listUserOrders } from "@/lib/payments/orders";
-import { formatPrice } from "@/lib/workshops-data";
-import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
+import { isOrderActive } from "@/lib/commerce/order-status";
+import { cn } from "@/lib/utils";
+import { OrderCard } from "./order-card";
 
 export const dynamic = "force-dynamic";
 
-const statusLabels: Record<
-  "pending" | "paid" | "canceled" | "refunded",
-  { label: string; className: string }
-> = {
-  pending: { label: "Ожидает оплаты", className: "bg-linen/50 text-espresso" },
-  paid: { label: "Оплачен", className: "bg-sage/25 text-sage-dark" },
-  canceled: { label: "Отменён", className: "bg-espresso/8 text-taupe" },
-  refunded: { label: "Возврат", className: "bg-terracotta/15 text-terracotta" },
-};
+const tabs = [
+  { key: "all", label: "Все" },
+  { key: "active", label: "Текущие" },
+  { key: "done", label: "Завершённые" },
+] as const;
 
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+type TabKey = (typeof tabs)[number]["key"];
 
-export default async function AccountOrdersPage() {
+function parseTab(value: string | string[] | undefined): TabKey {
+  return tabs.find((tab) => tab.key === value)?.key ?? "all";
+}
+
+function EmptyState({
+  title,
+  text,
+  withLinks,
+}: {
+  title: string;
+  text: string;
+  withLinks?: boolean;
+}) {
+  return (
+    <div className="bg-white border border-espresso/10 rounded-2xl px-6 py-12 text-center">
+      <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-sand">
+        <PackageIcon className="size-6 text-espresso" aria-hidden="true" />
+      </div>
+      <h2 className="font-serif text-2xl text-espresso mb-2">{title}</h2>
+      <p className="text-taupe text-sm max-w-sm mx-auto">{text}</p>
+      {withLinks && (
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Button
+            asChild
+            className="bg-espresso text-parchment hover:bg-espresso/90"
+          >
+            <Link href="/catalog">Перейти в каталог</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/workshops">Мастер-классы</Link>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default async function AccountOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await getSession();
   if (!session) return null;
 
-  const orders = await listUserOrders(session.user.id);
-  const workshopsBySlug = await getWorkshopsBySlugs([
-    ...new Set(orders.map((order) => order.workshopSlug)),
+  const [orders, { tab: rawTab }] = await Promise.all([
+    listAccountOrders(session.user.id),
+    searchParams,
   ]);
 
   if (orders.length === 0) {
     return (
-      <div className="bg-white border border-espresso/10 rounded-2xl p-10 text-center">
-        <h2 className="font-serif text-2xl text-espresso mb-2">
-          Заказов пока нет
-        </h2>
-        <p className="text-taupe text-sm">
-          Здесь будет история ваших покупок мастер-классов.
-        </p>
-      </div>
+      <EmptyState
+        title="Заказов пока нет"
+        text="Здесь будут ваши покупки: изделия из каталога, заказы по вашим меркам и мастер-классы."
+        withLinks
+      />
     );
   }
 
+  const tab = parseTab(rawTab);
+  const active = orders.filter((order) =>
+    isOrderActive(order.kind, order.status),
+  );
+  const byTab: Record<TabKey, typeof orders> = {
+    all: orders,
+    active,
+    done: orders.filter((order) => !active.includes(order)),
+  };
+  const visible = byTab[tab];
+  const awaitingPayment = orders.filter((order) => order.paymentStep).length;
+
   return (
-    <div className="bg-white border border-espresso/10 rounded-2xl overflow-hidden">
-      {orders.map((order, i) => {
-        const workshop = workshopsBySlug.get(order.workshopSlug);
-        const status = statusLabels[order.status] ?? statusLabels.pending;
-        return (
-          <div
-            key={order.id}
-            className={`flex items-center justify-between gap-4 px-5 py-4 ${
-              i < orders.length - 1 ? "border-b border-espresso/8" : ""
-            }`}
-          >
-            <div className="min-w-0">
-              <p className="text-espresso text-sm font-medium truncate">
-                {workshop?.title ?? order.workshopSlug}
-              </p>
-              <p className="text-taupe text-xs mt-0.5">
-                {dateFormatter.format(order.createdAt)}
-              </p>
-            </div>
-            <div className="flex items-center gap-4 flex-shrink-0">
-              <span
-                className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${status.className}`}
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <nav
+          aria-label="Фильтр заказов"
+          className="inline-flex rounded-full bg-sand p-1"
+        >
+          {tabs.map((item) => {
+            const selected = item.key === tab;
+            return (
+              <Link
+                key={item.key}
+                href={
+                  item.key === "all"
+                    ? "/account/orders"
+                    : `/account/orders?tab=${item.key}`
+                }
+                aria-current={selected ? "page" : undefined}
+                scroll={false}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm transition-colors",
+                  selected
+                    ? "bg-white text-espresso shadow-sm"
+                    : "text-taupe hover:text-espresso",
+                )}
               >
-                {status.label}
-              </span>
-              <span className="font-serif text-base text-espresso w-24 text-right">
-                {formatPrice(order.amount / 100)}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+                {item.label}
+                <span
+                  className={cn(
+                    "text-xs tabular-nums",
+                    selected ? "text-taupe" : "text-taupe/70",
+                  )}
+                >
+                  {byTab[item.key].length}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+        {awaitingPayment > 0 && (
+          <p className="text-sm text-espresso">
+            <span className="mr-2 inline-block size-1.5 rounded-full bg-espresso align-middle" />
+            {awaitingPayment === 1
+              ? "Один заказ ждёт оплаты"
+              : `Заказов ждут оплаты: ${awaitingPayment}`}
+          </p>
+        )}
+      </div>
+
+      {visible.length === 0 ? (
+        <EmptyState
+          title={tab === "active" ? "Текущих заказов нет" : "Пока пусто"}
+          text={
+            tab === "active"
+              ? "Все заказы получены или завершены. Новые появятся здесь сразу после оформления."
+              : "Здесь появятся полученные и отменённые заказы."
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          {visible.map((order) => (
+            <OrderCard key={order.id} order={order} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
