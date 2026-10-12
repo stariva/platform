@@ -20,4 +20,5 @@ export const requestFields = {
   createdAt: customOrderRequests.createdAt,
   deliveredAt: customOrderRequests.deliveredAt,
   attempts: customOrderRequests.attempts,
+  lockedUntil: customOrderRequests.lockedUntil,
 };

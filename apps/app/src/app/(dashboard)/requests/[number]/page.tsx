@@ -39,7 +39,11 @@ export default async function RequestPage({
           </Link>
           <h1 className="mt-1 flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight">
             Заявка №{request.number}
-            <DeliveryBadge deliveredAt={request.deliveredAt} />
+            <DeliveryBadge
+              deliveredAt={request.deliveredAt}
+              attempts={request.attempts}
+              lockedUntil={request.lockedUntil}
+            />
           </h1>
           <p className="text-muted-foreground text-sm">
             {dateFormat.format(request.createdAt)}

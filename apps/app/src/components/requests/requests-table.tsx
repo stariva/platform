@@ -23,11 +23,19 @@ export interface RequestRow {
   hasPhoto: boolean;
   createdAt: Date;
   deliveredAt: Date | null;
+  attempts: number;
+  lockedUntil: Date | null;
 }
 
-/** Метка, если уведомление о заявке так и не дошло в Telegram или на почту. */
-export function DeliveryBadge({ deliveredAt }: { deliveredAt: Date | null }) {
+/** Состояние отправки уведомления о заявке в Telegram или на почту. */
+export function DeliveryBadge({
+  deliveredAt,
+  attempts,
+  lockedUntil,
+}: Pick<RequestRow, "deliveredAt" | "attempts" | "lockedUntil">) {
   if (deliveredAt) return null;
+  if (attempts === 0 || lockedUntil !== null)
+    return <Badge variant="secondary">Ожидает отправки</Badge>;
   return <Badge variant="destructive">Уведомление не дошло</Badge>;
 }
 
@@ -77,7 +85,11 @@ export function RequestsTable({ rows }: { rows: RequestRow[] }) {
                     <Badge variant="secondary">{row.productType}</Badge>
                   )}
                   {row.hasPhoto && <Badge variant="outline">есть фото</Badge>}
-                  <DeliveryBadge deliveredAt={row.deliveredAt} />
+                  <DeliveryBadge
+                    deliveredAt={row.deliveredAt}
+                    attempts={row.attempts}
+                    lockedUntil={row.lockedUntil}
+                  />
                 </div>
               </TableCell>
               <TableCell className="align-top text-sm">
