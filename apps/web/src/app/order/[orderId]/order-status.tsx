@@ -19,6 +19,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { trackPaidOrder } from "@/lib/analytics";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { recallOrderPhone } from "@/lib/commerce/order-phone";
+import {
+  madeToOrderHints,
+  postingStatusLabels,
+  productOrderStatusLabels as statusLabels,
+} from "@/lib/commerce/order-status";
 import { formatPrice } from "@/lib/products";
 import {
   MadeToOrderDetails,
@@ -28,48 +33,6 @@ import {
   MadeToOrderPayment,
   madeToOrderTermsSchema,
 } from "./made-to-order-payment";
-
-const statusLabels: Record<string, string> = {
-  pending: "Ожидает оплаты",
-  paid: "Оплачен",
-  canceled: "Отменён",
-  refunded: "Возврат",
-  ozon_order_failed: "Обрабатывается вручную",
-  fulfilling: "Собирается",
-  shipped: "В пути",
-  delivered: "Доставлен",
-  requested: "Заявка отправлена",
-  awaiting_deposit: "Ждёт предоплату",
-  in_production: "Изготавливается",
-  awaiting_balance: "Готово · ждёт доплату",
-  ready_to_ship: "Оплачен · готовим отправку",
-  declined: "Заявка отклонена",
-};
-
-/** Что дальше, для заказа под заказ: по статусу. */
-const madeToOrderHints: Record<string, string> = {
-  requested:
-    "Оплачивать пока ничего не нужно. Мастер свяжется с вами, чтобы уточнить мерки, цвет, цену и доставку. Мерки и пожелания можно указать ниже.",
-  awaiting_deposit:
-    "Мастер согласовал заказ. Внесите предоплату 50% — и мастер начнёт плести.",
-  in_production:
-    "Предоплата получена — мастер плетёт ваше изделие. Когда оно будет готово, здесь появится доплата.",
-  awaiting_balance:
-    "Изделие готово! Внесите доплату — и мастер отправит заказ.",
-  ready_to_ship: "Заказ оплачен полностью. Мастер готовит отправку.",
-  shipped: "Заказ отправлен.",
-  delivered: "Заказ получен. Спасибо!",
-  canceled: "Заказ отменён.",
-};
-
-const postingStatusLabels: Record<string, string> = {
-  awaiting_packaging: "Ожидает сборки",
-  awaiting_deliver: "Ожидает отгрузки",
-  delivering: "В пути",
-  delivered: "Доставлено",
-  cancelled: "Отменено",
-  unknown: "Статус уточняется",
-};
 
 const orderResponseSchema = madeToOrderTermsSchema.extend({
   number: z.number().int().positive(),
