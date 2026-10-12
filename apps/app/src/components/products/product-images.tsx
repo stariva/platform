@@ -35,6 +35,25 @@ export function ProductImages({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
+  /** Фото, которые прямо сейчас удаляются на сервере. */
+  const [removing, setRemoving] = useState<string[]>([]);
+
+  /** У сохранённого товара фото убираем из базы сразу, без кнопки «Сохранить». */
+  const remove = async (url: string) => {
+    if (productId) {
+      setRemoving((list) => [...list, url]);
+      try {
+        await client.admin.products.removeImage({ id: productId, url });
+      } catch (err) {
+        toast.error((err as Error).message || "Не удалось удалить фото");
+        return;
+      } finally {
+        setRemoving((list) => list.filter((item) => item !== url));
+      }
+      toast.success("Фото удалено");
+    }
+    onChange(getImages().filter((item) => item !== url));
+  };
 
   const move = (from: number, to: number) => {
     const next = [...images];
@@ -72,8 +91,8 @@ export function ProductImages({
       <CardHeader>
         <CardTitle>Фото</CardTitle>
         <CardDescription>
-          Первое — обложка в каталоге. Изменения сохраняются кнопкой
-          «Сохранить».
+          Первое — обложка в каталоге. Загрузка и порядок сохраняются кнопкой
+          «Сохранить», а удаление фото срабатывает сразу.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -118,7 +137,8 @@ export function ProductImages({
                 variant="ghost"
                 size="icon"
                 aria-label="Убрать фото"
-                onClick={() => onChange(images.filter((_, i) => i !== index))}
+                disabled={removing.includes(url)}
+                onClick={() => void remove(url)}
               >
                 <IconTrash />
               </Button>
