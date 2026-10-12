@@ -119,7 +119,7 @@ export function WorkshopOrdersTable({
               )}
               <TableCell className="align-top text-sm whitespace-nowrap">
                 {dateFormat.format(row.createdAt)}
-                {row.paidAt && row.status === "paid" && (
+                {row.paidAt && (
                   <div className="text-muted-foreground text-xs">
                     оплачен {dateFormat.format(row.paidAt)}
                   </div>
