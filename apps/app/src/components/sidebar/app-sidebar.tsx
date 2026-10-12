@@ -15,6 +15,7 @@ import {
 } from "@stariva/ui";
 import {
   IconExternalLink,
+  IconInbox,
   IconMessageChatbot,
   IconMessageStar,
   IconPackage,
@@ -35,7 +36,10 @@ const catalog = [
   { title: "Отзывы", url: "/reviews", icon: IconMessageStar },
 ];
 
-const sales = [{ title: "Заказы", url: "/orders", icon: IconShoppingBag }];
+const sales = [
+  { title: "Заказы", url: "/orders", icon: IconShoppingBag },
+  { title: "Заявки", url: "/requests", icon: IconInbox },
+];
 
 const learning = [
   { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
