@@ -19,12 +19,15 @@ export const DELETABLE_STATUSES = [
 
 /**
  * Удаляет заказ вместе с позициями и платежами — для спама, дублей и
- * тестовых заказов. Только если по нему не платили и платить уже не могут:
- * иначе пропадёт история платежей, а оплата по старой ссылке уйдёт в никуда —
- * webhook не найдёт заказ.
+ * тестовых заказов. Без `force` — только если по нему не платили и платить
+ * уже не могут. С `force` мастер удаляет и такой заказ, понимая, что
+ * пропадёт история платежей, а оплата по старой ссылке уйдёт в никуда —
+ * webhook не найдёт заказ. Деньги и заказ в Ozon Доставка это не трогает.
  */
 export const remove = adminProcedure
-  .input(z.object({ id: z.string().min(1) }))
+  .input(
+    z.object({ id: z.string().min(1), force: z.boolean().default(false) }),
+  )
   .handler(async ({ context, input }) =>
     context.db.transaction(async (tx) => {
       const [order] = await tx
@@ -55,10 +58,10 @@ export const remove = adminProcedure
         !order.paidAt &&
         !order.depositPaidAt &&
         !payment;
-      if (!deletable) {
+      if (!deletable && !input.force) {
         throw new ORPCError("CONFLICT", {
           message:
-            "Удалить можно только заявку, отклонённый или отменённый заказ, по которому не было оплат",
+            "По заказу были оплаты или открыта ссылка на оплату — подтвердите удаление",
         });
       }
 

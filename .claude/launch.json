@@ -28,6 +28,20 @@
         "3011"
       ],
       "port": 3011
+    },
+    {
+      "name": "stariva-admin",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "run",
+        "--cwd",
+        "apps/app",
+        "dev",
+        "--",
+        "--port",
+        "3012"
+      ],
+      "port": 3012
     }
   ]
 }

@@ -8,9 +8,10 @@ import {
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { loadItemProducts } from "./item-products";
 import { toAdminOrder } from "./shape";
 
-/** Один заказ со всеми позициями, параметрами изделий, пожеланиями и оплатами. */
+/** Один заказ со всеми позициями, фото изделий, доставкой и попытками оплаты. */
 export const byId = adminProcedure
   .input(z.object({ id: z.string().min(1) }))
   .handler(async ({ context, input }) => {
@@ -31,5 +32,9 @@ export const byId = adminProcedure
         .from(productOrderPayments)
         .where(eq(productOrderPayments.orderId, order.id)),
     ]);
-    return toAdminOrder(order, items, payments);
+    const products = await loadItemProducts(
+      context.db,
+      items.map((item) => item.productSlug),
+    );
+    return toAdminOrder(order, items, payments, products);
   });

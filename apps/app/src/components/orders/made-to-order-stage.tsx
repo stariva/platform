@@ -412,22 +412,6 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
             </Button>
           ))}
 
-        {order.payments.length > 0 && (
-          <div className="space-y-1 border-t pt-3">
-            <p className="text-muted-foreground text-xs">Оплаты</p>
-            {order.payments.map((payment) => (
-              <Line
-                key={payment.id}
-                label={payment.type === "deposit" ? "Предоплата" : "Доплата"}
-              >
-                {rubles.format(payment.amount)}
-                {payment.paidAt &&
-                  ` · ${dateTime.format(new Date(payment.paidAt))}`}
-              </Line>
-            ))}
-          </div>
-        )}
-
         {CANCELABLE.has(order.status) && (
           <Button
             className="w-full"
