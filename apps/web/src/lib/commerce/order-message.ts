@@ -16,8 +16,6 @@ export interface OrderMessage {
   message: string;
 }
 
-export const shortOrderId = (orderId: string) => orderId.slice(0, 8);
-
 const money = (kopecks: number) => formatPrice(kopecks / 100);
 
 /** Склеивает строки сообщения: пустые строки-разделители остаются, пустые значения пропускаются. */
@@ -45,7 +43,7 @@ export function formatMadeToOrderRequestMessage(
   items: OrderItemRow[],
 ): OrderMessage {
   return {
-    title: `Заявка под заказ №${shortOrderId(order.id)} · ${money(order.amountProducts)} по каталогу`,
+    title: `Заявка под заказ №${order.number} · ${money(order.amountProducts)} по каталогу`,
     message: joinLines([
       ...customerLines(order),
       "",
@@ -70,7 +68,7 @@ export function formatMadeToOrderPaymentMessage(
   payment: Pick<PaymentRow, "type" | "amount">,
   outcome: PaymentOutcome,
 ): OrderMessage {
-  const what = `${STAGE_LABELS[payment.type]} ${money(payment.amount)} по заказу №${shortOrderId(order.id)}`;
+  const what = `${STAGE_LABELS[payment.type]} ${money(payment.amount)} по заказу №${order.number}`;
   if (outcome === "applied") {
     return {
       title: `Получена ${what}`,
@@ -101,7 +99,7 @@ export function formatPaidOrderMessage(
   items: OrderItemRow[],
 ): OrderMessage {
   return {
-    title: `Оплачен заказ №${shortOrderId(order.id)} · ${money(order.amountTotal)}`,
+    title: `Оплачен заказ №${order.number} · ${money(order.amountTotal)}`,
     message: joinLines([
       ...customerLines(order),
       "",
@@ -115,7 +113,7 @@ export function formatPaidOrderMessage(
 /** Оплата прошла, а отправление в Ozon не создалось — нужна ручная обработка. */
 export function formatOzonFailedMessage(order: OrderRow): OrderMessage {
   return {
-    title: `КРИТИЧНО: заказ №${shortOrderId(order.id)} оплачен, но не создан в Ozon Доставка`,
+    title: `КРИТИЧНО: заказ №${order.number} оплачен, но не создан в Ozon Доставка`,
     message: joinLines([
       ...customerLines(order),
       `Сумма: ${money(order.amountTotal)}`,
@@ -130,7 +128,7 @@ export function formatDetailsUpdatedMessage(
   items: OrderItemRow[],
 ): OrderMessage {
   return {
-    title: `Покупатель дополнил детали заказа №${shortOrderId(order.id)}`,
+    title: `Покупатель дополнил детали заказа №${order.number}`,
     message: joinLines([
       ...customerLines(order),
       "",

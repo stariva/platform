@@ -72,6 +72,7 @@ const postingStatusLabels: Record<string, string> = {
 };
 
 const orderResponseSchema = madeToOrderTermsSchema.extend({
+  number: z.number().int().positive(),
   kind: z.enum(["stock", "made_to_order"]),
   paid: z.boolean(),
   status: z.string(),
@@ -203,13 +204,16 @@ export function OrderStatus({ orderId }: { orderId: string }) {
 
   return (
     <div className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto">
-      <div className="flex items-center justify-between">
-        <span className="label-caps text-terracotta text-xs">
-          {statusLabels[order.status] ?? order.status}
-        </span>
-        <span className="text-taupe text-xs">
-          {new Date(order.createdAt).toLocaleDateString("ru-RU")}
-        </span>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="label-caps text-terracotta text-xs">
+            {statusLabels[order.status] ?? order.status}
+          </span>
+          <span className="text-taupe text-xs">
+            {new Date(order.createdAt).toLocaleDateString("ru-RU")}
+          </span>
+        </div>
+        <p className="text-espresso font-medium">Заказ №{order.number}</p>
       </div>
 
       {madeToOrder && hint && (

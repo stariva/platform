@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deliverNotification, type DeliveryConfig } from "./delivery";
+import {
+  type DeliveryConfig,
+  deliverNotification,
+  missingEmailSettings,
+} from "./delivery";
 const notification = {
   id: "test-request",
   message: "Тест & <эскиз>",
@@ -120,4 +124,34 @@ test("long Telegram messages use complete plain text chunks and failed photo rem
   );
   assert.ok(parts.join("").endsWith("<&>".repeat(1800)));
   assert.equal(delivered, false);
+});
+test("missing email settings are named for the log", () => {
+  assert.deepEqual(missingEmailSettings(config), []);
+  assert.deepEqual(
+    missingEmailSettings({ ...config, emailKey: undefined, emailTo: "" }),
+    ["RESEND_API_KEY", "ORDER_EMAIL_TO"],
+  );
+});
+test("a failed channel is logged even when the other one delivered", async () => {
+  const errors: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => errors.push(args);
+  try {
+    assert.equal(
+      await deliverNotification(
+        notification,
+        config,
+        fakeFetch((url) =>
+          url.includes("resend")
+            ? new Response("failure", { status: 500 })
+            : Response.json({ ok: true }),
+        ),
+      ),
+      true,
+    );
+  } finally {
+    console.error = original;
+  }
+  assert.equal(errors.length, 1);
+  assert.match(String(errors[0]?.[1]), /email_failed/);
 });

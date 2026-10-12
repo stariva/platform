@@ -19,7 +19,6 @@ import {
   NEEDS_ATTENTION,
   rubles,
   STATUS_LABELS,
-  shortId,
   statusVariant,
 } from "./order-meta";
 
@@ -121,7 +120,7 @@ export function OrdersTable({ orders }: { orders: AdminOrderView[] }) {
                       href={`/orders/${order.id}`}
                       className="font-mono text-sm font-medium hover:underline"
                     >
-                      {shortId(order.id)}
+                      №{order.number}
                     </Link>
                     <div>
                       <Badge variant="outline">{KIND_LABELS[order.kind]}</Badge>

@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
   try {
     const payment = await createPayment({
       amountKopecks: order.amountTotal,
-      description: `Заказ Stariva №${order.id.slice(0, 8)}`,
+      description: `Заказ Stariva №${order.number}`,
       returnUrl: `${siteUrl(request)}/order/${order.id}?payment=success`,
       metadata: {
         orderId: order.id,
@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       confirmationUrl,
       orderId: order.id,
+      orderNumber: order.number,
       analytics: {
         id: order.id,
         revenue: order.amountTotal / 100,

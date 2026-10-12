@@ -6,7 +6,11 @@ import { baseEnv, env } from "@/env";
 import { formatTouch } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { formatVisitor } from "@/lib/visitor";
-import { deliverNotification, type Notification } from "./delivery";
+import {
+  deliverNotification,
+  missingEmailSettings,
+  type Notification,
+} from "./delivery";
 import type { OrderRequest } from "./schema";
 
 export function notificationConfigured() {
@@ -161,6 +165,19 @@ export async function retryPendingRequests() {
     .orderBy(customOrderRequests.nextAttemptAt)
     .limit(10);
   await Promise.allSettled(rows.map(({ id }) => dispatchRequest(id)));
+}
+/** При старте сервера: громко, если заявки и заказы не уходят на почту. */
+export function warnIfOrderEmailMissing() {
+  const missing = missingEmailSettings({
+    emailKey: baseEnv.RESEND_API_KEY,
+    emailFrom: env.ORDER_EMAIL_FROM,
+    emailTo: env.ORDER_EMAIL_TO,
+  });
+  if (missing.length > 0) {
+    console.warn(
+      `[notifications] Уведомления о заказах не уходят на почту — не заданы ${missing.join(", ")}`,
+    );
+  }
 }
 let retryTimer: ReturnType<typeof setInterval> | undefined;
 export function startOrderRetryWorker() {

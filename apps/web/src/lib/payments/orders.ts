@@ -129,7 +129,8 @@ export async function unlinkTelegramChat(chatId: string): Promise<number> {
   return result.length;
 }
 
-export type NotificationChannel = "email" | "telegram";
+/** email и telegram — покупателю; staff — мастеру (Telegram и почта заказов). */
+export type NotificationChannel = "email" | "telegram" | "staff";
 
 /**
  * Атомарная аренда отправки на пять минут. null — уже отправлено или занято.

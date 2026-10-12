@@ -86,6 +86,7 @@ export async function POST(
     : new Map<string, MeasurementField[]>();
 
   return NextResponse.json({
+    number: order.number,
     kind: order.kind,
     status: order.status,
     paid: Boolean(order.paidAt),

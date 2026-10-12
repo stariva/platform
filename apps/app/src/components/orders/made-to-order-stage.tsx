@@ -21,7 +21,6 @@ import {
   dateTime,
   orderPageUrl,
   rubles,
-  shortId,
 } from "./order-meta";
 
 /** После предоплаты заказ уже не отклоняют, а отменяют — с возвратом денег вручную. */
@@ -58,13 +57,13 @@ function paymentMessage(order: AdminOrderView): string {
   if (order.status === "awaiting_balance") {
     const balance = order.amountTotal - (order.depositAmount ?? 0);
     return [
-      `Здравствуйте, ${order.contactName}! Ваше изделие по заказу №${shortId(order.id)} готово.`,
+      `Здравствуйте, ${order.contactName}! Ваше изделие по заказу №${order.number} готово.`,
       `Доплата — ${rubles.format(balance)}${order.amountDelivery > 0 ? `, включая доставку ${rubles.format(order.amountDelivery)}` : ""}. Оплатить до ${due}:`,
       link,
     ].join("\n");
   }
   return [
-    `Здравствуйте, ${order.contactName}! Заказ №${shortId(order.id)} согласован: ${rubles.format(order.amountProducts)}${delivery}${order.leadTime ? `, срок изготовления — ${order.leadTime}` : ""}.`,
+    `Здравствуйте, ${order.contactName}! Заказ №${order.number} согласован: ${rubles.format(order.amountProducts)}${delivery}${order.leadTime ? `, срок изготовления — ${order.leadTime}` : ""}.`,
     `Предоплата 50% — ${rubles.format(order.depositAmount ?? 0)}, оплатить до ${due}:`,
     link,
   ].join("\n");

@@ -27,6 +27,8 @@ import {
   isClientBotConfigured,
   sendClientMessage,
 } from "@/lib/telegram/client-bot";
+import { deliverNotification } from "@/lib/custom-order/delivery";
+import { notificationConfigured } from "@/lib/custom-order/inbox";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
 import { googleCalendarUrl } from "./calendar";
 import { earnsPreorderBonus } from "./preorder-bonus";
@@ -36,6 +38,10 @@ import {
   REMINDER_LOOKBEHIND_MS,
   type ReminderKind,
 } from "./reminder-schedule";
+import { formatWorkshopPurchaseMessage } from "./staff-message";
+
+/** Сколько повторять сообщение мастеру о покупке: старые покупки ему уже не нужны. */
+const STAFF_RETRY_MS = 3 * 60 * 60 * 1000;
 
 export function siteUrl(): string {
   return (env.NEXT_PUBLIC_SITE_URL ?? baseEnv.APP_URL).replace(/\/$/, "");
@@ -181,6 +187,40 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
   );
 }
 
+/**
+ * Сообщает мастеру о покупке. Без настроенных каналов — false без резерва,
+ * при сбое обоих каналов — ошибка, и ближайший прогон напоминаний повторит.
+ */
+function deliverStaff(target: Target) {
+  if (!notificationConfigured()) return Promise.resolve(false);
+  const { title, message } = formatWorkshopPurchaseMessage(
+    target.order,
+    target.workshop,
+    target.email,
+  );
+  return claimed(target, "booked", "staff", async () => {
+    const delivered = await deliverNotification(
+      {
+        id: target.order.id,
+        title,
+        message,
+        emailSubject: `${title} · Stariva`,
+        idempotencyScope: "workshop-purchase",
+        photoBase64: null,
+        photoType: null,
+      },
+      {
+        telegramToken: env.TELEGRAM_BOT_TOKEN,
+        telegramChatId: env.TELEGRAM_CHAT_ID,
+        emailKey: baseEnv.RESEND_API_KEY,
+        emailFrom: env.ORDER_EMAIL_FROM,
+        emailTo: env.ORDER_EMAIL_TO,
+      },
+    );
+    if (!delivered) throw new Error("staff_notification_failed");
+  });
+}
+
 function deliverTelegram(target: Target, kind: ReminderKind) {
   const chatId = target.order.telegramChatId;
   if (!chatId || !isClientBotConfigured()) return Promise.resolve(false);
@@ -207,15 +247,30 @@ async function loadTargets(where: Parameters<typeof and>[number]) {
 }
 
 /**
- * Письмо о покупке сразу после оплаты. Сбой не роняет вебхук: письмо
- * повторит ближайший прогон напоминаний (см. runWorkshopReminderSweep).
+ * Письмо о покупке покупателю и сообщение мастеру сразу после оплаты. Сбой
+ * не роняет вебхук: недошедшее повторит ближайший прогон напоминаний (см.
+ * runWorkshopReminderSweep).
  */
 export async function notifyWorkshopBooked(orderId: string): Promise<void> {
+  let target: Target | undefined;
   try {
-    const [target] = await loadTargets(eq(orders.id, orderId));
+    [target] = await loadTargets(eq(orders.id, orderId));
     if (target) await deliverEmail(target, "booked");
   } catch (error) {
     logger.error("workshop.booked_email.failed", {
+      orderId,
+      error: String(error),
+    });
+  }
+  if (!target) return;
+  if (!notificationConfigured()) {
+    logger.error("workshop.staff_notification.not_configured", { orderId });
+    return;
+  }
+  try {
+    await deliverStaff(target);
+  } catch (error) {
+    logger.error("workshop.staff_notification.failed", {
       orderId,
       error: String(error),
     });
@@ -270,6 +325,12 @@ export async function runWorkshopReminderSweep(now = new Date()) {
       order.paidAt.getTime() >= now.getTime() - REMINDER_LOOKBEHIND_MS;
     if (recentlyPaid && !isSent(target, "booked", "email")) {
       jobs.push(() => deliverEmail(target, "booked"));
+    }
+    if (
+      order.paidAt.getTime() >= now.getTime() - STAFF_RETRY_MS &&
+      !isSent(target, "booked", "staff")
+    ) {
+      jobs.push(() => deliverStaff(target));
     }
     if (!workshop.releaseAt) continue;
     for (const kind of dueReminders({

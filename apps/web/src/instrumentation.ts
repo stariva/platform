@@ -27,9 +27,10 @@ export async function register() {
       process.env.NODE_ENV === "production" &&
       process.env.NEXT_PHASE !== "phase-production-build"
     ) {
-      const { startOrderRetryWorker } = await import(
+      const { startOrderRetryWorker, warnIfOrderEmailMissing } = await import(
         "@/lib/custom-order/inbox"
       );
+      warnIfOrderEmailMissing();
       startOrderRetryWorker();
     }
     const { registerTelemetry } = await import("ai");

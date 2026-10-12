@@ -18,6 +18,7 @@ export function toAdminOrder(
 ) {
   return {
     id: order.id,
+    number: order.number,
     kind: order.kind,
     status: order.status,
     contactName: order.contactName,
