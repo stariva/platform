@@ -73,7 +73,7 @@ export const workshopOrderNotifications = pgTable(
       .references(() => orders.id, { onDelete: "cascade" }),
     // booked | week | day | release
     kind: text("kind").notNull(),
-    // email | telegram
+    // email | telegram | staff-telegram | staff-email
     channel: text("channel").notNull(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     leaseUntil: timestamp("lease_until", { withTimezone: true }),
