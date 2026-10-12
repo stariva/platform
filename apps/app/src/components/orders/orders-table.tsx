@@ -53,6 +53,7 @@ function summary(order: AdminOrderView) {
       ? `${first.options.size} · ${first.options.color}`
       : null,
     more: rest.length,
+    image: order.items.find((item) => item.image)?.image ?? null,
   };
 }
 
@@ -132,22 +133,35 @@ export function OrdersTable({ orders }: { orders: AdminOrderView[] }) {
                       {order.contactPhone}
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-[320px] text-sm whitespace-normal">
+                  <TableCell className="max-w-[360px] text-sm whitespace-normal">
                     {items && (
-                      <>
-                        <span className="line-clamp-2">{items.title}</span>
-                        {items.options && (
-                          <span className="text-muted-foreground text-xs">
-                            {items.options}
-                          </span>
+                      <div className="flex items-center gap-3">
+                        {items.image ? (
+                          // biome-ignore lint/performance/noImgElement: превью из внешнего бакета без оптимизации
+                          <img
+                            src={items.image}
+                            alt=""
+                            className="size-10 shrink-0 rounded object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="bg-muted size-10 shrink-0 rounded" />
                         )}
-                        {items.more > 0 && (
-                          <span className="text-muted-foreground text-xs">
-                            {" "}
-                            · ещё {items.more}
-                          </span>
-                        )}
-                      </>
+                        <div className="min-w-0">
+                          <span className="line-clamp-2">{items.title}</span>
+                          {items.options && (
+                            <span className="text-muted-foreground text-xs">
+                              {items.options}
+                            </span>
+                          )}
+                          {items.more > 0 && (
+                            <span className="text-muted-foreground text-xs">
+                              {" "}
+                              · ещё {items.more}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">

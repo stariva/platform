@@ -12,7 +12,11 @@ interface FakeOrder {
   depositPaidAt: Date | null;
 }
 
-function request(order: FakeOrder | undefined, openPayment = false) {
+function request(
+  order: FakeOrder | undefined,
+  openPayment = false,
+  force = false,
+) {
   const deleteWhere = mock(async () => undefined);
   const del = mock(() => ({ where: deleteWhere }));
   const tx = {
@@ -34,7 +38,7 @@ function request(order: FakeOrder | undefined, openPayment = false) {
     del,
     result: handler({
       context,
-      input: { id: "order" },
+      input: { id: "order", force },
       path: [],
       procedure: remove,
       errors: {},
@@ -76,4 +80,20 @@ test("remove refuses a request with an open payment link", async () => {
 test("remove reports a missing order", async () => {
   const { result } = request(undefined);
   await expect(result).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+test("remove deletes a paid order when forced", async () => {
+  const { result, del } = request(
+    { status: "delivered", paidAt: new Date(), depositPaidAt: null },
+    false,
+    true,
+  );
+  await expect(result).resolves.toEqual({ ok: true });
+  expect(del).toHaveBeenCalled();
+});
+
+test("remove deletes an order with an open payment link when forced", async () => {
+  const { result, del } = request({ status: "pending", ...unpaid }, true, true);
+  await expect(result).resolves.toEqual({ ok: true });
+  expect(del).toHaveBeenCalled();
 });

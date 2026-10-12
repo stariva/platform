@@ -61,11 +61,6 @@ const socials: ExternalLink[] = [
 
 const marketplaces: ExternalLink[] = [
   {
-    label: "Ozon",
-    href: "https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/",
-    Icon: OzonIcon,
-  },
-  {
     label: "Авито",
     href: "https://www.avito.ru/brands/i3320470/all?sellerId=5c2374e4adcfe4219ff7e1702a15d27f",
     Icon: AvitoIcon,
@@ -74,6 +69,11 @@ const marketplaces: ExternalLink[] = [
     label: "Ярмарка Мастеров",
     href: "https://www.livemaster.ru/olga-meu",
     Icon: LivemasterIcon,
+  },
+  {
+    label: "Ozon",
+    href: "https://www.ozon.ru/seller/stariva-makrame-odezhda-dekor-vyazanye-sumki-izdeliya-iz-shnura/",
+    Icon: OzonIcon,
   },
 ];
 

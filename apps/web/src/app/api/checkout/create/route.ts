@@ -11,6 +11,7 @@ import { attachPaymentId, createProductOrder } from "@/lib/commerce/orders";
 import { unavailableItemsResponse } from "@/lib/commerce/unavailable-items";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { checkout, isOzonDeliveryConfigured } from "@/lib/ozon-delivery/client";
+import { getCachedPickupPointsInfo } from "@/lib/ozon-delivery/pickup-points-cache";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { collectVisitor } from "@/lib/visitor";
 
@@ -98,6 +99,16 @@ export async function POST(request: NextRequest) {
   }
 
   const session = await getSession();
+  // Адрес пункта нужен только мастеру в админке — без него заказ всё равно оформляем
+  const pickupPoint = await getCachedPickupPointsInfo([data.delivery.pointId])
+    .then(({ points }) => points[0] ?? null)
+    .catch((error: unknown) => {
+      console.warn(
+        "[checkout/create] Не удалось получить адрес пункта:",
+        error,
+      );
+      return null;
+    });
 
   const order = await createProductOrder({
     userId: session?.user.id,
@@ -108,6 +119,7 @@ export async function POST(request: NextRequest) {
     contactEmail: data.contactEmail,
     items,
     delivery: data.delivery,
+    pickupPoint,
     checkout: deliveryQuote,
   });
 
