@@ -27,6 +27,29 @@ export async function migrate(
     Record<string, never>
   >(client, dialect, undefined);
   for (const migration of readMigrationFiles(config)) {
+    if (migration.sql[0]?.startsWith("-- migrate:non-transactional\n")) {
+      // Bootstrap the same journal as Drizzle, then run each statement in
+      // autocommit mode (required by CONCURRENTLY and batch COMMITs).
+      await dialect.migrate([], session, config);
+      const { rows: applied } = await client.query<{ created_at: string }>(
+        "SELECT created_at FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1",
+      );
+      if (
+        applied[0] &&
+        Number(applied[0].created_at) >= migration.folderMillis
+      ) {
+        continue;
+      }
+      // These migrations must be restartable: only journal complete success.
+      for (const statement of migration.sql) {
+        await client.query(statement);
+      }
+      await client.query(
+        "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ($1, $2)",
+        [migration.hash, migration.folderMillis],
+      );
+      continue;
+    }
     // Drizzle commits each call, including its journal entry. New enum values
     // (such as those in 0013) must commit before later migrations can use them.
     await dialect.migrate([migration], session, config);
