@@ -1,4 +1,5 @@
+import { lessonVideoHlsWorkflow } from "./lesson-video-hls";
 import { workshopRemindersWorkflow } from "./workshop-reminders";
 
 /** Все задания воркера. Новое задание — файл рядом и строка здесь. */
-export const workflows = [workshopRemindersWorkflow];
+export const workflows = [workshopRemindersWorkflow, lessonVideoHlsWorkflow];

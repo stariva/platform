@@ -1,12 +1,20 @@
+import { env } from "@stariva/config";
 import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
+import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { clientIp } from "@/lib/visitor";
 import {
+  HLS_GRANT_TTL_SECONDS,
+  sessionFingerprint,
+  signHlsGrant,
+} from "@/lib/workshops/hls-token";
+import {
   isVideoSignRateLimited,
   logVideoAccess,
 } from "@/lib/workshops/video-access";
+import { getReadyRendition } from "@/lib/workshops/video-renditions";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   findWorkshopLesson,
@@ -21,7 +29,8 @@ export const runtime = "nodejs";
 const URL_TTL_SECONDS = 60 * 15;
 
 /**
- * Выдаёт временную подписанную ссылку на видео урока.
+ * Выдаёт временную ссылку на видео урока: на HLS-плейлист, если видео уже
+ * нарезано (`type: "hls"`), иначе на исходный MP4 (`type: "mp4"`).
  * Доступ: бесплатный урок-превью — всем; платные уроки — только владельцам.
  */
 export async function GET(request: NextRequest) {
@@ -98,11 +107,35 @@ export async function GET(request: NextRequest) {
   });
 
   try {
+    // Есть HLS-версия — отдаём её кусками через сайт, исходный MP4 не светим
+    const rendition = await getReadyRendition(lesson.videoKey);
+    if (rendition && env.AUTH_SECRET) {
+      const token = signHlsGrant(
+        {
+          prefix: rendition.hlsPrefix,
+          expiresAt: Math.floor(Date.now() / 1000) + HLS_GRANT_TTL_SECONDS,
+          session: session
+            ? sessionFingerprint(getSessionCookie(request))
+            : null,
+        },
+        env.AUTH_SECRET,
+      );
+      return NextResponse.json(
+        {
+          url: `/api/video/hls/${token}/index.m3u8`,
+          type: "hls",
+          expiresIn: HLS_GRANT_TTL_SECONDS,
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    // Пока видео не нарезано — исходный файл по короткой ссылке
     const url = await getDownloadUrl(lesson.videoKey, {
       expiresIn: URL_TTL_SECONDS,
     });
     return NextResponse.json(
-      { url, expiresIn: URL_TTL_SECONDS },
+      { url, type: "mp4", expiresIn: URL_TTL_SECONDS },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

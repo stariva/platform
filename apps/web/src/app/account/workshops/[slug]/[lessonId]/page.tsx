@@ -57,7 +57,6 @@ export default async function LessonPlayerPage({
             initialPosition={initialPosition}
             initialCompleted={lessonProgress?.completed ?? false}
             lessonTitle={lesson.title}
-            lessonLabel={`Урок ${index + 1} из ${lessons.length}`}
             nextLesson={next ? { id: next.id, title: next.title } : null}
             courseHref={`/account/workshops/${slug}`}
             watermark={session.user.email}

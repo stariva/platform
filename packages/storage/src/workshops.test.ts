@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  HLS_FILE_PATTERN,
+  hlsContentType,
   isWorkshopKey,
+  workshopHlsPrefix,
   workshopImageKey,
   workshopMaterialKey,
   workshopVideoKey,
@@ -19,6 +22,30 @@ test("lesson ids cannot escape the workshop folder", () => {
   const key = workshopVideoKey("abazhur-kupol", "../../other/x", "video/webm");
   assert.ok(key.startsWith("workshops/abazhur-kupol/"));
   assert.ok(!key.includes(".."));
+});
+
+test("HLS folder sits next to the source video and is unique per upload", () => {
+  assert.equal(
+    workshopHlsPrefix("workshops/abazhur-kupol/l-1-0a1b2c3d4e.mp4"),
+    "workshops/abazhur-kupol/hls/l-1-0a1b2c3d4e",
+  );
+  assert.ok(
+    isWorkshopKey(
+      "abazhur-kupol",
+      `${workshopHlsPrefix("workshops/abazhur-kupol/l-1.mov")}/index.m3u8`,
+    ),
+  );
+});
+
+test("only playlist, init segment and numbered chunks are HLS files", () => {
+  for (const ok of ["index.m3u8", "init.mp4", "seg-00042.m4s"]) {
+    assert.match(ok, HLS_FILE_PATTERN);
+  }
+  for (const bad of ["../index.m3u8", "seg-1.m4s", "other.mp4", "index.m3u8x"]) {
+    assert.doesNotMatch(bad, HLS_FILE_PATTERN);
+  }
+  assert.equal(hlsContentType("seg-00001.m4s"), "video/iso.segment");
+  assert.equal(hlsContentType("index.m3u8"), "application/vnd.apple.mpegurl");
 });
 
 test("unsupported video types are refused", () => {

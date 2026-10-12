@@ -19,6 +19,8 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "media-src 'self' blob: https://storage.yandexcloud.net",
+  // hls.js разбирает видео в воркере из blob:
+  "worker-src 'self' blob:",
   "connect-src 'self' https: wss://mc.yandex.ru",
   "frame-src https://mc.yandex.ru",
   "frame-ancestors 'none'",

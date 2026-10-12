@@ -19,7 +19,8 @@
     "build": "tsdown",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "cors": "bun --env-file=../../.env src/scripts/set-bucket-cors.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1147.0",
