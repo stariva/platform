@@ -135,6 +135,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               alt={post.title}
               fill
               className="object-cover"
+              style={{ objectPosition: post.coverPosition }}
               sizes="(max-width: 1400px) 100vw, 1400px"
               priority
             />
@@ -285,6 +286,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                       alt={relatedPost.title}
                       fill
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      style={{ objectPosition: relatedPost.coverPosition }}
                       sizes="(max-width: 768px) 100vw, 400px"
                     />
                     <div className="absolute inset-0 bg-espresso/10 group-hover:bg-espresso/0 transition-colors duration-500" />
