@@ -17,6 +17,7 @@ const order = {
   telegramToken: null,
   telegramChatId: null,
   attribution: null,
+  visitor: null,
 } satisfies typeof orders.$inferSelect;
 
 const now = new Date("2026-10-12T12:00:00Z");

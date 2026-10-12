@@ -1,9 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { customOrderRequests, db } from "@stariva/db";
+import type { VisitorInfo } from "@stariva/db/schema";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { baseEnv, env } from "@/env";
 import { formatTouch } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { formatVisitor } from "@/lib/visitor";
 import {
   deliverNotification,
   missingEmailSettings,
@@ -28,6 +30,7 @@ export const requestTitle = (number: number) => `Заявка №${number}`;
 export async function saveRequest(
   data: OrderRequest,
   photo: File | null,
+  visitor?: VisitorInfo,
 ): Promise<{ id: string; number: number }> {
   const id = data.requestId ?? randomUUID();
   const photoBase64 = photo
@@ -54,6 +57,7 @@ export async function saveRequest(
     data.attribution &&
       data.attribution.first.at !== data.attribution.last.at &&
       `Первый заход: ${formatTouch(data.attribution.first)}`,
+    ...(visitor ? formatVisitor(visitor) : []),
     `Согласие на обработку данных: ${LEGAL_VERSION}, ${new Date().toISOString()}`,
   ]
     .filter(Boolean)
@@ -65,6 +69,7 @@ export async function saveRequest(
       fingerprint,
       data,
       message,
+      visitor: visitor ?? null,
       photoBase64,
       photoType: photo?.type,
     })

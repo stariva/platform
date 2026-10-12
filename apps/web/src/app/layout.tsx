@@ -8,6 +8,7 @@ import {
   WebSiteJsonLd,
 } from "@/components/stariva/json-ld";
 import { Metrika } from "@/components/stariva/metrika";
+import { VisitorEnv } from "@/components/stariva/visitor-env";
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/lib/cart/cart-context";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
@@ -130,6 +131,7 @@ export default function RootLayout({
         </CartProvider>
         <Toaster position="top-center" richColors />
         <CookieBanner />
+        <VisitorEnv />
         <Suspense fallback={null}>
           <Metrika />
         </Suspense>

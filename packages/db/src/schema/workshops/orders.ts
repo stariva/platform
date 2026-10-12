@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
+import type { VisitorInfo } from "../visitor";
 
 /** Статусы заказа/платежа. */
 export const orderStatus = pgEnum("order_status", [
@@ -50,6 +51,8 @@ export const orders = pgTable(
     telegramChatId: text("telegram_chat_id"),
     // UTM первого и последнего захода до заказа; null — пришли не по метке.
     attribution: jsonb("attribution").$type<CampaignAttribution>(),
+    // IP, город, устройство и язык покупателя в момент записи.
+    visitor: jsonb("visitor").$type<VisitorInfo>(),
   },
   (t) => [
     uniqueIndex("orders_access_token_idx").on(t.accessToken),

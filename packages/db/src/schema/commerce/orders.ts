@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
+import type { VisitorInfo } from "../visitor";
 
 /** Статус заказа на товары (каталог, не мастер-классы). */
 export const productOrderStatus = pgEnum("product_order_status", [
@@ -101,6 +102,8 @@ export const productOrders = pgTable(
     declineReason: text("decline_reason"),
     // UTM первого и последнего захода до заказа; null — пришли не по метке.
     attribution: jsonb("attribution").$type<CampaignAttribution>(),
+    // IP, город, устройство и язык покупателя в момент заказа.
+    visitor: jsonb("visitor").$type<VisitorInfo>(),
     // Внутренняя заметка мастера, покупателю не показывается.
     masterNotes: text("master_notes"),
     // Под заказ: служба и номер отправления, которые мастер вводит при отправке;

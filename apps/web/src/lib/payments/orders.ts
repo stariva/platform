@@ -3,6 +3,7 @@ import { db } from "@stariva/db";
 import {
   type CampaignAttribution,
   orders,
+  type VisitorInfo,
   workshopOrderNotifications,
 } from "@stariva/db/schema";
 import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
@@ -13,6 +14,7 @@ export interface CreateOrderInput {
   amountKopecks: number;
   contactEmail: string;
   attribution?: CampaignAttribution | null;
+  visitor?: VisitorInfo | null;
 }
 
 /** 32 символа base64url: годится и для URL, и для t.me/<бот>?start=… */
@@ -33,6 +35,7 @@ export async function createOrder(input: CreateOrderInput) {
       status: "pending",
       contactEmail: input.contactEmail,
       attribution: input.attribution ?? null,
+      visitor: input.visitor ?? null,
       accessToken: secretToken(),
       telegramToken: secretToken(),
     })

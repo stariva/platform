@@ -8,6 +8,10 @@ import {
   TableRow,
 } from "@stariva/ui";
 import Link from "next/link";
+import {
+  type VisitorInfo,
+  visitorPlace,
+} from "~/components/visitors/visitor-card";
 
 const rub = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -51,6 +55,7 @@ export interface WorkshopOrderRow {
   preorder: boolean;
   utmSource: string | null;
   utmCampaign: string | null;
+  visitor: VisitorInfo | null;
 }
 
 /** Заказы мастер-классов: кто, на какой курс, когда и оплатил ли. */
@@ -61,7 +66,7 @@ export function WorkshopOrdersTable({
   rows: WorkshopOrderRow[];
   showWorkshop: boolean;
 }) {
-  const columns = showWorkshop ? 5 : 4;
+  const columns = showWorkshop ? 6 : 5;
   return (
     <div className="rounded-lg border">
       <Table>
@@ -69,6 +74,7 @@ export function WorkshopOrdersTable({
           <TableRow>
             <TableHead>Кто</TableHead>
             {showWorkshop && <TableHead>Мастер-класс</TableHead>}
+            <TableHead>Откуда</TableHead>
             <TableHead>Когда</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead className="text-right">Сумма</TableHead>
@@ -117,6 +123,20 @@ export function WorkshopOrdersTable({
                   {row.workshopTitle ?? row.workshopSlug}
                 </TableCell>
               )}
+              <TableCell className="align-top text-sm whitespace-normal">
+                {row.visitor ? (
+                  <>
+                    <div>
+                      {visitorPlace(row.visitor) ?? "Город не определён"}
+                    </div>
+                    <div className="text-muted-foreground text-xs break-all">
+                      {row.visitor.ip ?? "IP не определён"}
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell className="align-top text-sm whitespace-nowrap">
                 {dateFormat.format(row.createdAt)}
                 {row.paidAt && (

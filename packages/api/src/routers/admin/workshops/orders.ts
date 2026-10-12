@@ -80,6 +80,7 @@ export const ordersList = adminProcedure
           paidAt: orders.paidAt,
           telegramLinked: sql<boolean>`${orders.telegramChatId} is not null`,
           attribution: orders.attribution,
+          visitor: orders.visitor,
         })
         .from(orders)
         .innerJoin(user, eq(user.id, orders.userId))
