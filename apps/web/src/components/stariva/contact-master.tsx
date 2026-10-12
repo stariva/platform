@@ -166,7 +166,8 @@ interface ChannelOption {
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
 }
 
-function ContactOptions({
+/** Список каналов связи: в окне «Написать мастеру» и прямо на странице. */
+export function ContactOptions({
   source,
   goal,
   message,
@@ -175,7 +176,7 @@ function ContactOptions({
   source: string;
   goal?: string;
   message?: string;
-  onPick: () => void;
+  onPick?: () => void;
 }) {
   const [copied, setCopied] = useState<"message" | "phone" | null>(null);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -234,7 +235,7 @@ function ContactOptions({
         return;
       }
     }
-    onPick();
+    onPick?.();
   };
 
   return (

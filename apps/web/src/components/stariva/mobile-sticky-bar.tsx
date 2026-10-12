@@ -9,7 +9,16 @@ export function MobileStickyBar() {
   useEffect(() => {
     const update = () => {
       const editing = document.activeElement?.matches("input,textarea,select");
-      setShow(window.scrollY > 450 && getCookieChoice() !== null && !editing);
+      // Карточка «Написать Ольге» на главной уже показывает те же каналы.
+      const card = document.getElementById("order")?.getBoundingClientRect();
+      const cardVisible =
+        !!card && card.top < window.innerHeight && card.bottom > 0;
+      setShow(
+        window.scrollY > 450 &&
+          getCookieChoice() !== null &&
+          !editing &&
+          !cardVisible,
+      );
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
@@ -29,20 +38,13 @@ export function MobileStickyBar() {
       hidden={!show}
       className="lg:hidden fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 right-3 z-50"
     >
-      <div className="bg-parchment/95 backdrop-blur-md border border-espresso/15 rounded-full p-1.5 shadow-lg flex gap-2">
-        <a
-          href="/#order"
-          data-location="mobile_bar"
-          className="flex-[1.4] flex items-center justify-center min-h-12 px-3 rounded-full bg-terracotta text-parchment text-sm font-medium"
-        >
-          Получить расчёт
-        </a>
+      <div className="bg-parchment/95 backdrop-blur-md border border-espresso/15 rounded-full p-1.5 shadow-lg">
         <ContactMasterButton
           source="mobile_bar"
-          className="flex-1 flex items-center justify-center gap-2 min-h-12 px-3 rounded-full border border-espresso/20 text-espresso text-sm"
+          className="w-full flex items-center justify-center gap-2 min-h-12 px-3 rounded-full bg-terracotta text-parchment text-sm font-medium"
         >
           <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
-          Написать
+          Написать мастеру
         </ContactMasterButton>
       </div>
     </div>

@@ -50,7 +50,7 @@ export function BuyingGuide({ product }: { product: Product }) {
             {lampshade ? "Сравнить все абажуры" : "Сравнить модели одежды"}
           </Link>
           <Link href="/#order" className="underline">
-            Уточнить размер у мастерской
+            Уточнить размер у мастера
           </Link>
           <Link href="/offer" className="underline">
             Условия заказа и возврата
