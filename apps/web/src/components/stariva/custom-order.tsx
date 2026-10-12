@@ -1,12 +1,8 @@
 "use client";
 
-import { MessageCircleIcon } from "lucide-react";
 import Link from "next/link";
-import { CONTACTS } from "@/lib/contacts";
-import { ContactMasterButton } from "./contact-master";
-import { CustomOrderForm } from "./custom-order-form";
+import { CustomOrderCard } from "./custom-order-card";
 import { useHomeOrder } from "./home-order-context";
-import { PhoneIcon } from "./icons";
 
 export function CustomOrder() {
   const { productType } = useHomeOrder();
@@ -32,28 +28,6 @@ export function CustomOrder() {
                 : "Панно, декор для стола или своя задумка — расскажите, что хочется добавить в интерьер. Ольга поможет выбрать размер, материал и плетение."}{" "}
             Стоимость и срок обсудим до оплаты.
           </p>
-          <p className="mt-4 text-sm text-taupe">
-            Отвечаем в рабочее время: пн–сб, 10:00–20:00 МСК.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <ContactMasterButton
-              source="custom_order"
-              message={`Здравствуйте, Ольга! Хочу обсудить ${
-                clothes ? "одежду" : lampshade ? "абажур" : "изделие"
-              } на заказ.`}
-              className="inline-flex items-center gap-2 rounded-full border border-espresso/20 px-5 py-3 text-sm text-espresso hover:border-terracotta"
-            >
-              <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
-              Написать мастеру
-            </ContactMasterButton>
-            <a
-              href={CONTACTS.phoneHref}
-              className="inline-flex items-center gap-2 px-2 py-3 text-sm text-espresso"
-            >
-              <PhoneIcon className="w-4 h-4" />
-              {CONTACTS.phone}
-            </a>
-          </div>
           <Link
             href="/about"
             className="inline-block mt-5 text-sm text-taupe underline underline-offset-4"
@@ -62,7 +36,7 @@ export function CustomOrder() {
           </Link>
         </div>
         <div id="order" className="scroll-mt-24">
-          <CustomOrderForm />
+          <CustomOrderCard />
         </div>
       </div>
     </section>

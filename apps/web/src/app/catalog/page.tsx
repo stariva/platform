@@ -233,7 +233,7 @@ export default async function CatalogPage() {
                   asChild
                   className="inline-flex items-center gap-2 bg-terracotta hover:bg-terracotta/90 text-white px-6 py-3 h-auto rounded-full transition-colors label-caps"
                 >
-                  <Link href="/#order">Оставить заявку</Link>
+                  <Link href="/#order">Написать мастеру</Link>
                 </Button>
               </div>
               <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10">
