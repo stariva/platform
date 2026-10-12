@@ -15,6 +15,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
+import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import {
   type AdminOrderView,
@@ -84,6 +85,7 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
  */
 export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const handlers = {
     onSuccess: () => {
       toast.success("Готово");
@@ -417,11 +419,16 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
             className="w-full"
             variant="ghost"
             disabled={busy}
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
-                  "Отменить заказ? Полученные деньги нужно будет вернуть вручную в кабинете ЮKassa.",
-                )
+                await confirm({
+                  title: "Отменить заказ?",
+                  description:
+                    "Полученные деньги нужно будет вернуть вручную в кабинете ЮKassa.",
+                  confirmLabel: "Отменить заказ",
+                  cancelLabel: "Не отменять",
+                  destructive: true,
+                })
               ) {
                 cancel.mutate({ id: order.id });
               }

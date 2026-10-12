@@ -28,6 +28,7 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { useConfirm } from "~/components/confirm-dialog";
 import { client } from "~/orpc/react";
 import { formatBytes, putFile, readVideoDuration } from "./upload";
 
@@ -86,6 +87,7 @@ export function WorkshopLessons({
   errors?: { title?: string; videoKey?: string }[];
   rootError?: string;
 }) {
+  const confirm = useConfirm();
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   // lessonId → доля загруженного (0–1)
   const [progress, setProgress] = useState<Record<string, number>>({});
@@ -222,12 +224,16 @@ export function WorkshopLessons({
                   size="icon"
                   aria-label="Удалить урок"
                   disabled={isUploading}
-                  onClick={() => {
+                  onClick={async () => {
                     if (
                       lesson.videoKey &&
-                      !window.confirm(
-                        `Убрать урок «${lesson.title || index + 1}»? Видео останется в хранилище, но из курса исчезнет.`,
-                      )
+                      !(await confirm({
+                        title: `Убрать урок «${lesson.title || index + 1}»?`,
+                        description:
+                          "Видео останется в хранилище, но из курса исчезнет.",
+                        confirmLabel: "Убрать",
+                        destructive: true,
+                      }))
                     ) {
                       return;
                     }

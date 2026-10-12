@@ -22,6 +22,7 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import { MadeToOrderStage } from "./made-to-order-stage";
 import {
@@ -75,6 +76,7 @@ function deleteRisks(order: AdminOrderView): string[] {
 /** Карточка заказа: что и кем заказано, доставка, оплаты и ведение заказа мастером. */
 export function OrderEditor({ order }: { order: AdminOrderView }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [status, setStatus] = useState(order.status);
   const [trackingNumber, setTrackingNumber] = useState(
     order.trackingNumber ?? "",
@@ -117,30 +119,44 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
     });
   }
 
-  function confirmRemove() {
+  async function confirmRemove() {
     const risks = deleteRisks(order);
     if (isSafeToDelete(order) && risks.length === 0) {
       if (
-        window.confirm(`Удалить заказ №${order.number}? Это нельзя отменить.`)
+        await confirm({
+          title: `Удалить заказ №${order.number}?`,
+          description: "Это нельзя отменить.",
+          confirmLabel: "Удалить",
+          destructive: true,
+        })
       ) {
         remove.mutate({ id: order.id });
       }
       return;
     }
-    const typed = window.prompt(
-      [
-        `Удалить заказ №${order.number} вместе с историей оплат? Это нельзя отменить.`,
-        ...risks.map((risk) => `• ${risk}`),
-        "",
-        "Чтобы подтвердить, введите номер заказа:",
-      ].join("\n"),
-    );
-    if (typed === null) return;
-    if (typed.replace(/\D/g, "") !== String(order.number)) {
-      toast.error("Номер не совпал — заказ не удалён");
-      return;
-    }
-    remove.mutate({ id: order.id, force: true });
+    const confirmed = await confirm({
+      title: `Удалить заказ №${order.number} вместе с историей оплат?`,
+      description: (
+        <>
+          <p>Это нельзя отменить.</p>
+          {risks.length > 0 && (
+            <ul className="list-disc space-y-1 pl-5">
+              {risks.map((risk) => (
+                <li key={risk}>{risk}</li>
+              ))}
+            </ul>
+          )}
+        </>
+      ),
+      confirmLabel: "Удалить заказ",
+      destructive: true,
+      input: {
+        label: "Чтобы подтвердить, введите номер заказа",
+        placeholder: String(order.number),
+        matches: (value) => value.replace(/\D/g, "") === String(order.number),
+      },
+    });
+    if (confirmed) remove.mutate({ id: order.id, force: true });
   }
 
   const kindStatuses = STATUSES_BY_KIND[order.kind];

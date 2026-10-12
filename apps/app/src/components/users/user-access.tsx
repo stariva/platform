@@ -13,6 +13,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 
 export interface UserAccessRow {
@@ -45,6 +46,7 @@ export function UserAccess({
   workshops: WorkshopOption[];
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [slug, setSlug] = useState("");
 
   const granted = new Set(access.map((row) => row.workshopSlug));
@@ -105,11 +107,13 @@ export function UserAccess({
                     size="sm"
                     className="text-destructive"
                     disabled={revoke.isPending}
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
-                          `Закрыть доступ к «${row.workshopTitle ?? row.workshopSlug}»?`,
-                        )
+                        await confirm({
+                          title: `Закрыть доступ к «${row.workshopTitle ?? row.workshopSlug}»?`,
+                          confirmLabel: "Закрыть доступ",
+                          destructive: true,
+                        })
                       ) {
                         revoke.mutate({ accessId: row.id });
                       }
