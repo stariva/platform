@@ -107,6 +107,7 @@ export function ProductForm({
   const router = useRouter();
   // Для нового товара адрес собираем из названия, пока его не правили руками
   const [slugTouched, setSlugTouched] = useState(Boolean(id));
+  const [isRemovingImages, setIsRemovingImages] = useState(false);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -143,7 +144,9 @@ export function ProductForm({
 
   return (
     <form
-      onSubmit={form.handleSubmit((values) => save.mutate({ id, values }))}
+      onSubmit={form.handleSubmit((values) => {
+        if (!isRemovingImages) save.mutate({ id, values });
+      })}
       className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]"
     >
       <div className="space-y-6">
@@ -495,7 +498,10 @@ export function ProductForm({
               />
             </FieldRow>
             <div className="flex flex-col gap-2">
-              <Button type="submit" disabled={save.isPending}>
+              <Button
+                type="submit"
+                disabled={save.isPending || isRemovingImages}
+              >
                 {save.isPending ? "Сохраняем…" : id ? "Сохранить" : "Создать"}
               </Button>
               {productUrl && (
@@ -521,6 +527,7 @@ export function ProductForm({
               images={field.value}
               getImages={() => form.getValues("images")}
               onChange={field.onChange}
+              onRemovingChange={setIsRemovingImages}
               error={errors.images?.message}
             />
           )}
