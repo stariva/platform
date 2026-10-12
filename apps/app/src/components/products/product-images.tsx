@@ -20,7 +20,7 @@ import {
   IconPhotoPlus,
   IconTrash,
 } from "@tabler/icons-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { client } from "~/orpc/react";
 
 /** Фото товара: загрузка в публичный бакет, порядок (первое — обложка), удаление. */
@@ -29,6 +29,7 @@ export function ProductImages({
   images,
   getImages,
   onChange,
+  onRemovingChange,
   error,
 }: {
   productId?: string;
@@ -36,12 +37,47 @@ export function ProductImages({
   /** Текущее значение формы: пока идёт загрузка, фото могли удалить или переставить. */
   getImages: () => string[];
   onChange: (images: string[]) => void;
+  onRemovingChange: (removing: boolean) => void;
   error?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
   /** Индекс фото, открытого на весь экран. */
   const [viewing, setViewing] = useState<number | null>(null);
+  /** Фото, которые прямо сейчас удаляются на сервере. */
+  const [removing, setRemoving] = useState<string[]>([]);
+  const isRemoving = removing.length > 0;
+
+  useEffect(() => {
+    onRemovingChange(isRemoving);
+  }, [isRemoving, onRemovingChange]);
+
+  /** У сохранённого товара фото убираем из базы сразу, без кнопки «Сохранить». */
+  const remove = async (url: string) => {
+    if (productId) {
+      setRemoving((list) => [...list, url]);
+      try {
+        const { revalidated } = await client.admin.products.removeImage({
+          id: productId,
+          url,
+        });
+        onChange(getImages().filter((item) => item !== url));
+        if (revalidated) {
+          toast.success("Фото удалено");
+        } else {
+          toast.warning(
+            "Фото удалено, но каталог может пока показывать старое фото. Сайт обновится позже.",
+          );
+        }
+      } catch (err) {
+        toast.error((err as Error).message || "Не удалось удалить фото");
+      } finally {
+        setRemoving((list) => list.filter((item) => item !== url));
+      }
+      return;
+    }
+    onChange(getImages().filter((item) => item !== url));
+  };
 
   const move = (from: number, to: number) => {
     const next = [...images];
@@ -79,8 +115,8 @@ export function ProductImages({
       <CardHeader>
         <CardTitle>Фото</CardTitle>
         <CardDescription>
-          Первое — обложка в каталоге. Изменения сохраняются кнопкой
-          «Сохранить».
+          Первое — обложка в каталоге. Загрузка и порядок сохраняются кнопкой
+          «Сохранить», а удаление фото срабатывает сразу.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -132,7 +168,8 @@ export function ProductImages({
                 variant="ghost"
                 size="icon"
                 aria-label="Убрать фото"
-                onClick={() => onChange(images.filter((_, i) => i !== index))}
+                disabled={removing.includes(url)}
+                onClick={() => void remove(url)}
               >
                 <IconTrash />
               </Button>

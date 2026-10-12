@@ -1,5 +1,6 @@
 import { byId } from "./by-id";
 import { list } from "./list";
+import { removeImage } from "./remove-image";
 import { save } from "./save";
 import { setAvailability } from "./set-availability";
 import { setOldPrice } from "./set-old-price";
@@ -18,4 +19,5 @@ export const adminProductsRouter = {
   setOldPriceBulk,
   setStock,
   uploadImage,
+  removeImage,
 };
