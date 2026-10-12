@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
@@ -50,67 +51,76 @@ export const productOrderKind = pgEnum("product_order_kind", [
 ]);
 
 /** Заказ на товары из каталога, оформленный на сайте и доставляемый Ozon Доставка. */
-export const productOrders = pgTable("product_orders", {
-  id: text("id").primaryKey(),
-  kind: productOrderKind("kind").notNull().default("stock"),
-  // Гостевой чек-аут допустим — заказ идентифицируется по contactPhone,
-  // а не только по аккаунту.
-  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
-  contactName: text("contact_name").notNull(),
-  contactPhone: text("contact_phone").notNull(),
-  contactEmail: text("contact_email"),
-  status: productOrderStatus("status").notNull().default("pending"),
-  // Суммы в копейках
-  amountProducts: integer("amount_products").notNull(),
-  amountDelivery: integer("amount_delivery").notNull().default(0),
-  amountTotal: integer("amount_total").notNull(),
-  currency: text("currency").notNull().default("RUB"),
-  // Идентификатор платежа в YooKassa
-  paymentId: text("payment_id"),
-  deliveryMethod: productDeliveryMethod("delivery_method").notNull(),
-  deliveryPointId: text("delivery_point_id"),
-  // { address: string; lat: number; lng: number } — для курьерской доставки
-  deliveryAddress: jsonb("delivery_address"),
-  // Точный ответ v2/delivery/checkout — состав/сроки нельзя менять после
-  // создания заказа в Ozon, поэтому воспроизводим ровно то, что показали
-  // покупателю при оформлении.
-  checkoutSnapshot: jsonb("checkout_snapshot"),
-  // Под заказ: пожелания покупателя (в заявке и до одобрения).
-  customerNotes: text("customer_notes"),
-  // Под заказ: куда и как отправить — покупатель пишет в заявке,
-  // мастер согласует способ и стоимость.
-  deliveryNote: text("delivery_note"),
-  // Под заказ: предоплата в копейках, фиксируется при одобрении;
-  // доплата — amountTotal минус предоплата.
-  depositAmount: integer("deposit_amount"),
-  // Под заказ: срок изготовления, который мастер назвал покупателю.
-  leadTime: text("lead_time"),
-  // Под заказ: до какого момента ждём текущую оплату (предоплату или доплату).
-  paymentDueAt: timestamp("payment_due_at"),
-  approvedAt: timestamp("approved_at"),
-  depositPaidAt: timestamp("deposit_paid_at"),
-  // Под заказ: почему мастер отклонил заявку — покупатель видит на странице заказа.
-  declineReason: text("decline_reason"),
-  // UTM первого и последнего захода до заказа; null — пришли не по метке.
-  attribution: jsonb("attribution").$type<CampaignAttribution>(),
-  // Внутренняя заметка мастера, покупателю не показывается.
-  masterNotes: text("master_notes"),
-  // Под заказ: служба и номер отправления, которые мастер вводит при отправке;
-  // покупатель видит их на странице заказа.
-  trackingNumber: text("tracking_number"),
-  // Когда мастеру ушло уведомление об оплаченном заказе или новой заявке.
-  staffNotifiedAt: timestamp("staff_notified_at"),
-  // Заполняются после успешного v2/order/create
-  ozonOrderId: text("ozon_order_id"),
-  ozonPostingNumbers: text("ozon_posting_numbers").array(),
-  ozonShipmentStatus: text("ozon_shipment_status")
-    .$type<"pending" | "creating" | "failed" | "created">()
-    .notNull()
-    .default("pending"),
-  ozonShipmentAttemptId: text("ozon_shipment_attempt_id"),
-  ozonShipmentAttemptedAt: timestamp("ozon_shipment_attempted_at"),
-  createdAt: timestamp("created_at")
-    .$defaultFn(() => new Date())
-    .notNull(),
-  paidAt: timestamp("paid_at"),
-});
+export const productOrders = pgTable(
+  "product_orders",
+  {
+    id: text("id").primaryKey(),
+    // Номер, который видят покупатель и мастер: «Заказ №1042».
+    // id остаётся ключом в ссылках и платежах.
+    number: integer("number")
+      .generatedAlwaysAsIdentity({ startWith: 1001 })
+      .notNull(),
+    kind: productOrderKind("kind").notNull().default("stock"),
+    // Гостевой чек-аут допустим — заказ идентифицируется по contactPhone,
+    // а не только по аккаунту.
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    contactName: text("contact_name").notNull(),
+    contactPhone: text("contact_phone").notNull(),
+    contactEmail: text("contact_email"),
+    status: productOrderStatus("status").notNull().default("pending"),
+    // Суммы в копейках
+    amountProducts: integer("amount_products").notNull(),
+    amountDelivery: integer("amount_delivery").notNull().default(0),
+    amountTotal: integer("amount_total").notNull(),
+    currency: text("currency").notNull().default("RUB"),
+    // Идентификатор платежа в YooKassa
+    paymentId: text("payment_id"),
+    deliveryMethod: productDeliveryMethod("delivery_method").notNull(),
+    deliveryPointId: text("delivery_point_id"),
+    // { address: string; lat: number; lng: number } — для курьерской доставки
+    deliveryAddress: jsonb("delivery_address"),
+    // Точный ответ v2/delivery/checkout — состав/сроки нельзя менять после
+    // создания заказа в Ozon, поэтому воспроизводим ровно то, что показали
+    // покупателю при оформлении.
+    checkoutSnapshot: jsonb("checkout_snapshot"),
+    // Под заказ: пожелания покупателя (в заявке и до одобрения).
+    customerNotes: text("customer_notes"),
+    // Под заказ: куда и как отправить — покупатель пишет в заявке,
+    // мастер согласует способ и стоимость.
+    deliveryNote: text("delivery_note"),
+    // Под заказ: предоплата в копейках, фиксируется при одобрении;
+    // доплата — amountTotal минус предоплата.
+    depositAmount: integer("deposit_amount"),
+    // Под заказ: срок изготовления, который мастер назвал покупателю.
+    leadTime: text("lead_time"),
+    // Под заказ: до какого момента ждём текущую оплату (предоплату или доплату).
+    paymentDueAt: timestamp("payment_due_at"),
+    approvedAt: timestamp("approved_at"),
+    depositPaidAt: timestamp("deposit_paid_at"),
+    // Под заказ: почему мастер отклонил заявку — покупатель видит на странице заказа.
+    declineReason: text("decline_reason"),
+    // UTM первого и последнего захода до заказа; null — пришли не по метке.
+    attribution: jsonb("attribution").$type<CampaignAttribution>(),
+    // Внутренняя заметка мастера, покупателю не показывается.
+    masterNotes: text("master_notes"),
+    // Под заказ: служба и номер отправления, которые мастер вводит при отправке;
+    // покупатель видит их на странице заказа.
+    trackingNumber: text("tracking_number"),
+    // Когда мастеру ушло уведомление об оплаченном заказе или новой заявке.
+    staffNotifiedAt: timestamp("staff_notified_at"),
+    // Заполняются после успешного v2/order/create
+    ozonOrderId: text("ozon_order_id"),
+    ozonPostingNumbers: text("ozon_posting_numbers").array(),
+    ozonShipmentStatus: text("ozon_shipment_status")
+      .$type<"pending" | "creating" | "failed" | "created">()
+      .notNull()
+      .default("pending"),
+    ozonShipmentAttemptId: text("ozon_shipment_attempt_id"),
+    ozonShipmentAttemptedAt: timestamp("ozon_shipment_attempted_at"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    paidAt: timestamp("paid_at"),
+  },
+  (table) => [uniqueIndex("product_orders_number_idx").on(table.number)],
+);

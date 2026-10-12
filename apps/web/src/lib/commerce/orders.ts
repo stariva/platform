@@ -82,7 +82,7 @@ function assertValidOrderTotal(amountTotal: number) {
  */
 export async function createMadeToOrderOrder(
   input: CreateMadeToOrderOrderInput,
-): Promise<{ id: string; amountTotal: number }> {
+): Promise<{ id: string; number: number; amountTotal: number }> {
   const orderId = randomUUID();
   const amountProducts = input.items.reduce(
     (sum, i) => sum + i.price * i.quantity,
@@ -90,23 +90,27 @@ export async function createMadeToOrderOrder(
   );
   assertValidOrderTotal(amountProducts);
 
-  await db.insert(productOrders).values({
-    id: orderId,
-    kind: "made_to_order",
-    userId: input.userId ?? null,
-    attribution: input.attribution ?? null,
-    contactName: input.contactName,
-    contactPhone: input.contactPhone,
-    contactEmail: input.contactEmail ?? null,
-    status: "requested",
-    amountProducts,
-    amountDelivery: 0,
-    amountTotal: amountProducts,
-    currency: "RUB",
-    deliveryMethod: "manual",
-    customerNotes: input.customerNotes || null,
-    deliveryNote: input.deliveryNote || null,
-  });
+  const [created] = await db
+    .insert(productOrders)
+    .values({
+      id: orderId,
+      kind: "made_to_order",
+      userId: input.userId ?? null,
+      attribution: input.attribution ?? null,
+      contactName: input.contactName,
+      contactPhone: input.contactPhone,
+      contactEmail: input.contactEmail ?? null,
+      status: "requested",
+      amountProducts,
+      amountDelivery: 0,
+      amountTotal: amountProducts,
+      currency: "RUB",
+      deliveryMethod: "manual",
+      customerNotes: input.customerNotes || null,
+      deliveryNote: input.deliveryNote || null,
+    })
+    .returning({ number: productOrders.number });
+  if (!created) throw new Error("product_order_not_created");
 
   await db.insert(productOrderItems).values(
     input.items.map((item) => ({
@@ -121,13 +125,13 @@ export async function createMadeToOrderOrder(
     })),
   );
 
-  return { id: orderId, amountTotal: amountProducts };
+  return { id: orderId, number: created.number, amountTotal: amountProducts };
 }
 
 /** Создаёт заказ на товары в статусе pending вместе с его позициями. */
 export async function createProductOrder(
   input: CreateProductOrderInput,
-): Promise<{ id: string; amountTotal: number }> {
+): Promise<{ id: string; number: number; amountTotal: number }> {
   const orderId = randomUUID();
   const amountProducts = input.items.reduce(
     (sum, i) => sum + i.price * i.quantity,
@@ -137,31 +141,35 @@ export async function createProductOrder(
   const amountTotal = amountProducts + amountDelivery;
   assertValidOrderTotal(amountTotal);
 
-  await db.insert(productOrders).values({
-    id: orderId,
-    userId: input.userId ?? null,
-    attribution: input.attribution ?? null,
-    contactName: input.contactName,
-    contactPhone: input.contactPhone,
-    contactEmail: input.contactEmail ?? null,
-    status: "pending",
-    amountProducts,
-    amountDelivery,
-    amountTotal,
-    currency: "RUB",
-    deliveryMethod: input.delivery.method,
-    deliveryPointId:
-      input.delivery.method === "pickup" ? input.delivery.pointId : null,
-    deliveryAddress:
-      input.delivery.method === "courier"
-        ? {
-            address: input.delivery.address,
-            lat: input.delivery.latitude,
-            lng: input.delivery.longitude,
-          }
-        : null,
-    checkoutSnapshot: input.checkout,
-  });
+  const [created] = await db
+    .insert(productOrders)
+    .values({
+      id: orderId,
+      userId: input.userId ?? null,
+      attribution: input.attribution ?? null,
+      contactName: input.contactName,
+      contactPhone: input.contactPhone,
+      contactEmail: input.contactEmail ?? null,
+      status: "pending",
+      amountProducts,
+      amountDelivery,
+      amountTotal,
+      currency: "RUB",
+      deliveryMethod: input.delivery.method,
+      deliveryPointId:
+        input.delivery.method === "pickup" ? input.delivery.pointId : null,
+      deliveryAddress:
+        input.delivery.method === "courier"
+          ? {
+              address: input.delivery.address,
+              lat: input.delivery.latitude,
+              lng: input.delivery.longitude,
+            }
+          : null,
+      checkoutSnapshot: input.checkout,
+    })
+    .returning({ number: productOrders.number });
+  if (!created) throw new Error("product_order_not_created");
 
   await db.insert(productOrderItems).values(
     input.items.map((item) => ({
@@ -175,7 +183,7 @@ export async function createProductOrder(
     })),
   );
 
-  return { id: orderId, amountTotal };
+  return { id: orderId, number: created.number, amountTotal };
 }
 
 export async function attachPaymentId(

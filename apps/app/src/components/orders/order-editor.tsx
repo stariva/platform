@@ -105,7 +105,7 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">
-              Заказ {order.id.slice(0, 8)}
+              Заказ №{order.number}
               <Badge variant="outline">{KIND_LABELS[order.kind]}</Badge>
               <Badge variant={statusVariant(order.status)}>
                 {STATUS_LABELS[order.status] ?? order.status}
@@ -325,7 +325,7 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
                 onClick={() => {
                   if (
                     window.confirm(
-                      `Удалить заказ ${order.id.slice(0, 8)}? Это нельзя отменить.`,
+                      `Удалить заказ №${order.number}? Это нельзя отменить.`,
                     )
                   ) {
                     remove.mutate({ id: order.id });
