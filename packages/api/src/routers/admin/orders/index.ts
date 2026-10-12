@@ -1,5 +1,6 @@
 import { byId } from "./by-id";
 import { list } from "./list";
+import { remove } from "./remove";
 import {
   cancel,
   decline,
@@ -20,4 +21,5 @@ export const adminOrdersRouter = {
   requestBalance,
   extendPayment,
   cancel,
+  remove,
 };

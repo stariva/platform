@@ -112,6 +112,19 @@ export const NEEDS_ATTENTION = new Set([
   "ozon_order_failed",
 ]);
 
+/**
+ * Удалить можно заявку, отклонённый или отменённый заказ без оплат. Открытую
+ * ссылку на оплату видит только сервер — он откажет, если она есть.
+ */
+export function isDeletable(order: AdminOrderView) {
+  return (
+    ["requested", "declined", "canceled"].includes(order.status) &&
+    !order.paidAt &&
+    !order.depositPaidAt &&
+    order.payments.length === 0
+  );
+}
+
 /** Оплачивает покупатель на странице заказа — ссылку мастер отправляет в мессенджер. */
 export const orderPageUrl = (id: string) => `https://stariva.ru/order/${id}`;
 
