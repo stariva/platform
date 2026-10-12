@@ -63,6 +63,7 @@ export default async function WorkshopsPage() {
                 <TableHead>Категория</TableHead>
                 <TableHead>Уроки</TableHead>
                 <TableHead className="text-right">Цена</TableHead>
+                <TableHead className="text-right">Оплатили</TableHead>
                 <TableHead>Статус</TableHead>
                 <TableHead className="text-right">Порядок</TableHead>
               </TableRow>
@@ -71,7 +72,7 @@ export default async function WorkshopsPage() {
               {workshops.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-muted-foreground py-8 text-center"
                   >
                     Мастер-классов пока нет
@@ -125,6 +126,18 @@ export default async function WorkshopsPage() {
                     {workshop.price === 0
                       ? "Бесплатно"
                       : rub.format(workshop.price)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {workshop.paidOrders > 0 ? (
+                      <Link
+                        href={`/workshop-orders?workshop=${encodeURIComponent(workshop.slug)}`}
+                        className="hover:underline"
+                      >
+                        {workshop.paidOrders}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant[workshop.status]}>
