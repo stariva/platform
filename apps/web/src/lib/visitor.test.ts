@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
+import { ATTRIBUTION_COOKIE } from "./campaign-attribution";
 import {
   clientIp,
   collectVisitor,
@@ -158,6 +159,53 @@ test("geo lookup skips foreign IPs and missing keys without calling the service 
   assert.equal((await lookupGeo("198.51.100.3", "key", found))?.city, "Тверь");
 });
 
+test("empty geo results are cached per IP and retried after five minutes", async () => {
+  for (const location of [null, { data: {} }]) {
+    resetGeoState();
+    let calls = 0;
+    const fetcher = (async () => {
+      calls++;
+      return Response.json(
+        calls <= 2 ? { location } : { location: { data: { city: "Тверь" } } },
+      );
+    }) as unknown as typeof fetch;
+    const now = 1_000_000;
+    assert.equal(await lookupGeo("198.51.100.1", "key", fetcher, now), null);
+    assert.equal(
+      await lookupGeo("198.51.100.1", "key", fetcher, now + 299_999),
+      null,
+    );
+    assert.equal(calls, 1);
+    assert.equal(await lookupGeo("198.51.100.2", "key", fetcher, now), null);
+    assert.equal(calls, 2);
+    assert.equal(
+      (await lookupGeo("198.51.100.1", "key", fetcher, now + 300_000))?.city,
+      "Тверь",
+    );
+    assert.equal(calls, 3);
+  }
+});
+
+test("empty geo results respect the cache size limit", async () => {
+  let calls = 0;
+  const fetcher = (async () => {
+    calls++;
+    return Response.json({ location: null });
+  }) as unknown as typeof fetch;
+  for (let i = 0; i <= 500; i++) {
+    await lookupGeo(
+      `198.51.${Math.floor(i / 256)}.${i % 256}`,
+      "key",
+      fetcher,
+      0,
+    );
+  }
+  await lookupGeo("198.51.1.244", "key", fetcher, 1);
+  assert.equal(calls, 501);
+  await lookupGeo("198.51.0.0", "key", fetcher, 1);
+  assert.equal(calls, 502);
+});
+
 test("visitor combines headers, geo lookup and the env cookie", async () => {
   const cookie = encodeURIComponent(
     JSON.stringify({ tz: "Europe/Moscow", scr: "390x844", lang: "ru-RU" }),
@@ -183,8 +231,36 @@ test("visitor combines headers, geo lookup and the env cookie", async () => {
   assert.equal(visitor.screen, "390x844");
   assert.equal(visitor.language, "ru-RU");
   assert.equal(visitor.page, "/catalog/lamps");
-  assert.equal(visitor.referrer, "stariva.ru");
+  assert.equal(visitor.referrer, undefined);
   assert.ok(formatVisitor(visitor).includes("IP: 203.0.113.7"));
+});
+
+test("visitor uses the saved arrival referrer while keeping the submission page", async () => {
+  const first = {
+    landing: "/catalog",
+    referrer: "vk.com",
+    at: "2026-10-10T12:00:00.000Z",
+  };
+  const last = { ...first, referrer: "ya.ru" };
+  for (const [cookie, expected] of [
+    [JSON.stringify({ first, last }), "ya.ru"],
+    [
+      JSON.stringify({ first, last: { ...last, referrer: undefined } }),
+      undefined,
+    ],
+    ["broken", undefined],
+  ] as const) {
+    const visitor = await collectVisitor(
+      new Request("https://stariva.ru/api/checkout/create", {
+        headers: {
+          referer: "https://stariva.ru/order/private-id?secret=value#form",
+          cookie: `${ATTRIBUTION_COOKIE}=${encodeURIComponent(cookie)}`,
+        },
+      }),
+    );
+    assert.equal(visitor.referrer, expected);
+    assert.equal(visitor.page, "/order/status");
+  }
 });
 
 test("a failing lookup never breaks the order", async () => {

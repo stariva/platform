@@ -1,6 +1,7 @@
 import { isIP } from "node:net";
 import type { VisitorInfo } from "@stariva/db/schema";
 import { z } from "zod";
+import { attributionFromRequest } from "./campaign-attribution";
 
 /**
  * Данные о посетителе для заказа, записи на мастер-класс и заявки:
@@ -27,6 +28,7 @@ const GEO_LOOKUP_URL =
   "https://suggestions.dadata.ru/suggestions/api/4_1/rs/iplocate/address";
 const GEO_LOOKUP_TIMEOUT_MS = 1200;
 const GEO_CACHE_LIMIT = 500;
+const GEO_MISS_TTL_MS = 5 * 60_000;
 /** После сбоя сервиса геокодер не трогаем минуту, чтобы не тормозить заказы. */
 const GEO_COOLDOWN_MS = 60_000;
 
@@ -44,8 +46,16 @@ type Geo = Pick<
   | "asn"
 >;
 
-const geoCache = new Map<string, Geo>();
+const geoCache = new Map<string, { geo: Geo | null; expiresAt: number }>();
 let geoDownUntil = 0;
+
+function cacheGeo(ip: string, geo: Geo | null, expiresAt = Infinity) {
+  if (geoCache.size >= GEO_CACHE_LIMIT) {
+    const oldest = geoCache.keys().next().value;
+    if (oldest !== undefined) geoCache.delete(oldest);
+  }
+  geoCache.set(ip, { geo, expiresAt });
+}
 
 const clean = (value: string | null | undefined, max = 200) => {
   const text = value
@@ -172,7 +182,8 @@ export async function lookupGeo(
 ): Promise<Geo | null> {
   if (!apiKey) return null;
   const cached = geoCache.get(ip);
-  if (cached) return cached;
+  if (cached && now < cached.expiresAt) return cached.geo;
+  if (cached) geoCache.delete(ip);
   if (now < geoDownUntil) return null;
   try {
     const response = await fetcher(
@@ -188,7 +199,10 @@ export async function lookupGeo(
     if (!response.ok) throw new Error(`geo lookup ${response.status}`);
     const data = ((await response.json()) as LookupResponse).location?.data;
     // Не нашли город (например, зарубежный IP) — это не сбой сервиса.
-    if (!data?.city && !data?.region_with_type) return null;
+    if (!data?.city && !data?.region_with_type) {
+      cacheGeo(ip, null, now + GEO_MISS_TTL_MS);
+      return null;
+    }
     const latitude = Number(data.geo_lat);
     const longitude = Number(data.geo_lon);
     const geo: Geo = {
@@ -202,11 +216,7 @@ export async function lookupGeo(
       longitude:
         data.geo_lon && Number.isFinite(longitude) ? longitude : undefined,
     };
-    if (geoCache.size >= GEO_CACHE_LIMIT) {
-      const oldest = geoCache.keys().next().value;
-      if (oldest !== undefined) geoCache.delete(oldest);
-    }
-    geoCache.set(ip, geo);
+    cacheGeo(ip, geo);
     return geo;
   } catch {
     geoDownUntil = now + GEO_COOLDOWN_MS;
@@ -334,14 +344,8 @@ export async function collectVisitor(
     const userAgent = clean(headers.get("user-agent"), 400);
     const env = envFromCookie(headers.get("cookie"));
     const languages = clean(headers.get("accept-language"), 120);
-    let referrer: string | undefined;
-    try {
-      const referer = headers.get("referer");
-      const host = referer ? new URL(referer).hostname : "";
-      if (host) referrer = host.slice(0, 100);
-    } catch {
-      /* Битый Referer — просто без него. */
-    }
+    // Источник последнего сохранённого захода, переданный в cookie при оформлении.
+    const referrer = clean(attributionFromRequest(request)?.last.referrer, 100);
     const visitor: VisitorInfo = {
       ip,
       geoSource,

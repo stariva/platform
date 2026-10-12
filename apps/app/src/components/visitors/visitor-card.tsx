@@ -91,7 +91,8 @@ export function VisitorCard({ visitor }: { visitor: VisitorInfo | null }) {
       "Часовой пояс",
       visitor.timezone || visitor.ipTimezone ? (
         <>
-          браузер: {visitor.timezone ?? "—"} · по IP: {visitor.ipTimezone ?? "—"}
+          браузер: {visitor.timezone ?? "—"} · по IP:{" "}
+          {visitor.ipTimezone ?? "—"}
           {timezoneMismatch(visitor) && (
             <Badge variant="destructive" className="ml-2">
               не совпадают, возможен VPN
@@ -117,7 +118,8 @@ export function VisitorCard({ visitor }: { visitor: VisitorInfo | null }) {
     ["Язык", visitor.languages ?? visitor.language],
     [
       "Оформлено со страницы",
-      visitor.page && `${visitor.page}${visitor.referrer ? ` (пришёл с ${visitor.referrer})` : ""}`,
+      visitor.page &&
+        `${visitor.page}${visitor.referrer ? ` (пришёл с ${visitor.referrer})` : ""}`,
     ],
     ["Время запроса", dateFormat.format(new Date(visitor.at))],
     ["User-Agent", visitor.userAgent],
