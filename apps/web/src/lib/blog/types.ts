@@ -6,6 +6,8 @@ export interface BlogPost {
   readTime: string;
   category: string;
   coverImage: string;
+  /** CSS object-position for the cover, when the default center crop cuts off the subject */
+  coverPosition?: string;
   content: BlogContent[];
 }
 

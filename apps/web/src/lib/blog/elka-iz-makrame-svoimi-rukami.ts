@@ -17,7 +17,8 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
   date: "2026-10-10",
   readTime: "7 мин",
   category: "Мастерство",
-  coverImage: "/images/elka/workshop.png",
+  coverImage: "/images/elka/weaving-tree.webp",
+  coverPosition: "50% 25%",
   content: [
     {
       type: "paragraph",
