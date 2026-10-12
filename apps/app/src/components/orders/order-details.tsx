@@ -105,7 +105,9 @@ export function OrderItemsCard({ order }: { order: AdminOrderView }) {
         ))}
 
         <dl className="space-y-1 border-t pt-3 text-sm">
-          <SumLine label="Изделия">{rubles.format(order.amountProducts)}</SumLine>
+          <SumLine label="Изделия">
+            {rubles.format(order.amountProducts)}
+          </SumLine>
           <SumLine label="Доставка">
             {order.amountDelivery > 0
               ? rubles.format(order.amountDelivery)

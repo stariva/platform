@@ -25,9 +25,7 @@ export const DELETABLE_STATUSES = [
  * webhook не найдёт заказ. Деньги и заказ в Ozon Доставка это не трогает.
  */
 export const remove = adminProcedure
-  .input(
-    z.object({ id: z.string().min(1), force: z.boolean().default(false) }),
-  )
+  .input(z.object({ id: z.string().min(1), force: z.boolean().default(false) }))
   .handler(async ({ context, input }) =>
     context.db.transaction(async (tx) => {
       const [order] = await tx

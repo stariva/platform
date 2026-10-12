@@ -148,18 +148,18 @@ export function OrdersTable({ orders }: { orders: AdminOrderView[] }) {
                           <div className="bg-muted size-10 shrink-0 rounded" />
                         )}
                         <div className="min-w-0">
-                        <span className="line-clamp-2">{items.title}</span>
-                        {items.options && (
-                          <span className="text-muted-foreground text-xs">
-                            {items.options}
-                          </span>
-                        )}
-                        {items.more > 0 && (
-                          <span className="text-muted-foreground text-xs">
-                            {" "}
-                            · ещё {items.more}
-                          </span>
-                        )}
+                          <span className="line-clamp-2">{items.title}</span>
+                          {items.options && (
+                            <span className="text-muted-foreground text-xs">
+                              {items.options}
+                            </span>
+                          )}
+                          {items.more > 0 && (
+                            <span className="text-muted-foreground text-xs">
+                              {" "}
+                              · ещё {items.more}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}

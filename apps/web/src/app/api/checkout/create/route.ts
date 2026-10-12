@@ -103,7 +103,10 @@ export async function POST(request: NextRequest) {
   const pickupPoint = await getCachedPickupPointsInfo([data.delivery.pointId])
     .then(({ points }) => points[0] ?? null)
     .catch((error: unknown) => {
-      console.warn("[checkout/create] Не удалось получить адрес пункта:", error);
+      console.warn(
+        "[checkout/create] Не удалось получить адрес пункта:",
+        error,
+      );
       return null;
     });
 
