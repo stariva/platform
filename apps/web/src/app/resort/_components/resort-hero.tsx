@@ -13,13 +13,14 @@ export function ResortHero() {
     <section className="relative min-h-[90vh] flex flex-col justify-end overflow-hidden">
       <div className="absolute inset-0">
         <Image
-          src="https://cdn.stariva.ru/site/images/resort/hero.png"
-          alt="Макраме-декор на террасе базы отдыха"
+          src="https://cdn.stariva.ru/site/images/resort/hero-lake.webp"
+          alt="Макраме-гамак и светильники на террасе у озера на закате"
           fill
           className="object-cover"
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-near-black/80 via-near-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-near-black/40 via-near-black/10 to-transparent" />
       </div>
 
       <div className="relative max-w-[1440px] mx-auto px-5 lg:px-12 pb-16 lg:pb-24 pt-32">
