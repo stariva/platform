@@ -21,6 +21,8 @@ const bodySchema = z.object({
   phone: z.string().min(5).max(32),
   // Оферту покупатель принимает при оплате — когда итоговая цена уже согласована.
   offerAccepted: z.literal(true),
+  // Из личного кабинета после оплаты возвращаем в кабинет, а не на гостевую страницу.
+  returnTo: z.enum(["order", "account"]).optional(),
 });
 
 const STAGE_DESCRIPTIONS = {
@@ -99,7 +101,10 @@ export async function POST(
     const payment = await createPayment({
       amountKopecks: step.amount,
       description: `${STAGE_DESCRIPTIONS[step.type]} по заказу Stariva №${order.number}`,
-      returnUrl: `${siteUrl(request)}/order/${orderId}?payment=success`,
+      returnUrl:
+        parsed.data.returnTo === "account"
+          ? `${siteUrl(request)}/account/orders/${orderId}?payment=success`
+          : `${siteUrl(request)}/order/${orderId}?payment=success`,
       metadata: {
         orderId,
         kind: "product",

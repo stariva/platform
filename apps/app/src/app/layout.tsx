@@ -2,6 +2,7 @@ import { APP_CONFIG } from "@stariva/config";
 import { cn, ThemeProvider, ThemeToggle, Toaster } from "@stariva/ui";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ConfirmProvider } from "~/components/confirm-dialog";
 import { env } from "~/env";
 import { ORPCReactProvider } from "~/orpc/react";
 
@@ -44,7 +45,9 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         )}
       >
         <ThemeProvider>
-          <ORPCReactProvider>{props.children}</ORPCReactProvider>
+          <ORPCReactProvider>
+            <ConfirmProvider>{props.children}</ConfirmProvider>
+          </ORPCReactProvider>
           <div className="absolute right-4 bottom-4">
             <ThemeToggle />
           </div>

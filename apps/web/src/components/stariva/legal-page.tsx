@@ -92,7 +92,6 @@ export function SellerDetails() {
       <p>{SELLER.name}</p>
       <p>{SELLER.status}</p>
       <p>ИНН: {SELLER.inn}</p>
-      <p>Адрес: {SELLER.address}</p>
       <p>
         Email: <SellerEmail />
       </p>

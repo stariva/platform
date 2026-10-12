@@ -11,6 +11,7 @@ import {
 } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 
 /** Выход со всех устройств и удаление аккаунта. */
@@ -26,6 +27,7 @@ export function UserDangerZone({
   isAdmin: boolean;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
 
   const revokeSessions = useMutation({
     ...orpc.admin.users.revokeSessions.mutationOptions(),
@@ -62,11 +64,13 @@ export function UserDangerZone({
           type="button"
           variant="outline"
           disabled={sessionsCount === 0 || revokeSessions.isPending}
-          onClick={() => {
+          onClick={async () => {
             if (
-              window.confirm(
-                `Завершить все сессии пользователя ${name}? Ему придётся войти заново.`,
-              )
+              await confirm({
+                title: `Завершить все сессии пользователя ${name}?`,
+                description: "Ему придётся войти заново.",
+                confirmLabel: "Завершить",
+              })
             ) {
               revokeSessions.mutate({ id });
             }
@@ -78,11 +82,15 @@ export function UserDangerZone({
           type="button"
           variant="destructive"
           disabled={isAdmin || remove.isPending}
-          onClick={() => {
+          onClick={async () => {
             if (
-              window.confirm(
-                `Удалить пользователя ${name}? Его доступы, прогресс и сертификаты пропадут, это нельзя отменить.`,
-              )
+              await confirm({
+                title: `Удалить пользователя ${name}?`,
+                description:
+                  "Его доступы, прогресс и сертификаты пропадут, это нельзя отменить.",
+                confirmLabel: "Удалить",
+                destructive: true,
+              })
             ) {
               remove.mutate({ id });
             }

@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import { WorkshopFiles } from "./workshop-files";
 import { WorkshopImageField } from "./workshop-image-field";
@@ -101,6 +102,7 @@ export function WorkshopForm({
   storefrontUrl?: string;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   // Для нового курса адрес собираем из названия, пока его не правили руками
   const [slugTouched, setSlugTouched] = useState(Boolean(id));
 
@@ -495,11 +497,15 @@ export function WorkshopForm({
                   size="sm"
                   className="text-destructive"
                   disabled={remove.isPending}
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      window.confirm(
-                        "Удалить мастер-класс? Это возможно, только если его никто не покупал.",
-                      )
+                      await confirm({
+                        title: "Удалить мастер-класс?",
+                        description:
+                          "Это возможно, только если его никто не покупал.",
+                        confirmLabel: "Удалить",
+                        destructive: true,
+                      })
                     ) {
                       remove.mutate({ id });
                     }
