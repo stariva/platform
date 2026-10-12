@@ -7,11 +7,16 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   toast,
 } from "@stariva/ui";
 import {
   IconArrowDown,
   IconArrowUp,
+  IconChevronLeft,
+  IconChevronRight,
   IconPhotoPlus,
   IconTrash,
 } from "@tabler/icons-react";
@@ -35,6 +40,8 @@ export function ProductImages({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
+  /** Индекс фото, открытого на весь экран. */
+  const [viewing, setViewing] = useState<number | null>(null);
 
   const move = (from: number, to: number) => {
     const next = [...images];
@@ -83,13 +90,20 @@ export function ProductImages({
         <ul className="space-y-2">
           {images.map((url, index) => (
             <li key={url} className="flex items-center gap-3">
-              {/* biome-ignore lint/performance/noImgElement: превью из внешнего бакета без оптимизации */}
-              <img
-                src={url}
-                alt=""
-                className="size-16 shrink-0 rounded object-cover"
-                loading="lazy"
-              />
+              <button
+                type="button"
+                aria-label="Открыть фото"
+                className="shrink-0 cursor-zoom-in rounded"
+                onClick={() => setViewing(index)}
+              >
+                {/* biome-ignore lint/performance/noImgElement: превью из внешнего бакета без оптимизации */}
+                <img
+                  src={url}
+                  alt=""
+                  className="size-16 rounded object-cover"
+                  loading="lazy"
+                />
+              </button>
               <span className="text-muted-foreground flex-1 text-xs">
                 {index === 0 ? "Обложка" : `Фото ${index + 1}`}
               </span>
@@ -148,6 +162,78 @@ export function ProductImages({
         </Button>
         {error && <p className="text-destructive text-xs">{error}</p>}
       </CardContent>
+      <PhotoViewer images={images} index={viewing} onIndexChange={setViewing} />
     </Card>
+  );
+}
+
+/** Фото на весь экран; листается стрелками на экране и клавиатуре. */
+function PhotoViewer({
+  images,
+  index,
+  onIndexChange,
+}: {
+  images: string[];
+  index: number | null;
+  onIndexChange: (index: number | null) => void;
+}) {
+  const url = index === null ? undefined : images[index];
+  const step = (delta: number) => {
+    if (index === null || images.length < 2) return;
+    onIndexChange((index + delta + images.length) % images.length);
+  };
+
+  return (
+    <Dialog
+      open={url !== undefined}
+      onOpenChange={(open) => {
+        if (!open) onIndexChange(null);
+      }}
+    >
+      <DialogContent
+        className="w-auto max-w-[calc(100vw-2rem)] gap-2 p-2 sm:max-w-[calc(100vw-4rem)]"
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft") step(-1);
+          if (event.key === "ArrowRight") step(1);
+        }}
+      >
+        <DialogTitle className="text-muted-foreground px-1 pr-8 text-sm font-normal">
+          Фото {(index ?? 0) + 1} из {images.length}
+          {index === 0 && " · обложка"}
+        </DialogTitle>
+        <div className="relative">
+          {/* biome-ignore lint/performance/noImgElement: фото из внешнего бакета без оптимизации */}
+          <img
+            src={url}
+            alt=""
+            className="mx-auto max-h-[calc(100vh-7rem)] max-w-full rounded object-contain"
+          />
+          {images.length > 1 && (
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-label="Предыдущее фото"
+                className="absolute top-1/2 left-2 -translate-y-1/2 opacity-80 hover:opacity-100"
+                onClick={() => step(-1)}
+              >
+                <IconChevronLeft />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-label="Следующее фото"
+                className="absolute top-1/2 right-2 -translate-y-1/2 opacity-80 hover:opacity-100"
+                onClick={() => step(1)}
+              >
+                <IconChevronRight />
+              </Button>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
