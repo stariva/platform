@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/resort`,
     images: [
       {
-        url: `https://cdn.stariva.ru/site/images/resort/hero.png`,
-        width: 1200,
-        height: 630,
+        url: `https://cdn.stariva.ru/site/images/resort/hero-lake.webp`,
+        width: 1848,
+        height: 851,
         alt: "Макраме-декор для баз отдыха — Stariva",
       },
     ],
