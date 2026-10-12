@@ -329,13 +329,15 @@ function MadeToOrderDialog({
         body: fd,
       });
       const resData = await res.json().catch(() => null);
-      if (!res.ok || !resData?.ok || !resData?.requestId) {
+      if (!res.ok || !resData?.ok || !resData?.requestNumber) {
         if (res.status === 409) submission.current = null;
         toast.error(resData?.error ?? "Не удалось отправить заявку");
         return;
       }
 
-      toast.success("Заявка принята! Мастер свяжется с вами в рабочее время.");
+      toast.success(
+        `Заявка №${resData.requestNumber} принята! Мастер свяжется с вами в рабочее время.`,
+      );
       submission.current = null;
       reachGoal("custom_order_submitted", {
         location: "product",
