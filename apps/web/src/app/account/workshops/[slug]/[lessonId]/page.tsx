@@ -60,6 +60,7 @@ export default async function LessonPlayerPage({
             lessonLabel={`Урок ${index + 1} из ${lessons.length}`}
             nextLesson={next ? { id: next.id, title: next.title } : null}
             courseHref={`/account/workshops/${slug}`}
+            watermark={session.user.email}
           />
 
           <div className="mt-4">

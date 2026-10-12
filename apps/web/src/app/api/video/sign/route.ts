@@ -2,6 +2,11 @@ import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { clientIp } from "@/lib/visitor";
+import {
+  isVideoSignRateLimited,
+  logVideoAccess,
+} from "@/lib/workshops/video-access";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   findWorkshopLesson,
@@ -11,8 +16,9 @@ import {
 
 export const runtime = "nodejs";
 
-// Ссылка живёт 2 часа — достаточно для просмотра урока, но недолго для шеринга
-const URL_TTL_SECONDS = 60 * 60 * 2;
+// Ссылка живёт 15 минут: плеер сам берёт новую, когда старая истекла, а
+// скопированная из браузера ссылка быстро перестаёт работать
+const URL_TTL_SECONDS = 60 * 15;
 
 /**
  * Выдаёт временную подписанную ссылку на видео урока.
@@ -50,8 +56,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Проверка доступа: превью открыто всем, пока курс опубликован
+  const session = await getSession();
   if (!(lesson.free && workshop.status === "published")) {
-    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
     }
@@ -72,6 +78,24 @@ export async function GET(request: NextRequest) {
       );
     }
   }
+
+  const access = {
+    userId: session?.user.id ?? null,
+    ip: clientIp(request.headers),
+  };
+  if (await isVideoSignRateLimited(access)) {
+    console.warn("[video/sign] Превышен предел ссылок:", access);
+    return NextResponse.json(
+      { error: "Слишком много запросов видео. Попробуйте через несколько минут" },
+      { status: 429 },
+    );
+  }
+  await logVideoAccess({
+    ...access,
+    workshopSlug: slug,
+    lessonId,
+    userAgent: request.headers.get("user-agent"),
+  });
 
   try {
     const url = await getDownloadUrl(lesson.videoKey, {

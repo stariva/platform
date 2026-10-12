@@ -46,6 +46,8 @@ interface VideoPlayerProps {
   nextLesson: { id: string; title: string } | null;
   /** Ссылка на страницу мастер-класса. */
   courseHref: string;
+  /** Email покупателя: виден поверх видео, чтобы по записи экрана было видно, чья копия. */
+  watermark: string;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -53,6 +55,10 @@ const SEEK_STEP = 10;
 const CONTROLS_HIDE_MS = 2800;
 const AUTONEXT_SECONDS = 8;
 const MAX_SOURCE_RETRIES = 2;
+// Ошибка незадолго до конца срока ссылки — тоже считаем истёкшей
+const LINK_EXPIRY_MARGIN_MS = 30_000;
+// Как часто водяной знак переезжает в другое место кадра
+const WATERMARK_MOVE_MS = 20_000;
 
 const PREFS_KEY = "stariva-player-prefs";
 // Флаг «запустить сразу» при автопереходе к следующему уроку
@@ -147,6 +153,7 @@ export function VideoPlayer({
   lessonLabel,
   nextLesson,
   courseHref,
+  watermark,
 }: VideoPlayerProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,6 +164,8 @@ export function VideoPlayer({
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const retriesRef = useRef(0);
+  // Когда истекает подписанная ссылка (мс). Ссылка короткая, за урок их несколько
+  const expiresAtRef = useRef(0);
   const pendingSeekRef = useRef<number | null>(initialPosition || null);
   const initialResumePendingRef = useRef(true);
   const resumePlayRef = useRef(false);
@@ -214,7 +223,13 @@ export function VideoPlayer({
         return r.json();
       })
       .then((d) => {
-        if (active) setSrc(d.url);
+        if (!active) return;
+        expiresAtRef.current = Date.now() + d.expiresIn * 1000;
+        // Подпись в ту же секунду даёт тот же адрес — React его не перезапишет,
+        // поэтому перезагружаем видео сами
+        const video = videoRef.current;
+        if (video && video.getAttribute("src") === d.url) video.load();
+        else setSrc(d.url);
       })
       .catch((e) => {
         if (active) setError(e.message);
@@ -717,10 +732,13 @@ export function VideoPlayer({
 
   const onVideoError = () => {
     const video = videoRef.current;
-    // Подписанная ссылка могла истечь — перезапрашиваем и продолжаем с того же места
-    if (retriesRef.current < MAX_SOURCE_RETRIES) {
-      retriesRef.current += 1;
-      pendingSeekRef.current = video?.currentTime || currentTime || null;
+    // Подписанная ссылка истекла — перезапрашиваем и продолжаем с того же места.
+    // Это штатно случается каждые 15 минут, поэтому в лимит попыток не входит
+    const expired = Date.now() > expiresAtRef.current - LINK_EXPIRY_MARGIN_MS;
+    if (expired || retriesRef.current < MAX_SOURCE_RETRIES) {
+      if (!expired) retriesRef.current += 1;
+      pendingSeekRef.current =
+        video?.currentTime || currentTimeRef.current || null;
       resumePlayRef.current = playing;
       setReloadToken((t) => t + 1);
       return;
@@ -890,6 +908,8 @@ export function VideoPlayer({
         }}
         className="absolute inset-0 size-full cursor-[inherit] outline-none"
       />
+
+      {src && <Watermark text={watermark} />}
 
       {/* Загрузка */}
       {(!src || (waiting && !ended)) && (
@@ -1429,6 +1449,49 @@ function MenuRow({
 }
 
 /** Возвращает долю [0..1] позиции указателя по горизонтали элемента. */
+/**
+ * Полупрозрачный email покупателя поверх видео. Время от времени переезжает в
+ * другое место кадра, чтобы его нельзя было закрыть или вырезать на записи экрана.
+ */
+function Watermark({ text }: { text: string }) {
+  // До первого переезда — фиксированное место, чтобы разметка сервера и
+  // браузера совпадала
+  const [position, setPosition] = useState({ top: 12, left: 6 });
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    let fadeTimer: number | undefined;
+    const move = () => {
+      setVisible(false);
+      fadeTimer = window.setTimeout(() => {
+        setPosition({
+          top: 8 + Math.random() * 72,
+          left: 4 + Math.random() * 56,
+        });
+        setVisible(true);
+      }, 700);
+    };
+    move();
+    const interval = window.setInterval(move, WATERMARK_MOVE_MS);
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(fadeTimer);
+    };
+  }, []);
+
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute select-none whitespace-nowrap text-[11px] font-medium text-white transition-opacity duration-700 [text-shadow:0_1px_2px_rgb(0_0_0/0.5)] sm:text-sm ${
+        visible ? "opacity-35" : "opacity-0"
+      }`}
+      style={{ top: `${position.top}%`, left: `${position.left}%` }}
+    >
+      {text}
+    </div>
+  );
+}
+
 function ratioFromPointer(el: HTMLElement, clientX: number): number {
   const rect = el.getBoundingClientRect();
   return clamp((clientX - rect.left) / rect.width, 0, 1);
