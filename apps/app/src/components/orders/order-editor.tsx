@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
   Input,
@@ -25,6 +26,7 @@ import { MadeToOrderStage } from "./made-to-order-stage";
 import {
   type AdminOrderView,
   dateTime,
+  isDeletable,
   KIND_LABELS,
   MANUAL_STATUSES,
   rubles,
@@ -66,6 +68,16 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
       router.refresh();
     },
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
+  });
+
+  const remove = useMutation({
+    ...orpc.admin.orders.remove.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Заказ удалён");
+      router.replace("/orders");
+      router.refresh();
+    },
+    onError: (error: Error) => toast.error(error.message || "Не удалилось"),
   });
 
   const changed =
@@ -295,6 +307,36 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
             </Button>
           </CardContent>
         </Card>
+
+        {isDeletable(order) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Удаление</CardTitle>
+              <CardDescription>
+                Для спама, дублей и тестовых заказов. Заказ пропадёт из админки
+                и из кабинета покупателя.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                className="w-full"
+                variant="destructive"
+                disabled={remove.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Удалить заказ ${order.id.slice(0, 8)}? Это нельзя отменить.`,
+                    )
+                  ) {
+                    remove.mutate({ id: order.id });
+                  }
+                }}
+              >
+                {remove.isPending ? "Удаляем…" : "Удалить заказ"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
