@@ -18,6 +18,8 @@ import {
 
 const MAX_ITEMS = 12;
 
+type BriefItemInput = Omit<BriefItem, "quantity"> & { quantity: string };
+
 const inputClass =
   "w-full rounded-xl border border-espresso/15 bg-white px-3.5 py-2.5 text-[15px] text-espresso placeholder:text-taupe/70 focus-visible:outline-2 focus-visible:outline-espresso";
 
@@ -31,8 +33,8 @@ const chipClass =
  */
 export function DesignerBrief() {
   const id = useId();
-  const [items, setItems] = useState<BriefItem[]>([
-    { typeId: "lampshade", sizeId: "m", quantity: 4 },
+  const [items, setItems] = useState<BriefItemInput[]>([
+    { typeId: "lampshade", sizeId: "m", quantity: "4" },
   ]);
   const [colorId, setColorId] = useState("natural");
   const [objectType, setObjectType] = useState<string>();
@@ -50,18 +52,18 @@ export function DesignerBrief() {
     colorId,
     deadline,
     comment,
-    items,
+    items: items.map((item) => ({ ...item, quantity: Number(item.quantity) })),
   };
   const estimate = estimateBrief(brief);
   const message = briefMessage(brief);
 
-  const updateItem = (index: number, patch: Partial<BriefItem>) =>
+  const updateItem = (index: number, patch: Partial<BriefItemInput>) =>
     setItems((prev) =>
       prev.map((item, i) => (i === index ? { ...item, ...patch } : item)),
     );
   const setQuantity = (index: number, quantity: number) =>
     updateItem(index, {
-      quantity: Math.min(MAX_ITEM_QUANTITY, Math.max(1, quantity || 1)),
+      quantity: String(Math.min(MAX_ITEM_QUANTITY, Math.max(1, quantity || 1))),
     });
 
   return (
@@ -145,8 +147,10 @@ export function DesignerBrief() {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        onClick={() => setQuantity(index, item.quantity - 1)}
-                        disabled={item.quantity <= 1}
+                        onClick={() =>
+                          setQuantity(index, Number(item.quantity) - 1)
+                        }
+                        disabled={Number(item.quantity) <= 1}
                         aria-label={`Меньше, позиция ${index + 1}`}
                         className="inline-flex size-9 items-center justify-center rounded-full border border-espresso/15 text-espresso hover:border-espresso/40 disabled:opacity-30"
                       >
@@ -163,14 +167,19 @@ export function DesignerBrief() {
                         max={MAX_ITEM_QUANTITY}
                         value={item.quantity}
                         onChange={(e) =>
+                          updateItem(index, { quantity: e.target.value })
+                        }
+                        onBlur={(e) =>
                           setQuantity(index, Number(e.target.value))
                         }
                         className="w-14 rounded-lg border border-espresso/15 bg-white py-2 text-center text-[15px] text-espresso [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                       <button
                         type="button"
-                        onClick={() => setQuantity(index, item.quantity + 1)}
-                        disabled={item.quantity >= MAX_ITEM_QUANTITY}
+                        onClick={() =>
+                          setQuantity(index, Number(item.quantity) + 1)
+                        }
+                        disabled={Number(item.quantity) >= MAX_ITEM_QUANTITY}
                         aria-label={`Больше, позиция ${index + 1}`}
                         className="inline-flex size-9 items-center justify-center rounded-full border border-espresso/15 text-espresso hover:border-espresso/40 disabled:opacity-30"
                       >
@@ -186,7 +195,7 @@ export function DesignerBrief() {
                   onClick={() =>
                     setItems((prev) => [
                       ...prev,
-                      { typeId: "panel", sizeId: "m", quantity: 1 },
+                      { typeId: "panel", sizeId: "m", quantity: "1" },
                     ])
                   }
                   className="mt-3 inline-flex items-center gap-2 rounded-full border border-dashed border-espresso/30 px-4 py-2.5 text-sm text-espresso hover:border-espresso transition-colors"
