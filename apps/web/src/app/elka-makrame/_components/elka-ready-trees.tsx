@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { TrackedLink } from "@/components/stariva/tracked-link";
-import { type ModelWithProduct, TREES_PATH } from "@/lib/elka/data";
+import { TREES_PATH } from "@/lib/elka/data";
+import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/workshops-data";
 import { READY_TREES_ID } from "../_data";
 
@@ -8,8 +9,8 @@ import { READY_TREES_ID } from "../_data";
  * Небольшой блок в конце страницы — для тех, кто не хочет плести сам.
  * Страница про мастер-класс, поэтому без витрины: только ссылки на карточки.
  */
-export function ElkaReadyTrees({ items }: { items: ModelWithProduct[] }) {
-  if (items.length === 0) return null;
+export function ElkaReadyTrees({ trees }: { trees: Product[] }) {
+  if (trees.length === 0) return null;
   return (
     <section
       id={READY_TREES_ID}
@@ -35,19 +36,19 @@ export function ElkaReadyTrees({ items }: { items: ModelWithProduct[] }) {
           </TrackedLink>
         </p>
         <ul className="grid sm:grid-cols-2 gap-3">
-          {items.map(({ model, product }) => (
-            <li key={model.slug}>
+          {trees.map((product) => (
+            <li key={product.id}>
               <TrackedLink
                 href={`/catalog/${product.category}/${product.slug}`}
                 goal="elka_model_click"
-                goalParams={{ slug: model.slug }}
+                goalParams={{ slug: product.slug }}
                 className="flex items-center gap-4 rounded-2xl bg-parchment p-3 pr-5 hover:bg-linen/60 transition-colors"
               >
                 <span className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-linen">
                   {product.images[0] ? (
                     <Image
                       src={product.images[0]}
-                      alt={`${model.name}, ${model.size}`}
+                      alt={product.name}
                       fill
                       sizes="80px"
                       className="object-cover"
@@ -55,10 +56,11 @@ export function ElkaReadyTrees({ items }: { items: ModelWithProduct[] }) {
                   ) : null}
                 </span>
                 <span className="flex-1">
-                  <span className="block text-espresso">{model.name}</span>
+                  <span className="block text-espresso">{product.name}</span>
                   <span className="block text-sm text-text-grey">
-                    {model.size} ·{" "}
-                    {formatPrice(product.price)}
+                    {[product.dimensions, formatPrice(product.price)]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 </span>
                 <span aria-hidden className="text-terracotta">

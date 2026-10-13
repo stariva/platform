@@ -1,36 +1,36 @@
 import { logger } from "@stariva/config";
-import { getProductBySlug } from "@/lib/ozon-service";
+import { getProducts } from "@/lib/ozon-service";
+import type { Product } from "@/lib/ozon-types";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
-import { type ModelWithProduct, TREE_MODELS, WORKSHOP_SLUG } from "./data";
+import { WORKSHOP_SLUG } from "./data";
 
 /**
- * Товары-ёлки и мастер-класс из базы — для обеих страниц ёлки.
- * Сбой любого источника не роняет страницу: ёлку без товара в базе просто
- * не показываем, мастер-класс берёт запасную цену. `page` попадает в ключ
- * лога, чтобы было видно, какая страница осталась без данных.
+ * Ёлки — опубликованные товары, чей slug начинается с «elka-». Админка
+ * собирает slug из названия («Ёлка …» → «elka-…»), поэтому новая ёлка
+ * попадает на страницы сама, порядок — как в каталоге.
+ */
+const TREE_SLUG_PREFIX = "elka-";
+
+export async function getTreeProducts(): Promise<Product[]> {
+  const products = await getProducts();
+  return products.filter((product) =>
+    product.slug.startsWith(TREE_SLUG_PREFIX),
+  );
+}
+
+/**
+ * Ёлки и мастер-класс из базы — для обеих страниц ёлки. Сбой любого
+ * источника не роняет страницу: без каталога ёлок нет, мастер-класс берёт
+ * запасную цену. `page` попадает в ключ лога, чтобы было видно, какая
+ * страница осталась без данных.
  */
 export async function loadElkaData(page: "elka_workshop" | "elka_trees") {
-  const [products, workshop] = await Promise.all([
-    Promise.all(
-      TREE_MODELS.map((model) =>
-        getProductBySlug(model.slug).catch((error) => {
-          logger.warn(`${page}.product.unavailable`, {
-            slug: model.slug,
-            error: String(error),
-          });
-          return undefined;
-        }),
-      ),
-    ),
+  const [trees, workshop] = await Promise.all([
+    getTreeProducts(),
     getWorkshopBySlug(WORKSHOP_SLUG).catch((error) => {
       logger.warn(`${page}.workshop.unavailable`, { error: String(error) });
       return undefined;
     }),
   ]);
-
-  const items: ModelWithProduct[] = TREE_MODELS.flatMap((model, index) => {
-    const product = products[index];
-    return product ? [{ model, product }] : [];
-  });
-  return { items, workshop };
+  return { trees, workshop };
 }

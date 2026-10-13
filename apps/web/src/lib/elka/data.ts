@@ -1,5 +1,3 @@
-import type { Product } from "@/lib/ozon-types";
-
 /**
  * Общее для страниц ёлки: мастер-класса (/elka-makrame) и готовых ёлок
  * (/elka-makrame-na-stenu), а ещё главной, блога и sitemap. Без серверных
@@ -32,52 +30,6 @@ export const BONUS_RELEASE_LABEL = "3 ноября";
 /** Заказ до этой даты успевает к празднику: 2–3 дня плетения и доставка. */
 export const ORDER_DEADLINE_DAY = 20;
 export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
-
-/**
- * Текст лендинга про модель ёлки. Цена, фото, ссылка и наличие — только
- * у товара из базы (по slug), здесь их нет.
- */
-export interface TreeModel {
-  slug: string;
-  name: string;
-  color: string;
-  size: string;
-  bestFor: string;
-  highlights: string[];
-}
-
-/** Модель и её товар из базы; модели без опубликованного товара не показываем. */
-export interface ModelWithProduct {
-  model: TreeModel;
-  product: Product;
-}
-
-export const TREE_MODELS: TreeModel[] = [
-  {
-    slug: "elka-panno-makrame-0687",
-    name: "Ёлка в технике макраме, бежевая",
-    color: "Бежевый, натуральный, молочный",
-    size: "70–75 × 150 см",
-    bestFor: "Гостиная, лобби отеля, зал ресторана",
-    highlights: [
-      "Заметна с порога — работает как фотозона",
-      "Три оттенка: бежевый, натуральный, молочный",
-      "Вешается за звезду на один крючок — без сверления",
-    ],
-  },
-  {
-    slug: "elka-panno-makrame-8124",
-    name: "Ёлка в технике макраме, хаки",
-    color: "Хаки",
-    size: "45 × 100 см",
-    bestFor: "Детская, прихожая, салон, ресепшен",
-    highlights: [
-      "Компактная — для небольших стен",
-      "Глубокий природный оттенок",
-      "Вешается за звезду на один крючок — без сверления",
-    ],
-  },
-];
 
 /** Фото ёлки у покупателя с идеей украшения — для галереи на обеих страницах. */
 export interface CustomerLook {

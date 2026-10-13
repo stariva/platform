@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Suspense } from "react";
 import { NewYearCountdown } from "@/components/stariva/new-year-countdown";
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import {
@@ -7,24 +8,12 @@ import {
   TREES_PATH,
   WORKSHOP_PATH,
 } from "@/lib/elka/data";
+import { getTreeProducts } from "@/lib/elka/load";
 
 const points = [
   "Не осыпается и не занимает места на полу",
   "Для квартиры, детской, отеля, кафе и офиса",
   "Под заказ за 2–3 дня, доставка по России",
-];
-
-const models = [
-  {
-    image: "/images/elka/elka-cream-interior.jpg",
-    alt: "Бежевая ёлка-панно в технике макраме на стене",
-    label: "Бежевая · 70–75 × 150 см",
-  },
-  {
-    image: "/images/elka/elka-green-festive.jpg",
-    alt: "Ёлка-панно в технике макраме цвета хаки",
-    label: "Хаки · 45 × 100 см",
-  },
 ];
 
 export function ElkaTeaser() {
@@ -95,33 +84,65 @@ export function ElkaTeaser() {
           </p>
         </div>
 
-        <ul className="grid grid-cols-2 gap-3 lg:gap-5">
-          {models.map((model, index) => (
-            <li
-              key={model.image}
-              className={index === 1 ? "mt-8 lg:mt-12" : ""}
+        <Suspense fallback={<TeaserTreesSkeleton />}>
+          <TeaserTrees />
+        </Suspense>
+      </div>
+    </section>
+  );
+}
+
+const TILE_OFFSET = "mt-8 lg:mt-12";
+
+function TeaserTreesSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:gap-5" aria-hidden>
+      {[0, 1].map((index) => (
+        <div
+          key={index}
+          className={`aspect-[4/5] rounded-xl bg-linen animate-pulse ${index === 1 ? TILE_OFFSET : ""}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Две первые ёлки из каталога; без каталога фото не показываем. */
+async function TeaserTrees() {
+  const trees = (await getTreeProducts()).slice(0, 2);
+  if (trees.length === 0) return null;
+
+  return (
+    <ul className="grid grid-cols-2 gap-3 lg:gap-5">
+      {trees.map((product, index) => {
+        const image = product.images[0];
+        const label = [product.color, product.dimensions]
+          .filter(Boolean)
+          .join(" · ");
+        return (
+          <li key={product.id} className={index === 1 ? TILE_OFFSET : ""}>
+            <TrackedLink
+              href={TREES_PATH}
+              goal="home_elka_image"
+              className="group relative block aspect-[4/5] overflow-hidden rounded-xl bg-linen"
             >
-              <TrackedLink
-                href={TREES_PATH}
-                goal="home_elka_image"
-                className="group relative block aspect-[4/5] overflow-hidden rounded-xl bg-linen"
-              >
+              {image ? (
                 <Image
-                  src={model.image}
-                  alt={model.alt}
+                  src={image}
+                  alt={product.name}
                   fill
                   sizes="(min-width: 1024px) 28vw, 45vw"
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-espresso/60 via-transparent to-transparent" />
-                <span className="absolute left-4 bottom-4 right-4 text-sm text-parchment">
-                  {model.label}
-                </span>
-              </TrackedLink>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+              ) : null}
+              <div className="absolute inset-0 bg-gradient-to-t from-espresso/60 via-transparent to-transparent" />
+              <span className="absolute left-4 bottom-4 right-4 text-sm text-parchment">
+                {label || product.name}
+              </span>
+            </TrackedLink>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

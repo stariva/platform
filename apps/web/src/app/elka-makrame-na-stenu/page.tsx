@@ -58,8 +58,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ElkaTreesPage() {
-  const { items, workshop } = await loadElkaData("elka_trees");
-  const reviewProductId = items[0]?.product.id;
+  const { trees, workshop } = await loadElkaData("elka_trees");
+  const reviewProductId = trees[0]?.id;
 
   return (
     <>
@@ -73,8 +73,8 @@ export default async function ElkaTreesPage() {
       <ItemListJsonLd
         name="Ёлки макраме на стену"
         url={TREES_PATH}
-        items={items.map(({ model, product }) => ({
-          name: model.name,
+        items={trees.map((product) => ({
+          name: product.name,
           url: `/catalog/${product.category}/${product.slug}`,
           image: product.images[0],
         }))}
@@ -84,7 +84,7 @@ export default async function ElkaTreesPage() {
       <Header variant="solid" />
       <main>
         <ElkaHero />
-        <ElkaModels items={items} />
+        <ElkaModels trees={trees} />
         <ElkaCustomerLooks
           source="elka_trees"
           eyebrow="Фото покупателей"
