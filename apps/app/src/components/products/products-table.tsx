@@ -15,6 +15,11 @@ import {
   PRODUCT_CATEGORIES,
   type ProductCategoryId,
 } from "@stariva/validators";
+import {
+  IconArrowDown,
+  IconArrowsSort,
+  IconArrowUp,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AvailabilitySwitches } from "./availability-switches";
@@ -129,8 +134,33 @@ function FilterRow<T extends string>({
   );
 }
 
-/** Таблица товаров с поиском и фильтрами по статусу, наличию, «под заказ», категории и показу на главной. */
-export function ProductsTable({ products }: { products: AdminProduct[] }) {
+export type PriceSort = "asc" | "desc" | null;
+
+/** Клик по заголовку «Цена»: без сортировки → по возрастанию → по убыванию → снова без. */
+const NEXT_PRICE_HREF: Record<NonNullable<PriceSort> | "none", string> = {
+  none: "/products?sort=price&dir=asc",
+  asc: "/products?sort=price&dir=desc",
+  desc: "/products",
+};
+
+const PRICE_SORT_ICON = {
+  none: IconArrowsSort,
+  asc: IconArrowUp,
+  desc: IconArrowDown,
+};
+
+/**
+ * Таблица товаров с поиском и фильтрами по статусу, наличию, «под заказ», категории и показу на главной.
+ * Фильтры работают на клиенте, сортировка по цене — на сервере (`priceSort` из адреса страницы).
+ */
+export function ProductsTable({
+  products,
+  priceSort,
+}: {
+  products: AdminProduct[];
+  priceSort: PriceSort;
+}) {
+  const PriceSortIcon = PRICE_SORT_ICON[priceSort ?? "none"];
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [stock, setStock] = useState<StockFilter>("all");
@@ -182,22 +212,19 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
   ]);
   const [visibleRows, setVisibleRows] = useState(() => ({
     filtersKey,
-    ids: products.map((p) => p.id),
+    ids: new Set(products.map((p) => p.id)),
   }));
 
   // Keep row membership until the search or filters change.
   if (visibleRows.filtersKey !== filtersKey) {
     setVisibleRows({
       filtersKey,
-      ids: products.filter((p) => matchesExcept(p)).map((p) => p.id),
+      ids: new Set(products.filter((p) => matchesExcept(p)).map((p) => p.id)),
     });
   }
 
-  const productsById = new Map(products.map((p) => [p.id, p]));
-  const visible = visibleRows.ids.flatMap((id) => {
-    const product = productsById.get(id);
-    return product ? [product] : [];
-  });
+  // Порядок строк — как пришёл с сервера (в том числе после сортировки по цене).
+  const visible = products.filter((p) => visibleRows.ids.has(p.id));
   // Массовые действия касаются только отмеченных строк, которые сейчас видны.
   const checkedVisible = visible.filter((p) => checked.has(p.id));
   const allChecked =
@@ -313,7 +340,26 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
               <TableHead className="w-24" />
               <TableHead>Название</TableHead>
               <TableHead>Категория</TableHead>
-              <TableHead className="text-right">Цена</TableHead>
+              <TableHead
+                className="text-right"
+                aria-sort={
+                  priceSort === "asc"
+                    ? "ascending"
+                    : priceSort === "desc"
+                      ? "descending"
+                      : "none"
+                }
+              >
+                <Link
+                  href={NEXT_PRICE_HREF[priceSort ?? "none"]}
+                  className="hover:text-foreground inline-flex items-center gap-1"
+                >
+                  Цена
+                  <PriceSortIcon
+                    className={`size-4 ${priceSort ? "" : "opacity-40"}`}
+                  />
+                </Link>
+              </TableHead>
               <TableHead className="text-right">Старая цена</TableHead>
               <TableHead>Продажа</TableHead>
               <TableHead className="text-right">Порядок</TableHead>
