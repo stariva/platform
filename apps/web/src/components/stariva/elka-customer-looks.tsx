@@ -58,7 +58,10 @@ export function ElkaCustomerLooks({
 
   const open = (index: number) => {
     setOpenIndex(index);
-    reachGoal("elka_looks_open", { source, photo: CUSTOMER_LOOKS[index]?.slug });
+    reachGoal("elka_looks_open", {
+      source,
+      photo: CUSTOMER_LOOKS[index]?.slug,
+    });
   };
   const step = (delta: number) =>
     setOpenIndex((index) =>
