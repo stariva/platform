@@ -19,7 +19,7 @@ export interface Scenario {
   looks: Look[];
 }
 
-const looks = {
+export const looks = {
   brick: {
     name: "Туника макраме кирпичная",
     href: `${CLOTHES}/stariva-makrame-tunika-iz-khlopkovogo-shnura-ruchnoy-raboty-2739`,
