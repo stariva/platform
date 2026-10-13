@@ -45,6 +45,7 @@ export const list = adminProcedure
         featured: products.featured,
         sortOrder: products.sortOrder,
         ozonOfferId: products.ozonOfferId,
+        ozonSku: products.ozonSku,
         updatedAt: products.updatedAt,
       })
       .from(products)
