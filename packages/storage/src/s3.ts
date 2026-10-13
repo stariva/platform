@@ -1,5 +1,6 @@
 import {
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -153,6 +154,30 @@ export async function uploadPublicObject(
     }),
   );
   return publicObjectUrl(key);
+}
+
+/** Текст небольшого файла из закрытого бакета (например, плейлиста HLS). */
+export async function getObjectText(key: string): Promise<string> {
+  const res = await getClient().send(
+    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+  );
+  if (!res.Body) throw new Error(`empty object: ${key}`);
+  return res.Body.transformToString("utf-8");
+}
+
+/** Есть ли файл в закрытом бакете. */
+export async function objectExists(key: string): Promise<boolean> {
+  try {
+    await getClient().send(
+      new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+    );
+    return true;
+  } catch (error) {
+    const status = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    if (status === 404) return false;
+    throw error;
+  }
 }
 
 export async function getDownloadUrl(

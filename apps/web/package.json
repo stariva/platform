@@ -56,6 +56,8 @@
     "@stariva/emails": "workspace:*",
     "@stariva/storage": "workspace:*",
     "@t3-oss/env-nextjs": "0.13.11",
+    "@videojs/hlsjs-video": "10.0.1",
+    "@videojs/react": "10.0.1",
     "ai": "^7.0.134",
     "better-auth": "1.7.7",
     "class-variance-authority": "^0.7.1",

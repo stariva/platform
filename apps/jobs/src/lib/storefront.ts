@@ -6,18 +6,22 @@ import { env } from "../env";
  */
 export async function postToStorefront<T>(
   path: string,
-  { timeoutMs }: { timeoutMs: number },
+  { timeoutMs, body }: { timeoutMs: number; body?: unknown },
 ): Promise<T> {
   const res = await fetch(`${env.STOREFRONT_URL}${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${env.JOBS_SECRET}` },
+    headers: {
+      Authorization: `Bearer ${env.JOBS_SECRET}`,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  const body = (await res.json().catch(() => ({}))) as T;
+  const result = (await res.json().catch(() => ({}))) as T;
   if (!res.ok) {
     throw new Error(
-      `POST ${path}: HTTP ${res.status}, ${JSON.stringify(body)}`,
+      `POST ${path}: HTTP ${res.status}, ${JSON.stringify(result)}`,
     );
   }
-  return body;
+  return result;
 }

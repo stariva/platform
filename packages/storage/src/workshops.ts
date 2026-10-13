@@ -29,6 +29,27 @@ export function workshopVideoKey(
   return `${workshopStoragePrefix(slug)}/${safeLesson || "lesson"}-${shortId()}.${extension}`;
 }
 
+/**
+ * Папка HLS-версии видео: рядом с исходником, `workshops/<slug>/hls/<имя без
+ * расширения>`. Выводится из ключа исходника, поэтому у каждой загрузки своя.
+ */
+export function workshopHlsPrefix(videoKey: string): string {
+  const slash = videoKey.lastIndexOf("/");
+  const folder = videoKey.slice(0, slash);
+  const name = videoKey.slice(slash + 1).replace(/\.[^.]+$/, "");
+  return `${folder}/hls/${name}`;
+}
+
+/** Файлы HLS-версии: плейлист, инициализирующий сегмент и куски по порядку. */
+export const HLS_FILE_PATTERN = /^(index\.m3u8|init\.mp4|seg-\d{5}\.m4s)$/;
+
+/** Content-Type файла HLS-версии. Подписывается в ссылке на загрузку. */
+export function hlsContentType(file: string): string {
+  if (file.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
+  if (file.endsWith(".m4s")) return "video/iso.segment";
+  return "video/mp4";
+}
+
 /** Ключ PDF-материала. Имя файла сохраняем для читаемости, но чистим. */
 export function workshopMaterialKey(slug: string, fileName: string): string {
   const base = fileName

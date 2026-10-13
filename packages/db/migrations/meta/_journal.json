@@ -148,6 +148,20 @@
       "when": 1791822898493,
       "tag": "0020_last_agent_zero",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791831819602,
+      "tag": "0021_video_access_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791835083777,
+      "tag": "0022_video_renditions",
+      "breakpoints": true
     }
   ]
 }

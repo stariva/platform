@@ -7,6 +7,9 @@ const schema = z.object({
   STOREFRONT_URL: z.url(),
   /** Общий с сайтом секрет для внутренних вызовов: `openssl rand -hex 32`. */
   JOBS_SECRET: z.string().min(32),
+  /** ffmpeg и ffprobe для нарезки видео в HLS; в образе стоят из apk. */
+  FFMPEG_PATH: z.string().default("ffmpeg"),
+  FFPROBE_PATH: z.string().default("ffprobe"),
 });
 
 const parsed = schema.safeParse(process.env);

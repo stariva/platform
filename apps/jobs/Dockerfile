@@ -26,6 +26,9 @@ RUN cd apps/jobs && bun run build
 #    @grpc/grpc-js поверх node:http2, а под Bun на хостинге heartbeat'ы уходили
 #    в бесконечный таймаут вместо переподключения
 FROM node:24-alpine AS runner
+# ffmpeg режет видео уроков в HLS (задание lesson-video-hls). Временные файлы
+# нарезки лежат в /tmp: поду нужно места не меньше размера самого большого видео
+RUN apk add --no-cache ffmpeg
 WORKDIR /repo
 RUN addgroup -g 1001 -S nodejs && adduser -S worker -u 1001 -G nodejs
 COPY --from=installer --chown=worker:nodejs /repo ./
