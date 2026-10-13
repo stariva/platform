@@ -148,9 +148,7 @@ export default function Page() {
         <Hero />
         <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
           <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
-            <p className="label-caps text-terracotta mb-4">
-              Примеры работ
-            </p>
+            <p className="label-caps text-terracotta mb-4">Примеры работ</p>
             <div className="flex flex-wrap justify-between items-end gap-5 mb-8">
               <div>
                 <h2 className="font-serif text-4xl lg:text-5xl leading-tight">
