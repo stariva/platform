@@ -9,6 +9,7 @@ import {
   measurementFieldsBySlug,
 } from "@/lib/commerce/measurement-fields";
 import {
+  getProductCoverImages,
   getProductOrderById,
   getProductOrderItems,
 } from "@/lib/commerce/orders";
@@ -40,6 +41,7 @@ export async function POST(
   }
 
   const items = await getProductOrderItems(orderId);
+  const covers = await getProductCoverImages(items.map((i) => i.productSlug));
 
   const postings = await getPostingStatuses(order.ozonPostingNumbers);
 
@@ -74,6 +76,7 @@ export async function POST(
       name: i.name,
       quantity: i.quantity,
       price: i.price,
+      image: covers.get(i.productSlug) ?? null,
       options: i.options,
       measurementFields: fields.get(i.productSlug) ?? [],
     })),
