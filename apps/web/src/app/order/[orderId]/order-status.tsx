@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { ItemImage } from "@/app/account/orders/order-ui";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -47,7 +48,9 @@ const orderResponseSchema = madeToOrderTermsSchema.extend({
   customerNotes: z.string().nullable(),
   deliveryNote: z.string().nullable(),
   trackingNumber: z.string().nullable(),
-  items: z.array(madeToOrderItemSchema),
+  items: z.array(
+    madeToOrderItemSchema.extend({ image: z.string().nullable() }),
+  ),
   postings: z.array(
     z.object({
       postingNumber: z.string(),
@@ -187,23 +190,31 @@ export function OrderStatus({ orderId }: { orderId: string }) {
 
       <div className="space-y-2">
         {order.items.map((item) => (
-          <div key={item.id} className="text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-espresso">
-                {item.name} × {item.quantity}
-              </span>
-              <span className="text-espresso">
-                {formatPrice((item.price * item.quantity) / 100)}
-              </span>
+          <div key={item.id} className="flex items-center gap-3 text-sm">
+            <ItemImage
+              src={item.image}
+              alt={item.name}
+              sizes="64px"
+              className="size-16"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-espresso">
+                  {item.name} × {item.quantity}
+                </span>
+                <span className="text-espresso">
+                  {formatPrice((item.price * item.quantity) / 100)}
+                </span>
+              </div>
+              {item.options && (
+                <p className="text-taupe text-xs mt-0.5">
+                  {describeMadeToOrderOptions({
+                    ...item.options,
+                    comment: undefined,
+                  })}
+                </p>
+              )}
             </div>
-            {item.options && (
-              <p className="text-taupe text-xs mt-0.5">
-                {describeMadeToOrderOptions({
-                  ...item.options,
-                  comment: undefined,
-                })}
-              </p>
-            )}
           </div>
         ))}
       </div>
