@@ -1,5 +1,10 @@
 import slugifyLib from "@sindresorhus/slugify";
 import { z } from "zod";
+import {
+  leadParagraph,
+  SHORT_DESCRIPTION_MAX,
+  toParagraphs,
+} from "../catalog/description-lead";
 import type { Product } from "../ozon-types";
 import { mapOfferIdToCategory } from "./category-mapper";
 
@@ -175,25 +180,18 @@ export function extractAttributes(
   return result;
 }
 
-const SHORT_DESCRIPTION_MAX = 200;
-
 /**
  * Чистый текст для карточки (без HTML-тегов), не длиннее 200 символов.
- * Абзацы склеиваем через точку, чтобы заголовок-зачин не слипался со вторым
- * абзацем, а обрезаем по границе предложения.
+ * Если первый абзац годится в лид — это он целиком (карточка уберёт его из
+ * блока «Описание»). Иначе абзацы склеиваем через точку, чтобы заголовок-зачин
+ * не слипался со вторым абзацем, а обрезаем по границе предложения.
  */
 export function toShortDescription(description: string, name: string): string {
-  const text = description
-    .replace(/(?:<br\s*\/?>\s*){2,}/gi, "</p>")
-    .replace(/<\/(?:p|div|h\d|li)>/gi, "</p>")
-    .split("</p>")
-    .map((part) =>
-      part
-        .replace(/<[^>]+>/g, "")
-        .replace(/\s+/g, " ")
-        .trim(),
-    )
-    .filter(Boolean)
+  const paragraphs = toParagraphs(description);
+  const lead = leadParagraph(paragraphs);
+  if (lead) return lead;
+
+  const text = paragraphs
     .map((part) => (/[.!?…:]$/.test(part) ? part : `${part}.`))
     .join(" ");
 
