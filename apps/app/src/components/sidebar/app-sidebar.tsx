@@ -31,24 +31,35 @@ import { usePathname } from "next/navigation";
 import type * as React from "react";
 import { NavUser } from "~/components/sidebar";
 
-const catalog = [
+type NavItem = { title: string; url: string; icon: typeof IconPackage };
+
+const matchesPath = (pathname: string, url: string) =>
+  pathname === url || pathname.startsWith(`${url}/`);
+
+/** Active item = the longest matching url in its group, so "/products" stays inactive on "/products/new". */
+const activeUrl = (pathname: string, items: NavItem[]) =>
+  items
+    .filter((item) => matchesPath(pathname, item.url))
+    .sort((a, b) => b.url.length - a.url.length)[0]?.url;
+
+const catalog: NavItem[] = [
   { title: "Товары", url: "/products", icon: IconPackage },
   { title: "Добавить товар", url: "/products/new", icon: IconPlus },
   { title: "Отзывы", url: "/reviews", icon: IconMessageStar },
 ];
 
-const sales = [
+const sales: NavItem[] = [
   { title: "Заказы", url: "/orders", icon: IconShoppingBag },
   { title: "Заявки", url: "/requests", icon: IconInbox },
 ];
 
-const learning = [
+const learning: NavItem[] = [
   { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
   { title: "Записи", url: "/workshop-orders", icon: IconTicket },
   { title: "Добавить мастер-класс", url: "/workshops/new", icon: IconPlus },
 ];
 
-const customers = [
+const customers: NavItem[] = [
   { title: "Пользователи", url: "/users", icon: IconUsers },
   { title: "Чат с Никой", url: "/chats", icon: IconMessageChatbot },
 ];
@@ -88,12 +99,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={
-                    item.url === "/products"
-                      ? pathname === "/products" ||
-                        /^\/products\/(?!new)/.test(pathname)
-                      : pathname === item.url
-                  }
+                  isActive={item.url === activeUrl(pathname, catalog)}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -110,7 +116,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={pathname.startsWith(item.url)}
+                  isActive={item.url === activeUrl(pathname, sales)}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -127,12 +133,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={
-                    item.url === "/workshops"
-                      ? pathname === "/workshops" ||
-                        /^\/workshops\/(?!new)/.test(pathname)
-                      : pathname === item.url
-                  }
+                  isActive={item.url === activeUrl(pathname, learning)}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -149,9 +150,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={
-                    pathname === item.url || pathname.startsWith(`${item.url}/`)
-                  }
+                  isActive={item.url === activeUrl(pathname, customers)}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -183,6 +182,7 @@ export function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Настройки"
+                isActive={matchesPath(pathname, paths.settings.root)}
                 render={<Link href={paths.settings.root} />}
               >
                 <IconSettings />
