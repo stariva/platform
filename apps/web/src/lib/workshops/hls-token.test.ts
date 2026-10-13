@@ -23,7 +23,10 @@ test("expired grants are refused", () => {
 
 test("tampered or foreign grants are refused", () => {
   const token = signHlsGrant(grant, SECRET);
-  assert.equal(verifyHlsGrant(token, "another-secret-another-secret", NOW), null);
+  assert.equal(
+    verifyHlsGrant(token, "another-secret-another-secret", NOW),
+    null,
+  );
 
   const [, sig] = token.split(".");
   const forged = Buffer.from(

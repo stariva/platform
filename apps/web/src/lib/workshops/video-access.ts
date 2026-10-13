@@ -62,7 +62,9 @@ export async function logVideoAccess(access: VideoAccess): Promise<void> {
     });
     if (Math.random() < CLEANUP_CHANCE) {
       const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60_000);
-      await db.delete(videoAccessLog).where(lt(videoAccessLog.createdAt, yearAgo));
+      await db
+        .delete(videoAccessLog)
+        .where(lt(videoAccessLog.createdAt, yearAgo));
     }
   } catch (error) {
     console.error("[video-access] Не удалось записать в журнал:", error);

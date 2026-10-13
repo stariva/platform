@@ -51,10 +51,15 @@ export async function GET(
   try {
     if (file === "index.m3u8") {
       return new Response(await getObjectText(key), {
-        headers: { "Content-Type": "application/vnd.apple.mpegurl", ...NO_STORE },
+        headers: {
+          "Content-Type": "application/vnd.apple.mpegurl",
+          ...NO_STORE,
+        },
       });
     }
-    const url = await getDownloadUrl(key, { expiresIn: SEGMENT_URL_TTL_SECONDS });
+    const url = await getDownloadUrl(key, {
+      expiresIn: SEGMENT_URL_TTL_SECONDS,
+    });
     return NextResponse.redirect(url, { status: 302, headers: NO_STORE });
   } catch (error) {
     console.error("[video/hls] Не удалось отдать файл:", key, error);
