@@ -17,7 +17,7 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12 py-16 lg:py-24">
         <div className="max-w-2xl mb-12">
           <p className="label-caps text-terracotta text-[11px] mb-4">
-            Две модели
+            {items.length === 1 ? "Одна модель" : "Две модели"}
           </p>
           <h2
             id="models-title"
@@ -32,14 +32,20 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
           </p>
         </div>
 
+        {items.length === 0 ? (
+          <p className="text-dark-grey">
+            Каталог временно недоступен. Напишите Ольге — она подскажет цену и
+            сроки.
+          </p>
+        ) : null}
+
         <div className="grid md:grid-cols-2 gap-6 lg:gap-10">
           {items.map(({ model, product }) => {
-            const price = product?.price ?? model.fallbackPrice;
-            const oldPrice = product?.oldPrice ?? model.fallbackOldPrice;
-            const image = product?.images[0] ?? model.fallbackImage;
+            const { price, oldPrice } = product;
+            const image = product.images[0];
+            const href = `/catalog/${product.category}/${product.slug}`;
             // Товар, который можно положить в корзину; иначе — заказ у мастера.
-            const purchasable =
-              product && isPurchasable(product) ? product : undefined;
+            const purchasable = isPurchasable(product) ? product : undefined;
             const discount =
               oldPrice && oldPrice > price
                 ? Math.round((1 - price / oldPrice) * 100)
@@ -51,13 +57,15 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
                 className="flex flex-col rounded-[28px] bg-parchment overflow-hidden"
               >
                 <div className="relative aspect-[4/5] bg-linen">
-                  <Image
-                    src={image}
-                    alt={`${model.name}, ${model.size}`}
-                    fill
-                    sizes="(min-width: 768px) 45vw, 100vw"
-                    className="object-cover"
-                  />
+                  {image ? (
+                    <Image
+                      src={image}
+                      alt={`${model.name}, ${model.size}`}
+                      fill
+                      sizes="(min-width: 768px) 45vw, 100vw"
+                      className="object-cover"
+                    />
+                  ) : null}
                   <div className="absolute top-4 left-4 flex gap-2">
                     <span className="rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs text-espresso">
                       {purchasable ? "В наличии" : "Под заказ 2–3 дня"}
@@ -113,7 +121,7 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
                         <AddToCartButton product={purchasable} />
                       ) : null}
                       <TrackedLink
-                        href={model.href}
+                        href={href}
                         goal="elka_model_click"
                         goalParams={{ slug: model.slug }}
                         className={

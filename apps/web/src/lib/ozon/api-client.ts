@@ -1,13 +1,8 @@
 import { logger } from "@stariva/config";
 import { z } from "zod";
 import { env } from "@/env";
-import type { Product } from "../ozon-types";
 import type { ExtractedAttributes, OzonProductInfoV3 } from "./transformers";
-import {
-  extractAttributes,
-  ozonProductInfoV3Schema,
-  transformOzonProduct,
-} from "./transformers";
+import { extractAttributes, ozonProductInfoV3Schema } from "./transformers";
 
 const OZON_API_URL = "https://api-seller.ozon.ru";
 
@@ -210,15 +205,4 @@ export async function fetchOzonCatalog(): Promise<OzonCatalogItem[] | null> {
     logger.error("ozon.fetch.error", error);
     return null;
   }
-}
-
-/**
- * Преобразует каталог Ozon в товары витрины; возвращает null при недоступности
- * каталога или отсутствии учётных данных и пустой массив, если товаров нет.
- */
-export async function fetchFromOzon(): Promise<Product[] | null> {
-  const catalog = await fetchOzonCatalog();
-  return (
-    catalog?.map(({ info, attrs }) => transformOzonProduct(info, attrs)) ?? null
-  );
 }

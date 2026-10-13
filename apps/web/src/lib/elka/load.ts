@@ -4,10 +4,10 @@ import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { type ModelWithProduct, TREE_MODELS, WORKSHOP_SLUG } from "./data";
 
 /**
- * Карточки ёлок с Ozon и мастер-класс из базы — для обеих страниц ёлки.
- * Сбой любого источника не роняет страницу: ёлки берут цену и фото из
- * модели, мастер-класс — запасную цену. `page` попадает в ключ лога, чтобы
- * было видно, какая страница осталась без данных.
+ * Товары-ёлки и мастер-класс из базы — для обеих страниц ёлки.
+ * Сбой любого источника не роняет страницу: ёлку без товара в базе просто
+ * не показываем, мастер-класс берёт запасную цену. `page` попадает в ключ
+ * лога, чтобы было видно, какая страница осталась без данных.
  */
 export async function loadElkaData(page: "elka_workshop" | "elka_trees") {
   const [products, workshop] = await Promise.all([
@@ -28,9 +28,9 @@ export async function loadElkaData(page: "elka_workshop" | "elka_trees") {
     }),
   ]);
 
-  const items: ModelWithProduct[] = TREE_MODELS.map((model, index) => ({
-    model,
-    product: products[index],
-  }));
+  const items: ModelWithProduct[] = TREE_MODELS.flatMap((model, index) => {
+    const product = products[index];
+    return product ? [{ model, product }] : [];
+  });
   return { items, workshop };
 }

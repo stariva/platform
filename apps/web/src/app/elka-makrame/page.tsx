@@ -60,7 +60,7 @@ export const metadata: Metadata = {
 
 export default async function ElkaMakramePage() {
   const { items, workshop } = await loadElkaData("elka_workshop");
-  const reviewProductId = items.find((item) => item.product)?.product?.id;
+  const reviewProductId = items[0]?.product.id;
 
   return (
     <>

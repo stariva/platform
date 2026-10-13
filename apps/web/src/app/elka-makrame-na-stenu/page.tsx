@@ -20,7 +20,7 @@ import { ElkaHero } from "./_components/elka-hero";
 import { ElkaModels } from "./_components/elka-models";
 import { FAQ, TREES_MODELS_ID } from "./_data";
 
-// Цены и наличие ёлок живые (Ozon), цена мастер-класса — из базы.
+// Цены и наличие ёлок и цена мастер-класса — из базы.
 export const dynamic = "force-dynamic";
 
 const TITLE = "Ёлка макраме на стену — купить новогоднюю ёлку-панно | Stariva";
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
 
 export default async function ElkaTreesPage() {
   const { items, workshop } = await loadElkaData("elka_trees");
-  const reviewProductId = items.find((item) => item.product)?.product?.id;
+  const reviewProductId = items[0]?.product.id;
 
   return (
     <>
@@ -75,8 +75,8 @@ export default async function ElkaTreesPage() {
         url={TREES_PATH}
         items={items.map(({ model, product }) => ({
           name: model.name,
-          url: model.href,
-          image: product?.images[0] ?? `${BASE_URL}${model.fallbackImage}`,
+          url: `/catalog/${product.category}/${product.slug}`,
+          image: product.images[0],
         }))}
       />
       <FAQJsonLd items={FAQ} />

@@ -33,35 +33,31 @@ export const BONUS_RELEASE_LABEL = "3 ноября";
 export const ORDER_DEADLINE_DAY = 20;
 export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
 
+/**
+ * Текст лендинга про модель ёлки. Цена, фото, ссылка и наличие — только
+ * у товара из базы (по slug), здесь их нет.
+ */
 export interface TreeModel {
   slug: string;
-  href: string;
   name: string;
   color: string;
   size: string;
-  fallbackPrice: number;
-  fallbackOldPrice?: number;
-  fallbackImage: string;
   bestFor: string;
   highlights: string[];
 }
 
-/** Модель и её карточка на Ozon — карточки может не быть, тогда цена и фото из модели. */
+/** Модель и её товар из базы; модели без опубликованного товара не показываем. */
 export interface ModelWithProduct {
   model: TreeModel;
-  product?: Product;
+  product: Product;
 }
 
 export const TREE_MODELS: TreeModel[] = [
   {
     slug: "elka-panno-makrame-0687",
-    href: "/catalog/interior/elka-panno-makrame-0687",
     name: "Ёлка в технике макраме, бежевая",
     color: "Бежевый, натуральный, молочный",
     size: "70–75 × 150 см",
-    fallbackPrice: 4200,
-    fallbackOldPrice: 11500,
-    fallbackImage: "/images/elka/elka-cream-interior.jpg",
     bestFor: "Гостиная, лобби отеля, зал ресторана",
     highlights: [
       "Заметна с порога — работает как фотозона",
@@ -71,13 +67,9 @@ export const TREE_MODELS: TreeModel[] = [
   },
   {
     slug: "elka-panno-makrame-8124",
-    href: "/catalog/interior/elka-panno-makrame-8124",
     name: "Ёлка в технике макраме, хаки",
     color: "Хаки",
     size: "45 × 100 см",
-    fallbackPrice: 3400,
-    fallbackOldPrice: 10000,
-    fallbackImage: "/images/elka/elka-green-festive.jpg",
     bestFor: "Детская, прихожая, салон, ресепшен",
     highlights: [
       "Компактная — для небольших стен",
