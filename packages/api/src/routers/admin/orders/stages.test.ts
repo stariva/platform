@@ -19,6 +19,9 @@ function request(amountProducts: number, amountDelivery: number) {
       select: () => ({
         from: () => ({
           where: async () => [{ amountProducts, depositAmount: 100 }],
+          // emailCustomer читает заказ вместе с почтой аккаунта. Пустой
+          // результат — письма нет, и тест не уходит в реальную рассылку.
+          leftJoin: () => ({ where: async () => [] }),
         }),
       }),
       update,

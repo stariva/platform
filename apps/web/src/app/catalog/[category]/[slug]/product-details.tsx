@@ -122,7 +122,6 @@ function productSpecs(product: Product, categorySlug: string): Spec[] {
   if (product.careInstructions) {
     specs.push({ label: "Уход", value: product.careInstructions });
   }
-  specs.push({ label: "Изготовление", value: "Вручную, автор — Ольга" });
   return specs;
 }
 
