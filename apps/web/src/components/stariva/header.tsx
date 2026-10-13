@@ -43,6 +43,11 @@ const b2bLinks: NavLink[] = [
     href: "/designers",
     desc: "Скидка с первого изделия, бриф проекта",
   },
+  {
+    label: "Фотографам и стилистам",
+    href: "/partners",
+    desc: "Платья для съёмок, партнёрская программа",
+  },
 ];
 
 const aboutLinks: NavLink[] = [
