@@ -95,7 +95,9 @@ export async function GET(request: NextRequest) {
   if (await isVideoSignRateLimited(access)) {
     console.warn("[video/sign] Превышен предел ссылок:", access);
     return NextResponse.json(
-      { error: "Слишком много запросов видео. Попробуйте через несколько минут" },
+      {
+        error: "Слишком много запросов видео. Попробуйте через несколько минут",
+      },
       { status: 429 },
     );
   }
@@ -109,14 +111,15 @@ export async function GET(request: NextRequest) {
   try {
     // Есть HLS-версия — отдаём её кусками через сайт, исходный MP4 не светим
     const rendition = await getReadyRendition(lesson.videoKey);
-    if (rendition && env.AUTH_SECRET) {
+    const fingerprint = session
+      ? sessionFingerprint(getSessionCookie(request))
+      : null;
+    if (rendition && env.AUTH_SECRET && (!session || fingerprint)) {
       const token = signHlsGrant(
         {
           prefix: rendition.hlsPrefix,
           expiresAt: Math.floor(Date.now() / 1000) + HLS_GRANT_TTL_SECONDS,
-          session: session
-            ? sessionFingerprint(getSessionCookie(request))
-            : null,
+          session: fingerprint,
         },
         env.AUTH_SECRET,
       );

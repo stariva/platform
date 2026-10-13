@@ -4,7 +4,12 @@ import { probe, segment, uploadDir, withTempDir } from "../lib/hls";
 import { postToStorefront } from "../lib/storefront";
 
 interface ClaimResponse {
-  job: { videoKey: string; hlsPrefix: string; sourceUrl: string } | null;
+  job: {
+    videoKey: string;
+    hlsPrefix: string;
+    attemptId: number;
+    sourceUrl: string;
+  } | null;
 }
 
 interface UploadUrlsResponse {
@@ -60,7 +65,14 @@ lessonVideoHlsWorkflow.task({
           const count = await uploadDir(dir, async (batch) => {
             const { uploads } = await postToStorefront<UploadUrlsResponse>(
               "/api/workshops/videos/upload-urls",
-              { timeoutMs: 60_000, body: { videoKey: job.videoKey, files: batch } },
+              {
+                timeoutMs: 60_000,
+                body: {
+                  videoKey: job.videoKey,
+                  attemptId: job.attemptId,
+                  files: batch,
+                },
+              },
             );
             return uploads;
           });
@@ -68,6 +80,7 @@ lessonVideoHlsWorkflow.task({
             timeoutMs: 30_000,
             body: {
               videoKey: job.videoKey,
+              attemptId: job.attemptId,
               durationSeconds: source.durationSeconds,
             },
           });
@@ -81,10 +94,17 @@ lessonVideoHlsWorkflow.task({
         failed.push(job.videoKey);
         await postToStorefront("/api/workshops/videos/fail", {
           timeoutMs: 30_000,
-          body: { videoKey: job.videoKey, error: message },
+          body: {
+            videoKey: job.videoKey,
+            attemptId: job.attemptId,
+            error: message,
+          },
         }).catch((reportError: unknown) => {
           // Не смогли сообщить — видео вернётся в очередь, когда истечёт аренда
-          console.error("[lesson-video-hls] не удалось сообщить об ошибке:", reportError);
+          console.error(
+            "[lesson-video-hls] не удалось сообщить об ошибке:",
+            reportError,
+          );
         });
       }
     }

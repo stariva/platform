@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   videoKey: z.string().startsWith("workshops/").max(300),
+  attemptId: z.number().int().positive(),
   error: z.string().max(10_000),
 });
 
@@ -15,6 +16,10 @@ export async function POST(request: Request) {
   const parsed = await readJobsRequest(request, bodySchema);
   if ("response" in parsed) return parsed.response;
 
-  await failRendition(parsed.data.videoKey, parsed.data.error);
+  await failRendition(
+    parsed.data.videoKey,
+    parsed.data.attemptId,
+    parsed.data.error,
+  );
   return NextResponse.json({ ok: true });
 }

@@ -21,7 +21,10 @@ export interface ProbeResult {
 /** Запускает ffmpeg/ffprobe; при ошибке — хвост stderr в тексте исключения. */
 function run(command: string, args: string[], cwd?: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => {
@@ -99,7 +102,9 @@ export function codecArgs(source: ProbeResult): string[] {
           "-force_key_frames",
           `expr:gte(t,n_forced*${SEGMENT_SECONDS})`,
         ]),
-    ...(copyAudio ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "160k", "-ac", "2"]),
+    ...(copyAudio
+      ? ["-c:a", "copy"]
+      : ["-c:a", "aac", "-b:a", "160k", "-ac", "2"]),
   ];
 }
 
@@ -144,7 +149,11 @@ export async function segment(
 
 type UploadTargets = Record<string, { url: string; contentType: string }>;
 
-async function putFile(file: string, path: string, target: UploadTargets[string]) {
+async function putFile(
+  file: string,
+  path: string,
+  target: UploadTargets[string],
+) {
   const body = await readFile(path);
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(target.url, {
@@ -175,7 +184,8 @@ export async function uploadDir(
     ...files.filter((f) => f !== "index.m3u8"),
     ...files.filter((f) => f === "index.m3u8"),
   ];
-  if (!files.includes("index.m3u8")) throw new Error("ffmpeg did not write index.m3u8");
+  if (!files.includes("index.m3u8"))
+    throw new Error("ffmpeg did not write index.m3u8");
 
   for (let start = 0; start < playlistLast.length; start += 500) {
     const batch = playlistLast.slice(start, start + 500);
@@ -203,7 +213,9 @@ export async function uploadDir(
 }
 
 /** Временная папка под нарезку; удаляется в любом случае. */
-export async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+export async function withTempDir<T>(
+  fn: (dir: string) => Promise<T>,
+): Promise<T> {
   const dir = await mkdtemp(join(tmpdir(), "stariva-hls-"));
   try {
     return await fn(dir);

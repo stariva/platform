@@ -18,7 +18,10 @@ export async function POST(request: Request) {
   const parsed = await readJobsRequest(request, z.object({}));
   if ("response" in parsed) return parsed.response;
   if (!isStorageConfigured()) {
-    return NextResponse.json({ error: "storage_not_configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "storage_not_configured" },
+      { status: 503 },
+    );
   }
 
   const job = await claimNextVideo();

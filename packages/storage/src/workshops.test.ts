@@ -41,7 +41,12 @@ test("only playlist, init segment and numbered chunks are HLS files", () => {
   for (const ok of ["index.m3u8", "init.mp4", "seg-00042.m4s"]) {
     assert.match(ok, HLS_FILE_PATTERN);
   }
-  for (const bad of ["../index.m3u8", "seg-1.m4s", "other.mp4", "index.m3u8x"]) {
+  for (const bad of [
+    "../index.m3u8",
+    "seg-1.m4s",
+    "other.mp4",
+    "index.m3u8x",
+  ]) {
     assert.doesNotMatch(bad, HLS_FILE_PATTERN);
   }
   assert.equal(hlsContentType("seg-00001.m4s"), "video/iso.segment");

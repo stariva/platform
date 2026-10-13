@@ -20,7 +20,9 @@ const bucket = process.env.AWS_S3_BUCKET;
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 if (!bucket || !accessKeyId || !secretAccessKey) {
-  throw new Error("Нужны AWS_S3_BUCKET, AWS_ACCESS_KEY_ID и AWS_SECRET_ACCESS_KEY");
+  throw new Error(
+    "Нужны AWS_S3_BUCKET, AWS_ACCESS_KEY_ID и AWS_SECRET_ACCESS_KEY",
+  );
 }
 
 const origins = process.argv.slice(2);

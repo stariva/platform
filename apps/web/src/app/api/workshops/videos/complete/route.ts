@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   videoKey: z.string().startsWith("workshops/").max(300),
+  attemptId: z.number().int().positive(),
   durationSeconds: z.number().nonnegative(),
 });
 
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
 
   const result = await completeRendition(
     parsed.data.videoKey,
+    parsed.data.attemptId,
     parsed.data.durationSeconds,
   );
   return NextResponse.json(

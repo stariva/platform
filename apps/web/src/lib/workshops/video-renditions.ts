@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { logger } from "@stariva/config";
 import { and, db, eq, inArray, isNull, lt, ne, or, sql } from "@stariva/db";
 import {
@@ -55,6 +56,7 @@ async function allLessonVideoKeys(): Promise<string[]> {
 export async function claimNextVideo(): Promise<{
   videoKey: string;
   hlsPrefix: string;
+  attemptId: number;
 } | null> {
   const keys = await allLessonVideoKeys();
   if (keys.length === 0) return null;
@@ -77,7 +79,7 @@ export async function claimNextVideo(): Promise<{
       continue;
     }
 
-    const hlsPrefix = workshopHlsPrefix(videoKey);
+    const hlsPrefix = `${workshopHlsPrefix(videoKey)}/${randomUUID()}`;
     const leaseUntil = new Date(now.getTime() + PROCESSING_LEASE_MS);
     // Условный upsert: если видео успел забрать другой воркер, строки не будет
     const [claimed] = await db
@@ -93,6 +95,7 @@ export async function claimNextVideo(): Promise<{
         target: videoRenditions.videoKey,
         set: {
           status: "processing",
+          hlsPrefix,
           attempts: sql`${videoRenditions.attempts} + 1`,
           leaseUntil,
           error: null,
@@ -107,8 +110,13 @@ export async function claimNextVideo(): Promise<{
           ),
         ),
       })
-      .returning({ videoKey: videoRenditions.videoKey });
-    if (claimed) return { videoKey, hlsPrefix };
+      // Счётчик увеличивается атомарно и служит идентификатором попытки.
+      .returning({
+        videoKey: videoRenditions.videoKey,
+        hlsPrefix: videoRenditions.hlsPrefix,
+        attemptId: videoRenditions.attempts,
+      });
+    if (claimed) return claimed;
   }
   return null;
 }
@@ -119,9 +127,21 @@ export async function claimNextVideo(): Promise<{
  */
 export async function completeRendition(
   videoKey: string,
+  attemptId: number,
   durationSeconds: number,
 ): Promise<"ready" | "not_found" | "missing_playlist"> {
-  const hlsPrefix = workshopHlsPrefix(videoKey);
+  const currentAttempt = and(
+    eq(videoRenditions.videoKey, videoKey),
+    eq(videoRenditions.attempts, attemptId),
+    eq(videoRenditions.status, "processing"),
+  );
+  const [rendition] = await db
+    .select({ hlsPrefix: videoRenditions.hlsPrefix })
+    .from(videoRenditions)
+    .where(currentAttempt)
+    .limit(1);
+  if (!rendition) return "not_found";
+  const { hlsPrefix } = rendition;
   if (!(await objectExists(`${hlsPrefix}/index.m3u8`))) {
     return "missing_playlist";
   }
@@ -135,7 +155,7 @@ export async function completeRendition(
       error: null,
       updatedAt: new Date(),
     })
-    .where(eq(videoRenditions.videoKey, videoKey))
+    .where(currentAttempt)
     .returning({ videoKey: videoRenditions.videoKey });
   return row ? "ready" : "not_found";
 }
@@ -143,6 +163,7 @@ export async function completeRendition(
 /** Нарезка упала: повторим позже, пока не кончатся попытки. */
 export async function failRendition(
   videoKey: string,
+  attemptId: number,
   error: string,
 ): Promise<void> {
   const now = new Date();
@@ -157,7 +178,8 @@ export async function failRendition(
     .where(
       and(
         eq(videoRenditions.videoKey, videoKey),
-        ne(videoRenditions.status, "ready"),
+        eq(videoRenditions.attempts, attemptId),
+        eq(videoRenditions.status, "processing"),
       ),
     );
 }

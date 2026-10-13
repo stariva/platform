@@ -34,7 +34,10 @@ function sign(payload: string, secret: string): Buffer {
 /** Отпечаток значения cookie сессии: в пропуск попадает не сам токен. */
 export function sessionFingerprint(cookieValue: string | null | undefined) {
   if (!cookieValue) return null;
-  return createHash("sha256").update(cookieValue).digest("base64url").slice(0, 22);
+  return createHash("sha256")
+    .update(cookieValue)
+    .digest("base64url")
+    .slice(0, 22);
 }
 
 export function signHlsGrant(grant: HlsGrant, secret: string): string {
