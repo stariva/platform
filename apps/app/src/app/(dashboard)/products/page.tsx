@@ -1,13 +1,29 @@
 import { buttonVariants } from "@stariva/ui";
 import Link from "next/link";
+import { z } from "zod";
 import { SiteHeader } from "~/components/layout";
 import { ProductsTable } from "~/components/products/products-table";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProductsPage() {
-  const products = await api.admin.products.list();
+const priceDirSchema = z.enum(["asc", "desc"]);
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string | string[]; dir?: string | string[] }>;
+}) {
+  const { sort, dir } = await searchParams;
+  const parsedDir = priceDirSchema.safeParse(Array.isArray(dir) ? dir[0] : dir);
+  const priceSort =
+    (Array.isArray(sort) ? sort[0] : sort) === "price" && parsedDir.success
+      ? parsedDir.data
+      : null;
+
+  const products = await api.admin.products.list(
+    priceSort ? { sort: "price", dir: priceSort } : undefined,
+  );
 
   return (
     <>
@@ -28,7 +44,7 @@ export default async function ProductsPage() {
           </Link>
         </div>
 
-        <ProductsTable products={products} />
+        <ProductsTable products={products} priceSort={priceSort} />
       </div>
     </>
   );
