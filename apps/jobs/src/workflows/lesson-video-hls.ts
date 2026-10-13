@@ -38,7 +38,7 @@ export const lessonVideoHlsWorkflow = hatchet.workflow({
   concurrency: {
     expression: "'lesson-video-hls'",
     maxRuns: 1,
-    limitStrategy: ConcurrencyLimitStrategy.DROP_NEWEST,
+    limitStrategy: ConcurrencyLimitStrategy.CANCEL_NEWEST,
   },
 });
 
