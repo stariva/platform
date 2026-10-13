@@ -1,5 +1,6 @@
 import {
   isOrderEmailStatus,
+  type OrderEmailItem,
   orderEmailSubject,
   type StarivaOrderEmailProps,
 } from "./emails/stariva-order";
@@ -27,7 +28,7 @@ const dueLabel = (date: Date) =>
 
 export interface OrderEmailInput {
   order: OrderEmailOrder;
-  items: { name: string; quantity: number }[];
+  items: OrderEmailItem[];
   to: string | null;
   siteUrl: string;
 }

@@ -11,6 +11,7 @@ import WelcomeEmail from "./emails/welcome";
 export {
   isOrderEmailStatus,
   ORDER_EMAIL_STATUSES,
+  type OrderEmailItem,
   type OrderEmailStatus,
   type StarivaOrderEmailProps,
 } from "./emails/stariva-order";

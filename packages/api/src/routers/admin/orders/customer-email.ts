@@ -8,6 +8,8 @@ import {
 } from "@stariva/db";
 import { sendOrderStatusEmail } from "@stariva/emails";
 
+import { loadItemProducts } from "./item-products";
+
 /** Куда ведёт ссылка «Открыть заказ», если адрес витрины не задан. */
 const DEFAULT_STOREFRONT_URL = "https://stariva.ru";
 
@@ -29,14 +31,23 @@ export async function emailCustomer(
     if (!row) return false;
     const items = await db
       .select({
+        slug: productOrderItems.productSlug,
         name: productOrderItems.name,
         quantity: productOrderItems.quantity,
       })
       .from(productOrderItems)
       .where(eq(productOrderItems.orderId, orderId));
+    const catalog = await loadItemProducts(
+      db,
+      items.map((item) => item.slug),
+    );
     return await sendOrderStatusEmail({
       order: row.order,
-      items,
+      items: items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        image: catalog.get(item.slug)?.image ?? null,
+      })),
       to: row.order.contactEmail ?? row.accountEmail,
       siteUrl: env.STOREFRONT_URL ?? DEFAULT_STOREFRONT_URL,
     });
