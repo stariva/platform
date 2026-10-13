@@ -41,10 +41,7 @@ export async function emailCustomer(
       siteUrl: env.STOREFRONT_URL ?? DEFAULT_STOREFRONT_URL,
     });
   } catch (error) {
-    logger.error("orders.customer_email.failed", {
-      orderId,
-      error: String(error),
-    });
+    logger.error("orders.customer_email.failed", error, { orderId });
     return false;
   }
 }
