@@ -21,7 +21,7 @@ const send = (
 ) =>
   buildOrderStatusEmail({
     order: { ...order, ...overrides },
-    items: [{ name: "Ёлка", quantity: 1 }],
+    items: [{ name: "Ёлка", quantity: 1, image: null }],
     to,
     siteUrl: "https://stariva.ru/",
   });

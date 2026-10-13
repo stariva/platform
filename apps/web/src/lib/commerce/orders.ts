@@ -241,6 +241,24 @@ export async function getProductOrderCustomerEmail(order: {
   return rows[0]?.email ?? null;
 }
 
+/**
+ * Обложки товаров по slug — для писем покупателю. Позиция хранит снапшот
+ * названия и цены, а товар мог исчезнуть из каталога: тогда его нет в словаре.
+ */
+export async function getProductCoverImages(
+  slugs: string[],
+): Promise<Map<string, string>> {
+  const unique = [...new Set(slugs)];
+  if (unique.length === 0) return new Map();
+  const rows = await db
+    .select({ slug: products.slug, images: products.images })
+    .from(products)
+    .where(inArray(products.slug, unique));
+  return new Map(
+    rows.flatMap((row) => (row.images[0] ? [[row.slug, row.images[0]]] : [])),
+  );
+}
+
 export async function getProductOrderItems(orderId: string) {
   return db
     .select()
