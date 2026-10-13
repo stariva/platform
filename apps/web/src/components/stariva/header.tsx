@@ -38,6 +38,11 @@ const b2bLinks: NavLink[] = [
     href: "/resort",
     desc: "Глэмпинг, террасы, SPA, отели",
   },
+  {
+    label: "Дизайнерам интерьера",
+    href: "/designers",
+    desc: "Скидка с первого изделия, бриф проекта",
+  },
 ];
 
 const aboutLinks: NavLink[] = [
