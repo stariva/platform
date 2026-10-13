@@ -551,6 +551,27 @@ export default function B2BPage() {
               </svg>
             </Link>
             <Link
+              href="/designers"
+              className="inline-flex items-center gap-2 label-caps-md text-espresso border border-espresso/15 px-6 py-3 rounded-full hover:border-espresso transition-colors"
+            >
+              Дизайнерам интерьера
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2 6h8M7 3l3 3-3 3"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+            <Link
               href="/blog/makrame-dlya-kafe-i-restoranov-kommercheskiy-dekor"
               className="inline-flex items-center gap-2 label-caps-md text-espresso border border-espresso/15 px-6 py-3 rounded-full hover:border-espresso transition-colors"
             >
