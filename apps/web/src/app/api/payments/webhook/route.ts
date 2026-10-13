@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  notifyCustomer,
   notifyMadeToOrderPayment,
   notifyOrderPaid,
   notifyOzonOrderFailed,
@@ -117,7 +118,11 @@ async function handleProductOrderWebhook(
     return;
   }
 
-  await markProductOrderPaid(orderId);
+  // Письмо покупателю — до Ozon: сбой отправления не должен задержать
+  // подтверждение оплаты, а повтор webhook письмо не продублирует
+  if (await markProductOrderPaid(orderId)) {
+    await notifyCustomer(orderId, "paid");
+  }
 
   const attemptId = await claimProductOrderShipment(orderId);
   if (!attemptId) return;
@@ -226,6 +231,7 @@ async function handleMadeToOrderPayment(
       console.info(
         `[payments/webhook] Заказ под заказ ${orderId}: оплачен этап ${row.type}`,
       );
+      await notifyCustomer(orderId);
     } else {
       console.error(
         `[payments/webhook] КРИТИЧНО: заказ под заказ ${orderId} не ждал оплату ${row.id} (${row.type})`,

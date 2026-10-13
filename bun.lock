@@ -163,6 +163,7 @@
         "@stariva/auth": "workspace:*",
         "@stariva/config": "workspace:*",
         "@stariva/db": "workspace:*",
+        "@stariva/emails": "workspace:*",
         "@stariva/storage": "workspace:*",
         "@stariva/validators": "workspace:*",
         "better-auth": "1.7.7",

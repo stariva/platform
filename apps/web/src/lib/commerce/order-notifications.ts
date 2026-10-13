@@ -1,9 +1,12 @@
+import type { productOrders } from "@stariva/db/schema";
+import { sendOrderStatusEmail } from "@stariva/emails";
 import { baseEnv, env } from "@/env";
 import {
   deliverNotification,
   type Notification,
 } from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
+import { siteUrl } from "@/lib/workshops/notifications";
 import { paymentOutcome } from "./made-to-order-flow";
 import {
   formatDetailsUpdatedMessage,
@@ -18,11 +21,14 @@ import {
   claimStaffNotification,
   getOrderPayment,
   getProductOrderById,
+  getProductOrderCustomerEmail,
   getProductOrderItems,
   listOrderPayments,
   releasePaymentNotification,
   releaseStaffNotification,
 } from "./orders";
+
+type OrderStatus = (typeof productOrders.$inferSelect)["status"];
 
 function send(
   id: string,
@@ -161,6 +167,35 @@ export async function notifyOzonOrderFailed(orderId: string): Promise<void> {
     );
   } catch (error) {
     console.error("[order-notifications] Не удалось отправить алерт:", error);
+  }
+}
+
+/**
+ * Письмо покупателю о текущем статусе заказа: заявка принята, оплата
+ * получена и т. п. Заказ уже сменил статус, поэтому сбой письма не ломает
+ * ни ответ покупателю, ни webhook — только попадает в лог.
+ *
+ * `status` — о каком статусе писать, если заказ мог уже уйти дальше:
+ * оплаченный заказ со склада тут же переходит в сборку Ozon.
+ */
+export async function notifyCustomer(
+  orderId: string,
+  status?: OrderStatus,
+): Promise<void> {
+  try {
+    const order = await getProductOrderById(orderId);
+    if (!order) return;
+    await sendOrderStatusEmail({
+      order: { ...order, status: status ?? order.status },
+      items: await getProductOrderItems(orderId),
+      to: await getProductOrderCustomerEmail(order),
+      siteUrl: siteUrl(),
+    });
+  } catch (error) {
+    console.error(
+      `[order-notifications] Не удалось написать покупателю о заказе ${orderId}:`,
+      error,
+    );
   }
 }
 
