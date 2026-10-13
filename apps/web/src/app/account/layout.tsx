@@ -20,7 +20,6 @@ export default async function AccountLayout({
   return (
     <div className="min-h-screen bg-parchment text-espresso">
       <Header variant="solid" />
-      {/* Имя, адреса и заказы в записях сессий PostHog — только звёздочками. */}
       <div
         data-analytics-private
         className="max-w-6xl mx-auto px-5 lg:px-10 pt-24 pb-24 lg:pb-32"

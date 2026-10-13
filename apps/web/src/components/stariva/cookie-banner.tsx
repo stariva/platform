@@ -73,7 +73,7 @@ export function CookieBanner() {
     >
       {/* На телефоне — короче: баннер не должен закрывать четверть экрана. */}
       <p className="text-[12px] sm:text-[13px] leading-snug sm:leading-relaxed text-espresso/80">
-        Мы используем cookie, Яндекс.Метрику, PostHog и пиксель VK Рекламы
+        Мы используем cookie, Яндекс.Метрику и пиксель VK Рекламы
         <span className="hidden sm:inline">
           , чтобы сайт работал и становился удобнее. Продолжая пользоваться
           сайтом, вы соглашаетесь с этим
