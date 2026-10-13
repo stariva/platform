@@ -12,6 +12,33 @@ import "./src/env";
  */
 const isDev = process.env.NODE_ENV === "development";
 
+// Метрика ходит на региональный домен по геолокации посетителя
+// (mc.yandex.md из Молдовы, mc.yandex.kz из Казахстана и т.д.).
+const metrikaHosts = [
+  "mc.yandex.ru",
+  "mc.yandex.az",
+  "mc.yandex.by",
+  "mc.yandex.co.il",
+  "mc.yandex.com",
+  "mc.yandex.com.am",
+  "mc.yandex.com.ge",
+  "mc.yandex.com.tr",
+  "mc.yandex.ee",
+  "mc.yandex.fr",
+  "mc.yandex.kg",
+  "mc.yandex.kz",
+  "mc.yandex.lt",
+  "mc.yandex.lv",
+  "mc.yandex.md",
+  "mc.yandex.tj",
+  "mc.yandex.tm",
+  "mc.yandex.uz",
+  "mc.webvisor.com",
+  "mc.webvisor.org",
+];
+const metrikaFrames = metrikaHosts.map((host) => `https://${host}`).join(" ");
+const metrikaSockets = metrikaHosts.map((host) => `wss://${host}`).join(" ");
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com https://mc.yandex.ru https://top-fwz1.mail.ru https://privacy-cs.mail.ru https://cloud.umami.is https://api-maps.yandex.ru https://yastatic.net https://core-renderer-tiles.maps.yandex.net`,
@@ -21,8 +48,8 @@ const contentSecurityPolicy = [
   "media-src 'self' blob: https://storage.yandexcloud.net",
   // hls.js разбирает видео в воркере из blob:
   "worker-src 'self' blob:",
-  "connect-src 'self' https: wss://mc.yandex.ru",
-  "frame-src https://mc.yandex.ru",
+  `connect-src 'self' https: ${metrikaSockets}`,
+  `frame-src ${metrikaFrames}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
