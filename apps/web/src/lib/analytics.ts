@@ -1,3 +1,4 @@
+import type { CaptureResult, PostHog, Properties } from "posthog-js";
 import { hasAnalyticsConsent } from "@/lib/cookie-consent";
 
 /** Product data only: never pass buyer contact details to analytics. */
@@ -6,6 +7,8 @@ export const COUNTER_ID = 96190087;
 export const VK_PIXEL_ID = "3800855";
 /** Umami Cloud — запасная аналитика на случай блокировки Метрики. */
 export const UMAMI_WEBSITE_ID = "49773ca8-3f5e-426e-8276-fe833b9b13ba";
+/** PostHog EU Cloud — воронки, записи сессий и ошибки. Без ключа канал выключен. */
+const POSTHOG_TOKEN = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 
 export interface AnalyticsProduct {
   id: string;
@@ -41,11 +44,35 @@ export function analyticsUrl(value: string): string {
       const entry = url.searchParams.get(key);
       if (entry) query.set(key, entry);
     }
-    const path = url.pathname.replace(/^\/order\/[^/]+/, "/order/status");
+    const path = analyticsPath(url.pathname);
     return `${url.origin}${path}${query.size ? `?${query}` : ""}`;
   } catch {
     return "";
   }
+}
+
+/** По этим ссылкам открывают заказ или видео без входа — id в них работает как пароль. */
+const SECRET_PATHS: Array<[RegExp, string]> = [
+  [/^\/order\/[^/]+/, "/order/status"],
+  [/^\/api\/orders\/[^/]+/, "/api/orders/:id"],
+  [/^\/api\/video\/hls\/[^/]+/, "/api/video/hls/:token"],
+  [/^\/api\/workshops\/access\/[^/]+/, "/api/workshops/access/:token"],
+];
+
+export function analyticsPath(pathname: string): string {
+  for (const [pattern, replacement] of SECRET_PATHS) {
+    if (pattern.test(pathname)) return pathname.replace(pattern, replacement);
+  }
+  return pathname;
+}
+
+const EMAIL = /[^\s@"'<>]+@[^\s@"'<>]+\.[^\s@"'<>]+/g;
+/** Десять и больше цифр подряд (можно с пробелами, скобками и дефисами): телефон или номер карты. */
+const LONG_NUMBER = /\+?\d(?:[\s()-]*\d){9,}/g;
+
+/** Email и телефоны из текста страницы не должны попасть в записи сессий и тексты кликов. */
+export function maskContacts(text: string): string {
+  return text.replace(EMAIL, "***").replace(LONG_NUMBER, "***");
 }
 
 type QueuedMetrika = NonNullable<Window["ym"]> & {
@@ -151,7 +178,123 @@ function umami(send: (umami: NonNullable<Window["umami"]>) => void) {
   }
 }
 
+const URL_PROPERTY = /(url|referrer)$/i;
+const PATH_PROPERTY = /pathname$/i;
+const ELEMENT_PROPERTY = new Set(["$elements_chain", "$el_text"]);
+
+/** $current_url, $initial_referrer, $prev_pageview_pathname и т. п. — по тем же правилам, что хиты Метрики. */
+function scrubProperties(properties: Properties | undefined) {
+  if (!properties) return;
+  for (const [key, value] of Object.entries(properties)) {
+    if (typeof value !== "string" || !value) continue;
+    if (PATH_PROPERTY.test(key)) properties[key] = analyticsPath(value);
+    else if (URL_PROPERTY.test(key) && /^https?:\/\//.test(value))
+      properties[key] = analyticsUrl(value);
+    else if (ELEMENT_PROPERTY.has(key))
+      properties[key] = maskContacts(value).replace(
+        /\/order\/[^/"?#\s]+/g,
+        "/order/status",
+      );
+  }
+}
+
+function scrubEvent(event: CaptureResult | null): CaptureResult | null {
+  if (!event) return event;
+  scrubProperties(event.properties);
+  scrubProperties(event.$set);
+  scrubProperties(event.$set_once);
+  return event;
+}
+
+/** Блок с data-analytics-private в записи сессии виден только как звёздочки. */
+function maskReplayText(text: string, element?: HTMLElement | null) {
+  if (element?.closest?.("[data-analytics-private]"))
+    return text.replace(/\S/g, "*");
+  return maskContacts(text);
+}
+
+let postHogClient: Promise<PostHog | undefined> | undefined;
+let loadedPostHog: PostHog | undefined;
+
+/**
+ * PostHog: тот же consent и те же хосты, что у Метрики. SDK — отдельный чанк,
+ * он грузится только когда аналитика разрешена. Запросы идут через /ingest
+ * на нашем домене (rewrites в next.config.ts), чтобы их не резали блокировщики.
+ * Просмотры страниц PostHog считает сам по смене history.
+ */
+function postHog(send?: (posthog: PostHog) => void) {
+  const token = POSTHOG_TOKEN;
+  if (!token || !analyticsAllowed()) return;
+  postHogClient ??= import("posthog-js")
+    .then(({ default: posthog }) => {
+      posthog.init(token, {
+        api_host: "/ingest",
+        ui_host: "https://eu.posthog.com",
+        defaults: "2026-05-30",
+        person_profiles: "identified_only",
+        capture_exceptions: true,
+        before_send: scrubEvent,
+        session_recording: {
+          maskAllInputs: true,
+          // Каждый текст проходит через maskReplayText: прячем контакты и приватные блоки.
+          maskTextSelector: "*",
+          maskTextFn: maskReplayText,
+          // Применяется и к адресу страницы в записи, не только к запросам.
+          maskCapturedNetworkRequestFn: (request) => ({
+            ...request,
+            name: analyticsUrl(request.name),
+          }),
+        },
+      });
+      loadedPostHog = posthog;
+      return posthog;
+    })
+    .catch(() => undefined);
+  if (!send) return;
+  void postHogClient.then((posthog) => {
+    if (!posthog || !analyticsAllowed()) return;
+    try {
+      send(posthog);
+    } catch {
+      /* optional */
+    }
+  });
+}
+
+/** Ранний старт из instrumentation-client: ловим ошибки до гидрации. */
+export function initPostHog() {
+  postHog();
+}
+
+/**
+ * После «Отказаться»: больше ничего не отправлять (даже $pageleave при
+ * перезагрузке) и не дописывать ph_* в хранилище после того, как баннер его очистит.
+ */
+export function stopPostHog() {
+  try {
+    loadedPostHog?.opt_out_capturing();
+    loadedPostHog?.set_config({ disable_persistence: true });
+  } catch {
+    /* optional */
+  }
+}
+
+/**
+ * Связывает события с аккаунтом после входа и отвязывает после выхода.
+ * Передаём только внутренний id: контакты в аналитику не уходят.
+ */
+export function identifyUser(userId: string | null) {
+  postHog((posthog) => {
+    if (userId) {
+      if (posthog.get_distinct_id() !== userId) posthog.identify(userId);
+    } else if (posthog.get_property("$user_state") === "identified") {
+      posthog.reset();
+    }
+  });
+}
+
 export function trackPageView() {
+  postHog();
   const ym = metrika();
   if (!ym) return;
   const url = analyticsUrl(window.location.href);
@@ -184,6 +327,7 @@ export function reachGoal(goal: string, params?: Record<string, unknown>) {
   try {
     metrika()?.(COUNTER_ID, "reachGoal", goal, params);
     umami((u) => u.track(goal, params));
+    postHog((posthog) => posthog.capture(goal, params));
     const value = params?.order_price ?? params?.price;
     vkPixel()?.push({
       id: VK_PIXEL_ID,
@@ -196,12 +340,30 @@ export function reachGoal(goal: string, params?: Record<string, unknown>) {
   }
 }
 
+/** У Метрики это ecommerce-действия, в PostHog — отдельные события для воронок. */
+const PRODUCT_EVENTS = {
+  detail: "product_viewed",
+  add: "product_added",
+  remove: "product_removed",
+} as const;
+
 export function trackProductEvent(
   event: "detail" | "add" | "remove",
   products: AnalyticsProduct[],
 ) {
   try {
-    if (!products.length || !metrika()) return;
+    if (!products.length) return;
+    postHog((posthog) =>
+      posthog.capture(PRODUCT_EVENTS[event], {
+        products,
+        value: products.reduce(
+          (sum, product) => sum + product.price * (product.quantity ?? 1),
+          0,
+        ),
+        currency: "RUB",
+      }),
+    );
+    if (!metrika()) return;
     window.dataLayer?.push({
       ecommerce: { currencyCode: "RUB", [event]: { products } },
     });
@@ -259,6 +421,19 @@ export function trackCreatedOrder(order: AnalyticsOrder): Promise<void> {
           goal: "order_created",
           value: order.revenue,
         });
+        // send_instantly: следом уходим на оплату, ждать пакетной отправки нельзя.
+        postHog((posthog) =>
+          posthog.capture(
+            "order_created",
+            {
+              order_id: order.id,
+              order_price: order.revenue,
+              currency: "RUB",
+              products: order.products,
+            },
+            { send_instantly: true },
+          ),
+        );
       });
       if (!sent) done();
     } catch {
