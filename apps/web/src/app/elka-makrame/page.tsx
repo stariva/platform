@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ElkaCustomerLooks } from "@/components/stariva/elka-customer-looks";
 import { ElkaFaq } from "@/components/stariva/elka-faq";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
@@ -14,7 +15,7 @@ import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ElkaReadyTrees } from "./_components/elka-ready-trees";
 import { ElkaWorkshop } from "./_components/elka-workshop";
 import { LegacyModelsRedirect } from "./_components/legacy-models-redirect";
-import { FAQ } from "./_data";
+import { FAQ, WORKSHOP_BUY_ID } from "./_data";
 
 // Рендер на каждый запрос: при сборке образа базы нет, и статическая
 // страница запекалась без мастер-класса (кнопка «связаться» вместо оплаты)
@@ -87,6 +88,17 @@ export default async function ElkaMakramePage() {
       <Header variant="solid" />
       <main>
         <ElkaWorkshop workshop={workshop} />
+        <ElkaCustomerLooks
+          source="elka_workshop"
+          eyebrow="Идеи для украшения"
+          title="Как наряжают ёлку макраме покупатели"
+          intro="Так готовые ёлки Stariva выглядят дома у покупателей. Ёлку, которую вы сплетёте сами, тоже можно каждый год украшать по-новому."
+          cta={{
+            href: `#${WORKSHOP_BUY_ID}`,
+            label: "Хочу сплести такую",
+            goal: "elka_looks_workshop",
+          }}
+        />
         <Reviews
           limit={3}
           productId={reviewProductId}
