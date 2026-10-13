@@ -77,7 +77,7 @@ export const metadata: Metadata = {
         url: "https://cdn.stariva.ru/site/images/about/founder-2026.jpg",
         width: 1200,
         height: 630,
-        alt: "Stariva — мастерская ручного макраме",
+        alt: "Stariva — ручное макраме",
       },
     ],
   },

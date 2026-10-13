@@ -25,9 +25,9 @@ export const filosofiyaSlowLivingIRuchnayaRabota: BlogPost = {
     {
       type: "image",
       src: "https://cdn.stariva.ru/site/images/blog/atelier-workspace.jpg",
-      alt: "Мастерская Stariva",
+      alt: "Рабочее место Ольги",
       caption:
-        "В мастерской время течёт иначе — здесь важен процесс, а не только результат",
+        "За работой время течёт иначе — здесь важен процесс, а не только результат",
     },
     {
       type: "heading",
@@ -61,9 +61,9 @@ export const filosofiyaSlowLivingIRuchnayaRabota: BlogPost = {
     },
     {
       type: "cta",
-      text: "Познакомьтесь с историей мастерской и философией Stariva",
+      text: "Познакомьтесь с Ольгой и философией Stariva",
       href: "/about",
-      label: "О нас",
+      label: "Обо мне",
     },
   ],
 };

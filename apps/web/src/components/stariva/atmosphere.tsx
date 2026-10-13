@@ -83,7 +83,7 @@ export function Atmosphere() {
               />
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
                 <span className="label-caps text-parchment/95 mix-blend-difference">
-                  Мастерская
+                  Рабочее место
                 </span>
                 <span className="label-caps text-parchment/95 mix-blend-difference">
                   Зима 2026
@@ -103,8 +103,9 @@ export function Atmosphere() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-espresso/80 leading-[1.75]">
               <p className="text-pretty">
                 Stariva начиналась в 2018 году с одной деревянной рамы и желания
-                плести узлы по старым русским образцам. Сегодня у меня своя
-                мастерская, где пахнет хлопком, пчелиным воском и свежим чаем.
+                плести узлы по старым русским образцам. Сегодня я плету
+                дома, в комнате, где пахнет хлопком, пчелиным воском и свежим
+                чаем.
               </p>
               <p className="text-pretty">
                 Каждый абажур — это{" "}

@@ -61,7 +61,7 @@ const homeFaq = [
   {
     question: "Когда будет готово изделие?",
     answer:
-      "Срок изготовления согласуем до оплаты: он зависит от размера, сложности и загрузки мастерской. Срок доставки обсудим отдельно. Если изделие нужно к определённой дате, укажите её в заявке.",
+      "Срок изготовления согласуем до оплаты: он зависит от размера, сложности и текущей загрузки. Срок доставки обсудим отдельно. Если изделие нужно к определённой дате, укажите её в заявке.",
   },
   {
     question: "Как проходит оплата и доставка?",
@@ -149,7 +149,7 @@ export default function Page() {
         <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
           <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
             <p className="label-caps text-terracotta mb-4">
-              Изделия мастерской
+              Примеры работ
             </p>
             <div className="flex flex-wrap justify-between items-end gap-5 mb-8">
               <div>
@@ -206,7 +206,7 @@ export default function Page() {
               </p>
               <div className="mt-5 flex flex-wrap gap-5 text-sm">
                 <Link href="/about" className="underline underline-offset-4">
-                  История мастерской
+                  Обо мне
                 </Link>
                 <ContactMasterButton
                   source="home_master"

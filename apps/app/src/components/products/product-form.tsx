@@ -472,7 +472,7 @@ export function ProductForm({
                   <div className="space-y-1">
                     <Label htmlFor="featured">Показывать на главной</Label>
                     <p className="text-muted-foreground text-xs">
-                      В блоке «Изделия мастерской» и в «Хитах продаж» каталога.
+                      В блоке «Примеры работ» и в «Хитах продаж» каталога.
                       Подпись карточки берётся по разделу товара
                     </p>
                   </div>

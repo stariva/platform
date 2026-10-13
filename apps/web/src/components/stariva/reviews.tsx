@@ -96,7 +96,7 @@ export async function Reviews({
   const title = showProductReviews
     ? (heading ?? "Отзывы о товаре")
     : isProductPage
-      ? "Отзывы о мастерской"
+      ? "Отзывы о Stariva"
       : heading;
 
   return (
@@ -119,7 +119,7 @@ export async function Reviews({
             {isProductPage && !showProductReviews && (
               <p className="mt-4 text-taupe max-w-xl">
                 У этой модели ещё нет отзывов — вот что пишут о других изделиях
-                мастерской.
+                Ольги.
               </p>
             )}
           </div>

@@ -24,7 +24,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const TITLE = "Отзывы покупателей";
 const DESCRIPTION =
-  "Все отзывы покупателей о макраме-изделиях мастерской Stariva: пояса, сумки, абажуры и декор. Реальные оценки и фото с Ozon и Авито.";
+  "Все отзывы покупателей об изделиях Stariva: пояса, сумки, абажуры и декор. Реальные оценки и фото с Ozon и Авито.";
 
 export async function generateMetadata({
   searchParams,

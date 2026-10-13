@@ -52,7 +52,7 @@ export function ReviewProductsPicker({
     <div className="space-y-1.5">
       {selected.length === 0 ? (
         <span className="text-muted-foreground text-xs">
-          о мастерской — без товара
+          о Stariva — без товара
         </span>
       ) : (
         <ul className="space-y-0.5 text-xs">
