@@ -7,9 +7,14 @@ import {
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
-import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
+import {
+  getWorkshopLessons,
+  hasBriefContent,
+  isPreorder,
+} from "@/lib/workshops-data";
 import { MaterialsList } from "./materials-list";
 import { PreorderNotice } from "./preorder-notice";
+import { WorkshopBrief } from "./workshop-brief";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +29,15 @@ export default async function AccountCoursePage({
 
   const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
+
+  const brief =
+    workshop.materials.length > 0 || hasBriefContent(workshop.brief) ? (
+      <WorkshopBrief
+        title={workshop.title}
+        materials={workshop.materials}
+        brief={workshop.brief}
+      />
+    ) : null;
 
   // Нет доступа — отправляем на публичную страницу с покупкой
   if (!(await hasAccess(session.user.id, slug))) {
@@ -46,6 +60,8 @@ export default async function AccountCoursePage({
           <p className="text-taupe text-sm">{workshop.subtitle}</p>
         </div>
         <PreorderNotice workshop={workshop} releaseAt={workshop.releaseAt} />
+        {/* Материалы лучше купить заранее — до старта уроков */}
+        {brief}
       </div>
     );
   }
@@ -91,6 +107,8 @@ export default async function AccountCoursePage({
           </Link>
         )}
       </div>
+
+      {brief}
 
       {workshop.materialFiles && workshop.materialFiles.length > 0 && (
         <MaterialsList slug={slug} materials={workshop.materialFiles} />

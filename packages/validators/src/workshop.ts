@@ -59,6 +59,31 @@ export const workshopMaterialFileSchema = z.object({
   key: z.string().trim().min(1).max(500),
 });
 
+export const workshopBriefLinkSchema = z.object({
+  label: z.string().trim().min(1, "Укажите название магазина").max(80),
+  url: z.url({
+    protocol: /^https?$/,
+    error: "Нужна ссылка вида https://…",
+  }),
+});
+
+export const workshopBriefShopSchema = z.object({
+  item: z.string().trim().min(1, "Укажите, что покупаем").max(120),
+  note: z.string().trim().max(300),
+  links: z.array(workshopBriefLinkSchema).max(6),
+});
+
+/** Бриф в кабинете ученика: где купить материалы и как подготовиться. */
+export const workshopBriefSchema = z.object({
+  howTo: z.string().trim().max(1000),
+  shops: z.array(workshopBriefShopSchema).max(15),
+  outro: z.string().trim().max(1000),
+  image: imageSrc,
+});
+
+export const EMPTY_WORKSHOP_BRIEF_VALUES: z.infer<typeof workshopBriefSchema> =
+  { howTo: "", shops: [], outro: "", image: "" };
+
 export const workshopFormSchema = z
   .object({
     title: z.string().trim().min(1, "Укажите название").max(200),
@@ -91,6 +116,7 @@ export const workshopFormSchema = z
     materials: textList(300),
     lessons: z.array(workshopLessonSchema).max(100, "Не больше 100 уроков"),
     materialFiles: z.array(workshopMaterialFileSchema).max(30),
+    brief: workshopBriefSchema,
     ozonUrl: z
       .string()
       .trim()
@@ -169,6 +195,8 @@ export type WorkshopLessonValues = z.infer<typeof workshopLessonSchema>;
 export type WorkshopMaterialFileValues = z.infer<
   typeof workshopMaterialFileSchema
 >;
+export type WorkshopBriefValues = z.infer<typeof workshopBriefSchema>;
+export type WorkshopBriefShopValues = z.infer<typeof workshopBriefShopSchema>;
 
 /** Форматы файлов, которые принимает загрузка материалов. */
 export const WORKSHOP_VIDEO_TYPES = [

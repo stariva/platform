@@ -33,6 +33,28 @@ export interface WorkshopMaterialFile {
   key: string;
 }
 
+/** Где купить одну позицию из списка материалов. */
+export interface WorkshopBriefShop {
+  item: string;
+  note: string;
+  links: { label: string; url: string }[];
+}
+
+/** Бриф для ученика в кабинете: где купить и как подготовиться. */
+export interface WorkshopBrief {
+  howTo: string;
+  shops: WorkshopBriefShop[];
+  outro: string;
+  image: string;
+}
+
+/** Есть ли в брифе что показать, кроме самого списка материалов. */
+export function hasBriefContent(brief: WorkshopBrief): boolean {
+  return Boolean(
+    brief.howTo || brief.outro || brief.image || brief.shops.length > 0,
+  );
+}
+
 export interface Workshop {
   slug: string;
   /** archived — не продаётся и не в каталоге, но купившие продолжают смотреть. */
@@ -54,6 +76,7 @@ export interface Workshop {
   lessons: WorkshopLesson[];
   /** PDF-материалы курса для скачивания (хранятся в Yandex S3). */
   materialFiles?: WorkshopMaterialFile[];
+  brief: WorkshopBrief;
   ozonUrl?: string;
   featured?: boolean;
   /** Один отзыв для страницы курса (вместо общей ленты отзывов с Ozon). */

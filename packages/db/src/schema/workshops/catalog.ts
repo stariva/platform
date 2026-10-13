@@ -48,6 +48,41 @@ export interface WorkshopMaterialFileData {
   key: string;
 }
 
+/** Ссылка на магазин в брифе: «Wildberries» → https://… */
+export interface WorkshopBriefLinkData {
+  label: string;
+  url: string;
+}
+
+/** Строка «Где купить» в брифе: шнур, бусины, погонаж… */
+export interface WorkshopBriefShopData {
+  item: string;
+  /** Подсказка к покупке: цвета, размер, на что смотреть. */
+  note: string;
+  links: WorkshopBriefLinkData[];
+}
+
+/**
+ * Бриф для ученика в кабинете: что купить, где и как подготовиться.
+ * Сам список материалов — в workshops.materials, здесь всё вокруг него.
+ */
+export interface WorkshopBriefData {
+  /** Совет перед стартом: на чём и как плести. */
+  howTo: string;
+  shops: WorkshopBriefShopData[];
+  /** Завершение: идея подарка, пожелание. */
+  outro: string;
+  /** Фото готового изделия (https://… или /images/…). */
+  image: string;
+}
+
+export const EMPTY_WORKSHOP_BRIEF: WorkshopBriefData = {
+  howTo: "",
+  shops: [],
+  outro: "",
+  image: "",
+};
+
 /**
  * Мастер-класс (видеокурс). Источник правды для сайта — эта таблица.
  *
@@ -89,6 +124,10 @@ export const workshops = pgTable(
       .$type<WorkshopMaterialFileData[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    brief: jsonb("brief")
+      .$type<WorkshopBriefData>()
+      .notNull()
+      .default(sql`'{"howTo":"","shops":[],"outro":"","image":""}'::jsonb`),
 
     ozonUrl: text("ozon_url"),
     testimonialText: text("testimonial_text"),

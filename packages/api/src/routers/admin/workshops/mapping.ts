@@ -1,5 +1,6 @@
 import type { NewWorkshopRow, WorkshopRow } from "@stariva/db/schema";
 import {
+  EMPTY_WORKSHOP_BRIEF_VALUES,
   formatMoscowDateTime,
   parseMoscowDateTime,
   type WorkshopFormValues,
@@ -24,6 +25,7 @@ export function formToRow(values: WorkshopFormValues) {
     materials: values.materials,
     lessons: values.lessons,
     materialFiles: values.materialFiles,
+    brief: values.brief,
     ozonUrl: nullIfEmpty(values.ozonUrl),
     testimonialText: nullIfEmpty(values.testimonialText),
     testimonialAuthor: nullIfEmpty(values.testimonialAuthor),
@@ -50,6 +52,8 @@ export function rowToForm(row: WorkshopRow): WorkshopFormValues {
     materials: row.materials,
     lessons: row.lessons,
     materialFiles: row.materialFiles,
+    // Колонка появилась позже: у старых строк ключей может не быть
+    brief: { ...EMPTY_WORKSHOP_BRIEF_VALUES, ...row.brief },
     ozonUrl: row.ozonUrl ?? "",
     featured: row.featured,
     sortOrder: row.sortOrder,

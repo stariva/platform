@@ -162,6 +162,13 @@
       "when": 1791835083777,
       "tag": "0022_video_renditions",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791921850959,
+      "tag": "0023_workshop_brief",
+      "breakpoints": true
     }
   ]
 }

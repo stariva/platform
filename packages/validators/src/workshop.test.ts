@@ -32,6 +32,7 @@ const valid: WorkshopFormValues = {
   materials: [],
   lessons: [lesson],
   materialFiles: [],
+  brief: { howTo: "", shops: [], outro: "", image: "" },
   ozonUrl: "",
   featured: false,
   sortOrder: 0,
@@ -156,6 +157,43 @@ describe("workshopFormSchema", () => {
         testimonialAuthor: "Анна",
       }),
     ).toEqual([]);
+  });
+
+  test("brief shops need an item and real links", () => {
+    const shop = {
+      item: "Шнур",
+      note: "Хаки, изумруд, шалфей, бежевый",
+      links: [
+        {
+          label: "Wildberries",
+          url: "https://www.wildberries.ru/catalog/134836626/detail.aspx",
+        },
+      ],
+    };
+    const withShops = (shops: (typeof shop)[]) => ({
+      ...valid,
+      brief: { ...valid.brief, shops },
+    });
+    expect(errorPaths(withShops([shop]))).toEqual([]);
+    expect(errorPaths(withShops([{ ...shop, item: " " }]))).toEqual([
+      "brief.shops.0.item",
+    ]);
+    expect(
+      errorPaths(
+        withShops([
+          { ...shop, links: [{ label: "WB", url: "javascript:alert(1)" }] },
+        ]),
+      ),
+    ).toEqual(["brief.shops.0.links.0.url"]);
+  });
+
+  test("brief photo follows the same rules as covers", () => {
+    expect(
+      errorPaths({
+        ...valid,
+        brief: { ...valid.brief, image: "http://example.com/a.jpg" },
+      }),
+    ).toEqual(["brief.image"]);
   });
 
   test("release date must be a real date", () => {
