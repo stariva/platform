@@ -1,4 +1,4 @@
-import { Section, Text } from "@react-email/components";
+import { Column, Img, Row, Section, Text } from "@react-email/components";
 import { colors, fonts, labelCaps, StarivaLayout } from "./stariva-layout";
 
 /**
@@ -26,12 +26,22 @@ export function isOrderEmailStatus(status: string): status is OrderEmailStatus {
   return (ORDER_EMAIL_STATUSES as readonly string[]).includes(status);
 }
 
+export interface OrderEmailItem {
+  name: string;
+  quantity: number;
+  /** Обложка товара (абсолютный URL); null — товара уже нет в каталоге. */
+  image: string | null;
+}
+
+/** Сторона квадратной миниатюры товара в письме, px. */
+const THUMB = 72;
+
 export interface StarivaOrderEmailProps {
   status: OrderEmailStatus;
   orderNumber: number;
   /** Страница заказа: покупатель подтверждает её телефоном из заказа. */
   orderUrl: string;
-  items: { name: string; quantity: number }[];
+  items: OrderEmailItem[];
   /** Суммы в копейках. */
   amountTotal: number;
   depositAmount: number | null;
@@ -190,7 +200,14 @@ export default function StarivaOrderEmail(
     status: "awaiting_deposit",
     orderNumber: 1042,
     orderUrl: "https://stariva.ru/order/abc",
-    items: [{ name: "Ёлка макраме 60 см", quantity: 1 }],
+    items: [
+      {
+        name: "Ёлка макраме 60 см",
+        quantity: 1,
+        image:
+          "https://cdn.stariva.ru/products/bb7d512f-fca4-4596-b151-8a7d08e2c1e3/2a7c81f8b4a78cc2.jpg",
+      },
+    ],
     amountTotal: 640000,
     depositAmount: 300000,
     leadTime: "2–3 недели",
@@ -237,21 +254,58 @@ export default function StarivaOrderEmail(
             Заказ №{props.orderNumber}
           </Text>
           {props.items.map((item, index) => (
-            <Text
+            <Row
               // biome-ignore lint/suspicious/noArrayIndexKey: позиции могут совпадать по названию
               key={index}
-              style={{
-                ...cell,
-                margin: 0,
-                padding: "10px 0",
-                fontFamily: fonts.sans,
-                color: colors.darkGrey,
-                borderTop: `1px solid ${colors.lightGrey}`,
-              }}
+              style={{ borderTop: `1px solid ${colors.lightGrey}` }}
             >
-              {item.name}
-              {item.quantity > 1 ? ` × ${item.quantity}` : ""}
-            </Text>
+              <Column
+                style={{ width: THUMB + 16, padding: "12px 16px 12px 0" }}
+              >
+                {item.image ? (
+                  <Img
+                    src={item.image}
+                    alt={item.name}
+                    width={THUMB}
+                    height={THUMB}
+                    style={{
+                      display: "block",
+                      width: THUMB,
+                      height: THUMB,
+                      objectFit: "cover",
+                      borderRadius: 8,
+                      background: colors.offWhite,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: THUMB,
+                      height: THUMB,
+                      borderRadius: 8,
+                      background: colors.offWhite,
+                    }}
+                  />
+                )}
+              </Column>
+              <Column style={{ verticalAlign: "middle" }}>
+                <Text
+                  style={{
+                    ...cell,
+                    margin: 0,
+                    fontFamily: fonts.sans,
+                    color: colors.nearBlack,
+                  }}
+                >
+                  {item.name}
+                </Text>
+                {item.quantity > 1 && (
+                  <Text style={{ ...cell, margin: 0, color: colors.textGrey }}>
+                    {item.quantity} шт.
+                  </Text>
+                )}
+              </Column>
+            </Row>
           ))}
         </Section>
       )}

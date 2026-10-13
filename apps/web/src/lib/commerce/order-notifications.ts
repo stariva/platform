@@ -20,6 +20,7 @@ import {
   claimPaymentNotification,
   claimStaffNotification,
   getOrderPayment,
+  getProductCoverImages,
   getProductOrderById,
   getProductOrderCustomerEmail,
   getProductOrderItems,
@@ -185,9 +186,17 @@ export async function notifyCustomer(
   try {
     const order = await getProductOrderById(orderId);
     if (!order) return;
+    const items = await getProductOrderItems(orderId);
+    const covers = await getProductCoverImages(
+      items.map((item) => item.productSlug),
+    );
     await sendOrderStatusEmail({
       order: { ...order, status: status ?? order.status },
-      items: await getProductOrderItems(orderId),
+      items: items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        image: covers.get(item.productSlug) ?? null,
+      })),
       to: await getProductOrderCustomerEmail(order),
       siteUrl: siteUrl(),
     });
