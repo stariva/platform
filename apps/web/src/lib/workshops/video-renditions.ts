@@ -10,8 +10,10 @@ import { objectExists, workshopHlsPrefix } from "@stariva/storage";
 
 /** Сколько раз воркер пробует нарезать видео, прежде чем сдаться. */
 export const MAX_RENDITION_ATTEMPTS = 3;
-// Столько видео считается занятым воркером: хватает на 4 ГБ с перекодированием
-const PROCESSING_LEASE_MS = 4 * 60 * 60_000;
+// Столько видео считается занятым воркером без вестей от него. Живой воркер
+// продлевает аренду каждые несколько минут, а упавший (под убили, кончилась
+// память) освобождает видео для повтора уже через 20 минут
+export const PROCESSING_LEASE_MS = 20 * 60_000;
 // Пауза перед новой попыткой после ошибки
 const RETRY_BACKOFF_MS = 30 * 60_000;
 
@@ -119,6 +121,33 @@ export async function claimNextVideo(): Promise<{
     if (claimed) return claimed;
   }
   return null;
+}
+
+/**
+ * Воркер жив и всё ещё режет эту попытку — продлеваем аренду. false —
+ * попытка уже не его (истекла и отдана другому, или видео готово): воркеру
+ * пора бросить работу.
+ */
+export async function extendRenditionLease(
+  videoKey: string,
+  attemptId: number,
+): Promise<boolean> {
+  const now = new Date();
+  const [row] = await db
+    .update(videoRenditions)
+    .set({
+      leaseUntil: new Date(now.getTime() + PROCESSING_LEASE_MS),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(videoRenditions.videoKey, videoKey),
+        eq(videoRenditions.attempts, attemptId),
+        eq(videoRenditions.status, "processing"),
+      ),
+    )
+    .returning({ videoKey: videoRenditions.videoKey });
+  return Boolean(row);
 }
 
 /**

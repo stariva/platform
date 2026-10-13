@@ -26,8 +26,15 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
     expect(await db.select({ id: workshops.id }).from(workshops)).toHaveLength(
       0,
     );
-    const { claimNextVideo, completeRendition, failRendition } = await import(
-      "./video-renditions"
+    const {
+      claimNextVideo,
+      completeRendition,
+      extendRenditionLease,
+      failRendition,
+      PROCESSING_LEASE_MS,
+    } = await import("./video-renditions");
+    const { POST: heartbeat } = await import(
+      "../../app/api/workshops/videos/heartbeat/route"
     );
     const { POST: uploadUrls } = await import(
       "../../app/api/workshops/videos/upload-urls/route"
@@ -101,11 +108,27 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       ).toBe(200);
       expect(uploadKeys.at(-1)).toBe(`${first.hlsPrefix}/seg-00001.m4s`);
 
+      // A live worker keeps its short lease; nobody can reclaim the video meanwhile.
+      await expire();
+      expect(
+        (await heartbeat(request({ attemptId: first.attemptId }))).status,
+      ).toBe(200);
+      const [extended] = await read();
+      expect(extended?.leaseUntil?.getTime()).toBeGreaterThan(
+        Date.now() + PROCESSING_LEASE_MS - 60_000,
+      );
+      expect(await claimNextVideo()).toBeNull();
+
       await expire();
       const second = await claimNextVideo();
       if (!second) throw new Error("Expected second claim");
       expect(second.attemptId).toBe(2);
       expect(second.hlsPrefix).not.toBe(first.hlsPrefix);
+      // The stale worker learns it lost the video and stops.
+      expect(
+        (await heartbeat(request({ attemptId: first.attemptId }))).status,
+      ).toBe(409);
+      expect(await extendRenditionLease(videoKey, second.attemptId)).toBe(true);
       const before = await read();
       expect(
         (
