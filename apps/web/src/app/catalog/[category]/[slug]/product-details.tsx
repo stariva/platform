@@ -16,6 +16,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { descriptionWithoutLead } from "@/lib/catalog/description-lead";
 import { CONTACTS } from "@/lib/contacts";
 import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
 import {
@@ -121,7 +122,7 @@ function productSpecs(product: Product, categorySlug: string): Spec[] {
   if (product.careInstructions) {
     specs.push({ label: "Уход", value: product.careInstructions });
   }
-  specs.push({ label: "Изготовление", value: "Вручную, мастерская Stariva" });
+  specs.push({ label: "Изготовление", value: "Вручную, автор — Ольга" });
   return specs;
 }
 
@@ -137,6 +138,11 @@ export function ProductDetails({
   const faqItems = faq[categorySlug] ?? faq.interior;
   // Два независимых способа купить: готовое со склада и сплести под заказ
   const readyToShip = isPurchasable(product);
+  // Один размер в карточке одежды — значит, и готовое изделие этого размера
+  const readySize =
+    categorySlug === "clothes" && product.sizes?.length === 1
+      ? product.sizes[0]
+      : undefined;
   const madeToOrder = getProductMadeToOrder(product);
   const productUrl = `https://stariva.ru/catalog/${categorySlug}/${product.slug}`;
   // Бейдж не должен обещать хлопок там, где шнур полиэфирный или пряжа шерстяная
@@ -331,6 +337,11 @@ export function ProductDetails({
                   <h2 className="font-serif text-xl text-espresso mb-1.5">
                     Готовое изделие
                   </h2>
+                  {readySize && (
+                    <p className="text-espresso text-sm mb-1.5">
+                      Размер {readySize}
+                    </p>
+                  )}
                   <p className="text-taupe text-[13px] leading-relaxed mb-5">
                     {product.stockAvailable === 1
                       ? "Осталось одно изделие"
@@ -511,7 +522,10 @@ export function ProductDetails({
             <div
               className="product-description text-dark-grey"
               // biome-ignore lint/security/noDangerouslySetInnerHtml: product description comes from Ozon API (trusted source) and is sanitized server-side
-              dangerouslySetInnerHTML={{ __html: product.description }}
+              dangerouslySetInnerHTML={{
+                // Первый абзац уже стоит под ценой — не повторяем его
+                __html: descriptionWithoutLead(product.description),
+              }}
             />
           </div>
         </div>
