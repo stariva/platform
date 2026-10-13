@@ -27,6 +27,7 @@ import { BulkOldPrice } from "./bulk-old-price";
 import { OldPriceCell } from "./old-price-cell";
 import { PriceCell } from "./price-cell";
 import { ProductThumb } from "./product-thumb";
+import { StockCell } from "./stock-cell";
 
 export interface AdminProduct {
   id: string;
@@ -43,6 +44,7 @@ export interface AdminProduct {
   featured: boolean;
   sortOrder: number;
   ozonOfferId: string | null;
+  ozonSku: number | null;
 }
 
 type StatusFilter = "all" | AdminProduct["status"];
@@ -419,13 +421,22 @@ export function ProductsTable({
                     <OldPriceCell id={product.id} oldPrice={product.oldPrice} />
                   </TableCell>
                   <TableCell>
-                    <AvailabilitySwitches
-                      id={product.id}
-                      name={product.name}
-                      status={product.status}
-                      madeToOrder={product.madeToOrder}
-                      stockAvailable={product.stockAvailable}
-                    />
+                    <div className="flex flex-col gap-2">
+                      <AvailabilitySwitches
+                        id={product.id}
+                        name={product.name}
+                        status={product.status}
+                        madeToOrder={product.madeToOrder}
+                      />
+                      <StockCell
+                        id={product.id}
+                        stockAvailable={product.stockAvailable}
+                        canStock={
+                          product.ozonSku !== null &&
+                          product.ozonOfferId !== null
+                        }
+                      />
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-right tabular-nums">
                     {product.sortOrder}

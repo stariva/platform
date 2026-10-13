@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Label, Switch, toast } from "@stariva/ui";
+import { Label, Switch, toast } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,7 +11,6 @@ interface Props {
   name: string;
   status: "draft" | "published" | "archived";
   madeToOrder: boolean;
-  stockAvailable: number;
 }
 
 /** Переключатели «На сайте» и «Под заказ» прямо в строке таблицы товаров. */
@@ -20,7 +19,6 @@ export function AvailabilitySwitches({
   name,
   status,
   madeToOrder,
-  stockAvailable,
 }: Props) {
   const router = useRouter();
   const [published, setPublished] = useState(status === "published");
@@ -90,13 +88,6 @@ export function AvailabilitySwitches({
           Под заказ
         </Label>
       </div>
-      {stockAvailable > 0 ? (
-        <Badge variant="default" className="w-fit">
-          В наличии: {stockAvailable}
-        </Badge>
-      ) : (
-        <span className="text-muted-foreground text-xs">Нет в наличии</span>
-      )}
     </div>
   );
 }
