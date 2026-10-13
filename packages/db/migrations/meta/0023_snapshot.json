@@ -1,5 +1,5 @@
 {
-  "id": "34af5f9d-1284-437f-9f02-16df073b657b",
+  "id": "f5e9ed8d-643a-4f2b-bae9-e908024411d3",
   "prevId": "92cc7380-8779-4833-9509-a4859977a72d",
   "version": "7",
   "dialect": "postgresql",
@@ -1838,6 +1838,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "campaign_id": {
+          "name": "campaign_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "request_number": {
+          "name": "request_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1861,6 +1873,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "crm_sales_request_idx": {
+          "name": "crm_sales_request_idx",
+          "columns": [
+            {
+              "expression": "request_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1875,6 +1902,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "crm_sales_campaign_id_ad_campaigns_id_fk": {
+          "name": "crm_sales_campaign_id_ad_campaigns_id_fk",
+          "tableFrom": "crm_sales",
+          "tableTo": "ad_campaigns",
+          "columnsFrom": [
+            "campaign_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

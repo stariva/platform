@@ -96,12 +96,15 @@ export const clients = adminProcedure
 export const client = adminProcedure
   .input(z.object({ key: keySchema }))
   .handler(async ({ context, input }) => {
-    const { campaigns, clients: all } = await loadCrm(context.db);
+    const { campaigns, clients: all, sales } = await loadCrm(context.db);
     const found = findClient(all, input.key);
     if (!found) {
       throw new ORPCError("NOT_FOUND", { message: "Клиент не найден" });
     }
     const campaignsById = byId(campaigns);
+    const requests = new Map(
+      sales.map((sale) => [sale.id, sale.requestNumber]),
+    );
     return {
       ...clientSummary(found, campaignsById),
       record: found.record && {
@@ -114,7 +117,11 @@ export const client = adminProcedure
       },
       userIds: found.userIds,
       touch: found.touch,
-      deals: found.deals.map(dealView),
+      deals: found.deals.map((deal) => ({
+        ...dealView(deal),
+        requestNumber:
+          deal.kind === "manual" ? (requests.get(deal.id) ?? null) : null,
+      })),
       campaigns: campaigns.map((campaign) => ({
         id: campaign.id,
         name: campaign.name,
@@ -206,12 +213,6 @@ export const saveClient = adminProcedure
   )
   .handler(async ({ context, input }) => {
     const fields = await cardFields(context.db, input);
-    if (!fields.phone && !fields.email && !input.key) {
-      throw new ORPCError("BAD_REQUEST", {
-        message:
-          "Укажите телефон или почту — по ним клиент склеится с заказами",
-      });
-    }
 
     try {
       if (input.key) {
@@ -269,58 +270,141 @@ export const removeClient = adminProcedure
     return { id: removed.id };
   });
 
+/** Карточка, к которой пишется заказ: существующая, клиента с сайта или новая. */
+async function cardFor(
+  db: Database,
+  input: {
+    key?: string;
+    client?: { name: string; phone: string | null; email: string | null };
+  },
+): Promise<string> {
+  const { clients: all } = await loadCrm(db);
+  let found: Client | null = null;
+  let fresh: { name: string; phone: string | null; email: string | null };
+
+  if (input.key) {
+    found = findClient(all, input.key);
+    if (!found) {
+      throw new ORPCError("NOT_FOUND", { message: "Клиент не найден" });
+    }
+    fresh = {
+      name: found.name,
+      phone: found.phones[0] ?? null,
+      email: found.emails[0] ?? null,
+    };
+  } else if (input.client) {
+    const phone = normalizePhone(input.client.phone);
+    const email = normalizeEmail(input.client.email);
+    if (input.client.phone && !phone) {
+      throw new ORPCError("BAD_REQUEST", { message: "Телефон не распознан" });
+    }
+    if (input.client.email && !email) {
+      throw new ORPCError("BAD_REQUEST", { message: "Почта не распознана" });
+    }
+    // Уже заказывал на сайте или заведён раньше — пишем к нему же
+    found =
+      (phone && findClient(all, `tel-${phone}`)) ||
+      (email && findClient(all, `mail-${email}`)) ||
+      null;
+    fresh = { name: input.client.name, phone, email };
+  } else {
+    throw new ORPCError("BAD_REQUEST", { message: "Не указан клиент" });
+  }
+
+  if (found?.record) return found.record.id;
+  try {
+    const [created] = await db
+      .insert(crmClients)
+      .values(fresh)
+      .returning({ id: crmClients.id });
+    if (!created) throw new Error("crm_client_insert_failed");
+    return created.id;
+  } catch (error) {
+    const message = conflictMessage(error);
+    if (message) throw new ORPCError("CONFLICT", { message });
+    throw error;
+  }
+}
+
 /**
- * Продажа мимо сайта. Клиенту с сайта без карточки она заводится сама —
- * с контактами из заказов и источником по метке.
+ * Заказ мимо корзины сайта: индивидуальный заказ по заявке или из
+ * мессенджера, продажа на Авито. Клиента задают ключом карточки или
+ * контактами — по ним найдётся уже известный клиент, иначе заведётся новый.
+ * Выбранная реклама получает выручку заказа; если источник клиента ещё не
+ * известен, она же становится его источником.
  */
 export const addSale = adminProcedure
   .input(
     z.object({
-      key: keySchema,
+      key: keySchema.optional(),
+      client: z
+        .object({
+          name: z.string().trim().min(1).max(120),
+          phone: optionalText(40),
+          email: optionalText(200),
+        })
+        .optional(),
       soldOn: daySchema,
-      amount: z.number().positive().max(10_000_000),
+      amount: z.number().positive().max(21_474_836.47),
       description: z.string().trim().min(1).max(300),
+      campaignId: z.string().min(1).nullable().default(null),
+      requestNumber: z.number().int().positive().optional(),
     }),
   )
   .handler(async ({ context, input }) => {
-    const { clients: all } = await loadCrm(context.db);
-    const found = findClient(all, input.key);
-    if (!found) {
-      throw new ORPCError("NOT_FOUND", { message: "Клиент не найден" });
-    }
-    let clientId = found.record?.id;
-    if (!clientId) {
-      try {
-        const [created] = await context.db
-          .insert(crmClients)
-          .values({
-            name: found.name,
-            phone: found.phones[0] ?? null,
-            email: found.emails[0] ?? null,
-          })
-          .returning({ id: crmClients.id });
-        clientId = created?.id;
-      } catch (error) {
-        const message = conflictMessage(error);
-        if (message) throw new ORPCError("CONFLICT", { message });
-        throw error;
+    if (input.campaignId) {
+      const [campaign] = await context.db
+        .select({ id: adCampaigns.id })
+        .from(adCampaigns)
+        .where(eq(adCampaigns.id, input.campaignId));
+      if (!campaign) {
+        throw new ORPCError("BAD_REQUEST", { message: "Кампания не найдена" });
       }
     }
-    if (!clientId) throw new Error("crm_client_insert_failed");
+    const clientId = await cardFor(context.db, input);
 
+    try {
+      const [sale] = await context.db
+        .insert(crmSales)
+        .values({
+          clientId,
+          soldOn: input.soldOn,
+          amount: toKopecks(input.amount),
+          description: input.description,
+          campaignId: input.campaignId,
+          requestNumber: input.requestNumber ?? null,
+        })
+        .returning();
+      return {
+        key: clientId,
+        sale: sale && { ...sale, amount: rubles(sale.amount) },
+      };
+    } catch (error) {
+      if (isUniqueViolation(error, "crm_sales_request_idx")) {
+        throw new ORPCError("CONFLICT", {
+          message: `Заказ по заявке №${input.requestNumber} уже записан`,
+        });
+      }
+      throw error;
+    }
+  });
+
+/** Заказ, записанный по заявке с сайта, — чтобы не завести его дважды. */
+export const saleForRequest = adminProcedure
+  .input(z.object({ number: z.number().int().positive() }))
+  .handler(async ({ context, input }) => {
     const [sale] = await context.db
-      .insert(crmSales)
-      .values({
-        clientId,
-        soldOn: input.soldOn,
-        amount: toKopecks(input.amount),
-        description: input.description,
+      .select({
+        id: crmSales.id,
+        clientId: crmSales.clientId,
+        amount: crmSales.amount,
+        soldOn: crmSales.soldOn,
+        campaignName: adCampaigns.name,
       })
-      .returning();
-    return {
-      key: clientId,
-      sale: sale && { ...sale, amount: rubles(sale.amount) },
-    };
+      .from(crmSales)
+      .leftJoin(adCampaigns, eq(adCampaigns.id, crmSales.campaignId))
+      .where(eq(crmSales.requestNumber, input.number));
+    return sale ? { ...sale, amount: rubles(sale.amount) } : null;
   });
 
 export const removeSale = adminProcedure

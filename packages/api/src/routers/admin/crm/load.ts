@@ -122,6 +122,7 @@ export async function loadCrm(db: Database) {
         emails: emails(order.contactEmail),
         userId: order.userId,
         clientId: null,
+        campaignId: null,
       };
     }),
     ...workshopRows.map(
@@ -141,6 +142,7 @@ export async function loadCrm(db: Database) {
         emails: emails(order.userEmail, order.contactEmail),
         userId: order.userId,
         clientId: null,
+        campaignId: null,
       }),
     ),
     ...sales.map((sale): Deal => {
@@ -159,6 +161,7 @@ export async function loadCrm(db: Database) {
         emails: [],
         userId: null,
         clientId: sale.clientId,
+        campaignId: sale.campaignId,
       };
     }),
   ];

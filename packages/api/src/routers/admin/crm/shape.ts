@@ -69,6 +69,7 @@ export function dealView(deal: Deal) {
     ),
     utmSource: deal.attribution?.first.utm_source ?? null,
     utmCampaign: deal.attribution?.first.utm_campaign ?? null,
+    campaignId: deal.campaignId,
   };
 }
 

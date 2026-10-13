@@ -30,6 +30,7 @@ function deal(overrides: Partial<Deal> & Pick<Deal, "id">): Deal {
     emails: [],
     userId: null,
     clientId: null,
+    campaignId: null,
     ...overrides,
   };
 }
@@ -226,5 +227,66 @@ test("report splits spend, new clients and revenue by period", () => {
     leads: 1,
     buyers: 1,
     revenue: 400000,
+  });
+});
+
+test("a custom order brings its revenue to the ad chosen for it", () => {
+  const clients = buildClients(
+    [
+      // Индивидуальный заказ, реклама выбрана вручную — Авито
+      deal({
+        id: "custom",
+        kind: "manual",
+        name: null,
+        clientId: "olga",
+        campaignId: "avito",
+        createdAt: new Date("2026-10-05T09:00:00Z"),
+        payments: [{ at: new Date("2026-10-05T09:00:00Z"), amount: 1200000 }],
+      }),
+      // Тот же клиент раньше заказывал с сайта по метке Директа
+      deal({
+        id: "site",
+        phone: "79161234567",
+        clientId: null,
+        createdAt: new Date("2026-09-01T10:00:00Z"),
+        attribution: touch("yandex"),
+        payments: [{ at: new Date("2026-09-01T10:00:00Z"), amount: 300000 }],
+      }),
+      deal({
+        id: "telegram-only",
+        kind: "manual",
+        name: null,
+        clientId: "anna",
+        campaignId: "avito",
+        payments: [{ at: new Date("2026-10-06T09:00:00Z"), amount: 500000 }],
+      }),
+    ],
+    [
+      record({ id: "olga", phone: "79161234567" }),
+      record({ id: "anna", name: "Анна" }),
+    ],
+    campaigns,
+  );
+  const olga = findClient(clients, "olga");
+  const anna = findClient(clients, "anna");
+  // Источник клиента — самая ранняя известная реклама
+  expect(olga?.source).toEqual({
+    kind: "campaign",
+    campaignId: "direct",
+    manual: false,
+  });
+  expect(anna?.source).toEqual({
+    kind: "campaign",
+    campaignId: "avito",
+    manual: true,
+  });
+
+  const rows = buildReport(clients, [], [], { from: null, to: null });
+  const byKey = Object.fromEntries(rows.map((row) => [row.key, row]));
+  expect(byKey["c:direct"]).toMatchObject({ revenue: 300000, paidDeals: 1 });
+  expect(byKey["c:avito"]).toMatchObject({
+    revenue: 1700000,
+    paidDeals: 2,
+    buyers: 1,
   });
 });

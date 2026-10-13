@@ -95,9 +95,17 @@ export default async function CrmClientsPage({
               и укажите, с какой рекламы они пришли.
             </p>
           </div>
-          <Link href="/crm/clients/new" className={buttonVariants()}>
-            Добавить клиента
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/crm/orders/new" className={buttonVariants()}>
+              Индивидуальный заказ
+            </Link>
+            <Link
+              href="/crm/clients/new"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Добавить клиента
+            </Link>
+          </div>
         </div>
 
         <form

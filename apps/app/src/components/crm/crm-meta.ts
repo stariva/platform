@@ -91,5 +91,19 @@ export function dealHref(deal: { kind: string; id: string }) {
 export const DEAL_KIND_LABELS: Record<string, string> = {
   product: "Заказ с сайта",
   workshop: "Мастер-класс",
-  manual: "Продажа вручную",
+  manual: "Вне сайта",
 };
+
+/**
+ * Телефон и почта из поля «контакт» заявки: туда пишут что угодно —
+ * номер, почту, ник в Telegram. Что не распознано, остаётся пустым.
+ */
+export function parseContact(raw: string | null | undefined) {
+  const value = raw ?? "";
+  const email = value.match(/[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+/)?.[0] ?? "";
+  const phone =
+    value
+      .match(/\+?\d[\d\s()-]{8,}\d/g)
+      ?.find((match) => match.replace(/\D/g, "").length >= 10) ?? "";
+  return { phone: phone.trim(), email };
+}
