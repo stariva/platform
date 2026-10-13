@@ -337,7 +337,7 @@ interface ContactsData {
   phone: string;
   schedule: string;
   master: string;
-  marketplace: string;
+  shop: string;
 }
 
 function ContactsCard({ data }: { data: ContactsData }) {
