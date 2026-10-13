@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { stopPostHog } from "@/lib/analytics";
 import {
   COOKIE_SETTINGS_EVENT,
   type CookieChoice,
@@ -11,16 +12,30 @@ import {
   setCookieChoice,
 } from "@/lib/cookie-consent";
 
-/** Удаляет cookie Метрики (_ym_*) и пикселя VK (tmr_*) после отзыва согласия. */
-function clearAnalyticsCookies() {
+/** Метрика (_ym*), пиксель VK (tmr_*) и PostHog (ph_*, __ph_*). */
+const ANALYTICS_PREFIXES = ["_ym", "tmr_", "ph_", "__ph_"];
+const isAnalyticsKey = (name: string) =>
+  ANALYTICS_PREFIXES.some((prefix) => name.startsWith(prefix));
+
+/** Удаляет cookie и записи в хранилище счётчиков после отзыва согласия. */
+function clearAnalyticsStorage() {
   const host = window.location.hostname;
   const domains = ["", host, `.${host.replace(/^www\./, "")}`];
   for (const entry of document.cookie.split(";")) {
     const name = entry.split("=")[0]?.trim();
-    if (!name?.startsWith("_ym") && !name?.startsWith("tmr_")) continue;
+    if (!name || !isAnalyticsKey(name)) continue;
     for (const domain of domains) {
       // biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API есть не во всех браузерах
       document.cookie = `${name}=; Max-Age=0; path=/${domain ? `; domain=${domain}` : ""}`;
+    }
+  }
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    try {
+      for (const key of Object.keys(storage)) {
+        if (isAnalyticsKey(key)) storage.removeItem(key);
+      }
+    } catch {
+      /* storage blocked */
     }
   }
 }
@@ -41,7 +56,8 @@ export function CookieBanner() {
     setOpen(false);
     if (choice === "denied" && wasEnabled) {
       // Загруженный счётчик нельзя выгрузить — чистим cookie и перезагружаем.
-      clearAnalyticsCookies();
+      stopPostHog();
+      clearAnalyticsStorage();
       window.location.reload();
     }
   }
@@ -57,7 +73,7 @@ export function CookieBanner() {
     >
       {/* На телефоне — короче: баннер не должен закрывать четверть экрана. */}
       <p className="text-[12px] sm:text-[13px] leading-snug sm:leading-relaxed text-espresso/80">
-        Мы используем cookie, Яндекс.Метрику и пиксель VK Рекламы
+        Мы используем cookie, Яндекс.Метрику, PostHog и пиксель VK Рекламы
         <span className="hidden sm:inline">
           , чтобы сайт работал и становился удобнее. Продолжая пользоваться
           сайтом, вы соглашаетесь с этим

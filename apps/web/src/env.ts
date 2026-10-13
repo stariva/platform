@@ -87,6 +87,10 @@ export const env = createEnv({
     // Яндекс.Карты JS API — карта пунктов выдачи Ozon в чекауте.
     // Ключ: https://developer.tech.yandex.ru → JavaScript API и HTTP Геокодер
     NEXT_PUBLIC_YANDEX_MAPS_API_KEY: z.string().min(1).optional(),
+
+    // PostHog (EU Cloud) — воронки, записи сессий, ошибки. Публичный ключ
+    // проекта: Project settings → Project token. Без него PostHog выключен.
+    NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: z.string().startsWith("phc_").optional(),
   },
 
   /**
@@ -121,6 +125,8 @@ export const env = createEnv({
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     NEXT_PUBLIC_YANDEX_MAPS_API_KEY:
       process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY,
+    NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN:
+      process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN,
   },
 
   skipValidation:

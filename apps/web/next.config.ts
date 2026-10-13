@@ -80,6 +80,13 @@ const config: NextConfig = {
   },
   async redirects() {
     return [
+      // Вместо встроенного редиректа, выключенного skipTrailingSlashRedirect:
+      // /about/ → /about для всех страниц, кроме прокси PostHog.
+      {
+        source: "/:path((?!ingest/).+)/",
+        destination: "/:path",
+        permanent: true,
+      },
       {
         source: "/catalog/decor",
         destination: "/catalog/interior",
@@ -99,6 +106,28 @@ const config: NextConfig = {
       },
     ];
   },
+  // PostHog через свой домен: блокировщики режут *.posthog.com, а /ingest — нет.
+  // Ассеты SDK (запись сессий, ошибки) идут с отдельного хоста EU-региона.
+  async rewrites() {
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: "https://eu-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/ingest/array/:path*",
+        destination: "https://eu-assets.i.posthog.com/array/:path*",
+      },
+      {
+        source: "/ingest/:path*",
+        destination: "https://eu.i.posthog.com/:path*",
+      },
+    ];
+  },
+  // API PostHog ждёт адреса со слешем на конце (/e/, /flags/); без этого Next
+  // ответил бы 308 на /ingest/e/ и сломал отправку. Редирект для остальных
+  // страниц — в redirects() выше.
+  skipTrailingSlashRedirect: true,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

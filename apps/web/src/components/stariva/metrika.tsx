@@ -2,13 +2,22 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { reachGoal, trackPageView } from "@/lib/analytics";
+import { identifyUser, reachGoal, trackPageView } from "@/lib/analytics";
+import { useSession } from "@/lib/auth/client";
 import { COOKIE_CONSENT_EVENT } from "@/lib/cookie-consent";
 
-/** Отправляет просмотры при навигации и выборе согласия, отслеживает клики по целевым ссылкам. */
+/**
+ * Отправляет просмотры при навигации и выборе согласия, отслеживает клики по
+ * целевым ссылкам, привязывает события PostHog к аккаунту после входа.
+ */
 export function Metrika() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: session, isPending } = useSession();
+  const userId = session?.user.id ?? null;
+  useEffect(() => {
+    if (!isPending) identifyUser(userId);
+  }, [isPending, userId]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: the current URL is read inside trackPageView
   useEffect(() => {
     if (pathname) trackPageView();
