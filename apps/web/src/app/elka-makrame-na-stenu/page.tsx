@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ElkaCustomerLooks } from "@/components/stariva/elka-customer-looks";
 import { ElkaFaq } from "@/components/stariva/elka-faq";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
@@ -17,7 +18,7 @@ import { ElkaComparison } from "./_components/elka-comparison";
 import { ElkaDiy } from "./_components/elka-diy";
 import { ElkaHero } from "./_components/elka-hero";
 import { ElkaModels } from "./_components/elka-models";
-import { FAQ } from "./_data";
+import { FAQ, TREES_MODELS_ID } from "./_data";
 
 // Цены и наличие ёлок живые (Ozon), цена мастер-класса — из базы.
 export const dynamic = "force-dynamic";
@@ -84,6 +85,17 @@ export default async function ElkaTreesPage() {
       <main>
         <ElkaHero />
         <ElkaModels items={items} />
+        <ElkaCustomerLooks
+          source="elka_trees"
+          eyebrow="Фото покупателей"
+          title="Ёлки макраме у покупателей дома"
+          intro="Одна ёлка — сколько угодно нарядов: игрушки, гирлянда, флажки или совсем ничего. Её можно каждый год украшать по-новому."
+          cta={{
+            href: `#${TREES_MODELS_ID}`,
+            label: "Выбрать ёлку",
+            goal: "elka_looks_models",
+          }}
+        />
         <ElkaAudiences />
         <ElkaComparison />
         <ElkaBusiness />
