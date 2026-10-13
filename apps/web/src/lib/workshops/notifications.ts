@@ -27,7 +27,10 @@ import {
   isClientBotConfigured,
   sendClientMessage,
 } from "@/lib/telegram/client-bot";
-import { deliverNotification } from "@/lib/custom-order/delivery";
+import {
+  type DeliveryConfig,
+  deliverNotification,
+} from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
 import { googleCalendarUrl } from "./calendar";
@@ -187,18 +190,43 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
   );
 }
 
-/**
- * Сообщает мастеру о покупке. Без настроенных каналов — false без резерва,
- * при сбое обоих каналов — ошибка, и ближайший прогон напоминаний повторит.
- */
-function deliverStaff(target: Target) {
-  if (!notificationConfigured()) return Promise.resolve(false);
+interface StaffChannel {
+  channel: Extract<NotificationChannel, `staff-${string}`>;
+  config: DeliveryConfig;
+}
+
+function configuredStaffChannels(): StaffChannel[] {
+  const channels: StaffChannel[] = [];
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
+    channels.push({
+      channel: "staff-telegram",
+      config: {
+        telegramToken: env.TELEGRAM_BOT_TOKEN,
+        telegramChatId: env.TELEGRAM_CHAT_ID,
+      },
+    });
+  }
+  if (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_FROM && env.ORDER_EMAIL_TO) {
+    channels.push({
+      channel: "staff-email",
+      config: {
+        emailKey: baseEnv.RESEND_API_KEY,
+        emailFrom: env.ORDER_EMAIL_FROM,
+        emailTo: env.ORDER_EMAIL_TO,
+      },
+    });
+  }
+  return channels;
+}
+
+/** Отдельный резерв на каждый канал: повторяем только недоставленное. */
+function deliverStaff(target: Target, { channel, config }: StaffChannel) {
   const { title, message } = formatWorkshopPurchaseMessage(
     target.order,
     target.workshop,
     target.email,
   );
-  return claimed(target, "booked", "staff", async () => {
+  return claimed(target, "booked", channel, async () => {
     const delivered = await deliverNotification(
       {
         id: target.order.id,
@@ -209,13 +237,7 @@ function deliverStaff(target: Target) {
         photoBase64: null,
         photoType: null,
       },
-      {
-        telegramToken: env.TELEGRAM_BOT_TOKEN,
-        telegramChatId: env.TELEGRAM_CHAT_ID,
-        emailKey: baseEnv.RESEND_API_KEY,
-        emailFrom: env.ORDER_EMAIL_FROM,
-        emailTo: env.ORDER_EMAIL_TO,
-      },
+      config,
     );
     if (!delivered) throw new Error("staff_notification_failed");
   });
@@ -267,13 +289,16 @@ export async function notifyWorkshopBooked(orderId: string): Promise<void> {
     logger.error("workshop.staff_notification.not_configured", { orderId });
     return;
   }
-  try {
-    await deliverStaff(target);
-  } catch (error) {
-    logger.error("workshop.staff_notification.failed", {
-      orderId,
-      error: String(error),
-    });
+  for (const staffChannel of configuredStaffChannels()) {
+    try {
+      await deliverStaff(target, staffChannel);
+    } catch (error) {
+      logger.error("workshop.staff_notification.failed", {
+        orderId,
+        channel: staffChannel.channel,
+        error: String(error),
+      });
+    }
   }
 }
 
@@ -317,6 +342,7 @@ export async function runWorkshopReminderSweep(now = new Date()) {
     sent.has(`${target.order.id}:${kind}:${channel}`);
 
   const jobs: Array<() => Promise<boolean>> = [];
+  const staffChannels = configuredStaffChannels();
   for (const target of targets) {
     const { order, workshop } = target;
     if (!order.paidAt) continue;
@@ -326,11 +352,12 @@ export async function runWorkshopReminderSweep(now = new Date()) {
     if (recentlyPaid && !isSent(target, "booked", "email")) {
       jobs.push(() => deliverEmail(target, "booked"));
     }
-    if (
-      order.paidAt.getTime() >= now.getTime() - STAFF_RETRY_MS &&
-      !isSent(target, "booked", "staff")
-    ) {
-      jobs.push(() => deliverStaff(target));
+    if (order.paidAt.getTime() >= now.getTime() - STAFF_RETRY_MS) {
+      for (const staffChannel of staffChannels) {
+        if (!isSent(target, "booked", staffChannel.channel)) {
+          jobs.push(() => deliverStaff(target, staffChannel));
+        }
+      }
     }
     if (!workshop.releaseAt) continue;
     for (const kind of dueReminders({
