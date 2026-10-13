@@ -20,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
 
+/** Показывает контакты, источник и сделки клиента с формой правки карточки. */
 export default async function CrmClientPage({
   params,
 }: {

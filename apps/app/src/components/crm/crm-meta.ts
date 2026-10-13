@@ -28,6 +28,7 @@ export interface SourceView {
 export const utmLabel = (source: string | null, campaign: string | null) =>
   [source, campaign].filter(Boolean).join(" / ");
 
+/** Название источника: кампания, UTM-метки или «не с рекламы». */
 export function sourceLabel(source: SourceView): string {
   if (source.kind === "campaign") return source.name ?? "Кампания удалена";
   if (source.kind === "utm")

@@ -38,6 +38,7 @@ interface Filters {
   buyers: boolean;
 }
 
+/** Ссылка на страницу списка клиентов с сохранением поиска и фильтров. */
 function pageHref({ query, source, buyers }: Filters, page = 1) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
@@ -48,6 +49,7 @@ function pageHref({ query, source, buyers }: Filters, page = 1) {
   return search ? `/crm/clients?${search}` : "/crm/clients";
 }
 
+/** Показывает клиентов с поиском, фильтрами и постраничной навигацией. */
 export default async function CrmClientsPage({
   searchParams,
 }: {

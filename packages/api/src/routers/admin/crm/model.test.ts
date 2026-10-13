@@ -16,6 +16,7 @@ const touch = (utm_source: string, utm_campaign?: string) => ({
   last: { utm_source, utm_campaign, landing: "/", at: "2026-09-01T10:00:00Z" },
 });
 
+/** Создаёт тестовую сделку с базовыми полями и указанными переопределениями. */
 function deal(overrides: Partial<Deal> & Pick<Deal, "id">): Deal {
   return {
     kind: "product",
@@ -33,6 +34,7 @@ function deal(overrides: Partial<Deal> & Pick<Deal, "id">): Deal {
   };
 }
 
+/** Создаёт тестовую карточку клиента с указанными переопределениями. */
 function record(overrides: Partial<ClientRecord> & Pick<ClientRecord, "id">) {
   return {
     name: "Анна",

@@ -82,6 +82,7 @@ export function ClientForm({
     (field) => values[field].trim() !== initial[field].trim(),
   );
 
+  /** Отправляет поля карточки, преобразуя выбранную кампанию в объект источника. */
   function submit(event: React.FormEvent) {
     event.preventDefault();
     save.mutate({

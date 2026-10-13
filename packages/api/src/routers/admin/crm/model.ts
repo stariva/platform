@@ -30,6 +30,7 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   return digits.length >= 6 ? digits : null;
 }
 
+/** Убирает пробелы и приводит почту к нижнему регистру; без @ возвращает null. */
 export function normalizeEmail(raw: string | null | undefined): string | null {
   const email = raw?.trim().toLowerCase();
   return email?.includes("@") ? email : null;
@@ -198,6 +199,7 @@ export function buildClients(
   );
 }
 
+/** Собирает контакты, источник, даты и выручку из объединённых сделок и карточек. */
 function toClient(
   deals: Deal[],
   records: ClientRecord[],

@@ -101,6 +101,7 @@ function sortRows(rows: Row[]) {
   );
 }
 
+/** Карточка показателя сводки с подписью и необязательной подсказкой. */
 function Stat({
   label,
   value,
@@ -127,6 +128,7 @@ function Stat({
   );
 }
 
+/** Ссылка на создание кампании с метками источника без кампании. */
 function newCampaignHref(source: SourceView) {
   const params = new URLSearchParams();
   if (source.utmSource) params.set("utm_source", source.utmSource);
@@ -134,6 +136,7 @@ function newCampaignHref(source: SourceView) {
   return `/crm/campaigns?${params}`;
 }
 
+/** Показывает рекламную сводку за выбранный период и итоги по месяцам. */
 export default async function CrmReportPage({
   searchParams,
 }: {

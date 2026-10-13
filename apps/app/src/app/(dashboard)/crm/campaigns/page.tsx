@@ -35,6 +35,7 @@ const utmSchema = z.string().trim().min(1).max(120);
 const first = (value?: string | string[]) =>
   Array.isArray(value) ? value[0] : value;
 
+/** Показывает итоги кампаний и форму создания с метками из URL. */
 export default async function CrmCampaignsPage({
   searchParams,
 }: {

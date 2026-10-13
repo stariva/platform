@@ -177,6 +177,7 @@ async function cardFields(
   };
 }
 
+/** Сообщение о занятом телефоне или почте; null для остальных ошибок. */
 function conflictMessage(error: unknown): string | null {
   if (isUniqueViolation(error, "crm_clients_phone_idx")) {
     return "Карточка с этим телефоном уже есть — найдите клиента в списке";

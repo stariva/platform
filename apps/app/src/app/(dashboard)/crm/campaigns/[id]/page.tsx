@@ -25,6 +25,7 @@ import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
 
+/** Показывает кампанию, её расходы, клиентов и форму редактирования. */
 export default async function CrmCampaignPage({
   params,
 }: {

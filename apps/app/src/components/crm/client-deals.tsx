@@ -47,6 +47,7 @@ export interface DealView {
   utmCampaign: string | null;
 }
 
+/** Подпись статуса заказа или записи; у ручной продажи статуса нет. */
 function statusLabel(deal: DealView) {
   if (deal.kind === "manual") return null;
   if (deal.kind === "workshop") {

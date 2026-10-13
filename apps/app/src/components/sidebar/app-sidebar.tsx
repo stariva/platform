@@ -77,6 +77,7 @@ const customers: NavItem[] = [
   { title: "Чат с Никой", url: "/chats", icon: IconMessageChatbot },
 ];
 
+/** Навигация админки с активным разделом, ссылкой на витрину и меню пользователя. */
 export function AppSidebar({
   user,
   storefrontUrl,

@@ -54,6 +54,7 @@ export function clientSummary(
   };
 }
 
+/** Сделка для админки: сумма оплат в рублях, последняя оплата и UTM-метки. */
 export function dealView(deal: Deal) {
   return {
     kind: deal.kind,
@@ -74,6 +75,7 @@ export function dealView(deal: Deal) {
 export const byId = (campaigns: CampaignRow[]) =>
   new Map(campaigns.map((campaign) => [campaign.id, campaign]));
 
+/** Проверяет код PostgreSQL 23505 и имя ограничения в ошибке или её cause. */
 export function isUniqueViolation(error: unknown, constraint: string) {
   const cause = (error as { cause?: { code?: string; constraint?: string } })
     ?.cause;

@@ -11,6 +11,7 @@ import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
 
+/** Загружает кампании и показывает форму добавления клиента вручную. */
 export default async function NewCrmClientPage() {
   const campaigns = await api.admin.crm.campaigns();
 
