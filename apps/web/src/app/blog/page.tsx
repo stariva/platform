@@ -11,7 +11,7 @@ import { absoluteImageUrl } from "@/lib/workshops-data";
 export const metadata: Metadata = {
   title: "Блог о макраме — советы, история, вдохновение",
   description:
-    "Статьи о технике макраме, уходе за изделиями, истории ремесла и философии осознанного потребления. Блог мастерской Stariva.",
+    "Статьи о технике макраме, уходе за изделиями, истории ремесла и философии осознанного потребления. Блог Stariva.",
   alternates: { canonical: `${BASE_URL}/blog` },
   openGraph: {
     type: "website",

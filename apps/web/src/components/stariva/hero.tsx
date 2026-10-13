@@ -144,7 +144,7 @@ export function Hero() {
 
         <div
           role="tablist"
-          aria-label="Направления мастерской"
+          aria-label="Направления Stariva"
           className={styles.tabs}
         >
           {slides.map((slide, index) => (
