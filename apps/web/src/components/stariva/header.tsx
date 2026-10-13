@@ -38,6 +38,11 @@ const b2bLinks: NavLink[] = [
     href: "/resort",
     desc: "Глэмпинг, террасы, SPA, отели",
   },
+  {
+    label: "Фотографам и стилистам",
+    href: "/partners",
+    desc: "Платья для съёмок, партнёрская программа",
+  },
 ];
 
 const aboutLinks: NavLink[] = [
