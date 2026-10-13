@@ -43,7 +43,7 @@ export default async function LessonPlayerPage({
     <div>
       <Link
         href={`/account/workshops/${slug}`}
-        className="text-sm text-taupe hover:text-espresso transition-colors inline-flex items-center gap-1.5 mb-4"
+        className="text-sm text-taupe hover:text-espresso transition-colors inline-flex items-center gap-1.5 mb-5"
       >
         ← {workshop.title}
       </Link>
@@ -62,8 +62,8 @@ export default async function LessonPlayerPage({
             watermark={session.user.email}
           />
 
-          <div className="mt-4">
-            <p className="label-caps text-[11px] text-taupe mb-1">
+          <div className="mt-5">
+            <p className="label-caps text-[11px] text-taupe mb-1.5">
               Урок {index + 1} из {lessons.length} · {lesson.duration}
             </p>
             <h1 className="font-serif text-2xl text-espresso">
@@ -71,28 +71,30 @@ export default async function LessonPlayerPage({
             </h1>
           </div>
 
-          <div className="flex items-center justify-between mt-6 gap-3">
-            {prev ? (
-              <Link
-                href={`/account/workshops/${slug}/${prev.id}`}
-                className="text-sm text-espresso/70 hover:text-espresso transition-colors"
-              >
-                ← {prev.title}
-              </Link>
-            ) : (
-              <span />
-            )}
-            {next ? (
-              <Link
-                href={`/account/workshops/${slug}/${next.id}`}
-                className="text-sm text-terracotta hover:underline text-right"
-              >
-                {next.title} →
-              </Link>
-            ) : (
-              <span />
-            )}
-          </div>
+          {(prev || next) && (
+            <div className="flex items-center justify-between mt-8 gap-3">
+              {prev ? (
+                <Link
+                  href={`/account/workshops/${slug}/${prev.id}`}
+                  className="text-sm text-espresso/70 hover:text-espresso transition-colors"
+                >
+                  ← {prev.title}
+                </Link>
+              ) : (
+                <span />
+              )}
+              {next ? (
+                <Link
+                  href={`/account/workshops/${slug}/${next.id}`}
+                  className="text-sm text-terracotta hover:underline text-right"
+                >
+                  {next.title} →
+                </Link>
+              ) : (
+                <span />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Список уроков */}
