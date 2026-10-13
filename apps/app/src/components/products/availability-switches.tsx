@@ -14,12 +14,7 @@ interface Props {
 }
 
 /** Переключатели «На сайте» и «Под заказ» прямо в строке таблицы товаров. */
-export function AvailabilitySwitches({
-  id,
-  name,
-  status,
-  madeToOrder,
-}: Props) {
+export function AvailabilitySwitches({ id, name, status, madeToOrder }: Props) {
   const router = useRouter();
   const [published, setPublished] = useState(status === "published");
   const [toOrder, setToOrder] = useState(madeToOrder);

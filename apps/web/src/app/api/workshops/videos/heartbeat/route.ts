@@ -22,8 +22,5 @@ export async function POST(request: Request) {
     parsed.data.videoKey,
     parsed.data.attemptId,
   );
-  return NextResponse.json(
-    { extended },
-    { status: extended ? 200 : 409 },
-  );
+  return NextResponse.json({ extended }, { status: extended ? 200 : 409 });
 }
