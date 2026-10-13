@@ -85,7 +85,7 @@ jobs:
 
       # Эти пакеты отдают код из dist — без сборки тесты их не находят
       - name: Build packages used by tests
-        run: bun run build --filter=@stariva/config --filter=@stariva/storage
+        run: bun run build --filter=@stariva/config --filter=@stariva/storage --filter=@stariva/emails
 
       - name: Test
         run: bun test
