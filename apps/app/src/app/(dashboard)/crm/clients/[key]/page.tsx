@@ -26,12 +26,10 @@ export default async function CrmClientPage({
   params: Promise<{ key: string }>;
 }) {
   const { key } = await params;
-  const client = await api.admin.crm
-    .client({ key: decodeURIComponent(key) })
-    .catch((error) => {
-      if ((error as { code?: string }).code === "NOT_FOUND") notFound();
-      throw error;
-    });
+  const client = await api.admin.crm.client({ key }).catch((error) => {
+    if ((error as { code?: string }).code === "NOT_FOUND") notFound();
+    throw error;
+  });
 
   const hasSiteOrders = client.deals.some((deal) => deal.kind !== "manual");
   const record = client.record;

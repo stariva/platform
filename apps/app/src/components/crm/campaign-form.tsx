@@ -79,14 +79,14 @@ export function CampaignForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Канал</Label>
+          <Label htmlFor="campaign-channel">Канал</Label>
           <Select
             value={values.channel}
             onValueChange={(value) => {
               if (value) set("channel", value as AdChannel);
             }}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger id="campaign-channel" className="w-full">
               <SelectValue>
                 {(value: AdChannel) => CHANNEL_LABELS[value]}
               </SelectValue>

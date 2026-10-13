@@ -190,7 +190,7 @@ export const addExpense = adminProcedure
     z.object({
       campaignId: z.string().min(1),
       spentOn: daySchema,
-      amount: z.number().positive().max(100_000_000),
+      amount: z.number().positive().max(21_474_836.47),
       note: z
         .string()
         .trim()
