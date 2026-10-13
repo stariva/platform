@@ -12,7 +12,10 @@ import {
   MAX_MADE_TO_ORDER_QUANTITY,
   madeToOrderOptionsSchema,
 } from "@/lib/commerce/made-to-order-options";
-import { notifyMadeToOrderRequested } from "@/lib/commerce/order-notifications";
+import {
+  notifyCustomer,
+  notifyMadeToOrderRequested,
+} from "@/lib/commerce/order-notifications";
 import { createMadeToOrderOrder } from "@/lib/commerce/orders";
 import { unavailableItemsResponse } from "@/lib/commerce/unavailable-items";
 import { collectVisitor } from "@/lib/visitor";
@@ -95,7 +98,10 @@ export async function POST(request: NextRequest) {
     items,
   });
 
-  await notifyMadeToOrderRequested(order.id);
+  await Promise.all([
+    notifyMadeToOrderRequested(order.id),
+    notifyCustomer(order.id),
+  ]);
 
   return NextResponse.json({
     orderId: order.id,

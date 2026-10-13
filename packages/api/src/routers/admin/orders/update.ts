@@ -3,7 +3,20 @@ import { and, eq, productOrderStatus, productOrders } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { emailCustomer } from "./customer-email";
 import { isManualStatus } from "./shape";
+
+/**
+ * Ручные статусы, о которых пишем покупателю. Остальные мастер ставит,
+ * чтобы поправить заказ, — письмо «предоплата получена» при такой правке
+ * было бы неправдой.
+ */
+const EMAILED_MANUAL_STATUSES = new Set<string>([
+  "shipped",
+  "delivered",
+  "canceled",
+  "refunded",
+]);
 
 /**
  * Мастер ведёт заказ: статус, номер отправления и внутренняя заметка.
@@ -70,5 +83,8 @@ export const update = adminProcedure
         trackingNumber: productOrders.trackingNumber,
       });
     if (!updated) throw conflict();
+    if (statusChanged && EMAILED_MANUAL_STATUSES.has(updated.status)) {
+      await emailCustomer(context.db, updated.id);
+    }
     return updated;
   });

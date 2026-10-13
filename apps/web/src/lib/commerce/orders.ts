@@ -6,6 +6,7 @@ import {
   productOrderPayments,
   productOrders,
   products,
+  user,
   type VisitorInfo,
 } from "@stariva/db/schema";
 import {
@@ -220,6 +221,24 @@ export async function getProductOrderById(orderId: string) {
     .where(eq(productOrders.id, orderId))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Куда писать покупателю: email из заказа, а если его не оставили —
+ * email аккаунта, из которого оформлен заказ.
+ */
+export async function getProductOrderCustomerEmail(order: {
+  contactEmail: string | null;
+  userId: string | null;
+}): Promise<string | null> {
+  if (order.contactEmail) return order.contactEmail;
+  if (!order.userId) return null;
+  const rows = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, order.userId))
+    .limit(1);
+  return rows[0]?.email ?? null;
 }
 
 export async function getProductOrderItems(orderId: string) {

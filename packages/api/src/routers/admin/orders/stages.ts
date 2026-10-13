@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { emailCustomer } from "./customer-email";
 import { depositFor, paymentDueFrom, toKopecks } from "./stage-math";
 
 /*
@@ -66,8 +67,8 @@ export const terms = adminProcedure
       approve: z.boolean().default(false),
     }),
   )
-  .handler(async ({ context, input }) =>
-    context.db.transaction(async (tx) => {
+  .handler(async ({ context, input }) => {
+    const updated = await context.db.transaction(async (tx) => {
       const [order] = await tx
         .select({ kind: productOrders.kind, status: productOrders.status })
         .from(productOrders)
@@ -134,8 +135,10 @@ export const terms = adminProcedure
         .returning({ id: productOrders.id, status: productOrders.status });
       if (!updated) throw conflict();
       return updated;
-    }),
-  );
+    });
+    if (input.approve) await emailCustomer(context.db, updated.id);
+    return updated;
+  });
 
 /** Отказ по заявке: покупатель увидит причину на странице заказа. */
 export const decline = adminProcedure
@@ -145,13 +148,16 @@ export const decline = adminProcedure
       reason: z.string().trim().min(1, "Укажите причину").max(1000),
     }),
   )
-  .handler(({ context, input }) =>
-    transition(context.db, input.id, ["requested", "awaiting_deposit"], {
-      status: "declined",
-      declineReason: input.reason,
-      paymentDueAt: null,
-    }),
-  );
+  .handler(async ({ context, input }) => {
+    const updated = await transition(
+      context.db,
+      input.id,
+      ["requested", "awaiting_deposit"],
+      { status: "declined", declineReason: input.reason, paymentDueAt: null },
+    );
+    await emailCustomer(context.db, updated.id);
+    return updated;
+  });
 
 /** Вернуть одобренную, но не оплаченную заявку на согласование — чтобы изменить условия. */
 export const reopen = adminProcedure
@@ -196,12 +202,14 @@ export const requestBalance = adminProcedure
       });
     }
     const now = new Date();
-    return transition(context.db, input.id, ["in_production"], {
+    const updated = await transition(context.db, input.id, ["in_production"], {
       status: "awaiting_balance",
       amountDelivery,
       amountTotal,
       paymentDueAt: paymentDueFrom(now),
     });
+    await emailCustomer(context.db, updated.id);
+    return updated;
   });
 
 /** Ещё 3 дня на оплату — например, если срок вышел, а покупатель на связи. */
@@ -220,11 +228,13 @@ export const extendPayment = adminProcedure
  */
 export const cancel = adminProcedure
   .input(z.object({ id: z.string().min(1) }))
-  .handler(({ context, input }) =>
-    transition(
+  .handler(async ({ context, input }) => {
+    const updated = await transition(
       context.db,
       input.id,
       ["in_production", "awaiting_balance", "ready_to_ship"],
       { status: "canceled", paymentDueAt: null },
-    ),
-  );
+    );
+    await emailCustomer(context.db, updated.id);
+    return updated;
+  });
