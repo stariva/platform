@@ -107,6 +107,15 @@ export function PhotoshootsScenarios() {
             подобрали к каждому модели из каталога. Любую можно сплести в другом
             цвете и по вашим меркам.
           </p>
+          <p className="mt-4 text-sm text-dark-grey">
+            Как выбрать цвет под фон и что взять на съёмку —{" "}
+            <Link
+              href="/blog/chto-nadet-na-fotosessiyu-v-puteshestvii"
+              className="underline underline-offset-4 hover:text-terracotta"
+            >
+              читайте в блоге
+            </Link>
+          </p>
         </div>
 
         {scenarios.map((scenario, i) => (
