@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 import { ChatWidget } from "@/components/stariva/chat-widget";
 import { CookieBanner } from "@/components/stariva/cookie-banner";
@@ -14,19 +14,33 @@ import { CartProvider } from "@/lib/cart/cart-context";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+// Self-hosted variable fonts (Google Fonts "latin" + "cyrillic" subsets),
+// so builds don't depend on reaching fonts.googleapis.com.
+const cormorant = localFont({
+  src: [
+    {
+      path: "./fonts/cormorant-garamond-var.woff2",
+      weight: "400 700",
+      style: "normal",
+    },
+    {
+      path: "./fonts/cormorant-garamond-italic-var.woff2",
+      weight: "400 700",
+      style: "italic",
+    },
+  ],
   variable: "--font-serif",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const inter = Inter({
-  subsets: ["latin", "cyrillic"],
-  weight: ["300", "400", "500", "600"],
+const inter = localFont({
+  src: "./fonts/inter-var.woff2",
+  weight: "300 600",
+  style: "normal",
   variable: "--font-sans",
   display: "swap",
+  adjustFontFallback: "Arial",
 });
 
 export const metadata: Metadata = {

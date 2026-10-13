@@ -62,9 +62,8 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-sans), "Inter Fallback", system-ui, sans-serif;
-  --font-serif:
-    var(--font-serif), "Cormorant Garamond Fallback", Georgia, serif;
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-serif: var(--font-serif), Georgia, serif;
   --font-mono: ui-monospace, monospace;
 
   /* Core tokens */
