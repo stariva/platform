@@ -14,6 +14,8 @@ import {
   SidebarRail,
 } from "@stariva/ui";
 import {
+  IconAddressBook,
+  IconChartBar,
   IconExternalLink,
   IconInbox,
   IconMessageChatbot,
@@ -23,6 +25,7 @@ import {
   IconSchool,
   IconSettings,
   IconShoppingBag,
+  IconSpeakerphone,
   IconTicket,
   IconUsers,
 } from "@tabler/icons-react";
@@ -57,6 +60,16 @@ const learning: NavItem[] = [
   { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
   { title: "Записи", url: "/workshop-orders", icon: IconTicket },
   { title: "Добавить мастер-класс", url: "/workshops/new", icon: IconPlus },
+];
+
+const marketing: NavItem[] = [
+  { title: "Сводка", url: "/crm", icon: IconChartBar },
+  { title: "Клиенты", url: "/crm/clients", icon: IconAddressBook },
+  {
+    title: "Кампании и расходы",
+    url: "/crm/campaigns",
+    icon: IconSpeakerphone,
+  },
 ];
 
 const customers: NavItem[] = [
@@ -117,6 +130,23 @@ export function AppSidebar({
                 <SidebarMenuButton
                   tooltip={item.title}
                   isActive={item.url === activeUrl(pathname, sales)}
+                  render={<Link href={item.url} />}
+                >
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Реклама</SidebarGroupLabel>
+          <SidebarMenu>
+            {marketing.map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  isActive={item.url === activeUrl(pathname, marketing)}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
