@@ -162,6 +162,13 @@
       "when": 1791835083777,
       "tag": "0022_video_renditions",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791922005670,
+      "tag": "0023_product_best_for_highlights",
+      "breakpoints": true
     }
   ]
 }

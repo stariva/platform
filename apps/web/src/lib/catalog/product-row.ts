@@ -42,6 +42,8 @@ export function productRowToProduct(row: ProductRow): Product {
     careInstructions: row.careInstructions ?? undefined,
     color: row.color ?? undefined,
     sizes: row.sizes.length > 0 ? row.sizes : undefined,
+    bestFor: row.bestFor ?? undefined,
+    highlights: row.highlights.length > 0 ? row.highlights : undefined,
     featured: row.featured,
     seoTitle: row.seoTitle ?? undefined,
     seoDescription: row.seoDescription ?? undefined,

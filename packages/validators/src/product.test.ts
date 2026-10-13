@@ -20,6 +20,8 @@ const valid: ProductFormValues = {
   dimensions: "",
   careInstructions: "",
   sizes: [],
+  bestFor: "",
+  highlights: [],
   madeToOrder: true,
   leadTimeMinDays: null,
   leadTimeMaxDays: null,

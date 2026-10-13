@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import Image from "next/image";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { TrackedLink } from "@/components/stariva/tracked-link";
@@ -93,7 +94,28 @@ export function ElkaModels({ trees }: { trees: Product[] }) {
                   {details ? (
                     <p className="text-sm text-text-grey mb-5">{details}</p>
                   ) : null}
-                  {product.shortDescription !== product.name ? (
+                  {product.bestFor ? (
+                    <p className="text-sm text-espresso mb-3">
+                      <span className="text-text-grey">Лучше всего для: </span>
+                      {product.bestFor}
+                    </p>
+                  ) : null}
+                  {product.highlights ? (
+                    <ul className="flex flex-col gap-2 mb-6">
+                      {product.highlights.map((item) => (
+                        <li
+                          key={item}
+                          className="flex items-start gap-2 text-sm text-dark-grey"
+                        >
+                          <Check
+                            className="size-4 text-sage mt-0.5 shrink-0"
+                            aria-hidden
+                          />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : product.shortDescription !== product.name ? (
                     <p className="text-sm text-dark-grey leading-relaxed mb-6">
                       {product.shortDescription}
                     </p>

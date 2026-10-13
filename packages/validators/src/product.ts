@@ -86,6 +86,10 @@ export const productFormSchema = z
     dimensions: optionalText(300),
     careInstructions: optionalText(1000),
     sizes: z.array(z.string().trim().min(1).max(20)).max(20),
+    bestFor: optionalText(300),
+    highlights: z
+      .array(z.string().trim().min(1).max(200))
+      .max(10, "Не больше 10 преимуществ"),
     madeToOrder: z.boolean(),
     leadTimeMinDays: days,
     leadTimeMaxDays: days,

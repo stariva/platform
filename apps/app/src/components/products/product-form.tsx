@@ -58,6 +58,8 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   dimensions: "",
   careInstructions: "",
   sizes: [],
+  bestFor: "",
+  highlights: [],
   madeToOrder: true,
   leadTimeMinDays: null,
   leadTimeMaxDays: null,
@@ -412,6 +414,49 @@ export function ProductForm({
                 />
               </FieldRow>
             </div>
+            <div className="sm:col-span-2">
+              <FieldRow
+                label="Лучше всего для"
+                htmlFor="bestFor"
+                hint="Например: гостиная, лобби отеля, зал ресторана"
+                error={errors.bestFor?.message}
+              >
+                <Input id="bestFor" {...register("bestFor")} />
+              </FieldRow>
+            </div>
+            <Controller
+              control={control}
+              name="highlights"
+              render={({ field }) => (
+                <div className="sm:col-span-2">
+                  <FieldRow
+                    label="Преимущества"
+                    htmlFor="highlights"
+                    hint="По одному на строку, до 10. Сейчас показываются на карточках ёлок"
+                    error={
+                      errors.highlights?.message ??
+                      (errors.highlights
+                        ? "Каждое преимущество — не длиннее 200 символов"
+                        : undefined)
+                    }
+                  >
+                    <Textarea
+                      id="highlights"
+                      rows={3}
+                      defaultValue={field.value.join("\n")}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter(Boolean),
+                        )
+                      }
+                    />
+                  </FieldRow>
+                </div>
+              )}
+            />
           </CardContent>
         </Card>
 

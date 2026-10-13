@@ -67,6 +67,10 @@ export interface Product {
   careInstructions?: string;
   color?: string;
   sizes?: string[];
+  /** «Лучше всего для: …» — где изделие смотрится лучше всего. */
+  bestFor?: string;
+  /** Короткие преимущества списком. */
+  highlights?: string[];
   featured?: boolean;
 }
 
