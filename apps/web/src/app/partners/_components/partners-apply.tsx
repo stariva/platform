@@ -195,27 +195,34 @@ export function PartnersApply() {
                 <FormField
                   control={form.control}
                   name="role"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormControl>
-                        <fieldset>
-                          <legend className={groupLabel}>
-                            Чем вы занимаетесь
-                          </legend>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {ROLES.map((role) => (
-                              <Chip
-                                key={role}
-                                active={field.value === role}
-                                onClick={() => field.onChange(role)}
-                              >
-                                {role}
-                              </Chip>
-                            ))}
-                          </div>
-                        </fieldset>
-                      </FormControl>
-                      <FormMessage />
+                      <fieldset
+                        aria-invalid={fieldState.invalid}
+                        aria-describedby={
+                          fieldState.error ? "role-error" : undefined
+                        }
+                      >
+                        <legend className={groupLabel}>
+                          Чем вы занимаетесь
+                        </legend>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {ROLES.map((role, index) => (
+                            <Chip
+                              key={role}
+                              active={field.value === role}
+                              onClick={() => field.onChange(role)}
+                              buttonRef={index === 0 ? field.ref : undefined}
+                              aria-describedby={
+                                fieldState.error ? "role-error" : undefined
+                              }
+                            >
+                              {role}
+                            </Chip>
+                          ))}
+                        </div>
+                      </fieldset>
+                      <FormMessage id="role-error" />
                     </FormItem>
                   )}
                 />
@@ -376,16 +383,22 @@ export function PartnersApply() {
 function Chip({
   active,
   onClick,
+  buttonRef,
+  "aria-describedby": ariaDescribedBy,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+  "aria-describedby"?: string;
   children: React.ReactNode;
 }) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-pressed={active}
+      aria-describedby={ariaDescribedBy}
       onClick={onClick}
       className={`px-4 py-2 rounded-full text-[13px] border transition-colors ${
         active
