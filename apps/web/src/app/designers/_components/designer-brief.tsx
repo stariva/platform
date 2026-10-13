@@ -20,10 +20,10 @@ const MAX_ITEMS = 12;
 
 type BriefItemInput = Omit<BriefItem, "quantity"> & { quantity: string };
 
-const inputClass =
+const INPUT_CLASS =
   "w-full rounded-xl border border-espresso/15 bg-white px-3.5 py-2.5 text-[15px] text-espresso placeholder:text-taupe/70 focus-visible:outline-2 focus-visible:outline-espresso";
 
-const chipClass =
+const CHIP_CLASS =
   "rounded-full border border-espresso/20 px-3.5 py-2 text-sm text-espresso transition-colors hover:border-terracotta aria-pressed:border-terracotta aria-pressed:bg-terracotta aria-pressed:text-parchment";
 
 /**
@@ -63,7 +63,9 @@ export function DesignerBrief() {
     );
   const setQuantity = (index: number, quantity: number) =>
     updateItem(index, {
-      quantity: String(Math.min(MAX_ITEM_QUANTITY, Math.max(1, quantity || 1))),
+      quantity: String(
+        Math.min(MAX_ITEM_QUANTITY, Math.max(1, Math.floor(quantity) || 1)),
+      ),
     });
 
   return (
@@ -108,7 +110,7 @@ export function DesignerBrief() {
                       onChange={(e) =>
                         updateItem(index, { typeId: e.target.value })
                       }
-                      className={inputClass}
+                      className={INPUT_CLASS}
                     >
                       {BRIEF_ITEM_TYPES.map((type) => (
                         <option key={type.id} value={type.id}>
@@ -136,7 +138,7 @@ export function DesignerBrief() {
                       onChange={(e) =>
                         updateItem(index, { sizeId: e.target.value })
                       }
-                      className={inputClass}
+                      className={INPUT_CLASS}
                     >
                       {SIZES.map((size) => (
                         <option key={size.id} value={size.id}>
@@ -165,6 +167,7 @@ export function DesignerBrief() {
                         inputMode="numeric"
                         min={1}
                         max={MAX_ITEM_QUANTITY}
+                        step={1}
                         value={item.quantity}
                         onChange={(e) =>
                           updateItem(index, { quantity: e.target.value })
@@ -217,7 +220,7 @@ export function DesignerBrief() {
                     type="button"
                     aria-pressed={colorId === color.id}
                     onClick={() => setColorId(color.id)}
-                    className={chipClass}
+                    className={CHIP_CLASS}
                   >
                     {color.label}
                   </button>
@@ -241,7 +244,7 @@ export function DesignerBrief() {
                     onClick={() =>
                       setObjectType(objectType === type ? undefined : type)
                     }
-                    className={chipClass}
+                    className={CHIP_CLASS}
                   >
                     {type}
                   </button>
@@ -260,7 +263,7 @@ export function DesignerBrief() {
                     type="button"
                     aria-pressed={stage === item}
                     onClick={() => setStage(stage === item ? undefined : item)}
-                    className={chipClass}
+                    className={CHIP_CLASS}
                   >
                     {item}
                   </button>
@@ -277,7 +280,7 @@ export function DesignerBrief() {
                   maxLength={120}
                   autoComplete="organization"
                   placeholder="Например, студия «Север»"
-                  className={inputClass}
+                  className={INPUT_CLASS}
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-espresso">
@@ -287,7 +290,7 @@ export function DesignerBrief() {
                   onChange={(e) => setCity(e.target.value)}
                   maxLength={80}
                   placeholder="Москва"
-                  className={inputClass}
+                  className={INPUT_CLASS}
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-espresso sm:col-span-2">
@@ -296,7 +299,7 @@ export function DesignerBrief() {
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  className={inputClass}
+                  className={INPUT_CLASS}
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-espresso sm:col-span-2">
@@ -307,7 +310,7 @@ export function DesignerBrief() {
                   maxLength={1000}
                   rows={3}
                   placeholder="Стиль, палитра, высота потолков, требования объекта"
-                  className={`${inputClass} resize-y`}
+                  className={`${INPUT_CLASS} resize-y`}
                 />
               </label>
             </div>
