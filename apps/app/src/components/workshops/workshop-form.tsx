@@ -15,6 +15,7 @@ import {
   toast,
 } from "@stariva/ui";
 import {
+  EMPTY_WORKSHOP_BRIEF_VALUES,
   formatDurationLabel,
   productSlugFromName,
   WORKSHOP_CATEGORIES,
@@ -30,6 +31,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
+import { WorkshopBrief } from "./workshop-brief";
 import { WorkshopFiles } from "./workshop-files";
 import { WorkshopImageField } from "./workshop-image-field";
 import { WorkshopLessons } from "./workshop-lessons";
@@ -52,6 +54,7 @@ export const EMPTY_WORKSHOP: WorkshopFormValues = {
   materials: [],
   lessons: [],
   materialFiles: [],
+  brief: EMPTY_WORKSHOP_BRIEF_VALUES,
   ozonUrl: "",
   featured: false,
   sortOrder: 0,
@@ -92,6 +95,7 @@ const toLines = (text: string) =>
     .map((line) => line.trim())
     .filter(Boolean);
 
+/** Форма создания и редактирования мастер-класса с сохранением и удалением. */
 export function WorkshopForm({
   id,
   initialValues,
@@ -312,6 +316,13 @@ export function WorkshopForm({
             />
           </CardContent>
         </Card>
+
+        <WorkshopBrief
+          slug={slug}
+          control={control}
+          register={register}
+          errors={errors.brief}
+        />
 
         <Controller
           control={control}

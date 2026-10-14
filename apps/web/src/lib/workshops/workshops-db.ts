@@ -1,6 +1,10 @@
 import { logger } from "@stariva/config";
 import { and, asc, db, eq, inArray, ne } from "@stariva/db";
-import { type WorkshopRow, workshops } from "@stariva/db/schema";
+import {
+  EMPTY_WORKSHOP_BRIEF,
+  type WorkshopRow,
+  workshops,
+} from "@stariva/db/schema";
 import { cache } from "react";
 import {
   formatDurationLabel,
@@ -31,6 +35,7 @@ export function workshopRowToWorkshop(row: WorkshopRow): Workshop {
     materials: row.materials,
     lessons: row.lessons,
     materialFiles: row.materialFiles,
+    brief: { ...EMPTY_WORKSHOP_BRIEF, ...row.brief },
     ozonUrl: row.ozonUrl ?? undefined,
     featured: row.featured,
     testimonial:
