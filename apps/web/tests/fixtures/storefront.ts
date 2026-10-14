@@ -1,5 +1,8 @@
 import { mock } from "bun:test";
 import assert from "node:assert/strict";
+import { implement } from "@orpc/server";
+import { RPCHandler } from "@orpc/server/fetch";
+import { WEB_RPC_PATH, webContract } from "@stariva/web-api/contract";
 
 const env = {
   STOREFRONT_URL: "https://store.example",
@@ -17,24 +20,39 @@ const complete = {
 };
 let body: unknown = complete;
 let calls = 0;
-let timeout = 0;
-const realTimeout = AbortSignal.timeout;
-AbortSignal.timeout = (ms) => {
-  timeout = ms;
-  return realTimeout(ms);
-};
-globalThis.fetch = mock(async (url, options) => {
+// Витрина по контракту: ответ, не прошедший схему, станет ошибкой сервера
+const handler = new RPCHandler({
+  admin: {
+    ozon: {
+      pushStock: implement(webContract).admin.ozon.pushStock.handler(
+        () => body as typeof complete,
+      ),
+    },
+  },
+});
+const timeouts: number[] = [];
+const realSetTimeout = globalThis.setTimeout;
+globalThis.setTimeout = ((fn: () => void, ms?: number) => {
+  timeouts.push(ms ?? 0);
+  return realSetTimeout(fn, ms);
+}) as typeof setTimeout;
+globalThis.fetch = mock(async (input, init) => {
   calls++;
-  assert.equal(new URL(String(url)).protocol, "https:");
-  assert.equal(options?.method, "POST");
-  assert.equal(
-    new Headers(options?.headers).get("authorization"),
-    "Bearer fixture",
-  );
-  return Response.json(body);
+  const request = new Request(input, init);
+  assert.equal(new URL(request.url).protocol, "https:");
+  assert.equal(request.method, "POST");
+  assert.equal(request.headers.get("authorization"), "Bearer fixture");
+  if (new URL(request.url).pathname === "/api/revalidate") {
+    return Response.json({ revalidated: true });
+  }
+  const { matched, response } = await handler.handle(request, {
+    prefix: WEB_RPC_PATH,
+    context: {},
+  });
+  return matched ? response : new Response(null, { status: 404 });
 }) as unknown as typeof fetch;
 assert.equal(await pushStorefrontStockToOzon(["vase"]), true);
-assert.ok(timeout > 20_000);
+assert.ok(timeouts.some((ms) => ms > 20_000));
 for (const invalid of [
   {},
   { failed: [] },

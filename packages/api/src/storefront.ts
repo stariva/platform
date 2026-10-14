@@ -1,28 +1,45 @@
+import { createORPCClient, ORPCError } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
+import { TimeoutLinkPlugin } from "@orpc/client/plugins";
 import { env, logger } from "@stariva/config";
-import { z } from "zod";
+import { WEB_RPC_PATH, type WebClient } from "@stariva/web-api/contract";
 
-const stockSyncResponseSchema = z.object({
-  updated: z.array(z.string().min(1)),
-  syncedSlugs: z.array(z.string().min(1)),
-  failed: z.array(z.object({ offerId: z.string(), error: z.string() })),
-  hidden: z.array(z.number().int().positive()),
-});
-
-function storefrontRequest(path: string, body: unknown, timeoutMs: number) {
+/** Адрес витрины и общий секрет; null без настроек или не по HTTPS. */
+function storefrontTarget() {
   const baseUrl = env.STOREFRONT_URL;
   const secret = env.REVALIDATE_SECRET;
   if (!baseUrl || !secret) return null;
-  const url = new URL(path, baseUrl);
+  const url = new URL(baseUrl);
   if (url.protocol !== "https:") return null;
-  return fetch(url, {
+  return { origin: url.origin, secret };
+}
+
+function storefrontRequest(path: string, body: unknown, timeoutMs: number) {
+  const target = storefrontTarget();
+  if (!target) return null;
+  return fetch(new URL(path, target.origin), {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${secret}`,
+      Authorization: `Bearer ${target.secret}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
+}
+
+/** Типизированный клиент API витрины (@stariva/web-api) с секретом админки. */
+function storefrontApi(timeoutMs: number): WebClient | null {
+  const target = storefrontTarget();
+  if (!target) return null;
+  return createORPCClient(
+    new RPCLink({
+      origin: target.origin,
+      url: WEB_RPC_PATH,
+      headers: { authorization: `Bearer ${target.secret}` },
+      plugins: [new TimeoutLinkPlugin({ timeout: timeoutMs })],
+    }),
+  );
 }
 
 /**
@@ -34,20 +51,16 @@ function storefrontRequest(path: string, body: unknown, timeoutMs: number) {
 export async function pushStorefrontStockToOzon(
   slugs: string[],
 ): Promise<boolean> {
+  if (slugs.length === 0) return false;
   try {
-    const res = await storefrontRequest("/api/ozon/stock", { slugs }, 30_000);
-    if (!res) {
+    const api = storefrontApi(30_000);
+    if (!api) {
       logger.warn("storefront.ozon_stock.not_configured");
       return false;
     }
-    if (!res.ok) {
-      logger.warn("storefront.ozon_stock.failed", { status: res.status });
-      return false;
-    }
-    const data = stockSyncResponseSchema.parse(await res.json());
+    const data = await api.admin.ozon.pushStock({ slugs });
     if (
       data.failed.length > 0 ||
-      slugs.length === 0 ||
       !slugs.every((slug) => data.syncedSlugs.includes(slug)) ||
       data.updated.length < new Set(slugs).size
     ) {
@@ -56,7 +69,10 @@ export async function pushStorefrontStockToOzon(
     }
     return true;
   } catch (error) {
-    logger.warn("storefront.ozon_stock.error", { error: String(error) });
+    logger.warn("storefront.ozon_stock.failed", {
+      code: error instanceof ORPCError ? error.code : undefined,
+      error: String(error),
+    });
     return false;
   }
 }

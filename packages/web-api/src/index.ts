@@ -3,6 +3,7 @@ export {
   createWebORPCContext,
   type WebErrorCode,
   type WebORPCContext,
+  type WebServices,
   webErrorStatus,
   webErrorStatusMap,
 } from "./orpc";

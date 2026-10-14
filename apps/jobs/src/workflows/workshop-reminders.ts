@@ -1,19 +1,13 @@
 import { hatchet } from "../client";
-import { postToStorefront } from "../lib/storefront";
-
-interface ReminderSweepResult {
-  checked?: number;
-  delivered?: number;
-  failed?: number;
-}
+import { webApi } from "../lib/web-api";
 
 /**
  * Напоминания покупателям мастер-классов — каждые 15 минут.
  *
  * Сама рассылка живёт на сайте (письма, Telegram, ссылки входа), воркер
- * только дёргает её по расписанию: POST /api/workshops/reminders. Повторы
- * безопасны: сайт помнит, что уже отправлено, поэтому ретраи Hatchet
- * ничего не задвоят.
+ * только дёргает её по расписанию: jobs.reminders.sweep. Если часть не ушла,
+ * сайт отвечает ошибкой REMINDERS_FAILED и Hatchet повторяет задание. Повторы
+ * безопасны: сайт помнит, что уже отправлено, и ничего не задвоит.
  */
 export const workshopRemindersWorkflow = hatchet.workflow({
   name: "workshop-reminders",
@@ -26,15 +20,6 @@ workshopRemindersWorkflow.task({
   name: "send-due-reminders",
   retries: 3,
   executionTimeout: "120s",
-  fn: async () => {
-    const body = await postToStorefront<ReminderSweepResult>(
-      "/api/workshops/reminders",
-      { timeoutMs: 110_000 },
-    );
-    return {
-      checked: body.checked ?? 0,
-      delivered: body.delivered ?? 0,
-      failed: body.failed ?? 0,
-    };
-  },
+  fn: () =>
+    webApi.jobs.reminders.sweep(undefined, { context: { timeout: 110_000 } }),
 });

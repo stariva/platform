@@ -4,13 +4,21 @@ import { logger } from "@stariva/config";
 import {
   createWebORPCContext,
   WEB_RPC_PATH,
+  type WebServices,
   webErrorStatus,
   webErrorStatusMap,
   webRouter,
 } from "@stariva/web-api";
+import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Рассылка о мастер-классах пока живёт в витрине: письма, Telegram и
+// заказы тянут за собой половину apps/web
+const services: WebServices = {
+  runWorkshopReminderSweep: () => runWorkshopReminderSweep(),
+};
 
 const handler = new RPCHandler(webRouter, {
   errorStatusMap: webErrorStatusMap,
@@ -29,7 +37,7 @@ const handler = new RPCHandler(webRouter, {
 async function handleRequest(request: Request) {
   const { matched, response } = await handler.handle(request, {
     prefix: WEB_RPC_PATH,
-    context: () => createWebORPCContext({ headers: request.headers }),
+    context: () => createWebORPCContext({ headers: request.headers, services }),
   });
   return matched ? response : new Response("Not found", { status: 404 });
 }

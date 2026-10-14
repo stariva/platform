@@ -1,10 +1,19 @@
 import type { ClientContext, RouterContractClient } from "@orpc/contract";
+import { adminContract } from "./admin";
 import { jobsContract } from "./jobs";
 
+export {
+  AdminNotConfiguredError,
+  OzonNotConfiguredError,
+  OzonRequestFailedError,
+  type OzonStockPushResult,
+} from "./admin";
 export {
   AttemptLostError,
   JobsNotConfiguredError,
   PlaylistMissingError,
+  type ReminderSweepResult,
+  RemindersFailedError,
   StorageNotConfiguredError,
 } from "./jobs";
 
@@ -15,6 +24,7 @@ export {
  */
 export const webContract = {
   jobs: jobsContract,
+  admin: adminContract,
 };
 
 export type WebContract = typeof webContract;

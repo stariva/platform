@@ -9,14 +9,6 @@ export const env = createEnv({
   server: {
     OZON_API_KEY: z.string().min(1).optional(),
     OZON_CLIENT_ID: z.string().min(1).optional(),
-    // FBS-склад, с которого Ozon Доставка отгружает готовые изделия сайта.
-    // Ozon Доставка продаёт только то, что числится в остатке на Ozon,
-    // поэтому остаток из админки дублируется сюда. По умолчанию — Лотошино_наличие.
-    OZON_FBS_WAREHOUSE_ID: z.coerce
-      .number()
-      .int()
-      .positive()
-      .default(1020005006898070),
 
     // Ozon Доставка — приватное приложение (OAuth), отдельно от классического
     // Seller API выше. Нужен для продажи со своего сайта с доставкой Ozon.
@@ -57,10 +49,6 @@ export const env = createEnv({
     TELEGRAM_CLIENT_BOT_USERNAME: z.string().min(1).optional(),
     TELEGRAM_CLIENT_WEBHOOK_SECRET: z.string().min(16).optional(),
 
-    // Общий секрет сайта и воркера Hatchet (packages/jobs): воркер по
-    // расписанию вызывает /api/workshops/reminders с Authorization: Bearer …
-    JOBS_SECRET: z.string().min(32).optional(),
-
     // Resend (HTTP API) — необязательный канал доставки заявок на email
     ORDER_EMAIL_TO: z.string().email().optional(),
     ORDER_EMAIL_FROM: z.string().min(1).optional(),
@@ -100,7 +88,6 @@ export const env = createEnv({
   runtimeEnv: {
     OZON_API_KEY: process.env.OZON_API_KEY,
     OZON_CLIENT_ID: process.env.OZON_CLIENT_ID,
-    OZON_FBS_WAREHOUSE_ID: process.env.OZON_FBS_WAREHOUSE_ID,
     OZON_DELIVERY_CLIENT_ID: process.env.OZON_DELIVERY_CLIENT_ID,
     OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
     OZON_DELIVERY_REFRESH_TOKEN: process.env.OZON_DELIVERY_REFRESH_TOKEN,
@@ -116,7 +103,6 @@ export const env = createEnv({
     TELEGRAM_CLIENT_BOT_TOKEN: process.env.TELEGRAM_CLIENT_BOT_TOKEN,
     TELEGRAM_CLIENT_BOT_USERNAME: process.env.TELEGRAM_CLIENT_BOT_USERNAME,
     TELEGRAM_CLIENT_WEBHOOK_SECRET: process.env.TELEGRAM_CLIENT_WEBHOOK_SECRET,
-    JOBS_SECRET: process.env.JOBS_SECRET,
     ORDER_EMAIL_TO: process.env.ORDER_EMAIL_TO,
     ORDER_EMAIL_FROM: process.env.ORDER_EMAIL_FROM,
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,

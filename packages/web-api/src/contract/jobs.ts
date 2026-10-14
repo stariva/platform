@@ -99,6 +99,35 @@ export const videosContract = {
     .output(type<void>()),
 };
 
+const reminderSweepResult = z.object({
+  /** Оплаченные заказы, которые попали в окно прогона. */
+  checked: z.number().int().nonnegative(),
+  delivered: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+});
+
+export type ReminderSweepResult = z.infer<typeof reminderSweepResult>;
+
+/**
+ * Часть писем или сообщений не ушла. Отправленное помечено, поэтому воркер
+ * просто повторяет прогон целиком: дублей не будет.
+ */
+export const RemindersFailedError = error("REMINDERS_FAILED", {
+  message: "reminders_failed",
+  data: reminderSweepResult,
+});
+
+export const remindersContract = {
+  /**
+   * Дошлёт письма о покупке мастер-класса, не ушедшие из вебхука, и
+   * разошлёт напоминания о старте (письма и Telegram).
+   */
+  sweep: jobProcedure
+    .errors({ [RemindersFailedError.code]: RemindersFailedError })
+    .output(reminderSweepResult),
+};
+
 export const jobsContract = {
   videos: videosContract,
+  reminders: remindersContract,
 };

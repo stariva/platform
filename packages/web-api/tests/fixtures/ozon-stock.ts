@@ -35,7 +35,7 @@ mock.module("../../src/env", () => ({
     OZON_FBS_WAREHOUSE_ID: 1,
   },
 }));
-const { pushStockToOzon } = await import("../../src/lib/ozon/stock-push");
+const { pushStockToOzon } = await import("../../src/services/ozon-stock");
 let visibilityErrors: { sku: number; code: string }[] = [];
 let omitted = false;
 let failVisibility = false;
