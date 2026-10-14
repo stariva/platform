@@ -6,8 +6,9 @@ import {
   getRatingSummary,
   getReviews,
   type RatingSummary,
-} from "@/lib/ozon-service";
-import type { Review } from "@/lib/ozon-types";
+} from "@/lib/catalog/service";
+import type { Review } from "@/lib/catalog/types";
+import { productHref } from "@/lib/products";
 import { formatRating, pluralRatings, ratingSourcesLabel } from "@/lib/ratings";
 import { ContactMasterButton } from "./contact-master";
 import { ReviewCard, Stars } from "./review-card";
@@ -84,7 +85,7 @@ export async function Reviews({
   const productHrefs = new Map<string, string>();
   if (!showProductReviews) {
     for (const p of await getProducts()) {
-      productHrefs.set(p.id, `/catalog/${p.category}/${p.slug}`);
+      productHrefs.set(p.id, productHref(p));
     }
   }
 

@@ -1,9 +1,13 @@
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import { CONTACTS } from "@/lib/contacts";
-import { BUSINESS_POINTS, TREES_BUSINESS_ID } from "../_data";
+import { TREES_BUSINESS_ID } from "../_data";
 
-export function ElkaBusiness() {
+export function ElkaBusiness({
+  points,
+}: {
+  points: { title: string; text: string }[];
+}) {
   return (
     <section
       id={TREES_BUSINESS_ID}
@@ -46,7 +50,7 @@ export function ElkaBusiness() {
         </div>
 
         <ul className="grid sm:grid-cols-2 gap-px bg-parchment/10 rounded-[24px] overflow-hidden">
-          {BUSINESS_POINTS.map((point, index) => (
+          {points.map((point, index) => (
             <li key={point.title} className="bg-espresso p-6 lg:p-8">
               <span className="font-serif text-parchment/50 text-lg">
                 0{index + 1}

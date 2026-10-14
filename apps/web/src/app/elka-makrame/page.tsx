@@ -59,7 +59,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ElkaMakramePage() {
-  const { trees, workshop } = await loadElkaData("elka_workshop");
+  const { trees: treesResult, workshop } = await loadElkaData("elka_workshop");
+  const trees = treesResult.products;
   const reviewProductId = trees[0]?.id;
 
   return (

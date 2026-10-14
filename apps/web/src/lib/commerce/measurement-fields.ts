@@ -1,5 +1,5 @@
+import { getProductsResult } from "@/lib/catalog/service";
 import { getMadeToOrder } from "@/lib/made-to-order";
-import { getProductsResult } from "@/lib/ozon-service";
 
 export interface MeasurementField {
   id: string;

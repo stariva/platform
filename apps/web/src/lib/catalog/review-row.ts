@@ -1,5 +1,5 @@
 import type { ReviewRow } from "@stariva/db/schema";
-import type { Review } from "@/lib/ozon-types";
+import type { Review } from "@/lib/catalog/types";
 
 /** Строка reviews → отзыв витрины. Скрытые фото на сайт не попадают. */
 export function reviewRowToReview(

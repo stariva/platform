@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { blogPosts } from "@/lib/blog-data";
+import { categories, getProducts } from "@/lib/catalog/service";
 import { TREES_PATH, WORKSHOP_PATH } from "@/lib/elka/data";
 import { IN_STOCK_HREF } from "@/lib/in-stock";
-import { categories, getProducts } from "@/lib/ozon-service";
+import { productHref } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import { absoluteImageUrl } from "@/lib/workshops-data";
@@ -129,7 +130,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         : undefined;
 
     return {
-      url: `${BASE_URL}/catalog/${product.category}/${product.slug}`,
+      url: `${BASE_URL}${productHref(product)}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: product.featured ? 0.85 : 0.75,

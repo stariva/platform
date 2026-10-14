@@ -2,7 +2,7 @@
 // В отличие от изготовления под заказ, эти изделия уже сплетены и лежат на
 // складе Ozon — их можно сразу положить в корзину и оплатить на сайте.
 
-import type { Product } from "@/lib/ozon-types";
+import type { Product } from "@/lib/catalog/types";
 
 export const IN_STOCK_HREF = "/catalog/v-nalichii";
 

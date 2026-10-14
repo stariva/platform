@@ -24,7 +24,7 @@ export function PaymentDelivery() {
             </h3>
             <p className="text-espresso/75 leading-[1.7] mb-6 text-pretty">
               Выберите пункт на карте при оформлении — стоимость и срок доставки
-              покажем сразу, ещё до оплаты. Упаковка в крафт и лён — в подарок к
+              видны сразу, ещё до оплаты. Упаковка в крафт и лён — в подарок к
               каждому заказу.
             </p>
             <div className="flex items-center gap-2 text-espresso/70">

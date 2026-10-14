@@ -1,6 +1,6 @@
 import type { ProductRow } from "@stariva/db/schema";
+import type { Product } from "@/lib/catalog/types";
 import { toShortDescription } from "@/lib/ozon/transformers";
-import type { Product } from "@/lib/ozon-types";
 
 const PLACEHOLDER_IMAGE =
   "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg";

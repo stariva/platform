@@ -40,6 +40,13 @@ export interface OzonInfo {
 const selectClass =
   "border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
+/** Текст поля → список без пустых элементов. */
+const splitList = (value: string, separator: string) =>
+  value
+    .split(separator)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 const toNullableNumber = (value: unknown) =>
   value === "" || value === null || value === undefined ? null : Number(value);
 
@@ -394,12 +401,7 @@ export function ProductForm({
                     defaultValue={field.value.join(", ")}
                     // Не onBlur: при отправке по Enter blur может не случиться
                     onChange={(event) =>
-                      field.onChange(
-                        event.target.value
-                          .split(",")
-                          .map((size) => size.trim())
-                          .filter(Boolean),
-                      )
+                      field.onChange(splitList(event.target.value, ","))
                     }
                   />
                 </FieldRow>
@@ -435,9 +437,8 @@ export function ProductForm({
                     hint="По одному на строку, до 10. Сейчас показываются на карточках ёлок"
                     error={
                       errors.highlights?.message ??
-                      (errors.highlights
-                        ? "Каждое преимущество — не длиннее 200 символов"
-                        : undefined)
+                      errors.highlights?.find?.((item) => item?.message)
+                        ?.message
                     }
                   >
                     <Textarea
@@ -445,12 +446,7 @@ export function ProductForm({
                       rows={3}
                       defaultValue={field.value.join("\n")}
                       onChange={(event) =>
-                        field.onChange(
-                          event.target.value
-                            .split("\n")
-                            .map((line) => line.trim())
-                            .filter(Boolean),
-                        )
+                        field.onChange(splitList(event.target.value, "\n"))
                       }
                     />
                   </FieldRow>

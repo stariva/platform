@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
-import { getProductsByCategory } from "@/lib/ozon-service";
+import { getProductsByCategory } from "@/lib/catalog/service";
 import { SITE_URL } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 import CategoryFilters from "../catalog/[category]/category-filters";

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { getProductBySlug } from "@/lib/ozon-service";
+import { getProductBySlug } from "@/lib/catalog/service";
+import { productHref } from "@/lib/products";
 
 interface ProductRedirectProps {
   params: Promise<{ slug: string }>;
@@ -13,5 +14,5 @@ export default async function ProductRedirectPage({
 
   if (!product) notFound();
 
-  redirect(`/catalog/${product.category}/${slug}`);
+  redirect(productHref(product));
 }

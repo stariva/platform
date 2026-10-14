@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getProducts, getReviews } from "@/lib/ozon-service";
-import type { Review } from "@/lib/ozon-types";
+import { getProducts, getReviews } from "@/lib/catalog/service";
+import type { Review } from "@/lib/catalog/types";
 
 export const revalidate = 14400; // 4 hours
 

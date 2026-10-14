@@ -5,8 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { MAX_CART_QUANTITY, useCart } from "@/lib/cart/cart-context";
+import type { Product } from "@/lib/catalog/types";
 import { isPurchasable } from "@/lib/in-stock";
-import type { Product } from "@/lib/ozon-types";
 
 /**
  * Добавляет изделие в корзину, отправляет аналитику и показывает подтверждение.

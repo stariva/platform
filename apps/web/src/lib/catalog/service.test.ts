@@ -1,6 +1,6 @@
 import { mock, test } from "bun:test";
 import assert from "node:assert/strict";
-import type { Product, Review } from "./ozon-types";
+import type { Product, Review } from "./types";
 
 const review = (overrides: Partial<Review>): Review => ({
   id: "r",
@@ -41,14 +41,14 @@ const publishedReviews: Review[] = [
 const fetchReviews = mock(async (): Promise<Review[]> => publishedReviews);
 const fetchProducts = mock(async (): Promise<Product[] | null> => null);
 
-mock.module("./catalog/products-db", () => ({
+mock.module("./products-db", () => ({
   fetchPublishedProducts: async () => {
     const products = await fetchProducts();
     if (products === null) throw new Error("db_unavailable");
     return products;
   },
 }));
-mock.module("./catalog/reviews-db", () => ({
+mock.module("./reviews-db", () => ({
   fetchPublishedReviews: fetchReviews,
 }));
 
@@ -60,7 +60,7 @@ const {
   getReviews,
   getRatingSummary,
   summarizeRatings,
-} = await import("./ozon-service");
+} = await import("./service");
 
 const product: Product = {
   id: "lamp-1",

@@ -2,13 +2,42 @@ import { Check } from "lucide-react";
 import Image from "next/image";
 import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { TrackedLink } from "@/components/stariva/tracked-link";
+import type { Product } from "@/lib/catalog/types";
+import { treeDetails } from "@/lib/elka/data";
 import { isPurchasable } from "@/lib/in-stock";
 import { madeToOrderLeadTime } from "@/lib/made-to-order";
-import type { Product } from "@/lib/ozon-types";
+import { productHref } from "@/lib/products";
 import { formatPrice } from "@/lib/workshops-data";
 import { TREES_MODELS_ID } from "../_data";
 
-export function ElkaModels({ trees }: { trees: Product[] }) {
+type TreeState = "inStock" | "madeToOrder" | "unavailable";
+
+/** Плашка и кнопка карточки по состоянию ёлки. */
+const STATE_COPY: Record<
+  TreeState,
+  { badge: (tree: Product) => string; cta: string }
+> = {
+  inStock: { badge: () => "В наличии", cta: "Подробнее о модели" },
+  madeToOrder: {
+    badge: (tree) => `Под заказ ${madeToOrderLeadTime(tree)}`,
+    cta: "Заказать ёлку",
+  },
+  unavailable: { badge: () => "Нет в наличии", cta: "Подробнее о модели" },
+};
+
+function treeState(tree: Product): TreeState {
+  if (isPurchasable(tree)) return "inStock";
+  return tree.madeToOrder ? "madeToOrder" : "unavailable";
+}
+
+export function ElkaModels({
+  trees,
+  unavailable,
+}: {
+  trees: Product[];
+  /** База недоступна — в отличие от «ёлок в каталоге нет». */
+  unavailable: boolean;
+}) {
   return (
     <section
       id={TREES_MODELS_ID}
@@ -35,26 +64,21 @@ export function ElkaModels({ trees }: { trees: Product[] }) {
 
         {trees.length === 0 ? (
           <p className="text-dark-grey">
-            Каталог временно недоступен. Напишите Ольге — она подскажет цену и
-            сроки.
+            {unavailable
+              ? "Каталог временно недоступен."
+              : "Готовых ёлок сейчас нет в каталоге."}{" "}
+            Напишите Ольге — она подскажет цену и сроки.
           </p>
         ) : null}
 
         <div className="grid md:grid-cols-2 gap-6 lg:gap-10">
           {trees.map((product) => {
             const { price, oldPrice } = product;
-            const details = [product.dimensions, product.color]
-              .filter(Boolean)
-              .join(" · ");
+            const details = treeDetails(product);
             const image = product.images[0];
-            const href = `/catalog/${product.category}/${product.slug}`;
-            // Товар, который можно положить в корзину; иначе — заказ у мастера.
-            const purchasable = isPurchasable(product) ? product : undefined;
-            const availability = purchasable
-              ? "В наличии"
-              : product.madeToOrder
-                ? `Под заказ ${madeToOrderLeadTime(product)}`
-                : "Нет в наличии";
+            const href = productHref(product);
+            const state = treeState(product);
+            const copy = STATE_COPY[state];
             const discount =
               oldPrice && oldPrice > price
                 ? Math.round((1 - price / oldPrice) * 100)
@@ -77,7 +101,7 @@ export function ElkaModels({ trees }: { trees: Product[] }) {
                   ) : null}
                   <div className="absolute top-4 left-4 flex gap-2">
                     <span className="rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs text-espresso">
-                      {availability}
+                      {copy.badge(product)}
                     </span>
                     {discount ? (
                       <span className="rounded-full bg-terracotta px-3 py-1.5 text-xs text-parchment">
@@ -133,22 +157,20 @@ export function ElkaModels({ trees }: { trees: Product[] }) {
                       ) : null}
                     </p>
                     <div className="flex flex-col gap-3">
-                      {purchasable ? (
-                        <AddToCartButton product={purchasable} />
+                      {state === "inStock" ? (
+                        <AddToCartButton product={product} />
                       ) : null}
                       <TrackedLink
                         href={href}
                         goal="elka_model_click"
                         goalParams={{ slug: product.slug }}
                         className={
-                          purchasable
+                          state === "inStock"
                             ? "inline-flex items-center justify-center rounded-2xl border border-espresso/20 hover:border-espresso text-espresso py-4 transition-colors"
                             : "inline-flex items-center justify-center rounded-2xl bg-espresso hover:bg-terracotta text-parchment py-4 transition-colors"
                         }
                       >
-                        {purchasable || !product.madeToOrder
-                          ? "Подробнее о модели"
-                          : "Заказать ёлку"}
+                        {copy.cta}
                       </TrackedLink>
                     </div>
                   </div>

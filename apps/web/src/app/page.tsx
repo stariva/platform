@@ -15,10 +15,10 @@ import { PhotoshootsTeaser } from "@/components/stariva/photoshoots-teaser";
 import { Process } from "@/components/stariva/process";
 import { ProductCardImages } from "@/components/stariva/product-card-images";
 import { Reviews } from "@/components/stariva/reviews";
+import { getFeaturedProducts } from "@/lib/catalog/service";
+import type { Product } from "@/lib/catalog/types";
 import { getHomeCopy } from "@/lib/home-portfolio";
-import { getFeaturedProducts } from "@/lib/ozon-service";
-import type { Product } from "@/lib/ozon-types";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, productHref } from "@/lib/products";
 import { SITE_URL } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +79,7 @@ function Examples({ products }: { products: Product[] }) {
   return (
     <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
       {products.map((product) => {
-        const href = `/catalog/${product.category}/${product.slug}`;
+        const href = productHref(product);
         const copy = getHomeCopy(product);
         return (
           <article

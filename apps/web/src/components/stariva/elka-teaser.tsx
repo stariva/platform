@@ -6,6 +6,7 @@ import {
   ORDER_DEADLINE_DAY,
   ORDER_DEADLINE_LABEL,
   TREES_PATH,
+  treeDetails,
   WORKSHOP_PATH,
 } from "@/lib/elka/data";
 import { getTreeProducts } from "@/lib/elka/load";
@@ -13,7 +14,7 @@ import { getTreeProducts } from "@/lib/elka/load";
 const points = [
   "Не осыпается и не занимает места на полу",
   "Для квартиры, детской, отеля, кафе и офиса",
-  "Под заказ за 2–3 дня, доставка по России",
+  "Плетётся под заказ, доставка по России",
 ];
 
 export function ElkaTeaser() {
@@ -109,16 +110,14 @@ function TeaserTreesSkeleton() {
 
 /** Две первые ёлки из каталога; без каталога фото не показываем. */
 async function TeaserTrees() {
-  const trees = (await getTreeProducts()).slice(0, 2);
+  const trees = (await getTreeProducts()).products.slice(0, 2);
   if (trees.length === 0) return null;
 
   return (
     <ul className="grid grid-cols-2 gap-3 lg:gap-5">
       {trees.map((product, index) => {
         const image = product.images[0];
-        const label = [product.color, product.dimensions]
-          .filter(Boolean)
-          .join(" · ");
+        const label = treeDetails(product);
         return (
           <li key={product.id} className={index === 1 ? TILE_OFFSET : ""}>
             <TrackedLink

@@ -1,6 +1,6 @@
 import { db, desc, eq } from "@stariva/db";
 import { reviewProducts, reviews } from "@stariva/db/schema";
-import type { Review } from "@/lib/ozon-types";
+import type { Review } from "@/lib/catalog/types";
 import { reviewRowToReview } from "./review-row";
 
 /** Отзывы, отмеченные в админке для показа на сайте, — новые сверху. */

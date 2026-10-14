@@ -5,7 +5,7 @@ import {
   SHORT_DESCRIPTION_MAX,
   toParagraphs,
 } from "../catalog/description-lead";
-import type { Product } from "../ozon-types";
+import type { Product } from "../catalog/types";
 import { mapOfferIdToCategory } from "./category-mapper";
 
 // Локальный интерфейс для ответа v3 API (отличается от полного OzonProductInfo)

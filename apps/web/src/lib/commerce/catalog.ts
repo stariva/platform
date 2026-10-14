@@ -1,10 +1,10 @@
+import { getProductsResult } from "@/lib/catalog/service";
+import type { Product } from "@/lib/catalog/types";
 import {
   getProductMadeToOrder,
   isMadeToOrderColor,
   isMadeToOrderSize,
 } from "@/lib/made-to-order";
-import { getProductsResult } from "@/lib/ozon-service";
-import type { Product } from "@/lib/ozon-types";
 import {
   MAX_MADE_TO_ORDER_QUANTITY,
   type MadeToOrderOptions,

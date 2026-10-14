@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Product } from "@/lib/ozon-types";
+import type { Product } from "@/lib/catalog/types";
 import { productMetaDescription, productMetaTitle } from "./product-seo";
 
 const product = {

@@ -1,21 +1,18 @@
 import { logger } from "@stariva/config";
-import { getProducts } from "@/lib/ozon-service";
-import type { Product } from "@/lib/ozon-types";
+import { getProductsResult, type ProductsResult } from "@/lib/catalog/service";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
-import { WORKSHOP_SLUG } from "./data";
+import { TREES_SUBCATEGORY, WORKSHOP_SLUG } from "./data";
 
 /**
- * Ёлки — опубликованные товары, чей slug начинается с «elka-». Админка
- * собирает slug из названия («Ёлка …» → «elka-…»), поэтому новая ёлка
- * попадает на страницы сама, порядок — как в каталоге.
+ * Ёлки — опубликованные товары подкатегории «Ёлки», порядок как в каталоге.
+ * Статус отличает «ёлок нет» от «база недоступна».
  */
-const TREE_SLUG_PREFIX = "elka-";
-
-export async function getTreeProducts(): Promise<Product[]> {
-  const products = await getProducts();
-  return products.filter((product) =>
-    product.slug.startsWith(TREE_SLUG_PREFIX),
-  );
+export async function getTreeProducts(): Promise<ProductsResult> {
+  const { products, status } = await getProductsResult();
+  return {
+    products: products.filter((p) => p.subcategory === TREES_SUBCATEGORY),
+    status,
+  };
 }
 
 /**

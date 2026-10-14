@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Review } from "@/lib/ozon-types";
+import type { Review } from "@/lib/catalog/types";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ru-RU", {

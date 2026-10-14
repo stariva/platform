@@ -31,6 +31,8 @@ export const productSubcategory = pgEnum("product_subcategory", [
   "baskets",
   "totes",
   "crossbody",
+  // В конце: ADD VALUE дописывает значение последним
+  "trees",
 ]);
 
 export const productStatus = pgEnum("product_status", [

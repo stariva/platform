@@ -15,13 +15,13 @@ import {
   productMetaDescription,
   productMetaTitle,
 } from "@/lib/catalog/product-seo";
-import { madeToOrderLeadTime } from "@/lib/made-to-order";
 import {
   getProductBySlug,
   getProductsByCategory,
   getReviews,
   summarizeRatings,
-} from "@/lib/ozon-service";
+} from "@/lib/catalog/service";
+import { madeToOrderLeadTime } from "@/lib/made-to-order";
 import { getCategoryBySlug, getProductSection } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ProductDetails } from "./product-details";
@@ -106,7 +106,7 @@ interface ProductPageProps {
 }
 
 export async function generateStaticParams() {
-  const { getProducts } = await import("@/lib/ozon-service");
+  const { getProducts } = await import("@/lib/catalog/service");
   const products = await getProducts();
   return products.map((p) => ({
     category: p.category,

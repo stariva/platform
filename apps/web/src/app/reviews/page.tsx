@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
-import { RatingPanel, SOURCE_PROFILES } from "@/components/stariva/reviews";
 import { ReviewCard } from "@/components/stariva/review-card";
+import { RatingPanel, SOURCE_PROFILES } from "@/components/stariva/reviews";
 import {
   getAllReviews,
   getProducts,
   summarizeRatings,
-} from "@/lib/ozon-service";
+} from "@/lib/catalog/service";
+import { productHref } from "@/lib/products";
 import {
   pageWindow,
   paginateReviews,
@@ -207,7 +208,7 @@ export default async function ReviewsPage({
 
   const productHrefs = new Map<string, string>();
   for (const p of await getProducts()) {
-    productHrefs.set(p.id, `/catalog/${p.category}/${p.slug}`);
+    productHrefs.set(p.id, productHref(p));
   }
 
   return (

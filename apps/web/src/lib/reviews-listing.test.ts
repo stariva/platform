@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Review } from "./ozon-types";
+import type { Review } from "./catalog/types";
 import {
   pageWindow,
   paginateReviews,

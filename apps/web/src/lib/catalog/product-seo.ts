@@ -1,4 +1,4 @@
-import type { Product } from "@/lib/ozon-types";
+import type { Product } from "@/lib/catalog/types";
 
 const MAX_DESCRIPTION = 160;
 

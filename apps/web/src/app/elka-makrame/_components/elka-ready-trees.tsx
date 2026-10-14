@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { TrackedLink } from "@/components/stariva/tracked-link";
-import { TREES_PATH } from "@/lib/elka/data";
-import type { Product } from "@/lib/ozon-types";
+import type { Product } from "@/lib/catalog/types";
+import { TREES_PATH, treeDetails } from "@/lib/elka/data";
+import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
+import { productHref } from "@/lib/products";
 import { formatPrice } from "@/lib/workshops-data";
 import { READY_TREES_ID } from "../_data";
 
@@ -25,8 +27,8 @@ export function ElkaReadyTrees({ trees }: { trees: Product[] }) {
           Нет времени плести?
         </h2>
         <p className="text-dark-grey mb-6">
-          Готовая ёлка ручной работы плетётся за 2–3 дня, доставка — по всей
-          России.{" "}
+          Готовая ёлка ручной работы плетётся за {madeToOrderLeadTimeOf(trees)},
+          доставка — по всей России.{" "}
           <TrackedLink
             href={TREES_PATH}
             goal="elka_ready_trees_page"
@@ -39,7 +41,7 @@ export function ElkaReadyTrees({ trees }: { trees: Product[] }) {
           {trees.map((product) => (
             <li key={product.id}>
               <TrackedLink
-                href={`/catalog/${product.category}/${product.slug}`}
+                href={productHref(product)}
                 goal="elka_model_click"
                 goalParams={{ slug: product.slug }}
                 className="flex items-center gap-4 rounded-2xl bg-parchment p-3 pr-5 hover:bg-linen/60 transition-colors"
@@ -58,7 +60,7 @@ export function ElkaReadyTrees({ trees }: { trees: Product[] }) {
                 <span className="flex-1">
                   <span className="block text-espresso">{product.name}</span>
                   <span className="block text-sm text-text-grey">
-                    {[product.dimensions, formatPrice(product.price)]
+                    {[treeDetails(product), formatPrice(product.price)]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>

@@ -1,4 +1,4 @@
-import type { Review } from "./ozon-types";
+import type { Review } from "./catalog/types";
 
 export const REVIEWS_PAGE_SIZE = 12;
 

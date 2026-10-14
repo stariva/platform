@@ -4,6 +4,7 @@ import {
   getProductMadeToOrder,
   MADE_TO_ORDER_DAYS,
   madeToOrderLeadTime,
+  madeToOrderLeadTimeOf,
 } from "./made-to-order";
 
 test("lead time falls back to the shared term and declines days", () => {
@@ -27,6 +28,21 @@ test("lead time falls back to the shared term and declines days", () => {
   assert.equal(
     madeToOrderLeadTime({ leadTimeDays: { min: 14, max: 21 } }),
     "14–21 день",
+  );
+});
+
+test("combines lead times of several products", () => {
+  assert.equal(madeToOrderLeadTimeOf([]), MADE_TO_ORDER_DAYS);
+  assert.equal(
+    madeToOrderLeadTimeOf([
+      { leadTimeDays: { min: 2, max: 3 } },
+      { leadTimeDays: { min: 2, max: 3 } },
+    ]),
+    "2–3 дня",
+  );
+  assert.equal(
+    madeToOrderLeadTimeOf([{ leadTimeDays: { min: 5, max: 7 } }, {}]),
+    "2–7 дней",
   );
 });
 

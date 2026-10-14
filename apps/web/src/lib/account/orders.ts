@@ -6,12 +6,13 @@ import {
   productOrders,
 } from "@stariva/db/schema";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { getProductsResult } from "@/lib/catalog/service";
 import {
   type MadeToOrderPaymentType,
   madeToOrderPaymentStep,
 } from "@/lib/commerce/made-to-order-flow";
 import type { OrderKind } from "@/lib/commerce/order-status";
-import { getProductsResult } from "@/lib/ozon-service";
+import { productHref } from "@/lib/products";
 import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 
 type ProductOrderRow = typeof productOrders.$inferSelect;
@@ -62,7 +63,7 @@ async function catalogBySlug(): Promise<Map<string, CatalogEntry>> {
       product.slug,
       {
         image: product.images[0] ?? null,
-        href: `/catalog/${product.category}/${product.slug}`,
+        href: productHref(product),
       },
     ]),
   );

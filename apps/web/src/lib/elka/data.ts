@@ -1,3 +1,5 @@
+import type { Product } from "@/lib/catalog/types";
+
 /**
  * Общее для страниц ёлки: мастер-класса (/elka-makrame) и готовых ёлок
  * (/elka-makrame-na-stenu), а ещё главной, блога и sitemap. Без серверных
@@ -26,6 +28,14 @@ export const BONUS_TREE_SIZE = "75 × 150 см";
 export const WORKSHOP_RELEASE_LABEL = "20 октября";
 /** Выход мастер-класса по большой ёлке. */
 export const BONUS_RELEASE_LABEL = "3 ноября";
+
+/** Подкатегория каталога, товары которой показываются на страницах ёлки. */
+export const TREES_SUBCATEGORY = "trees";
+
+/** Подпись ёлки «70–75 × 150 см · Хаки» — одна на всех страницах. */
+export function treeDetails(tree: Pick<Product, "dimensions" | "color">) {
+  return [tree.dimensions, tree.color].filter(Boolean).join(" · ");
+}
 
 /** Заказ до этой даты успевает к празднику: 2–3 дня плетения и доставка. */
 export const ORDER_DEADLINE_DAY = 20;

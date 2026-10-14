@@ -7,6 +7,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { blogPosts } from "@/lib/blog";
+import { getProducts } from "@/lib/catalog/service";
 import { CONTACTS } from "@/lib/contacts";
 import {
   COLORS,
@@ -17,7 +18,7 @@ import {
   SIZES,
 } from "@/lib/custom-order/pricing";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
-import { getProducts } from "@/lib/ozon-service";
+import { productHref } from "@/lib/products";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
@@ -87,10 +88,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   bags: "Сумки",
   interior: "Декор интерьера",
 };
-
-function productUrl(category: string, slug: string): string {
-  return `/catalog/${category}/${slug}`;
-}
 
 /** Очень простой нечёткий матч по русскому тексту. */
 function matches(haystack: string, needle: string): boolean {
@@ -166,7 +163,7 @@ export const chatTools = {
         image: p.images?.[0],
         category: p.category,
         categoryLabel: CATEGORY_LABELS[p.category] ?? p.category,
-        url: productUrl(p.category, p.slug),
+        url: productHref(p),
         inStock: p.inStock,
         madeToOrder: p.madeToOrder,
         shortDescription: p.shortDescription,

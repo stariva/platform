@@ -8,9 +8,9 @@ import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { ProductCardImages } from "@/components/stariva/product-card-images";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getFeaturedProducts } from "@/lib/ozon-service";
-import type { Product } from "@/lib/ozon-types";
-import { catalogSections, formatPrice } from "@/lib/products";
+import { getFeaturedProducts } from "@/lib/catalog/service";
+import type { Product } from "@/lib/catalog/types";
+import { catalogSections, formatPrice, productHref } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 
@@ -57,10 +57,7 @@ async function FeaturedProducts() {
 /** Показывает ссылку на товар, его цену и доступность в общем каталоге. */
 function ProductCard({ product }: { product: Product; index?: number }) {
   return (
-    <Link
-      href={`/catalog/${product.category}/${product.slug}`}
-      className="group block"
-    >
+    <Link href={productHref(product)} className="group block">
       <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-4 bg-cream">
         <ProductCardImages
           images={product.images}

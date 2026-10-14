@@ -4,10 +4,10 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Button } from "@/components/ui/button";
+import { getInStockProductsResult } from "@/lib/catalog/service";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
-import { getInStockProductsResult } from "@/lib/ozon-service";
-import { productSectionKey, sectionFilters } from "@/lib/products";
+import { productHref, productSectionKey, sectionFilters } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import CategoryFilters from "../[category]/category-filters";
 
@@ -64,7 +64,7 @@ export default async function InStockPage() {
         url={IN_STOCK_HREF}
         items={products.map((p) => ({
           name: p.name,
-          url: `/catalog/${p.category}/${p.slug}`,
+          url: productHref(p),
           image: p.images[0]?.startsWith("http")
             ? p.images[0]
             : `${BASE_URL}${p.images[0]}`,
