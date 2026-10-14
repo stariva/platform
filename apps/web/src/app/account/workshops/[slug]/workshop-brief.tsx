@@ -65,6 +65,7 @@ export function WorkshopBrief({ title, materials, brief }: WorkshopBriefProps) {
           <div className="relative aspect-[3/4] w-full max-w-[260px] mx-auto sm:max-w-none overflow-hidden rounded-t-full rounded-b-xl bg-sand">
             <Image
               src={brief.image}
+              unoptimized
               alt={`Готовая работа: ${title}`}
               fill
               sizes="(max-width: 640px) 260px, 220px"

@@ -82,11 +82,17 @@ function ShopLinks({
         type="button"
         variant="ghost"
         size="sm"
-        onClick={() => links.append({ label: "", url: "" })}
+        disabled={links.fields.length >= 6}
+        onClick={() => {
+          if (links.fields.length < 6) {
+            links.append({ label: "", url: "" });
+          }
+        }}
       >
         <IconLink />
         Добавить ссылку
       </Button>
+      <FieldError message={linkErrors?.root?.message ?? linkErrors?.message} />
     </div>
   );
 }
@@ -150,11 +156,16 @@ export function WorkshopBrief({
                       message={errors?.shops?.[index]?.item?.message}
                     />
                   </div>
-                  <Input
-                    placeholder="Подсказка: подойдут цвета хаки, изумруд…"
-                    aria-label="Подсказка к покупке"
-                    {...register(`brief.shops.${index}.note`)}
-                  />
+                  <div className="space-y-1">
+                    <Input
+                      placeholder="Подсказка: подойдут цвета хаки, изумруд…"
+                      aria-label="Подсказка к покупке"
+                      {...register(`brief.shops.${index}.note`)}
+                    />
+                    <FieldError
+                      message={errors?.shops?.[index]?.note?.message}
+                    />
+                  </div>
                 </div>
                 <Button
                   type="button"
@@ -178,17 +189,23 @@ export function WorkshopBrief({
             type="button"
             variant="outline"
             className="w-full"
-            onClick={() =>
-              shops.append({
-                item: "",
-                note: "",
-                links: [{ label: "", url: "" }],
-              })
-            }
+            disabled={shops.fields.length >= 15}
+            onClick={() => {
+              if (shops.fields.length < 15) {
+                shops.append({
+                  item: "",
+                  note: "",
+                  links: [{ label: "", url: "" }],
+                });
+              }
+            }}
           >
             <IconPlus />
             Добавить позицию
           </Button>
+          <FieldError
+            message={errors?.shops?.root?.message ?? errors?.shops?.message}
+          />
         </div>
 
         <div className="space-y-1.5">
