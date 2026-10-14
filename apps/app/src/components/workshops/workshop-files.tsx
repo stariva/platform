@@ -77,7 +77,8 @@ export function WorkshopFiles({
       <CardHeader>
         <CardTitle>Материалы</CardTitle>
         <CardDescription>
-          PDF для скачивания в кабинете: выкройки, схемы, списки покупок.
+          PDF для скачивания в кабинете — кнопка в брифе «Перед началом»: бриф
+          для печати, выкройки, схемы.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

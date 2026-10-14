@@ -1,17 +1,30 @@
 import Image from "next/image";
-import type { WorkshopBrief as WorkshopBriefData } from "@/lib/workshops-data";
+import type {
+  WorkshopBrief as WorkshopBriefData,
+  WorkshopMaterialFile,
+} from "@/lib/workshops-data";
+import { BriefDownloads } from "./brief-downloads";
 
 interface WorkshopBriefProps {
+  slug: string;
   title: string;
   materials: string[];
   brief: WorkshopBriefData;
+  /** PDF курса — показываем здесь, чтобы распечатать бриф ещё до старта уроков. */
+  files: WorkshopMaterialFile[];
 }
 
 /**
  * Бриф перед началом курса: что купить, где и как подготовиться.
  * Список материалов — из «Что понадобится», остальное — из брифа в админке.
  */
-export function WorkshopBrief({ title, materials, brief }: WorkshopBriefProps) {
+export function WorkshopBrief({
+  slug,
+  title,
+  materials,
+  brief,
+  files,
+}: WorkshopBriefProps) {
   const hasList = materials.length > 0;
 
   return (
@@ -26,6 +39,8 @@ export function WorkshopBrief({ title, materials, brief }: WorkshopBriefProps) {
       >
         Что понадобится
       </h3>
+
+      {files.length > 0 && <BriefDownloads slug={slug} files={files} />}
 
       <div
         className={
@@ -77,37 +92,39 @@ export function WorkshopBrief({ title, materials, brief }: WorkshopBriefProps) {
 
       {brief.shops.length > 0 && (
         <div className="mt-7 rounded-xl bg-sand/60 border border-espresso/8 px-5 py-5 sm:px-6">
-          <p className="font-serif italic text-2xl text-espresso leading-none mb-4">
-            На заметку
+          <p className="font-serif italic text-2xl text-espresso leading-none mb-3">
+            Где купить
           </p>
-          <ul className="space-y-3 text-sm leading-relaxed text-espresso">
+          {/* Название слева, ссылки справа — читается как таблица покупок */}
+          <ul className="divide-y divide-espresso/8 text-sm leading-relaxed text-espresso">
             {brief.shops.map((shop) => (
-              <li key={shop.item}>
+              <li
+                key={shop.item}
+                className="py-2.5 sm:grid sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4"
+              >
                 <span className="font-medium">{shop.item}</span>
-                {shop.note && (
-                  <span className="text-espresso/75"> — {shop.note}</span>
-                )}
-                {shop.links.length > 0 && (
-                  <span className="block mt-0.5">
-                    {shop.links.map((link, index) => (
-                      <span key={link.url}>
-                        {index > 0 && <span className="text-taupe"> · </span>}
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer nofollow"
-                          className="underline decoration-espresso/30 underline-offset-[3px] hover:text-terracotta hover:decoration-terracotta transition-colors"
-                        >
-                          {link.label}
-                          <span className="sr-only">
-                            {" "}
-                            (откроется в новой вкладке)
-                          </span>
-                        </a>
-                      </span>
-                    ))}
-                  </span>
-                )}
+                <span className="block">
+                  {shop.links.map((link, index) => (
+                    <span key={link.url}>
+                      {index > 0 && <span className="text-taupe"> · </span>}
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="underline decoration-espresso/30 underline-offset-[3px] hover:text-terracotta hover:decoration-terracotta transition-colors"
+                      >
+                        {link.label}
+                        <span className="sr-only">
+                          {" "}
+                          (откроется в новой вкладке)
+                        </span>
+                      </a>
+                    </span>
+                  ))}
+                  {shop.note && (
+                    <span className="block text-espresso/70">{shop.note}</span>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
