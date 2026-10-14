@@ -1,6 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { logger } from "@stariva/config";
-import { and, db, eq, inArray, isNull, lt, ne, or, sql } from "@stariva/db";
+import {
+  and,
+  db,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "@stariva/db";
 import {
   type VideoRenditionRow,
   videoRenditions,
@@ -51,6 +62,30 @@ async function allLessonVideoKeys(): Promise<string[]> {
   return [...new Set(keys)];
 }
 
+/** Причина отказа, когда воркер пропал на последней попытке. */
+export const WORKER_LOST_ERROR =
+  "worker_lost: аренда истекла без продления и без отчёта воркера";
+
+/**
+ * Последняя попытка, чей воркер пропал (под убили, кончилась память):
+ * аренда истекла, а ни `complete`, ни `fail` не пришло. Повторять уже
+ * нечем, поэтому помечаем видео упавшим. Иначе оно навсегда оставалось бы
+ * «в работе» с пустой причиной. Попытки, у которых остались повторы, не
+ * трогаем: их сразу заберёт следующий воркер.
+ */
+async function failExhaustedAbandonedAttempts(now: Date): Promise<void> {
+  await db
+    .update(videoRenditions)
+    .set({ status: "failed", error: WORKER_LOST_ERROR, updatedAt: now })
+    .where(
+      and(
+        eq(videoRenditions.status, "processing"),
+        gte(videoRenditions.attempts, MAX_RENDITION_ATTEMPTS),
+        lt(videoRenditions.leaseUntil, now),
+      ),
+    );
+}
+
 /**
  * Берёт в работу следующее видео без HLS-версии. Занятое видео другой
  * воркер не получит, пока не истечёт аренда. null — нарезать нечего.
@@ -60,6 +95,8 @@ export async function claimNextVideo(): Promise<{
   hlsPrefix: string;
   attemptId: number;
 } | null> {
+  await failExhaustedAbandonedAttempts(new Date());
+
   const keys = await allLessonVideoKeys();
   if (keys.length === 0) return null;
 
