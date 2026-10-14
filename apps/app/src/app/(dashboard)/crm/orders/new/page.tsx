@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/client";
 import {
   buttonVariants,
   Card,
@@ -48,7 +49,14 @@ export default async function NewCustomOrderPage({
   const [campaigns, request, existing] = await Promise.all([
     api.admin.crm.campaigns(),
     requestNumber
-      ? api.admin.requests.byNumber({ number: requestNumber }).catch(() => null)
+      ? api.admin.requests
+          .byNumber({ number: requestNumber })
+          .catch((error) => {
+            if (error instanceof ORPCError && error.code === "NOT_FOUND") {
+              return null;
+            }
+            throw error;
+          })
       : null,
     requestNumber
       ? api.admin.crm.saleForRequest({ number: requestNumber })

@@ -302,10 +302,14 @@ async function cardFor(
       throw new ORPCError("BAD_REQUEST", { message: "Почта не распознана" });
     }
     // Уже заказывал на сайте или заведён раньше — пишем к нему же
-    found =
-      (phone && findClient(all, `tel-${phone}`)) ||
-      (email && findClient(all, `mail-${email}`)) ||
-      null;
+    const byPhone = phone ? findClient(all, `tel-${phone}`) : null;
+    const byEmail = email ? findClient(all, `mail-${email}`) : null;
+    if (byPhone && byEmail && byPhone.key !== byEmail.key) {
+      throw new ORPCError("CONFLICT", {
+        message: "Телефон и почта принадлежат разным клиентам",
+      });
+    }
+    found = byPhone ?? byEmail;
     fresh = { name: input.client.name, phone, email };
   } else {
     throw new ORPCError("BAD_REQUEST", { message: "Не указан клиент" });
@@ -361,24 +365,25 @@ export const addSale = adminProcedure
         throw new ORPCError("BAD_REQUEST", { message: "Кампания не найдена" });
       }
     }
-    const clientId = await cardFor(context.db, input);
-
     try {
-      const [sale] = await context.db
-        .insert(crmSales)
-        .values({
-          clientId,
-          soldOn: input.soldOn,
-          amount: toKopecks(input.amount),
-          description: input.description,
-          campaignId: input.campaignId,
-          requestNumber: input.requestNumber ?? null,
-        })
-        .returning();
-      return {
-        key: clientId,
-        sale: sale && { ...sale, amount: rubles(sale.amount) },
-      };
+      return await context.db.transaction(async (tx) => {
+        const clientId = await cardFor(tx, input);
+        const [sale] = await tx
+          .insert(crmSales)
+          .values({
+            clientId,
+            soldOn: input.soldOn,
+            amount: toKopecks(input.amount),
+            description: input.description,
+            campaignId: input.campaignId,
+            requestNumber: input.requestNumber ?? null,
+          })
+          .returning();
+        return {
+          key: clientId,
+          sale: sale && { ...sale, amount: rubles(sale.amount) },
+        };
+      });
     } catch (error) {
       if (isUniqueViolation(error, "crm_sales_request_idx")) {
         throw new ORPCError("CONFLICT", {
