@@ -14,6 +14,7 @@ let extended = true;
 mock.module("../services/video-renditions", () => ({
   getReadyRendition: async () => null,
   claimNextVideo: async () => null,
+  getAttemptHlsPrefix: async () => "workshops/test/hls/lesson/attempt",
   extendRenditionLease: async () => extended,
   completeRendition: async () => "ready",
   failRendition: async () => {},

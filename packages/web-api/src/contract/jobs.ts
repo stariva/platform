@@ -34,18 +34,22 @@ const attempt = z.object({
   attemptId: z.number().int().positive(),
 });
 
-const base = oc.errors({
+/** Любая процедура воркера: на сайте может быть не задан JOBS_SECRET. */
+const jobProcedure = oc.errors({
   [JobsNotConfiguredError.code]: JobsNotConfiguredError,
 });
 
-const lossy = base.errors({ [AttemptLostError.code]: AttemptLostError });
+/** Процедура над попыткой нарезки: попытку могли отдать другому воркеру. */
+const attemptProcedure = jobProcedure.errors({
+  [AttemptLostError.code]: AttemptLostError,
+});
 
 export const videosContract = {
   /**
    * Следующее видео без HLS-версии: ссылка на исходник и папка, куда класть
    * куски. `job: null` — нарезать нечего.
    */
-  claim: base
+  claim: jobProcedure
     .errors({ [StorageNotConfiguredError.code]: StorageNotConfiguredError })
     .output(
       z.object({
@@ -61,13 +65,13 @@ export const videosContract = {
     ),
 
   /** Воркер ещё режет видео — продлеваем аренду. */
-  heartbeat: lossy.input(attempt).output(type<void>()),
+  heartbeat: attemptProcedure.input(attempt).output(type<void>()),
 
   /**
    * Ссылки для заливки кусков HLS-версии. Папку берём из текущей попытки,
    * чтобы старый воркер не перезаписал её файлы.
    */
-  uploadUrls: lossy
+  uploadUrls: attemptProcedure
     .errors({ [StorageNotConfiguredError.code]: StorageNotConfiguredError })
     .input(
       attempt.extend({
@@ -84,13 +88,13 @@ export const videosContract = {
     ),
 
   /** Воркер залил HLS-версию: с этого момента плеер показывает её. */
-  complete: lossy
+  complete: attemptProcedure
     .errors({ [PlaylistMissingError.code]: PlaylistMissingError })
     .input(attempt.extend({ durationSeconds: z.number().nonnegative() }))
     .output(type<void>()),
 
   /** Нарезка упала: видео вернётся в очередь после паузы. */
-  fail: base
+  fail: jobProcedure
     .input(attempt.extend({ error: z.string().max(10_000) }))
     .output(type<void>()),
 };

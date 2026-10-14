@@ -25,13 +25,25 @@ export type WebORPCContext = ReturnType<typeof createWebORPCContext>;
  * HTTP-статусы для своих кодов ошибок: в v2 статус задаёт обработчик, а не
  * ошибка. Клиенты различают ошибки по коду, статус нужен логам и прокси.
  */
-export const webErrorStatusMap: Record<string, number> = {
+export const webErrorStatusMap = {
   ...COMMON_ERROR_STATUS_MAP,
   [JobsNotConfiguredError.code]: 503,
   [StorageNotConfiguredError.code]: 503,
   [AttemptLostError.code]: 409,
   [PlaylistMissingError.code]: 409,
-};
+} satisfies Record<string, number>;
+
+/** Коды ошибок, для которых у API витрины есть свой HTTP-статус. */
+export type WebErrorCode = keyof typeof webErrorStatusMap;
+
+function isWebErrorCode(code: string): code is WebErrorCode {
+  return Object.hasOwn(webErrorStatusMap, code);
+}
+
+/** HTTP-статус ошибки с этим кодом; незнакомый код — 500, как у обработчика. */
+export function webErrorStatus(code: string): number {
+  return isWebErrorCode(code) ? webErrorStatusMap[code] : 500;
+}
 
 export const os = implement(webContract).$context<WebORPCContext>();
 
@@ -48,10 +60,7 @@ const timingMiddleware = os.middleware(async ({ next, path }) => {
 });
 
 /** Сверка `Authorization: Bearer <secret>` за постоянное время. */
-export function isBearerAuthorized(
-  header: string | null,
-  secret: string,
-): boolean {
+function isBearerAuthorized(header: string | null, secret: string): boolean {
   const expected = Buffer.from(`Bearer ${secret}`);
   const actual = Buffer.from(header ?? "");
   return actual.length === expected.length && timingSafeEqual(actual, expected);

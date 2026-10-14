@@ -4,6 +4,7 @@ import { logger } from "@stariva/config";
 import {
   createWebORPCContext,
   WEB_RPC_PATH,
+  webErrorStatus,
   webErrorStatusMap,
   webRouter,
 } from "@stariva/web-api";
@@ -17,10 +18,7 @@ const handler = new RPCHandler(webRouter, {
     onError((error) => {
       // 4xx — штатные ответы (попытка отдана другому воркеру, неверный
       // секрет), в лог ошибок им не место
-      if (
-        error instanceof ORPCError &&
-        (webErrorStatusMap[error.code] ?? 500) < 500
-      ) {
+      if (error instanceof ORPCError && webErrorStatus(error.code) < 500) {
         return;
       }
       logger.error("web_orpc.handler_error", error);
