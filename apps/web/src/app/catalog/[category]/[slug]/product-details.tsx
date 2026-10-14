@@ -194,7 +194,7 @@ export function ProductDetails({
       {/* Product Section */}
       <section className="pb-16 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid lg:grid-cols-2 gap-12" data-cart-fly-scope>
             {/* Gallery */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}

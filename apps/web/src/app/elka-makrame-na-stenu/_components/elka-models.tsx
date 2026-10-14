@@ -88,8 +88,12 @@ export function ElkaModels({
               <article
                 key={product.id}
                 className="flex flex-col rounded-[28px] bg-parchment overflow-hidden"
+                data-cart-fly-scope
               >
-                <div className="relative aspect-[4/5] bg-linen">
+                <div
+                  className="relative aspect-[4/5] bg-linen"
+                  data-cart-fly-source
+                >
                   {image ? (
                     <Image
                       src={image}
