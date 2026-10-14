@@ -53,6 +53,9 @@ lessonVideoHlsWorkflow.task({
       if (!job) break;
 
       const attempt = { videoKey: job.videoKey, attemptId: job.attemptId };
+      console.log(
+        `[lesson-video-hls] ${job.videoKey}: попытка ${job.attemptId}`,
+      );
       // Останавливаем ffmpeg, если Hatchet отменил задачу или сайт отдал
       // видео другой попытке (наша аренда истекла)
       const abort = new AbortController();
@@ -80,7 +83,7 @@ lessonVideoHlsWorkflow.task({
               );
               return uploads;
             },
-            abort.signal,
+            { signal: abort.signal },
           );
           await webApi.jobs.videos.complete({
             ...attempt,
