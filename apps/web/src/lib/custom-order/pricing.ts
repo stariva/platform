@@ -57,7 +57,7 @@ export const PRODUCT_TYPES: ProductType[] = [
   },
   {
     id: "placemat",
-    label: "Плейсменты / декор стола",
+    label: "Плейсматы / декор стола",
     basePrice: 1800,
     description: "Набор салфеток или подставок",
   },

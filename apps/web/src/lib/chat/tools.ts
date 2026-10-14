@@ -190,7 +190,7 @@ export const chatTools = {
           "other",
         ])
         .describe(
-          "Тип: lampshade — абажур, panel — панно, bag — сумка/авоська, clothes — одежда, tipi — вигвам/кресло, plant-hanger — кашпо/подвес, placemat — плейсменты, other — другое",
+          "Тип: lampshade — абажур, panel — панно, bag — сумка/авоська, clothes — одежда, tipi — вигвам/кресло, plant-hanger — кашпо/подвес, placemat — плейсматы, other — другое",
         ),
       size: z
         .enum(["s", "m", "l", "xl"])
