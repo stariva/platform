@@ -25,8 +25,16 @@ const product: Product = {
 
 let catalog: ProductsResult = { products: [], status: "available" };
 
-mock.module("@/lib/catalog/service", () => ({
-  getProductsResult: async () => catalog,
+// Подменяем слой базы, а не весь service: mock.module в bun глобален для прогона,
+// и урезанный service ломал бы другие тесты, которым нужны getProducts и т. д.
+mock.module("@/lib/catalog/products-db", () => ({
+  fetchPublishedProducts: async () => {
+    if (catalog.status === "unavailable") throw new Error("db_unavailable");
+    return catalog.products;
+  },
+}));
+mock.module("@/lib/catalog/reviews-db", () => ({
+  fetchPublishedReviews: async () => [],
 }));
 
 const { POST } = await import("./route");
