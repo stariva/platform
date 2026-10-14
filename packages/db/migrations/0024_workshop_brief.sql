@@ -1,0 +1,1 @@
+ALTER TABLE "workshops" ADD COLUMN "brief" jsonb DEFAULT '{"howTo":"","shops":[],"outro":"","image":""}'::jsonb NOT NULL;

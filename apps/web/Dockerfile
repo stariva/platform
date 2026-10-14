@@ -21,6 +21,7 @@ ENV NEXT_PUBLIC_SITE_URL=https://stariva.ru
 ENV APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=814c36f0-1a32-47af-b51d-8f197d5f2981
+ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_kCRjCvwxBW8Wrfav8gBsxeT6fswrCVFASUsMY5d34Swb
 RUN bun run build --filter=@stariva/web
 
 # 3. Minimal runtime image, just the Next.js standalone output
@@ -36,6 +37,7 @@ ENV NEXT_PUBLIC_SITE_URL=https://stariva.ru
 ENV APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=814c36f0-1a32-47af-b51d-8f197d5f2981
+ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_kCRjCvwxBW8Wrfav8gBsxeT6fswrCVFASUsMY5d34Swb
 ENV PORT=3000
 EXPOSE 3000
 # --smol: bun чаще запускает GC — без этого RSS держится у лимита пода

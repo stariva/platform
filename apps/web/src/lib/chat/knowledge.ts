@@ -11,6 +11,10 @@ import {
   PRODUCT_TYPES,
   SIZES,
 } from "@/lib/custom-order/pricing";
+import {
+  DESIGNER_DISCOUNTS,
+  INDIVIDUAL_PRICE_FROM,
+} from "@/lib/designers/brief";
 import { categories } from "@/lib/products";
 import {
   categoryLabels,
@@ -94,6 +98,19 @@ const CARE_BLOCK = `
 - Все изделия — из натурального хлопкового шнура без синтетики и химических красителей.
 `.trim();
 
+function buildDesignersBlock(): string {
+  const tiers = DESIGNER_DISCOUNTS.map((t) =>
+    t.minItems === 1
+      ? `${t.percent}% с первого изделия`
+      : `${t.percent}% от ${t.minItems} изделий в проекте`,
+  ).join(", ");
+  return [
+    `- Для дизайнеров интерьера, архитекторов и комплектаторов есть отдельные условия: ${tiers}, от ${INDIVIDUAL_PRICE_FROM} изделий — индивидуальный расчёт. Скидки не суммируются, доставка и монтаж — отдельно.`,
+    "- Заказчик дизайнера закреплён за ним; КП для сметы — за 2 рабочих дня; образец в цвете проекта засчитывается в заказ.",
+    "- Подробности и бриф проекта — на странице stariva.ru/designers. Если собеседник — дизайнер, предложи заполнить бриф там.",
+  ].join("\n");
+}
+
 const DELIVERY_BLOCK = `
 - Готовые изделия покупаются на сайте: положите в корзину, выберите пункт выдачи Ozon на карте и оплатите онлайн на защищённой странице ЮKassa.
 - Готовые изделия отправляются в течение 1–3 дней, доставка в пункты выдачи Ozon по всей России; стоимость и срок доставки видны при оформлении до оплаты.
@@ -146,6 +163,9 @@ export function buildSystemPrompt(workshops: Workshop[]): string {
     "",
     "━━━ МАСТЕР-КЛАССЫ (видео, доступ навсегда) ━━━",
     buildWorkshopsBlock(workshops),
+    "",
+    "━━━ ДИЗАЙНЕРАМ ИНТЕРЬЕРА ━━━",
+    buildDesignersBlock(),
     "",
     "━━━ УХОД ЗА ИЗДЕЛИЯМИ ━━━",
     CARE_BLOCK,

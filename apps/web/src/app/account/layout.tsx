@@ -20,7 +20,10 @@ export default async function AccountLayout({
   return (
     <div className="min-h-screen bg-parchment text-espresso">
       <Header variant="solid" />
-      <div className="max-w-6xl mx-auto px-5 lg:px-10 pt-24 pb-24 lg:pb-32">
+      <div
+        data-analytics-private
+        className="max-w-6xl mx-auto px-5 lg:px-10 pt-24 pb-24 lg:pb-32"
+      >
         <header className="mb-8">
           <p className="label-caps text-[11px] text-taupe mb-1">
             Личный кабинет

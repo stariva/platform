@@ -1,6 +1,7 @@
 export type { BlogContent, BlogPost } from "./types";
 
 import { bazovyeUzlyMakrame } from "./5-bazovykh-uzlov-makrame";
+import { chtoNadetNaFotosessiyuVPuteshestvii } from "./chto-nadet-na-fotosessiyu-v-puteshestvii";
 import { dizainMakrameSChegoNachatEsliVyNeKhudozhnik } from "./dizain-makrame-s-chego-nachat-esli-vy-ne-khudozhnik";
 import { elkaIzMakrameSvoimiRukami } from "./elka-iz-makrame-svoimi-rukami";
 import { filosofiyaSlowLivingIRuchnayaRabota } from "./filosofiya-slow-living-i-ruchnaya-rabota";
@@ -61,6 +62,7 @@ export const blogPosts: BlogPost[] = [
   makramePodarokKakUpak,
   makrameNaSvadbe,
   elkaIzMakrameSvoimiRukami,
+  chtoNadetNaFotosessiyuVPuteshestvii,
 ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export function getPostBySlug(slug: string): BlogPost | undefined {

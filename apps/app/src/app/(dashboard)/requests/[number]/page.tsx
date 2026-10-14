@@ -1,6 +1,7 @@
-import { Card, CardContent } from "@stariva/ui";
+import { buttonVariants, Card, CardContent } from "@stariva/ui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { rubles } from "~/components/crm/crm-meta";
 import { SiteHeader } from "~/components/layout";
 import { DeliveryBadge } from "~/components/requests/requests-table";
 import { VisitorCard } from "~/components/visitors/visitor-card";
@@ -20,12 +21,13 @@ export default async function RequestPage({
 }) {
   const number = Number((await params).number);
   if (!Number.isSafeInteger(number) || number < 1) notFound();
-  const request = await api.admin.requests
-    .byNumber({ number })
-    .catch((error) => {
+  const [request, sale] = await Promise.all([
+    api.admin.requests.byNumber({ number }).catch((error) => {
       if ((error as { code?: string }).code === "NOT_FOUND") notFound();
       throw error;
-    });
+    }),
+    api.admin.crm.saleForRequest({ number }),
+  ]);
 
   return (
     <>
@@ -52,6 +54,36 @@ export default async function RequestPage({
               ? ` · ушла в Telegram или на почту ${dateFormat.format(request.deliveredAt)}`
               : ` · попыток отправить уведомление: ${request.attempts}`}
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {sale ? (
+            <>
+              <span className="text-sm">
+                Заказ записан в CRM: {rubles.format(sale.amount)}
+                {sale.campaignName && ` · ${sale.campaignName}`}
+              </span>
+              <Link
+                href={`/crm/clients/${encodeURIComponent(sale.clientId)}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Открыть клиента
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href={`/crm/orders/new?request=${request.number}`}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Записать индивидуальный заказ
+              </Link>
+              <span className="text-muted-foreground text-sm">
+                когда договоритесь и клиент оплатит — с выбором рекламы, откуда
+                он пришёл
+              </span>
+            </>
+          )}
         </div>
 
         <Card>

@@ -39,6 +39,11 @@ const b2bLinks: NavLink[] = [
     desc: "Глэмпинг, террасы, SPA, отели",
   },
   {
+    label: "Дизайнерам интерьера",
+    href: "/designers",
+    desc: "Скидка с первого изделия, бриф проекта",
+  },
+  {
     label: "Фотографам и стилистам",
     href: "/partners",
     desc: "Платья для съёмок, партнёрская программа",
@@ -189,7 +194,9 @@ export function Header({
   const navItemClass = (active: boolean) =>
     `group px-2 2xl:px-4 py-2 rounded-md label-caps-nav whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-terracotta/40 ${
       active
-        ? "text-terracotta"
+        ? isSolid
+          ? "text-terracotta"
+          : "text-white underline underline-offset-8 decoration-white/60"
         : isSolid
           ? "text-espresso/70 hover:text-espresso data-[state=open]:text-espresso"
           : "text-white/80 hover:text-white data-[state=open]:text-white"

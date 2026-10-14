@@ -166,8 +166,15 @@
     {
       "idx": 23,
       "version": "7",
-      "when": 1791922005670,
-      "tag": "0023_product_best_for_highlights",
+      "when": 1791923811569,
+      "tag": "0023_crm",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791960688974,
+      "tag": "0024_workshop_brief",
       "breakpoints": true
     }
   ]
