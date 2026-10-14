@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/lib/cart/cart-context";
 import {
-  CART_TARGET_ATTR,
   isFlightPending,
   onCartLanded,
   prefersReducedMotion,
@@ -85,7 +84,7 @@ export function CartTrigger({ isSolid }: { isSolid: boolean }) {
   useEffect(
     () =>
       onCartLanded(() => {
-        if (!isFlightPending()) setShownCount(countRef.current);
+        setShownCount(countRef.current);
         setLandings((n) => n + 1);
       }),
     [],
@@ -96,10 +95,11 @@ export function CartTrigger({ isSolid }: { isSolid: boolean }) {
     if (iconRef.current && ringRef.current) {
       bounce(iconRef.current, ringRef.current, badgeRef.current ?? undefined);
     }
-    if ("vibrate" in navigator) navigator.vibrate(12);
+    // Без касания пользователя Chrome запрещает вибрацию и ругается в консоль
+    if ("vibrate" in navigator && navigator.userActivation?.hasBeenActive) {
+      navigator.vibrate(12);
+    }
   }, [landings]);
-
-  const attrs = { [CART_TARGET_ATTR]: "" };
 
   return (
     <>
@@ -107,7 +107,7 @@ export function CartTrigger({ isSolid }: { isSolid: boolean }) {
         ref={linkRef}
         href="/cart"
         aria-label={`Корзина: ${count}`}
-        {...attrs}
+        data-cart-target
         className={`relative inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
           isSolid
             ? "bg-espresso/8 text-espresso hover:bg-espresso/14"
@@ -131,7 +131,7 @@ export function CartTrigger({ isSolid }: { isSolid: boolean }) {
               key={shownCount}
               className={
                 landings > 0
-                  ? "animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  ? "animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none"
                   : undefined
               }
             >

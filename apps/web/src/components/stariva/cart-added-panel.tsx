@@ -1,7 +1,13 @@
 "use client";
 
 import { ArrowRightIcon, ImageOffIcon, XIcon } from "lucide-react";
-import { AnimatePresence, motion, type PanInfo } from "motion/react";
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  type PanInfo,
+  useReducedMotion,
+} from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -85,6 +91,7 @@ export function CartAddedPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef<Animation | null>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => setMounted(true), []);
 
@@ -136,7 +143,9 @@ export function CartAddedPanel({
     };
   }, [shown, close]);
 
-  // Escape и клик мимо панели закрывают её
+  // Escape и нажатие мимо панели закрывают её. Слушаем click, а не
+  // pointerdown: на телефоне прокрутка страницы не даёт click, и панель
+  // не исчезает от первого же касания
   useEffect(() => {
     if (!shown) return;
     const onKey = (e: KeyboardEvent) => {
@@ -145,17 +154,17 @@ export function CartAddedPanel({
       close();
       if (hadFocus) anchorRef.current?.focus();
     };
-    const onPointerDown = (e: PointerEvent) => {
+    const onClick = (e: MouseEvent) => {
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (anchorRef.current?.contains(target)) return;
       close();
     };
     document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("click", onClick, true);
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("click", onClick, true);
     };
   }, [shown, close, anchorRef]);
 
@@ -177,11 +186,15 @@ export function CartAddedPanel({
   return (
     <>
       <p className="sr-only" aria-live="polite">
-        {shown ? `Добавлено в корзину: ${shown.name}` : ""}
+        {shown
+          ? `Добавлено в корзину: ${shown.name}. В корзине ${count} ${pluralItems(count)}`
+          : ""}
       </p>
       {mounted &&
         createPortal(
-          <AnimatePresence custom={swiped}>
+          // С «уменьшением движения» панель только проявляется, без сдвигов
+          <MotionConfig reducedMotion="user">
+            <AnimatePresence custom={swiped}>
             {shown && placement && (
               <motion.div
                 key="cart-added"
@@ -260,7 +273,7 @@ export function CartAddedPanel({
                             strokeWidth="1.8"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            initial={{ pathLength: 0 }}
+                            initial={reduceMotion ? false : { pathLength: 0 }}
                             animate={{ pathLength: 1 }}
                             transition={{
                               duration: 0.35,
@@ -366,7 +379,8 @@ export function CartAddedPanel({
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>,
+            </AnimatePresence>
+          </MotionConfig>,
           document.body,
         )}
     </>

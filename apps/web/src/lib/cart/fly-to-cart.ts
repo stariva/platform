@@ -12,9 +12,9 @@
  * Если фото карточки не видно на экране, кружок вылетает из самой кнопки.
  */
 
-export const CART_TARGET_ATTR = "data-cart-target";
-export const FLY_SCOPE_ATTR = "data-cart-fly-scope";
-export const FLY_SOURCE_ATTR = "data-cart-fly-source";
+const CART_TARGET_ATTR = "data-cart-target";
+const FLY_SCOPE_ATTR = "data-cart-fly-scope";
+const FLY_SOURCE_ATTR = "data-cart-fly-source";
 
 /** Что показать в панели «Добавлено в корзину». */
 export interface AddedToCart {
@@ -29,8 +29,13 @@ type LandListener = (item: AddedToCart) => void;
 
 const listeners = new Set<LandListener>();
 let pendingFlights = 0;
+/** Изделие из последнего нажатия — его и покажет панель. */
+let latestItem: AddedToCart | null = null;
 
-/** Подписка на момент, когда изделие «долетело» до корзины. */
+/**
+ * Подписка на момент, когда изделие «долетело» до корзины. Если подряд
+ * добавили несколько, сигнал один — когда приземлилось последнее.
+ */
 export function onCartLanded(listener: LandListener): () => void {
   listeners.add(listener);
   return () => {
@@ -43,6 +48,7 @@ export function isFlightPending(): boolean {
   return pendingFlights > 0;
 }
 
+/** В системе включено «уменьшение движения». */
 export function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -50,7 +56,11 @@ export function prefersReducedMotion(): boolean {
   );
 }
 
-function emitLanded(item: AddedToCart) {
+function landOne() {
+  pendingFlights = Math.max(0, pendingFlights - 1);
+  if (pendingFlights > 0 || !latestItem) return;
+  const item = latestItem;
+  latestItem = null;
   for (const listener of listeners) listener(item);
 }
 
@@ -126,9 +136,11 @@ export function flyToCart({
   trigger: HTMLElement;
   item: AddedToCart;
 }): void {
+  latestItem = item;
+  pendingFlights++;
   const target = findTarget();
   if (!target || prefersReducedMotion()) {
-    requestAnimationFrame(() => emitLanded(item));
+    requestAnimationFrame(landOne);
     return;
   }
 
@@ -235,14 +247,12 @@ export function flyToCart({
   flyer.append(clip);
   document.body.append(flyer);
 
-  pendingFlights++;
   let landed = false;
   const land = () => {
     if (landed) return;
     landed = true;
     flyer.remove();
-    pendingFlights = Math.max(0, pendingFlights - 1);
-    emitLanded(item);
+    landOne();
   };
 
   const flight = flyer.animate(frames, { duration, fill: "forwards" });
