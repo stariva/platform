@@ -1,41 +1,42 @@
-import { timingSafeEqual } from "node:crypto";
-import { COMMON_ERROR_STATUS_MAP, implement, ORPCError } from "@orpc/server";
+import { implement } from "@orpc/server";
+import type { Session } from "@stariva/auth";
 import { logger } from "@stariva/config";
-import {
-  AttemptLostError,
-  JobsNotConfiguredError,
-  PlaylistMissingError,
-  StorageNotConfiguredError,
-  webContract,
-} from "./contract";
-import { env } from "./env";
+import { type ReminderSweepResult, webContract } from "./contract";
+
+/**
+ * Логика, которая пока живёт в витрине и тянет за собой её модули (письма,
+ * Telegram, заказы). Витрина передаёт её в контекст, процедуры только зовут.
+ */
+export interface WebServices {
+  /** Рассылка о мастер-классах: apps/web/src/lib/workshops/notifications.ts */
+  runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
+}
 
 export interface CreateWebORPCContextOptions {
   /** Заголовки запроса: по ним процедуры проверяют доступ. */
   headers: Headers;
+  services: WebServices;
+  /**
+   * Сессия покупателя. Экземпляр better-auth живёт в витрине, поэтому она
+   * передаёт загрузчик, а не готовую сессию: его зовут только процедуры
+   * покупателя, вызовы воркера и админки в базу за сессией не ходят.
+   */
+  getSession: () => Promise<Session | null>;
 }
 
 export function createWebORPCContext(opts: CreateWebORPCContextOptions) {
-  return { headers: opts.headers };
+  return {
+    headers: opts.headers,
+    services: opts.services,
+    getSession: opts.getSession,
+  };
 }
 
 export type WebORPCContext = ReturnType<typeof createWebORPCContext>;
 
-/**
- * HTTP-статусы для своих кодов ошибок: в v2 статус задаёт обработчик, а не
- * ошибка. Клиенты различают ошибки по коду, статус нужен логам и прокси.
- */
-export const webErrorStatusMap: Record<string, number> = {
-  ...COMMON_ERROR_STATUS_MAP,
-  [JobsNotConfiguredError.code]: 503,
-  [StorageNotConfiguredError.code]: 503,
-  [AttemptLostError.code]: 409,
-  [PlaylistMissingError.code]: 409,
-};
-
 export const os = implement(webContract).$context<WebORPCContext>();
 
-const timingMiddleware = os.middleware(async ({ next, path }) => {
+export const timingMiddleware = os.middleware(async ({ next, path }) => {
   const start = Date.now();
   try {
     return await next();
@@ -46,29 +47,3 @@ const timingMiddleware = os.middleware(async ({ next, path }) => {
     });
   }
 });
-
-/** Сверка `Authorization: Bearer <secret>` за постоянное время. */
-export function isBearerAuthorized(
-  header: string | null,
-  secret: string,
-): boolean {
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const actual = Buffer.from(header ?? "");
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
-
-/** Доступ для воркера Hatchet: по общему JOBS_SECRET. */
-const requireJobsSecret = os.middleware(async ({ context, next }) => {
-  const secret = env.JOBS_SECRET;
-  if (!secret) throw new JobsNotConfiguredError();
-  if (!isBearerAuthorized(context.headers.get("authorization"), secret)) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-  return next();
-});
-
-/**
- * Процедуры воркера. Middleware висят на уровне поддерева, до валидации
- * входа: неавторизованный запрос отбивается, не доходя до схем.
- */
-export const jobs = os.jobs.use(timingMiddleware).use(requireJobsSecret);

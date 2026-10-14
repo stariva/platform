@@ -4,12 +4,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // Each fixture has its own module mocks; keep them out of other test modules.
-for (const fixture of [
-  "stock-push",
-  "storefront",
-  "set-stock",
-  "split-reason",
-]) {
+for (const fixture of ["storefront", "set-stock", "split-reason"]) {
   test(`Ozon stock regression: ${fixture}`, () => {
     const result = spawnSync(
       process.execPath,

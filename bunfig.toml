@@ -29,3 +29,9 @@ concurrentScripts = 16 # (cpu count or GOMAXPROCS) x2
 # - configVersion = 1: "isolated" if using workspaces, otherwise "hoisted"
 # - configVersion = 0: "hoisted"
 linker = "hoisted"
+
+[test]
+# bun test из корня гоняет все пакеты одним процессом, а окружение
+# @stariva/web-api читается один раз — при первом импорте. Секреты для его
+# тестов задаём до любого теста, иначе порядок файлов решает, пройдут ли они
+preload = ["./packages/web-api/src/testing/setup.ts"]

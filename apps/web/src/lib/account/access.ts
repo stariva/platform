@@ -4,23 +4,13 @@ import { courseAccess, lessonProgress } from "@stariva/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { getWorkshopLessons, type Workshop } from "@/lib/workshops-data";
 
-/** Проверяет, есть ли у пользователя доступ к мастер-классу. */
-export async function hasAccess(
-  userId: string,
-  workshopSlug: string,
-): Promise<boolean> {
-  const rows = await db
-    .select({ id: courseAccess.id })
-    .from(courseAccess)
-    .where(
-      and(
-        eq(courseAccess.userId, userId),
-        eq(courseAccess.workshopSlug, workshopSlug),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
-}
+// Доступ к курсу и прогресс уроков переехали в API витрины: их зовут и
+// процедуры кабинета, и страницы. Реэкспорт — пока страницы не перешли
+export {
+  hasAccess,
+  type UpsertProgressInput,
+  upsertLessonProgress,
+} from "@stariva/web-api";
 
 /**
  * Идемпотентно выдаёт доступ к мастер-классу.
@@ -148,45 +138,4 @@ export async function getProgressForSlugs(
     map.set(r.workshopSlug, list);
   }
   return map;
-}
-
-export interface UpsertProgressInput {
-  userId: string;
-  workshopSlug: string;
-  lessonId: string;
-  positionSeconds: number;
-  durationSeconds: number;
-  completed?: boolean;
-}
-
-/** Сохраняет/обновляет прогресс просмотра урока. */
-export async function upsertLessonProgress(
-  input: UpsertProgressInput,
-): Promise<void> {
-  const completed =
-    input.completed ??
-    (input.durationSeconds > 0 &&
-      input.positionSeconds / input.durationSeconds >= 0.95);
-
-  await db
-    .insert(lessonProgress)
-    .values({
-      id: randomUUID(),
-      userId: input.userId,
-      workshopSlug: input.workshopSlug,
-      lessonId: input.lessonId,
-      positionSeconds: Math.max(0, Math.floor(input.positionSeconds)),
-      durationSeconds: Math.max(0, Math.floor(input.durationSeconds)),
-      completed,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [lessonProgress.userId, lessonProgress.lessonId],
-      set: {
-        positionSeconds: Math.max(0, Math.floor(input.positionSeconds)),
-        durationSeconds: Math.max(0, Math.floor(input.durationSeconds)),
-        completed,
-        updatedAt: new Date(),
-      },
-    });
 }

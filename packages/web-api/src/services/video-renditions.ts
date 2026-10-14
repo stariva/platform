@@ -124,13 +124,50 @@ export async function claimNextVideo(): Promise<{
 }
 
 /**
+ * Попытка нарезки: видео и номер попытки. Номер — значение счётчика
+ * `attempts` на момент выдачи видео воркеру.
+ */
+export interface RenditionAttempt {
+  videoKey: string;
+  attemptId: number;
+}
+
+/**
+ * Попытка всё ещё текущая: номер не сменился (видео не отдано другому
+ * воркеру) и нарезка не завершена. Все записи воркера идут под этим
+ * условием, чтобы опоздавший воркер ничего не перетёр.
+ */
+function isCurrentAttempt({ videoKey, attemptId }: RenditionAttempt) {
+  return and(
+    eq(videoRenditions.videoKey, videoKey),
+    eq(videoRenditions.attempts, attemptId),
+    eq(videoRenditions.status, "processing"),
+  );
+}
+
+/**
+ * Папка, куда текущая попытка кладёт куски HLS-версии. null — попытка уже
+ * не текущая. У каждой попытки своя папка, так что старый воркер не
+ * перезапишет файлы нового.
+ */
+export async function getAttemptHlsPrefix(
+  attempt: RenditionAttempt,
+): Promise<string | null> {
+  const [rendition] = await db
+    .select({ hlsPrefix: videoRenditions.hlsPrefix })
+    .from(videoRenditions)
+    .where(isCurrentAttempt(attempt))
+    .limit(1);
+  return rendition?.hlsPrefix ?? null;
+}
+
+/**
  * Воркер жив и всё ещё режет эту попытку — продлеваем аренду. false —
  * попытка уже не его (истекла и отдана другому, или видео готово): воркеру
  * пора бросить работу.
  */
 export async function extendRenditionLease(
-  videoKey: string,
-  attemptId: number,
+  attempt: RenditionAttempt,
 ): Promise<boolean> {
   const now = new Date();
   const [row] = await db
@@ -139,13 +176,7 @@ export async function extendRenditionLease(
       leaseUntil: new Date(now.getTime() + PROCESSING_LEASE_MS),
       updatedAt: now,
     })
-    .where(
-      and(
-        eq(videoRenditions.videoKey, videoKey),
-        eq(videoRenditions.attempts, attemptId),
-        eq(videoRenditions.status, "processing"),
-      ),
-    )
+    .where(isCurrentAttempt(attempt))
     .returning({ videoKey: videoRenditions.videoKey });
   return Boolean(row);
 }
@@ -155,22 +186,11 @@ export async function extendRenditionLease(
  * лежит в бакете: он заливается последним.
  */
 export async function completeRendition(
-  videoKey: string,
-  attemptId: number,
+  attempt: RenditionAttempt,
   durationSeconds: number,
 ): Promise<"ready" | "not_found" | "missing_playlist"> {
-  const currentAttempt = and(
-    eq(videoRenditions.videoKey, videoKey),
-    eq(videoRenditions.attempts, attemptId),
-    eq(videoRenditions.status, "processing"),
-  );
-  const [rendition] = await db
-    .select({ hlsPrefix: videoRenditions.hlsPrefix })
-    .from(videoRenditions)
-    .where(currentAttempt)
-    .limit(1);
-  if (!rendition) return "not_found";
-  const { hlsPrefix } = rendition;
+  const hlsPrefix = await getAttemptHlsPrefix(attempt);
+  if (!hlsPrefix) return "not_found";
   if (!(await objectExists(`${hlsPrefix}/index.m3u8`))) {
     return "missing_playlist";
   }
@@ -184,15 +204,15 @@ export async function completeRendition(
       error: null,
       updatedAt: new Date(),
     })
-    .where(currentAttempt)
+    // Аренда могла истечь, пока проверяли бакет: условие повторяем
+    .where(isCurrentAttempt(attempt))
     .returning({ videoKey: videoRenditions.videoKey });
   return row ? "ready" : "not_found";
 }
 
 /** Нарезка упала: повторим позже, пока не кончатся попытки. */
 export async function failRendition(
-  videoKey: string,
-  attemptId: number,
+  attempt: RenditionAttempt,
   error: string,
 ): Promise<void> {
   const now = new Date();
@@ -204,11 +224,5 @@ export async function failRendition(
       leaseUntil: new Date(now.getTime() + RETRY_BACKOFF_MS),
       updatedAt: now,
     })
-    .where(
-      and(
-        eq(videoRenditions.videoKey, videoKey),
-        eq(videoRenditions.attempts, attemptId),
-        eq(videoRenditions.status, "processing"),
-      ),
-    );
+    .where(isCurrentAttempt(attempt));
 }

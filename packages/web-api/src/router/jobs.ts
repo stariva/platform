@@ -1,6 +1,4 @@
 import { ORPCError } from "@orpc/server";
-import { and, db, eq } from "@stariva/db";
-import { videoRenditions } from "@stariva/db/schema";
 import {
   createUploadUrl,
   getDownloadUrl,
@@ -8,12 +6,13 @@ import {
   hlsContentType,
   isStorageConfigured,
 } from "@stariva/storage";
-import { jobs } from "../orpc";
+import { jobs } from "../procedures";
 import {
   claimNextVideo,
   completeRendition,
   extendRenditionLease,
   failRendition,
+  getAttemptHlsPrefix,
 } from "../services/video-renditions";
 
 // ffmpeg читает исходник по этой ссылке всё время нарезки
@@ -36,12 +35,11 @@ const claim = jobs.videos.claim.handler(async ({ errors }) => {
 });
 
 const heartbeat = jobs.videos.heartbeat.handler(async ({ input, errors }) => {
-  const extended = await extendRenditionLease(input.videoKey, input.attemptId);
-  if (!extended) throw errors.ATTEMPT_LOST();
+  if (!(await extendRenditionLease(input))) throw errors.ATTEMPT_LOST();
 });
 
 const uploadUrls = jobs.videos.uploadUrls.handler(async ({ input, errors }) => {
-  const { videoKey, attemptId, files } = input;
+  const { files } = input;
   // Имена файлов знает только @stariva/storage, поэтому проверяем здесь,
   // а не в контракте: контракт не тянет за собой S3 SDK
   if (!files.every((file) => HLS_FILE_PATTERN.test(file))) {
@@ -49,20 +47,9 @@ const uploadUrls = jobs.videos.uploadUrls.handler(async ({ input, errors }) => {
   }
   if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
 
-  const [rendition] = await db
-    .select({ hlsPrefix: videoRenditions.hlsPrefix })
-    .from(videoRenditions)
-    .where(
-      and(
-        eq(videoRenditions.videoKey, videoKey),
-        eq(videoRenditions.attempts, attemptId),
-        eq(videoRenditions.status, "processing"),
-      ),
-    )
-    .limit(1);
-  if (!rendition) throw errors.ATTEMPT_LOST();
+  const prefix = await getAttemptHlsPrefix(input);
+  if (!prefix) throw errors.ATTEMPT_LOST();
 
-  const prefix = rendition.hlsPrefix;
   const entries = await Promise.all(
     files.map(async (file) => {
       const contentType = hlsContentType(file);
@@ -76,19 +63,26 @@ const uploadUrls = jobs.videos.uploadUrls.handler(async ({ input, errors }) => {
 });
 
 const complete = jobs.videos.complete.handler(async ({ input, errors }) => {
-  const result = await completeRendition(
-    input.videoKey,
-    input.attemptId,
-    input.durationSeconds,
-  );
+  const result = await completeRendition(input, input.durationSeconds);
   if (result === "not_found") throw errors.ATTEMPT_LOST();
   if (result === "missing_playlist") throw errors.PLAYLIST_MISSING();
 });
 
 const fail = jobs.videos.fail.handler(async ({ input }) => {
-  await failRendition(input.videoKey, input.attemptId, input.error);
+  await failRendition(input, input.error);
+});
+
+/**
+ * Повторный прогон безопасен: отправленное помечено и второй раз не уйдёт.
+ * Поэтому при сбоях отдаём ошибку, и Hatchet повторяет прогон целиком.
+ */
+const sweep = jobs.reminders.sweep.handler(async ({ context, errors }) => {
+  const result = await context.services.runWorkshopReminderSweep();
+  if (result.failed > 0) throw errors.REMINDERS_FAILED({ data: result });
+  return result;
 });
 
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
+  reminders: { sweep },
 };

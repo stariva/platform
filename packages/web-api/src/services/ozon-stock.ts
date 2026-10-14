@@ -2,7 +2,8 @@ import { logger } from "@stariva/config";
 import { and, db, inArray, isNotNull } from "@stariva/db";
 import { products } from "@stariva/db/schema";
 import { z } from "zod";
-import { env } from "@/env";
+import type { OzonStockPushResult } from "../contract";
+import { env } from "../env";
 
 const OZON_API_URL = "https://api-seller.ozon.ru";
 // Ограничение Ozon: до 100 пар товар-склад и до 100 SKU видимости за запрос
@@ -25,15 +26,8 @@ const visibilityResponseSchema = z.object({
     .optional(),
 });
 
-export interface OzonStockPushResult {
-  /** Артикулы, остаток которых Ozon принял. */
-  updated: string[];
-  /** Товары с подтверждённым остатком и требуемым скрытием. */
-  syncedSlugs: string[];
-  /** Ошибки обновления остатка или скрытия с витрины. */
-  failed: { offerId: string; error: string }[];
-  /** SKU, скрытые с витрин Ozon и Селект. */
-  hidden: number[];
+export function isOzonSellerConfigured(): boolean {
+  return !!env.OZON_CLIENT_ID && !!env.OZON_API_KEY;
 }
 
 async function ozonSellerFetch<T>(

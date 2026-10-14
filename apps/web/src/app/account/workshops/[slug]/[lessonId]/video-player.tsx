@@ -25,6 +25,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { webApi } from "@/lib/web-api";
 
 interface VideoPlayerProps {
   slug: string;
@@ -310,21 +311,15 @@ function LessonController({
   // ── Сохранение прогресса ────────────────────────────────────────
   const saveProgress = useCallback(
     (positionSeconds: number, durationSeconds: number, completed?: boolean) => {
-      // keepalive — чтобы запрос успел уйти при закрытии вкладки
-      fetch("/api/video/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        keepalive: true,
-        body: JSON.stringify({
-          slug,
-          lessonId,
-          positionSeconds,
-          durationSeconds,
-          completed,
-        }),
-      }).catch(() => {
-        /* тихо игнорируем сетевые сбои сохранения прогресса */
-      });
+      webApi.account
+        .saveLessonProgress(
+          { slug, lessonId, positionSeconds, durationSeconds, completed },
+          // keepalive — чтобы запрос успел уйти при закрытии вкладки
+          { context: { keepalive: true } },
+        )
+        .catch(() => {
+          /* тихо игнорируем сетевые сбои сохранения прогресса */
+        });
     },
     [slug, lessonId],
   );

@@ -11,9 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { useSession } from "@/lib/auth/client";
 import { reachGoal } from "@/lib/analytics";
+import { useSession } from "@/lib/auth/client";
 import { suggestEmailFix } from "@/lib/email-typo";
+import { webApi } from "@/lib/web-api";
 import { formatPrice } from "@/lib/workshops-data";
 
 interface WorkshopPurchaseProps {
@@ -85,10 +86,10 @@ export function WorkshopPurchase({
       setOwned(false);
       return;
     }
-    fetch(`/api/account/access?slug=${encodeURIComponent(slug)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (active) setOwned(Boolean(d.owned));
+    webApi.account
+      .workshopAccess({ slug })
+      .then(({ owned }) => {
+        if (active) setOwned(owned);
       })
       .catch(() => {
         if (active) setOwned(false);

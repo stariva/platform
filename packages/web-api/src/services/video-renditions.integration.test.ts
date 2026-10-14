@@ -19,8 +19,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
         return `https://storage.example.test/${key}`;
       },
     }));
-    const secret = crypto.randomUUID();
-    process.env.JOBS_SECRET = secret;
+    const { JOBS_SECRET: secret } = await import("../testing/setup");
     const { db, eq, sql } = await import("@stariva/db");
     const { videoRenditions, workshops } = await import("@stariva/db/schema");
     expect(await db.select({ id: workshops.id }).from(workshops)).toHaveLength(
@@ -35,7 +34,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
     } = await import("./video-renditions");
     const { createRouterClient, ORPCError } = await import("@orpc/server");
     const { webRouter } = await import("../router");
-    const { webErrorStatusMap } = await import("../orpc");
+    const { webErrorStatus } = await import("../errors");
     const api = createRouterClient(webRouter, {
       context: {
         headers: new Headers({ authorization: `Bearer ${secret}` }),
@@ -48,9 +47,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
         status: await procedure(input as never).then(
           () => 200,
           (error: unknown) => {
-            if (error instanceof ORPCError) {
-              return webErrorStatusMap[error.code] ?? 500;
-            }
+            if (error instanceof ORPCError) return webErrorStatus(error.code);
             throw error;
           },
         ),
@@ -137,7 +134,9 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       expect(
         (await heartbeat(request({ attemptId: first.attemptId }))).status,
       ).toBe(409);
-      expect(await extendRenditionLease(videoKey, second.attemptId)).toBe(true);
+      expect(
+        await extendRenditionLease({ videoKey, attemptId: second.attemptId }),
+      ).toBe(true);
       const before = await read();
       expect(
         (
@@ -146,10 +145,13 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
           )
         ).status,
       ).toBe(409);
-      expect(await completeRendition(videoKey, first.attemptId, 999)).toBe(
-        "not_found",
+      expect(
+        await completeRendition({ videoKey, attemptId: first.attemptId }, 999),
+      ).toBe("not_found");
+      await failRendition(
+        { videoKey, attemptId: first.attemptId },
+        "stale failure",
       );
-      await failRendition(videoKey, first.attemptId, "stale failure");
       expect(await read()).toEqual(before);
 
       expect(
@@ -161,9 +163,9 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       ).toBe(200);
       expect(uploadKeys.at(-1)).toBe(`${second.hlsPrefix}/index.m3u8`);
       playlistExists = async () => false;
-      expect(await completeRendition(videoKey, second.attemptId, 60)).toBe(
-        "missing_playlist",
-      );
+      expect(
+        await completeRendition({ videoKey, attemptId: second.attemptId }, 60),
+      ).toBe("missing_playlist");
       expect(await read()).toEqual(before);
 
       // The lease expires while S3 is being checked: fence the subsequent UPDATE too.
@@ -174,19 +176,21 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
         third = await claimNextVideo();
         return true;
       };
-      expect(await completeRendition(videoKey, second.attemptId, 999)).toBe(
-        "not_found",
-      );
+      expect(
+        await completeRendition({ videoKey, attemptId: second.attemptId }, 999),
+      ).toBe("not_found");
       const [current] = await read();
       expect(current?.attempts).toBe(3);
       expect(current?.status).toBe("processing");
       expect(current?.hlsPrefix).not.toBe(second.hlsPrefix);
       if (!third) throw new Error("Expected third claim");
       playlistExists = async () => true;
-      expect(await completeRendition(videoKey, 3, 60.4)).toBe("ready");
+      expect(await completeRendition({ videoKey, attemptId: 3 }, 60.4)).toBe(
+        "ready",
+      );
       const ready = await read();
       expect(ready[0]?.durationSeconds).toBe(60);
-      await failRendition(videoKey, 3, "late failure");
+      await failRendition({ videoKey, attemptId: 3 }, "late failure");
       expect(await read()).toEqual(ready);
 
       // Current failures back off, and exhausted attempts cannot be reclaimed.
@@ -194,7 +198,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
         .update(videoRenditions)
         .set({ status: "processing" })
         .where(eq(videoRenditions.videoKey, videoKey));
-      await failRendition(videoKey, 3, "current failure");
+      await failRendition({ videoKey, attemptId: 3 }, "current failure");
       const [failed] = await read();
       expect(failed?.status).toBe("failed");
       expect(failed?.error).toBe("current failure");
