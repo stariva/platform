@@ -47,6 +47,7 @@ const uploadUrls = jobs.videos.uploadUrls.handler(async ({ input, errors }) => {
   if (!files.every((file) => HLS_FILE_PATTERN.test(file))) {
     throw new ORPCError("BAD_REQUEST", { message: "invalid_hls_file" });
   }
+  if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
 
   const [rendition] = await db
     .select({ hlsPrefix: videoRenditions.hlsPrefix })

@@ -1,7 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
-import { implement, ORPCError } from "@orpc/server";
+import { COMMON_ERROR_STATUS_MAP, implement, ORPCError } from "@orpc/server";
 import { logger } from "@stariva/config";
-import { webContract } from "./contract";
+import {
+  AttemptLostError,
+  JobsNotConfiguredError,
+  PlaylistMissingError,
+  StorageNotConfiguredError,
+  webContract,
+} from "./contract";
 import { env } from "./env";
 
 export interface CreateWebORPCContextOptions {
@@ -15,7 +21,19 @@ export function createWebORPCContext(opts: CreateWebORPCContextOptions) {
 
 export type WebORPCContext = ReturnType<typeof createWebORPCContext>;
 
-const os = implement(webContract).$context<WebORPCContext>();
+/**
+ * HTTP-статусы для своих кодов ошибок: в v2 статус задаёт обработчик, а не
+ * ошибка. Клиенты различают ошибки по коду, статус нужен логам и прокси.
+ */
+export const webErrorStatusMap: Record<string, number> = {
+  ...COMMON_ERROR_STATUS_MAP,
+  [JobsNotConfiguredError.code]: 503,
+  [StorageNotConfiguredError.code]: 503,
+  [AttemptLostError.code]: 409,
+  [PlaylistMissingError.code]: 409,
+};
+
+export const os = implement(webContract).$context<WebORPCContext>();
 
 const timingMiddleware = os.middleware(async ({ next, path }) => {
   const start = Date.now();
@@ -39,18 +57,18 @@ export function isBearerAuthorized(
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-/** Процедуры для воркера Hatchet: доступ по общему JOBS_SECRET. */
-export const jobs = os.jobs.use(timingMiddleware).use(({ context, next }) => {
+/** Доступ для воркера Hatchet: по общему JOBS_SECRET. */
+const requireJobsSecret = os.middleware(async ({ context, next }) => {
   const secret = env.JOBS_SECRET;
-  if (!secret) {
-    throw new ORPCError("JOBS_NOT_CONFIGURED", {
-      status: 503,
-      message: "jobs_not_configured",
-      defined: true,
-    });
-  }
+  if (!secret) throw new JobsNotConfiguredError();
   if (!isBearerAuthorized(context.headers.get("authorization"), secret)) {
     throw new ORPCError("UNAUTHORIZED");
   }
   return next();
 });
+
+/**
+ * Процедуры воркера. Middleware висят на уровне поддерева, до валидации
+ * входа: неавторизованный запрос отбивается, не доходя до схем.
+ */
+export const jobs = os.jobs.use(timingMiddleware).use(requireJobsSecret);

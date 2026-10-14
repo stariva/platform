@@ -19,8 +19,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@orpc/contract": "^1.15.6",
-    "@orpc/server": "^1.15.6",
+    "@orpc/server": "2.0.0-beta.43",
     "@stariva/auth": "workspace:*",
     "@stariva/config": "workspace:*",
     "@stariva/db": "workspace:*",
@@ -28,7 +27,6 @@
     "@stariva/storage": "workspace:*",
     "@stariva/validators": "workspace:*",
     "better-auth": "1.7.7",
-    "superjson": "2.2.6",
     "zod": "4.6.7"
   },
   "devDependencies": {

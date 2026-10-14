@@ -1,4 +1,4 @@
-import { oc } from "@orpc/contract";
+import { error, oc, type } from "@orpc/contract";
 import { z } from "zod";
 
 /**
@@ -6,18 +6,39 @@ import { z } from "zod";
  * общему JOBS_SECRET в `Authorization: Bearer …`.
  */
 
+/** На сайте не задан JOBS_SECRET: воркеру тут делать нечего. */
+export const JobsNotConfiguredError = error("JOBS_NOT_CONFIGURED", {
+  message: "jobs_not_configured",
+});
+
+/** Бакет не настроен: ни исходник отдать, ни ссылки на загрузку выдать. */
+export const StorageNotConfiguredError = error("STORAGE_NOT_CONFIGURED", {
+  message: "storage_not_configured",
+});
+
+/**
+ * Попытка уже не воркера: аренда истекла и видео отдано другому, или оно
+ * готово. Воркер бросает работу, чтобы не грузить сервер впустую.
+ */
+export const AttemptLostError = error("ATTEMPT_LOST", {
+  message: "attempt_lost",
+});
+
+/** Плейлист заливается последним; без него HLS-версия не готова. */
+export const PlaylistMissingError = error("PLAYLIST_MISSING", {
+  message: "playlist_missing",
+});
+
 const attempt = z.object({
   videoKey: z.string().startsWith("workshops/").max(300),
   attemptId: z.number().int().positive(),
 });
 
-// Попытка уже не воркера: аренда истекла и видео отдано другому, или оно
-// готово. Воркер бросает работу, чтобы не грузить сервер впустую
-const ATTEMPT_LOST = { status: 409, message: "attempt_lost" } as const;
-
 const base = oc.errors({
-  JOBS_NOT_CONFIGURED: { status: 503, message: "jobs_not_configured" },
+  [JobsNotConfiguredError.code]: JobsNotConfiguredError,
 });
+
+const lossy = base.errors({ [AttemptLostError.code]: AttemptLostError });
 
 export const videosContract = {
   /**
@@ -25,12 +46,7 @@ export const videosContract = {
    * куски. `job: null` — нарезать нечего.
    */
   claim: base
-    .errors({
-      STORAGE_NOT_CONFIGURED: {
-        status: 503,
-        message: "storage_not_configured",
-      },
-    })
+    .errors({ [StorageNotConfiguredError.code]: StorageNotConfiguredError })
     .output(
       z.object({
         job: z
@@ -45,14 +61,14 @@ export const videosContract = {
     ),
 
   /** Воркер ещё режет видео — продлеваем аренду. */
-  heartbeat: base.errors({ ATTEMPT_LOST }).input(attempt),
+  heartbeat: lossy.input(attempt).output(type<void>()),
 
   /**
    * Ссылки для заливки кусков HLS-версии. Папку берём из текущей попытки,
    * чтобы старый воркер не перезаписал её файлы.
    */
-  uploadUrls: base
-    .errors({ ATTEMPT_LOST })
+  uploadUrls: lossy
+    .errors({ [StorageNotConfiguredError.code]: StorageNotConfiguredError })
     .input(
       attempt.extend({
         files: z.array(z.string().min(1).max(64)).min(1).max(500),
@@ -68,16 +84,15 @@ export const videosContract = {
     ),
 
   /** Воркер залил HLS-версию: с этого момента плеер показывает её. */
-  complete: base
-    .errors({
-      ATTEMPT_LOST,
-      // Плейлист заливается последним; без него версия не готова
-      PLAYLIST_MISSING: { status: 409, message: "playlist_missing" },
-    })
-    .input(attempt.extend({ durationSeconds: z.number().nonnegative() })),
+  complete: lossy
+    .errors({ [PlaylistMissingError.code]: PlaylistMissingError })
+    .input(attempt.extend({ durationSeconds: z.number().nonnegative() }))
+    .output(type<void>()),
 
   /** Нарезка упала: видео вернётся в очередь после паузы. */
-  fail: base.input(attempt.extend({ error: z.string().max(10_000) })),
+  fail: base
+    .input(attempt.extend({ error: z.string().max(10_000) }))
+    .output(type<void>()),
 };
 
 export const jobsContract = {

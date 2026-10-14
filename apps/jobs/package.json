@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@hatchet-dev/typescript-sdk": "1.36.0",
-    "@orpc/client": "^1.15.6",
+    "@orpc/client": "2.0.0-beta.43",
     "@stariva/web-api": "workspace:*",
     "zod": "4.6.7"
   },

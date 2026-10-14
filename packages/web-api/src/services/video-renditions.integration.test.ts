@@ -35,19 +35,22 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
     } = await import("./video-renditions");
     const { createRouterClient, ORPCError } = await import("@orpc/server");
     const { webRouter } = await import("../router");
+    const { webErrorStatusMap } = await import("../orpc");
     const api = createRouterClient(webRouter, {
       context: {
         headers: new Headers({ authorization: `Bearer ${secret}` }),
       },
     }).jobs.videos;
-    // Процедура → HTTP-статус, который увидел бы воркер
+    // Процедура → HTTP-статус, который отдал бы обработчик витрины
     const handle =
       (procedure: (input: never) => Promise<unknown>) =>
       async (input: object) => ({
         status: await procedure(input as never).then(
           () => 200,
           (error: unknown) => {
-            if (error instanceof ORPCError) return error.status;
+            if (error instanceof ORPCError) {
+              return webErrorStatusMap[error.code] ?? 500;
+            }
             throw error;
           },
         ),

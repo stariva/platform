@@ -1,8 +1,9 @@
 import { ConcurrencyLimitStrategy } from "@hatchet-dev/typescript-sdk/v1";
 import { safe } from "@orpc/client";
+import { AttemptLostError } from "@stariva/web-api/contract";
 import { hatchet } from "../client";
 import { probe, segmentAndUpload, withTempDir } from "../lib/hls";
-import { timeout, webApi } from "../lib/web-api";
+import { webApi } from "../lib/web-api";
 
 // Больше за один прогон не берём: следующий прогон через 10 минут доберёт
 const MAX_VIDEOS_PER_RUN = 5;
@@ -48,10 +49,7 @@ lessonVideoHlsWorkflow.task({
 
     for (let i = 0; i < MAX_VIDEOS_PER_RUN; i++) {
       if (ctx.cancelled) break;
-      const { job } = await webApi.jobs.videos.claim(
-        undefined,
-        timeout(30_000),
-      );
+      const { job } = await webApi.jobs.videos.claim();
       if (!job) break;
 
       const attempt = { videoKey: job.videoKey, attemptId: job.attemptId };
@@ -61,11 +59,9 @@ lessonVideoHlsWorkflow.task({
       const onCancel = () => abort.abort(new Error("task cancelled"));
       ctx.abortController.signal.addEventListener("abort", onCancel);
       const heartbeat = setInterval(async () => {
-        const { error, isDefined } = await safe(
-          webApi.jobs.videos.heartbeat(attempt, timeout(30_000)),
-        );
+        const [error] = await safe(webApi.jobs.videos.heartbeat(attempt));
         // Попытка уже не наша; сетевой сбой переждём до следующего раза
-        if (isDefined && error.code === "ATTEMPT_LOST") {
+        if (error instanceof AttemptLostError) {
           abort.abort(new Error("attempt taken over by another worker"));
         }
       }, HEARTBEAT_MS);
@@ -80,16 +76,16 @@ lessonVideoHlsWorkflow.task({
             async (batch) => {
               const { uploads } = await webApi.jobs.videos.uploadUrls(
                 { ...attempt, files: batch },
-                timeout(60_000),
+                { context: { timeout: 60_000 } },
               );
               return uploads;
             },
             abort.signal,
           );
-          await webApi.jobs.videos.complete(
-            { ...attempt, durationSeconds: source.durationSeconds },
-            timeout(30_000),
-          );
+          await webApi.jobs.videos.complete({
+            ...attempt,
+            durationSeconds: source.durationSeconds,
+          });
           return count;
         });
         console.log(`[lesson-video-hls] ${job.videoKey}: ${files} файлов`);
@@ -99,7 +95,7 @@ lessonVideoHlsWorkflow.task({
         console.error(`[lesson-video-hls] ${job.videoKey}:`, message);
         failed.push(job.videoKey);
         await webApi.jobs.videos
-          .fail({ ...attempt, error: message }, timeout(30_000))
+          .fail({ ...attempt, error: message })
           .catch((reportError: unknown) => {
             // Не смогли сообщить — видео вернётся в очередь, когда истечёт аренда
             console.error(

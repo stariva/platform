@@ -1,10 +1,10 @@
 "use client";
 
-import type { appRouter } from "@stariva/api";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import type { appRouter } from "@stariva/api";
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { env } from "~/env";
@@ -30,22 +30,19 @@ const getQueryClient = () => {
   }
 };
 
-const getApiUrl = () => {
+const getApiOrigin = () => {
   // The standalone server is opt-in. By default, browser requests stay on the
   // current origin and are handled by apps/app/src/app/api/orpc.
-  if (env.NEXT_PUBLIC_API_URL) {
-    return new URL("/api/orpc", env.NEXT_PUBLIC_API_URL).toString();
-  }
-  if (typeof window !== "undefined") {
-    return new URL("/api/orpc", window.location.origin).toString();
-  }
-  if (env.VERCEL_URL) return `https://${env.VERCEL_URL}/api/orpc`;
-  return `http://localhost:${env.PORT}/api/orpc`;
+  if (env.NEXT_PUBLIC_API_URL) return new URL(env.NEXT_PUBLIC_API_URL).origin;
+  if (typeof window !== "undefined") return window.location.origin;
+  if (env.VERCEL_URL) return `https://${env.VERCEL_URL}`;
+  return `http://localhost:${env.PORT}`;
 };
 
 // Создаем RPCLink
 const link = new RPCLink({
-  url: getApiUrl(),
+  origin: getApiOrigin,
+  url: "/api/orpc",
 });
 
 // Создаем oRPC клиент (используем глобальный $client если доступен для SSR оптимизации)
