@@ -76,9 +76,7 @@ export function CartTrigger({ isSolid }: { isSolid: boolean }) {
 
   useEffect(() => {
     countRef.current = count;
-    setShownCount((prev) =>
-      isFlightPending() && count > prev ? prev : count,
-    );
+    setShownCount((prev) => (isFlightPending() && count > prev ? prev : count));
   }, [count]);
 
   useEffect(

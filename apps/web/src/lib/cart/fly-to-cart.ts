@@ -67,10 +67,8 @@ function landOne() {
 /** Доля прямоугольника, попавшая в окно браузера. */
 function visibleRatio(rect: DOMRect): number {
   if (rect.width === 0 || rect.height === 0) return 0;
-  const w =
-    Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
-  const h =
-    Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+  const w = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
+  const h = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
   if (w <= 0 || h <= 0) return 0;
   return (w * h) / (rect.width * rect.height);
 }

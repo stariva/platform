@@ -1850,12 +1850,8 @@
           "name": "crm_sales_campaign_id_ad_campaigns_id_fk",
           "tableFrom": "crm_sales",
           "tableTo": "ad_campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
