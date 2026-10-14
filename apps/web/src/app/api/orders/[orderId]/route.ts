@@ -8,6 +8,7 @@ import {
   type MeasurementField,
   measurementFieldsBySlug,
 } from "@/lib/commerce/measurement-fields";
+import { syncPendingProductOrder } from "@/lib/commerce/order-payment";
 import {
   getProductCoverImages,
   getProductOrderById,
@@ -35,10 +36,12 @@ export async function POST(
     return NextResponse.json({ error: "Укажите телефон" }, { status: 400 });
   }
 
-  const order = await getProductOrderById(orderId);
-  if (!order || !phonesMatch(order.contactPhone, parsed.data.phone)) {
+  const found = await getProductOrderById(orderId);
+  if (!found || !phonesMatch(found.contactPhone, parsed.data.phone)) {
     return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
   }
+  // Вебхук мог потеряться: оплаченный заказ не должен висеть в «ожидает оплаты»
+  const order = await syncPendingProductOrder(found);
 
   const items = await getProductOrderItems(orderId);
   const covers = await getProductCoverImages(items.map((i) => i.productSlug));
