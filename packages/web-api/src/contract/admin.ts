@@ -59,4 +59,24 @@ export const ozonContract = {
 
 export const adminContract = {
   ozon: ozonContract,
+
+  /**
+   * Сбрасывает кэш страниц витрины после правок каталога. Путь с `[…]`
+   * (шаблон маршрута) сбрасывает все его страницы.
+   */
+  revalidate: base
+    .input(
+      z.object({
+        paths: z
+          .array(
+            z
+              .string()
+              .max(1024)
+              .regex(/^\/[^\s?#]*$/, "Ожидается путь страницы"),
+          )
+          .min(1)
+          .max(50),
+      }),
+    )
+    .output(z.object({ revalidated: z.number().int().nonnegative() })),
 };

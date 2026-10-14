@@ -5,6 +5,7 @@ export {
   createWebORPCContext,
   type WebORPCContext,
   type WebServices,
+  type WorkshopFileServices,
 } from "./orpc";
 export { type WebRouter, webRouter } from "./router";
 export {

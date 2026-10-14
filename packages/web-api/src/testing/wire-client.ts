@@ -34,6 +34,19 @@ const idleServices: WebServices = {
     save: async () => ({ id: "request-id", number: 1 }),
     dispatchLater: () => {},
   },
+  workshopFiles: {
+    signLessonVideo: async () => ({
+      status: "ok",
+      url: "https://storage.example.test/lesson.mp4",
+      type: "mp4",
+      expiresIn: 900,
+    }),
+    signMaterial: async () => ({
+      status: "ok",
+      url: "https://storage.example.test/brief.pdf",
+    }),
+  },
+  revalidatePaths: () => {},
 };
 
 let lastResponseStatus = 0;

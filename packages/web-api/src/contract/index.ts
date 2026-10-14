@@ -4,7 +4,17 @@ import { adminContract } from "./admin";
 import { formsContract } from "./forms";
 import { jobsContract } from "./jobs";
 
-export { LessonNotFoundError } from "./account";
+export {
+  FilesUnavailableError,
+  LessonNotFoundError,
+  LessonNotReleasedError,
+  type LessonVideo,
+  type LessonVideoResult,
+  MaterialNotFoundError,
+  type MaterialUrlResult,
+  VideoNotUploadedError,
+  VideoRateLimitedError,
+} from "./account";
 export {
   AdminNotConfiguredError,
   OzonNotConfiguredError,

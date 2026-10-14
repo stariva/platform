@@ -25,7 +25,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { webApi } from "@/lib/web-api";
+import { accessErrorMessage, webApi } from "@/lib/web-api";
 
 interface VideoPlayerProps {
   slug: string;
@@ -42,7 +42,7 @@ interface VideoPlayerProps {
   watermark: string;
 }
 
-/** Что отдал /api/video/sign: HLS через сайт или, пока видео не нарезано, MP4. */
+/** Что отдал account.lessonVideo: HLS через сайт или, пока видео не нарезано, MP4. */
 interface LessonSource {
   url: string;
   type: "hls" | "mp4";
@@ -146,26 +146,19 @@ export function VideoPlayer({
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadToken намеренно перезапрашивает ссылку
   useEffect(() => {
     let active = true;
-    fetch(
-      `/api/video/sign?slug=${encodeURIComponent(slug)}&lessonId=${encodeURIComponent(lessonId)}`,
-    )
-      .then(async (r) => {
-        if (!r.ok) {
-          const d = await r.json().catch(() => ({}));
-          throw new Error(d.error || "Не удалось загрузить видео");
-        }
-        return r.json();
-      })
-      .then((d: { url: string; type?: "hls" | "mp4"; expiresIn: number }) => {
+    webApi.account
+      .lessonVideo({ slug, lessonId })
+      .then((d) => {
         if (!active) return;
         setSource({
           url: d.url,
-          type: d.type ?? "mp4",
+          type: d.type,
           expiresAt: Date.now() + d.expiresIn * 1000,
         });
       })
-      .catch((e: Error) => {
-        if (active) setError(e.message);
+      .catch((e: unknown) => {
+        if (active)
+          setError(accessErrorMessage(e, "Не удалось загрузить видео"));
       });
     return () => {
       active = false;

@@ -16,6 +16,12 @@ const pushStock = admin.ozon.pushStock.handler(async ({ input, errors }) => {
   }
 });
 
+const revalidate = admin.revalidate.handler(({ input, context }) => {
+  context.services.revalidatePaths(input.paths);
+  return { revalidated: input.paths.length };
+});
+
 export const adminRouter = {
   ozon: { pushStock },
+  revalidate,
 };
