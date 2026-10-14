@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { analyticsPath, analyticsUrl, maskContacts } from "./analytics";
+import {
+  analyticsPath,
+  analyticsUrl,
+  ignoreParam,
+  maskContacts,
+} from "./analytics";
 
 test("analyticsPath hides ids that open an order or a video without sign-in", () => {
   assert.equal(analyticsPath("/order/abc123"), "/order/status");
@@ -40,4 +45,12 @@ test("maskContacts hides emails and phone numbers but keeps prices and dates", (
     maskContacts("12 500 ₽ до 2026-12-31"),
     "12 500 ₽ до 2026-12-31",
   );
+});
+
+test("ignoreParam switches PostHog ignoring on and off and leaves other URLs alone", () => {
+  assert.equal(ignoreParam("?ph_ignore=1"), true);
+  assert.equal(ignoreParam("?utm_source=vk&ph_ignore=1"), true);
+  assert.equal(ignoreParam("?ph_ignore=0"), false);
+  assert.equal(ignoreParam("?ph_ignore=yes"), null);
+  assert.equal(ignoreParam(""), null);
 });

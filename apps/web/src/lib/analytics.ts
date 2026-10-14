@@ -213,6 +213,43 @@ function maskReplayText(text: string, element?: HTMLElement | null) {
   return maskContacts(text);
 }
 
+const IGNORE_PARAM = "ph_ignore";
+const IGNORE_KEY = "stariva:posthog-ignore";
+
+/** `?ph_ignore=1` включает игнорирование, `?ph_ignore=0` выключает, остальное — не трогает. */
+export function ignoreParam(search: string): boolean | null {
+  const value = new URLSearchParams(search).get(IGNORE_PARAM);
+  if (value === "1") return true;
+  if (value === "0") return false;
+  return null;
+}
+
+let memoryIgnore: boolean | null = null;
+
+/**
+ * Свои сессии не пишем: один раз открываем сайт с ?ph_ignore=1, флаг лежит в
+ * localStorage этого браузера. Пока он есть, PostHog даже не загружается.
+ */
+function postHogIgnored(): boolean {
+  if (typeof window === "undefined") return false;
+  const requested = ignoreParam(window.location.search);
+  if (requested !== null) {
+    memoryIgnore = requested;
+    try {
+      if (requested) window.localStorage.setItem(IGNORE_KEY, "1");
+      else window.localStorage.removeItem(IGNORE_KEY);
+    } catch {
+      /* storage blocked — флаг живёт до закрытия вкладки */
+    }
+  }
+  if (memoryIgnore !== null) return memoryIgnore;
+  try {
+    return window.localStorage.getItem(IGNORE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 let postHogClient: Promise<PostHog | undefined> | undefined;
 let loadedPostHog: PostHog | undefined;
 
@@ -224,7 +261,7 @@ let loadedPostHog: PostHog | undefined;
  */
 function postHog(send?: (posthog: PostHog) => void) {
   const token = POSTHOG_TOKEN;
-  if (!token || !analyticsAllowed()) return;
+  if (!token || !analyticsAllowed() || postHogIgnored()) return;
   postHogClient ??= import("posthog-js")
     .then(({ default: posthog }) => {
       posthog.init(token, {
@@ -252,7 +289,7 @@ function postHog(send?: (posthog: PostHog) => void) {
     .catch(() => undefined);
   if (!send) return;
   void postHogClient.then((posthog) => {
-    if (!posthog || !analyticsAllowed()) return;
+    if (!posthog || !analyticsAllowed() || postHogIgnored()) return;
     try {
       send(posthog);
     } catch {
