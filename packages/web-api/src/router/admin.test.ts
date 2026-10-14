@@ -77,3 +77,42 @@ test("hides Ozon failure details behind a typed error", async () => {
   expect(String(error)).not.toContain("secret detail");
   expect(lastStatus()).toBe(502);
 });
+
+test("revalidate rejects the jobs secret", async () => {
+  const revalidatePaths = mock((_paths: string[]) => {});
+  const [error] = await safe(
+    wireClient({
+      authorization: `Bearer ${JOBS_SECRET}`,
+      services: { revalidatePaths },
+    }).admin.revalidate({ paths: ["/"] }),
+  );
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(lastStatus()).toBe(401);
+  expect(revalidatePaths).not.toHaveBeenCalled();
+});
+
+test("revalidate passes the paths to the storefront", async () => {
+  const revalidatePaths = mock((_paths: string[]) => {});
+  const paths = ["/catalog/interior/abazhur-4756", "/sitemap.xml"];
+  const result = await wireClient({
+    authorization: `Bearer ${secret}`,
+    services: { revalidatePaths },
+  }).admin.revalidate({ paths });
+  expect(result).toEqual({ revalidated: 2 });
+  expect(revalidatePaths).toHaveBeenCalledWith(paths);
+});
+
+test("revalidate refuses anything that is not a page path", async () => {
+  const revalidatePaths = mock((_paths: string[]) => {});
+  for (const paths of [[], ["https://evil.example/"], ["/a?b=1"]]) {
+    const [error] = await safe(
+      wireClient({
+        authorization: `Bearer ${secret}`,
+        services: { revalidatePaths },
+      }).admin.revalidate({ paths }),
+    );
+    expect(error).toMatchObject({ code: "BAD_REQUEST" });
+    expect(lastStatus()).toBe(400);
+  }
+  expect(revalidatePaths).not.toHaveBeenCalled();
+});

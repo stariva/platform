@@ -3,6 +3,7 @@
 import { Download, Printer } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { accessErrorMessage, webApi } from "@/lib/web-api";
 import type { WorkshopMaterialFile } from "@/lib/workshops-data";
 
 interface BriefDownloadsProps {
@@ -17,17 +18,13 @@ export function BriefDownloads({ slug, files }: BriefDownloadsProps) {
   async function download(file: WorkshopMaterialFile) {
     setLoadingKey(file.key);
     try {
-      const res = await fetch(
-        `/api/materials/sign?slug=${encodeURIComponent(slug)}&key=${encodeURIComponent(file.key)}`,
-      );
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        toast.error(data.error || "Не удалось скачать файл");
-        return;
-      }
-      window.open(data.url, "_blank", "noopener,noreferrer");
-    } catch {
-      toast.error("Не удалось скачать файл");
+      const { url } = await webApi.account.materialUrl({
+        slug,
+        key: file.key,
+      });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      toast.error(accessErrorMessage(error, "Не удалось скачать файл"));
     } finally {
       setLoadingKey(null);
     }

@@ -38,6 +38,18 @@ export function formErrorMessage(error: unknown, fallback: string): string {
     : fallback;
 }
 
+/**
+ * Отказ кабинета (видео, файлы курса): что показать покупателю. Вход и
+ * покупку объясняем сами, у своих ошибок контракта есть текст, остальное —
+ * запасная фраза.
+ */
+export function accessErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ORPCError)) return fallback;
+  if (error.code === "UNAUTHORIZED") return "Требуется вход";
+  if (error.code === "FORBIDDEN") return "Нет доступа к этому курсу";
+  return error.defined ? error.message : fallback;
+}
+
 /** Ответил ли сервер (в отличие от обрыва сети). */
 export function isServerError(
   error: unknown,
