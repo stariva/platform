@@ -1,5 +1,12 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  statfs,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { env } from "../env";
@@ -10,9 +17,18 @@ const SEGMENT_SECONDS = 6;
 const UPLOAD_CONCURRENCY = 3;
 const UPLOAD_BATCH = 12;
 const UPLOAD_ATTEMPTS = 3;
-// Очередь готовых кусков на диске: больше — ffmpeg ждёт, меньше — продолжает
-const PAUSE_BACKLOG = 12;
-const RESUME_BACKLOG = 3;
+const MB = 1024 * 1024;
+// Сколько нарезки может лежать на диске (все файлы папки, включая
+// недописанный кусок и те, что сейчас льются): больше — ffmpeg на паузе,
+// пока заливка не опустит очередь до RESUME_BYTES
+const PAUSE_BYTES = 48 * MB;
+const RESUME_BYTES = 16 * MB;
+// Как часто смотрим на диск. Отдельным таймером, а не между пачками
+// заливки: с -c copy ffmpeg пишет десятки мегабайт в секунду и за одну
+// пачку успевал набить сотни мегабайт
+const WATCH_MS = 200;
+// Как часто пишем в лог строку о ходе нарезки
+const PROGRESS_LOG_MS = 10_000;
 // Как часто смотрим, не появились ли новые куски
 const POLL_MS = 1000;
 const SEGMENT_FILE = /^seg-\d{5}\.m4s$/;
@@ -160,11 +176,12 @@ function segmentArgs(sourceUrl: string, source: ProbeResult): string[] {
 
 type UploadTargets = Record<string, { url: string; contentType: string }>;
 
+/** Заливает файл по ссылке; возвращает его размер. */
 async function putFile(
   file: string,
   path: string,
   target: UploadTargets[string],
-) {
+): Promise<number> {
   const body = await readFile(path);
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(target.url, {
@@ -173,7 +190,7 @@ async function putFile(
       body,
       signal: AbortSignal.timeout(120_000),
     }).catch((error: unknown) => error as Error);
-    if (!(res instanceof Error) && res.ok) return;
+    if (!(res instanceof Error) && res.ok) return body.length;
     if (attempt >= UPLOAD_ATTEMPTS) {
       const reason = res instanceof Error ? res.message : `HTTP ${res.status}`;
       throw new Error(`upload ${file}: ${reason}`);
@@ -182,25 +199,89 @@ async function putFile(
   }
 }
 
-/** Заливает файлы по ссылкам от сайта, по несколько сразу, и удаляет их с диска. */
+/**
+ * Заливает файлы по ссылкам от сайта, по несколько сразу, и удаляет их с
+ * диска. Возвращает число залитых байт.
+ */
 async function uploadAndRemove(
   dir: string,
   files: string[],
   getTargets: (files: string[]) => Promise<UploadTargets>,
-) {
+): Promise<number> {
   const targets = await getTargets(files);
   let next = 0;
+  let bytes = 0;
   await Promise.all(
     Array.from({ length: UPLOAD_CONCURRENCY }, async () => {
       while (next < files.length) {
         const file = files[next++] as string;
         const target = targets[file];
         if (!target) throw new Error(`no upload url for ${file}`);
-        await putFile(file, join(dir, file), target);
+        bytes += await putFile(file, join(dir, file), target);
         await rm(join(dir, file), { force: true });
       }
     }),
   );
+  return bytes;
+}
+
+/** Сколько лежит в папке нарезки: все файлы и отдельно готовые куски. */
+async function scanDir(dir: string) {
+  const names = await readdir(dir);
+  const sizes = await Promise.all(
+    // Файл могли залить и удалить между readdir и stat
+    names.map((name) =>
+      stat(join(dir, name)).then(
+        (s) => s.size,
+        () => 0,
+      ),
+    ),
+  );
+  return {
+    bytes: sizes.reduce((sum, size) => sum + size, 0),
+    ready: names.filter((name) => SEGMENT_FILE.test(name)).sort(),
+  };
+}
+
+const mb = (bytes: number) => `${(bytes / MB).toFixed(1)} МБ`;
+
+/**
+ * Память и место — то, из-за чего под убивают. Чего не прочитать (не Linux,
+ * нет cgroup v2), просто нет в строке.
+ */
+async function resources(dir: string, ffmpegPid: number | undefined) {
+  const parts = [`node ${mb(process.memoryUsage().rss)}`];
+  const read = (path: string) =>
+    readFile(path, "utf8").then(
+      (s) => s.trim(),
+      () => null,
+    );
+  if (ffmpegPid) {
+    const rss = (await read(`/proc/${ffmpegPid}/status`))?.match(
+      /VmRSS:\s+(\d+) kB/,
+    )?.[1];
+    if (rss) parts.push(`ffmpeg ${mb(Number(rss) * 1024)}`);
+  }
+  const used = await read("/sys/fs/cgroup/memory.current");
+  if (used) {
+    const max = await read("/sys/fs/cgroup/memory.max");
+    const limit = max && max !== "max" ? ` из ${mb(Number(max))}` : "";
+    parts.push(`контейнер ${mb(Number(used))}${limit}`);
+  }
+  const fs = await statfs(dir).catch(() => null);
+  if (fs) parts.push(`свободно ${mb(fs.bavail * fs.bsize)}`);
+  return parts.join(", ");
+}
+
+export interface SegmentOptions {
+  /** Отмена: ffmpeg убивается, заливка прерывается. */
+  signal?: AbortSignal;
+  /** Байт на диске, при которых ffmpeg встаёт на паузу. */
+  pauseBytes?: number;
+  /** Байт на диске, при которых ffmpeg продолжает. */
+  resumeBytes?: number;
+  /** Как часто смотреть на диск, мс. */
+  watchMs?: number;
 }
 
 /**
@@ -209,9 +290,15 @@ async function uploadAndRemove(
  * воркера маленький, и раньше его убивали посреди заливки.
  *
  * Если заливка не поспевает за ffmpeg (копирование без перекодирования режет
- * быстрее, чем льётся сеть), ffmpeg ставится на паузу, пока очередь не
- * разойдётся. init.mp4 и плейлист заливаются в самом конце, плейлист —
- * последним: по нему сайт понимает, что всё на месте.
+ * быстрее, чем льётся сеть), ffmpeg ставится на паузу, как только на диске
+ * набирается pauseBytes, и продолжает, когда заливка опустит очередь до
+ * resumeBytes. Диск проверяет отдельный таймер, независимо от заливки.
+ * init.mp4 и плейлист заливаются в самом конце, плейлист — последним: по
+ * нему сайт понимает, что всё на месте.
+ *
+ * Пишет в лог старт, паузы и выход ffmpeg, а раз в PROGRESS_LOG_MS — ход
+ * заливки, объём на диске и память: если под убьют, по последней строке
+ * видно, на чём.
  *
  * Возвращает число залитых файлов.
  */
@@ -220,20 +307,39 @@ export async function segmentAndUpload(
   source: ProbeResult,
   dir: string,
   getTargets: (files: string[]) => Promise<UploadTargets>,
-  signal?: AbortSignal,
+  {
+    signal,
+    pauseBytes = PAUSE_BYTES,
+    resumeBytes = RESUME_BYTES,
+    watchMs = WATCH_MS,
+  }: SegmentOptions = {},
 ): Promise<number> {
+  const startedAt = Date.now();
+  const seconds = () => `${Math.round((Date.now() - startedAt) / 1000)} с`;
   const child = spawn(env.FFMPEG_PATH, segmentArgs(sourceUrl, source), {
     cwd: dir,
     stdio: ["ignore", "ignore", "pipe"],
   });
+  const codecs = codecArgs(source);
+  console.log(
+    `[hls] ffmpeg ${child.pid ?? "?"} запущен: ` +
+      `${source.videoCodec ?? "?"}/${source.audioCodec ?? "-"}, ` +
+      `${Math.round(source.durationSeconds)} с видео, ` +
+      `${codecs.includes("libx264") ? "перекодирование" : "копирование"}, ` +
+      `пауза при ${mb(pauseBytes)} на диске`,
+  );
   let stderr = "";
   child.stderr.on("data", (chunk) => {
     stderr = (stderr + chunk).slice(-4000);
   });
   let exitCode: number | null | undefined;
   const exited = new Promise<void>((resolve) => {
-    child.on("close", (code) => {
+    child.on("close", (code, exitSignal) => {
       exitCode = code;
+      console.log(
+        `[hls] ffmpeg вышел через ${seconds()}: код ${code}` +
+          (exitSignal ? `, сигнал ${exitSignal}` : ""),
+      );
       resolve();
     });
     child.on("error", (error) => {
@@ -243,6 +349,14 @@ export async function segmentAndUpload(
     });
   });
 
+  let uploadedFiles = 0;
+  let uploadedBytes = 0;
+  let disk = { bytes: 0, ready: [] as string[] };
+  let peakBytes = 0;
+  const progress = () =>
+    `залито ${uploadedFiles} файлов / ${mb(uploadedBytes)}, ` +
+    `на диске ${mb(disk.bytes)} (${disk.ready.length} кусков)`;
+
   // Пауза процесса есть только в POSIX; на Windows (локальная проверка) без неё
   const canPause = process.platform !== "win32";
   let paused = false;
@@ -250,29 +364,65 @@ export async function segmentAndUpload(
     if (!canPause || paused === value || exitCode !== undefined) return;
     child.kill(value ? "SIGSTOP" : "SIGCONT");
     paused = value;
+    console.log(
+      `[hls] ${seconds()}: ffmpeg ${value ? "на паузе" : "продолжает"}, ${progress()}`,
+    );
   };
+  let stopped = false;
   const stop = () => {
-    if (exitCode !== undefined) return;
+    if (exitCode !== undefined || stopped) return;
+    stopped = true;
+    console.log(`[hls] ${seconds()}: останавливаем ffmpeg, ${progress()}`);
     child.kill("SIGKILL"); // снимает и с паузы
   };
   signal?.addEventListener("abort", stop, { once: true });
 
-  let uploaded = 0;
+  const checkDisk = async () => {
+    const scan = await scanDir(dir);
+    disk = scan;
+    peakBytes = Math.max(peakBytes, scan.bytes);
+    // Готовых кусков нет — заливать нечего, и пауза очередь не разгрузит
+    // (например, один кусок длиннее предела): ffmpeg должен дописать его
+    if (scan.ready.length === 0 || scan.bytes <= resumeBytes) setPaused(false);
+    else if (scan.bytes >= pauseBytes) setPaused(true);
+    return scan;
+  };
+  // Таймер не запускает новую проверку, пока не закончилась прошлая
+  let watching: Promise<unknown> | undefined;
+  const watcher = setInterval(() => {
+    watching ??= checkDisk()
+      .catch((error: unknown) => {
+        console.error("[hls] не удалось проверить диск:", error);
+      })
+      .finally(() => {
+        watching = undefined;
+      });
+  }, watchMs);
+  const progressLog = setInterval(async () => {
+    try {
+      const state = paused ? "на паузе" : "работает";
+      const pid = exitCode === undefined ? child.pid : undefined;
+      console.log(
+        `[hls] ${seconds()}: ${progress()}, пик ${mb(peakBytes)}, ` +
+          `ffmpeg ${pid ? state : "закончил"}; ${await resources(dir, pid)}`,
+      );
+    } catch {
+      // Лог хода работы не должен ронять воркер
+    }
+  }, PROGRESS_LOG_MS);
+
   try {
     for (;;) {
       signal?.throwIfAborted();
       const finished = exitCode !== undefined;
-      const ready = (await readdir(dir))
-        .filter((f) => SEGMENT_FILE.test(f))
-        .sort();
-
-      if (ready.length >= PAUSE_BACKLOG) setPaused(true);
-      else if (ready.length <= RESUME_BACKLOG) setPaused(false);
+      // Свой просмотр папки, а не результат таймера: тот мог начаться до
+      // выхода ffmpeg и не увидеть последний кусок
+      const { ready } = await checkDisk();
 
       if (ready.length > 0) {
         const batch = ready.slice(0, UPLOAD_BATCH);
-        await uploadAndRemove(dir, batch, getTargets);
-        uploaded += batch.length;
+        uploadedBytes += await uploadAndRemove(dir, batch, getTargets);
+        uploadedFiles += batch.length;
         continue;
       }
       if (finished) break;
@@ -282,13 +432,21 @@ export async function segmentAndUpload(
     if (exitCode !== 0) {
       throw new Error(`ffmpeg exited with ${exitCode}: ${stderr}`);
     }
-    await uploadAndRemove(dir, ["init.mp4"], getTargets);
-    await uploadAndRemove(dir, ["index.m3u8"], getTargets);
-    return uploaded + 2;
+    uploadedBytes += await uploadAndRemove(dir, ["init.mp4"], getTargets);
+    uploadedBytes += await uploadAndRemove(dir, ["index.m3u8"], getTargets);
+    uploadedFiles += 2;
+    console.log(
+      `[hls] готово за ${seconds()}: ${uploadedFiles} файлов / ` +
+        `${mb(uploadedBytes)}, пик на диске ${mb(peakBytes)}`,
+    );
+    return uploadedFiles;
   } finally {
+    clearInterval(watcher);
+    clearInterval(progressLog);
     signal?.removeEventListener("abort", stop);
     stop();
     await exited;
+    await watching;
   }
 }
 
