@@ -24,6 +24,7 @@ import { WorkshopImageField } from "./workshop-image-field";
 
 type BriefErrors = FieldErrors<WorkshopFormValues>["brief"];
 
+/** Показывает ошибку поля брифа, если сообщение задано. */
 function FieldError({ message }: { message?: string }) {
   return message ? <p className="text-destructive text-xs">{message}</p> : null;
 }

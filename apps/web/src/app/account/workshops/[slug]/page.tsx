@@ -18,6 +18,7 @@ import { WorkshopBrief } from "./workshop-brief";
 
 export const dynamic = "force-dynamic";
 
+/** Показывает купленный мастер-класс: бриф, предзаказ или уроки с прогрессом. */
 export default async function AccountCoursePage({
   params,
 }: {

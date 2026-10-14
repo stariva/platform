@@ -95,6 +95,7 @@ const toLines = (text: string) =>
     .map((line) => line.trim())
     .filter(Boolean);
 
+/** Форма создания и редактирования мастер-класса с сохранением и удалением. */
 export function WorkshopForm({
   id,
   initialValues,
