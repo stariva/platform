@@ -1,6 +1,6 @@
 import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
+import { hasAccess } from "@stariva/web-api";
 import { type NextRequest, NextResponse } from "next/server";
-import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 

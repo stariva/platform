@@ -4,14 +4,6 @@ import { courseAccess, lessonProgress } from "@stariva/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { getWorkshopLessons, type Workshop } from "@/lib/workshops-data";
 
-// Доступ к курсу и прогресс уроков переехали в API витрины: их зовут и
-// процедуры кабинета, и страницы. Реэкспорт — пока страницы не перешли
-export {
-  hasAccess,
-  type UpsertProgressInput,
-  upsertLessonProgress,
-} from "@stariva/web-api";
-
 /**
  * Идемпотентно выдаёт доступ к мастер-классу.
  * Повторный вызов для той же пары (пользователь, курс) ничего не меняет.

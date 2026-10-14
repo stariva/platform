@@ -20,12 +20,20 @@ const handler = new RPCHandler(webRouter, {
   errorStatusMap: webErrorStatusMap,
 });
 
+// Сервисы витрины по умолчанию: ничего не делают. Тест подменяет нужные
 const idleServices: WebServices = {
   runWorkshopReminderSweep: async () => ({
     checked: 0,
     delivered: 0,
     failed: 0,
   }),
+  issueFormToken: async () => "form-token",
+  subscribeToNewsletter: async () => {},
+  customOrders: {
+    isAccepting: () => true,
+    save: async () => ({ id: "request-id", number: 1 }),
+    dispatchLater: () => {},
+  },
 };
 
 let lastResponseStatus = 0;
@@ -38,7 +46,7 @@ export function lastStatus(): number {
 export interface WireClientOptions {
   /** Заголовок Authorization: секрет воркера или админки. */
   authorization?: string;
-  services?: WebServices;
+  services?: Partial<WebServices>;
   /** Сессия покупателя; по умолчанию — не вошёл. */
   session?: Session | null;
 }
@@ -57,7 +65,7 @@ export function wireClient(options: WireClientOptions = {}): WebClient {
           prefix: WEB_RPC_PATH,
           context: createWebORPCContext({
             headers: request.headers,
-            services: options.services ?? idleServices,
+            services: { ...idleServices, ...options.services },
             getSession: async () => options.session ?? null,
           }),
         });

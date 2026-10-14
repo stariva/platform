@@ -1,22 +1,18 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { baseEnv, env } from "@/env";
 import { LEGAL_VERSION } from "@/lib/legal";
 
-export const runtime = "nodejs";
-
-const bodySchema = z.object({
-  email: z.string().email("Укажите корректный email").max(200),
-  // Откуда пришла подписка — блог, футер, поп-ап и т.д.
-  source: z.string().max(60).optional(),
-  // Согласие на обработку ПДн (152-ФЗ) и на получение рекламы (ст. 18 38-ФЗ).
-  personalDataConsent: z.literal(true, {
-    error: "Нужно согласие на обработку персональных данных",
-  }),
-  marketingConsent: z.literal(true, {
-    error: "Нужно согласие на получение рассылки",
-  }),
-});
+/**
+ * Уведомление мастеру о новой подписке на рассылку. Telegram обязателен:
+ * без него подписка не засчитывается. Письмо — необязательный дубль, его
+ * отправляем «вдогонку», не дожидаясь.
+ */
+export async function subscribeToNewsletter(
+  email: string,
+  source?: string,
+): Promise<void> {
+  await sendToTelegram(email, source);
+  void sendEmailNotification(email, source);
+}
 
 function escapeHtml(text: string): string {
   return text
@@ -81,30 +77,4 @@ async function sendEmailNotification(
   }).catch(() => {
     // email — необязательный канал, ошибку не эскалируем
   });
-}
-
-export async function POST(request: NextRequest) {
-  const json = await request.json().catch(() => null);
-  const parsed = bodySchema.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Проверьте email" },
-      { status: 400 },
-    );
-  }
-
-  const { email, source } = parsed.data;
-
-  try {
-    await sendToTelegram(email, source);
-    // email-дубль отправляем «вдогонку», не блокируя ответ клиенту
-    void sendEmailNotification(email, source);
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[newsletter] Ошибка подписки:", error);
-    return NextResponse.json(
-      { error: "Не удалось оформить подписку. Попробуйте позже." },
-      { status: 502 },
-    );
-  }
 }

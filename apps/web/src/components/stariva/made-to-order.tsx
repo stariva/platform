@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CustomOrderConflictError } from "@stariva/web-api/contract";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -42,6 +43,7 @@ import {
   PHOTO_SIZE,
 } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
+import { formErrorMessage, isServerError, webApi } from "@/lib/web-api";
 
 interface MadeToOrderProps {
   product: Product;
@@ -311,27 +313,29 @@ function MadeToOrderDialog({
 
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("name", data.name);
-      fd.append("contact", data.contact);
-      fd.append("description", description);
-      fd.append("productType", config.productType);
-      fd.append("size", requestSize);
-      fd.append("color", color);
-      fd.append("personalDataConsent", String(data.personalDataConsent));
-      const signature = JSON.stringify([...fd.entries()]);
+      const fields = {
+        name: data.name,
+        contact: data.contact,
+        description,
+        productType: config.productType,
+        size: requestSize,
+        color,
+        personalDataConsent: String(data.personalDataConsent) as "true",
+      };
+      // Повтор той же заявки идёт с тем же requestId: сервер не задвоит её
+      const signature = JSON.stringify(fields);
       if (submission.current?.signature !== signature)
         submission.current = { signature, id: crypto.randomUUID() };
-      fd.append("requestId", submission.current.id);
+      const request = { ...fields, requestId: submission.current.id };
 
-      const res = await fetch("/api/custom-order", {
-        method: "POST",
-        body: fd,
-      });
-      const resData = await res.json().catch(() => null);
-      if (!res.ok || !resData?.ok || !resData?.requestNumber) {
-        if (res.status === 409) submission.current = null;
-        toast.error(resData?.error ?? "Не удалось отправить заявку");
+      let resData: { requestNumber: number };
+      try {
+        resData = await webApi.forms.submitCustomOrder(request);
+      } catch (error) {
+        if (!isServerError(error)) throw error;
+        if (error instanceof CustomOrderConflictError)
+          submission.current = null;
+        toast.error(formErrorMessage(error, "Не удалось отправить заявку"));
         return;
       }
 

@@ -300,7 +300,7 @@ export function envFromCookie(cookieHeader: string | null) {
 }
 
 /** Путь страницы, с которой отправлена форма (без query и хэша). */
-function pageOf(request: Request): string | undefined {
+function pageOf(request: Pick<Request, "headers">): string | undefined {
   const referer = request.headers.get("referer");
   if (!referer) return undefined;
   try {
@@ -322,7 +322,7 @@ async function defaultLookup(ip: string) {
  * важнее статистики, поэтому в худшем случае вернётся хотя бы время.
  */
 export async function collectVisitor(
-  request: Request,
+  request: Pick<Request, "headers">,
   options: { lookup?: (ip: string) => Promise<Geo | null> } = {},
 ): Promise<VisitorInfo> {
   const at = new Date().toISOString();

@@ -1,7 +1,11 @@
 import { implement } from "@orpc/server";
 import type { Session } from "@stariva/auth";
 import { logger } from "@stariva/config";
-import { type ReminderSweepResult, webContract } from "./contract";
+import {
+  type CustomOrderRequest,
+  type ReminderSweepResult,
+  webContract,
+} from "./contract";
 
 /**
  * Логика, которая пока живёт в витрине и тянет за собой её модули (письма,
@@ -10,6 +14,29 @@ import { type ReminderSweepResult, webContract } from "./contract";
 export interface WebServices {
   /** Рассылка о мастер-классах: apps/web/src/lib/workshops/notifications.ts */
   runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
+  /** Токен антиспама для форм входа: секрет better-auth живёт в витрине. */
+  issueFormToken: () => Promise<string>;
+  /** Уведомление мастеру о подписке: apps/web/src/lib/newsletter.ts */
+  subscribeToNewsletter: (email: string, source?: string) => Promise<void>;
+  customOrders: CustomOrderServices;
+}
+
+/** Заявки на изделия: apps/web/src/lib/custom-order */
+export interface CustomOrderServices {
+  /** Есть ли куда доставить уведомление о заявке (Telegram или почта). */
+  isAccepting: () => boolean;
+  /**
+   * Сохраняет заявку и фото. Визитёра и рекламный источник витрина берёт из
+   * заголовков запроса. `"conflict"` — повтор с тем же requestId, но другими
+   * данными.
+   */
+  save: (
+    request: CustomOrderRequest,
+    photo: File | null,
+    headers: Headers,
+  ) => Promise<{ id: string; number: number } | "conflict">;
+  /** Отправляет уведомление уже после ответа посетителю. */
+  dispatchLater: (id: string) => void;
 }
 
 export interface CreateWebORPCContextOptions {

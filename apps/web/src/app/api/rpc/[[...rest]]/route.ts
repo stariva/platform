@@ -1,5 +1,6 @@
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { RequestLimitHandlerPlugin } from "@orpc/server/plugins";
 import { logger } from "@stariva/config";
 import {
   createWebORPCContext,
@@ -9,24 +10,45 @@ import {
   webErrorStatusMap,
   webRouter,
 } from "@stariva/web-api";
+import { after } from "next/server";
+import { issueFormToken } from "@/lib/auth/antispam";
 import { auth } from "@/lib/auth/server";
+import {
+  dispatchRequest,
+  notificationConfigured,
+  saveRequest,
+} from "@/lib/custom-order/inbox";
+import { createCustomOrderServices } from "@/lib/custom-order/services";
+import { subscribeToNewsletter } from "@/lib/newsletter";
 import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Рассылка о мастер-классах пока живёт в витрине: письма, Telegram и
-// заказы тянут за собой половину apps/web
+// Самый большой запрос — заявка с фото до 8 МБ; остальное намного меньше
+const MAX_BODY_BYTES = 9 * 1024 * 1024;
+
+// Логика, которая пока живёт в витрине: письма, Telegram, заказы и
+// better-auth тянут за собой половину apps/web
 const services: WebServices = {
   runWorkshopReminderSweep: () => runWorkshopReminderSweep(),
+  issueFormToken: async () => issueFormToken((await auth.$context).secret),
+  subscribeToNewsletter,
+  customOrders: createCustomOrderServices({
+    notificationConfigured,
+    saveRequest,
+    dispatchRequest,
+    after,
+  }),
 };
 
 const handler = new RPCHandler(webRouter, {
   errorStatusMap: webErrorStatusMap,
+  plugins: [new RequestLimitHandlerPlugin({ maxBodySize: MAX_BODY_BYTES })],
   interceptors: [
     onError((error) => {
       // 4xx — штатные ответы (попытка отдана другому воркеру, неверный
-      // секрет), в лог ошибок им не место
+      // секрет, ошибка в форме), в лог ошибок им не место
       if (error instanceof ORPCError && webErrorStatus(error.code) < 500) {
         return;
       }

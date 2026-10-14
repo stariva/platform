@@ -5,8 +5,10 @@ const grantAccess = mock(async () => {});
 const sendLoginEmail = mock(async () => {
   throw new Error("email unavailable");
 });
-mock.module("@/lib/account/access", () => ({
-  grantAccess,
+mock.module("@/lib/account/access", () => ({ grantAccess }));
+const webApi = await import("@stariva/web-api");
+mock.module("@stariva/web-api", () => ({
+  ...webApi,
   hasAccess: async () => false,
 }));
 mock.module("@/lib/auth/session", () => ({ getSession: async () => null }));

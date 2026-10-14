@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CustomOrderConflictError } from "@stariva/web-api/contract";
 import { MessageCircleIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -25,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { reachGoal } from "@/lib/analytics";
 import { CONTACTS } from "@/lib/contacts";
+import { formErrorMessage, isServerError, webApi } from "@/lib/web-api";
 import { APPLY_MESSAGE, formats } from "../_data";
 
 const ROLES = [
@@ -89,26 +91,28 @@ export function PartnersApply() {
 
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("name", data.name);
-      fd.append("contact", data.contact);
-      fd.append("description", description);
-      fd.append("productType", `Партнёрство: ${data.role}`);
-      fd.append("personalDataConsent", String(data.personalDataConsent));
-      if (data.website) fd.append("website", data.website);
-      const signature = JSON.stringify([...fd.entries()]);
+      const fields = {
+        name: data.name,
+        contact: data.contact,
+        description,
+        productType: `Партнёрство: ${data.role}`,
+        personalDataConsent: String(data.personalDataConsent) as "true",
+        ...(data.website ? { website: data.website } : {}),
+      };
+      // Повтор той же анкеты идёт с тем же requestId: сервер не задвоит её
+      const signature = JSON.stringify(fields);
       if (submission.current?.signature !== signature)
         submission.current = { signature, id: crypto.randomUUID() };
-      fd.append("requestId", submission.current.id);
+      const request = { ...fields, requestId: submission.current.id };
 
-      const res = await fetch("/api/custom-order", {
-        method: "POST",
-        body: fd,
-      });
-      const resData = await res.json().catch(() => null);
-      if (!res.ok || !resData?.ok || !resData?.requestNumber) {
-        if (res.status === 409) submission.current = null;
-        toast.error(resData?.error ?? "Не удалось отправить анкету");
+      let resData: { requestNumber: number };
+      try {
+        resData = await webApi.forms.submitCustomOrder(request);
+      } catch (error) {
+        if (!isServerError(error)) throw error;
+        if (error instanceof CustomOrderConflictError)
+          submission.current = null;
+        toast.error(formErrorMessage(error, "Не удалось отправить анкету"));
         return;
       }
 

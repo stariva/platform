@@ -48,5 +48,8 @@ export const jobs = os.jobs.use(timingMiddleware).use(requireJobsSecret);
 /** Процедуры админки. */
 export const admin = os.admin.use(timingMiddleware).use(requireAdminSecret);
 
+/** Публичные формы: без входа. */
+export const forms = os.forms.use(timingMiddleware);
+
 /** Процедуры кабинета покупателя: вызывает браузер с cookie сессии. */
 export const account = os.account.use(timingMiddleware).use(withSession);

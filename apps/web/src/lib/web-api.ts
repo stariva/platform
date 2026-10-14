@@ -1,4 +1,4 @@
-import { createORPCClient } from "@orpc/client";
+import { createORPCClient, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { WEB_RPC_PATH, type WebClient } from "@stariva/web-api/contract";
 
@@ -22,3 +22,25 @@ export const webApi: WebClient<WebApiCallContext> = createORPCClient(
       fetch(url, { ...init, keepalive: context.keepalive ?? false }),
   }),
 );
+
+/**
+ * Ответ сервера не удался (не сеть): что показать посетителю. Первая ошибка
+ * в полях формы — тексты из схем контракта; своя ошибка контракта или отказ
+ * в данных — её текст; иначе запасная фраза.
+ */
+export function formErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ORPCError)) return fallback;
+  const data = error.data as { issues?: Array<{ message?: string }> };
+  const issue = data?.issues?.[0]?.message;
+  if (issue) return issue;
+  return error.defined || error.code === "BAD_REQUEST"
+    ? error.message
+    : fallback;
+}
+
+/** Ответил ли сервер (в отличие от обрыва сети). */
+export function isServerError(
+  error: unknown,
+): error is ORPCError<string, unknown> {
+  return error instanceof ORPCError;
+}

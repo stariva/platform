@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { reachGoal } from "@/lib/analytics";
+import { formErrorMessage, isServerError, webApi } from "@/lib/web-api";
 
 const newsletterSchema = z.object({
   email: z
@@ -58,21 +59,13 @@ export function NewsletterForm({ source = "blog" }: NewsletterFormProps) {
   async function onSubmit(data: NewsletterFormValues) {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: data.email,
-          source,
-          personalDataConsent: data.personalDataConsent,
-          marketingConsent: data.marketingConsent,
-        }),
+      await webApi.forms.subscribeNewsletter({
+        email: data.email,
+        source,
+        // Галочки уже проверила схема формы; сервер проверит ещё раз
+        personalDataConsent: data.personalDataConsent as true,
+        marketingConsent: data.marketingConsent as true,
       });
-      const resData = await res.json().catch(() => null);
-      if (!res.ok) {
-        toast.error(resData?.error ?? "Не удалось оформить подписку");
-        return;
-      }
       reachGoal("newsletter_subscribe", { source });
       toast.success(
         "Готово! Спасибо за подписку — будем писать только по делу.",
@@ -82,8 +75,12 @@ export function NewsletterForm({ source = "blog" }: NewsletterFormProps) {
         personalDataConsent: false,
         marketingConsent: false,
       });
-    } catch {
-      toast.error("Ошибка соединения. Попробуйте ещё раз.");
+    } catch (error) {
+      toast.error(
+        isServerError(error)
+          ? formErrorMessage(error, "Не удалось оформить подписку")
+          : "Ошибка соединения. Попробуйте ещё раз.",
+      );
     } finally {
       setSubmitting(false);
     }

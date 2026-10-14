@@ -1,6 +1,7 @@
+import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getCourseProgressMap, hasAccess } from "@/lib/account/access";
+import { getCourseProgressMap } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
