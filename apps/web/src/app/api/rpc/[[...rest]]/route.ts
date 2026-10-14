@@ -9,6 +9,7 @@ import {
   webErrorStatusMap,
   webRouter,
 } from "@stariva/web-api";
+import { auth } from "@/lib/auth/server";
 import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
 
 export const runtime = "nodejs";
@@ -37,7 +38,12 @@ const handler = new RPCHandler(webRouter, {
 async function handleRequest(request: Request) {
   const { matched, response } = await handler.handle(request, {
     prefix: WEB_RPC_PATH,
-    context: () => createWebORPCContext({ headers: request.headers, services }),
+    context: () =>
+      createWebORPCContext({
+        headers: request.headers,
+        services,
+        getSession: () => auth.api.getSession({ headers: request.headers }),
+      }),
   });
   return matched ? response : new Response("Not found", { status: 404 });
 }

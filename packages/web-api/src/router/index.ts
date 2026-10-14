@@ -1,4 +1,5 @@
 import { os } from "../orpc";
+import { accountRouter } from "./account";
 import { adminRouter } from "./admin";
 import { jobsRouter } from "./jobs";
 
@@ -6,6 +7,7 @@ import { jobsRouter } from "./jobs";
 export const webRouter = os.router({
   jobs: jobsRouter,
   admin: adminRouter,
+  account: accountRouter,
 });
 
 export type WebRouter = typeof webRouter;

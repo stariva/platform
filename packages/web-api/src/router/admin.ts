@@ -1,5 +1,5 @@
 import { logger } from "@stariva/config";
-import { admin } from "../orpc";
+import { admin } from "../procedures";
 import {
   isOzonSellerConfigured,
   pushStockToOzon,

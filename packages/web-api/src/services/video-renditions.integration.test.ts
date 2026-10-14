@@ -19,8 +19,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
         return `https://storage.example.test/${key}`;
       },
     }));
-    const secret = crypto.randomUUID();
-    process.env.JOBS_SECRET = secret;
+    const { JOBS_SECRET: secret } = await import("../testing/setup");
     const { db, eq, sql } = await import("@stariva/db");
     const { videoRenditions, workshops } = await import("@stariva/db/schema");
     expect(await db.select({ id: workshops.id }).from(workshops)).toHaveLength(
@@ -35,7 +34,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
     } = await import("./video-renditions");
     const { createRouterClient, ORPCError } = await import("@orpc/server");
     const { webRouter } = await import("../router");
-    const { webErrorStatus } = await import("../orpc");
+    const { webErrorStatus } = await import("../errors");
     const api = createRouterClient(webRouter, {
       context: {
         headers: new Headers({ authorization: `Bearer ${secret}` }),

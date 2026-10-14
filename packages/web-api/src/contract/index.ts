@@ -1,7 +1,9 @@
 import type { ClientContext, RouterContractClient } from "@orpc/contract";
+import { accountContract } from "./account";
 import { adminContract } from "./admin";
 import { jobsContract } from "./jobs";
 
+export { LessonNotFoundError } from "./account";
 export {
   AdminNotConfiguredError,
   OzonNotConfiguredError,
@@ -19,12 +21,13 @@ export {
 
 /**
  * Контракт API витрины (stariva.ru). Только схемы и ошибки, без реализации:
- * его импортируют клиенты (воркер apps/jobs, админка), которым не нужны ни
+ * его импортируют клиенты (воркер apps/jobs, админка, браузер), которым не нужны ни
  * база, ни ключи витрины. Реализация — в `@stariva/web-api`.
  */
 export const webContract = {
   jobs: jobsContract,
   admin: adminContract,
+  account: accountContract,
 };
 
 export type WebContract = typeof webContract;

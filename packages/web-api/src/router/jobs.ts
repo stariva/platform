@@ -6,7 +6,7 @@ import {
   hlsContentType,
   isStorageConfigured,
 } from "@stariva/storage";
-import { jobs } from "../orpc";
+import { jobs } from "../procedures";
 import {
   claimNextVideo,
   completeRendition,

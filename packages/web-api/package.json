@@ -26,6 +26,7 @@
   "dependencies": {
     "@orpc/contract": "2.0.0-beta.43",
     "@orpc/server": "2.0.0-beta.43",
+    "@stariva/auth": "workspace:*",
     "@stariva/config": "workspace:*",
     "@stariva/db": "workspace:*",
     "@stariva/storage": "workspace:*",
