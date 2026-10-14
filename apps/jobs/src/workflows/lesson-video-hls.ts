@@ -1,20 +1,9 @@
 import { ConcurrencyLimitStrategy } from "@hatchet-dev/typescript-sdk/v1";
+import { safe } from "@orpc/client";
+import { AttemptLostError } from "@stariva/web-api/contract";
 import { hatchet } from "../client";
 import { probe, segmentAndUpload, withTempDir } from "../lib/hls";
-import { postToStorefront } from "../lib/storefront";
-
-interface ClaimResponse {
-  job: {
-    videoKey: string;
-    hlsPrefix: string;
-    attemptId: number;
-    sourceUrl: string;
-  } | null;
-}
-
-interface UploadUrlsResponse {
-  uploads: Record<string, { url: string; contentType: string }>;
-}
+import { webApi } from "../lib/web-api";
 
 // Больше за один прогон не берём: следующий прогон через 10 минут доберёт
 const MAX_VIDEOS_PER_RUN = 5;
@@ -60,10 +49,7 @@ lessonVideoHlsWorkflow.task({
 
     for (let i = 0; i < MAX_VIDEOS_PER_RUN; i++) {
       if (ctx.cancelled) break;
-      const { job } = await postToStorefront<ClaimResponse>(
-        "/api/workshops/videos/claim",
-        { timeoutMs: 30_000, body: {} },
-      );
+      const { job } = await webApi.jobs.videos.claim();
       if (!job) break;
 
       const attempt = { videoKey: job.videoKey, attemptId: job.attemptId };
@@ -72,16 +58,12 @@ lessonVideoHlsWorkflow.task({
       const abort = new AbortController();
       const onCancel = () => abort.abort(new Error("task cancelled"));
       ctx.abortController.signal.addEventListener("abort", onCancel);
-      const heartbeat = setInterval(() => {
-        postToStorefront("/api/workshops/videos/heartbeat", {
-          timeoutMs: 30_000,
-          body: attempt,
-        }).catch((error: unknown) => {
-          // 409 — попытка уже не наша; сетевой сбой переждём до следующего раза
-          if (String(error).includes("HTTP 409")) {
-            abort.abort(new Error("attempt taken over by another worker"));
-          }
-        });
+      const heartbeat = setInterval(async () => {
+        const [error] = await safe(webApi.jobs.videos.heartbeat(attempt));
+        // Попытка уже не наша; сетевой сбой переждём до следующего раза
+        if (error instanceof AttemptLostError) {
+          abort.abort(new Error("attempt taken over by another worker"));
+        }
       }, HEARTBEAT_MS);
 
       try {
@@ -92,17 +74,17 @@ lessonVideoHlsWorkflow.task({
             source,
             dir,
             async (batch) => {
-              const { uploads } = await postToStorefront<UploadUrlsResponse>(
-                "/api/workshops/videos/upload-urls",
-                { timeoutMs: 60_000, body: { ...attempt, files: batch } },
+              const { uploads } = await webApi.jobs.videos.uploadUrls(
+                { ...attempt, files: batch },
+                { context: { timeout: 60_000 } },
               );
               return uploads;
             },
             abort.signal,
           );
-          await postToStorefront("/api/workshops/videos/complete", {
-            timeoutMs: 30_000,
-            body: { ...attempt, durationSeconds: source.durationSeconds },
+          await webApi.jobs.videos.complete({
+            ...attempt,
+            durationSeconds: source.durationSeconds,
           });
           return count;
         });
@@ -112,16 +94,15 @@ lessonVideoHlsWorkflow.task({
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[lesson-video-hls] ${job.videoKey}:`, message);
         failed.push(job.videoKey);
-        await postToStorefront("/api/workshops/videos/fail", {
-          timeoutMs: 30_000,
-          body: { ...attempt, error: message },
-        }).catch((reportError: unknown) => {
-          // Не смогли сообщить — видео вернётся в очередь, когда истечёт аренда
-          console.error(
-            "[lesson-video-hls] не удалось сообщить об ошибке:",
-            reportError,
-          );
-        });
+        await webApi.jobs.videos
+          .fail({ ...attempt, error: message })
+          .catch((reportError: unknown) => {
+            // Не смогли сообщить — видео вернётся в очередь, когда истечёт аренда
+            console.error(
+              "[lesson-video-hls] не удалось сообщить об ошибке:",
+              reportError,
+            );
+          });
       } finally {
         clearInterval(heartbeat);
         ctx.abortController.signal.removeEventListener("abort", onCancel);

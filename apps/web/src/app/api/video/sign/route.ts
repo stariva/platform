@@ -1,5 +1,6 @@
 import { env } from "@stariva/config";
 import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
+import { getReadyRendition } from "@stariva/web-api";
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 import { hasAccess } from "@/lib/account/access";
@@ -14,7 +15,6 @@ import {
   isVideoSignRateLimited,
   logVideoAccess,
 } from "@/lib/workshops/video-access";
-import { getReadyRendition } from "@/lib/workshops/video-renditions";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   findWorkshopLesson,

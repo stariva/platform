@@ -1,0 +1,41 @@
+{
+  "name": "@stariva/web-api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./contract": {
+      "types": "./dist/contract/index.d.ts",
+      "default": "./src/contract/index.ts"
+    }
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc",
+    "format": "biome format .",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "test": "bun --filter @stariva/config build && bun --filter @stariva/storage build && bun test",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@orpc/contract": "2.0.0-beta.43",
+    "@orpc/server": "2.0.0-beta.43",
+    "@stariva/config": "workspace:*",
+    "@stariva/db": "workspace:*",
+    "@stariva/storage": "workspace:*",
+    "@t3-oss/env-core": "0.13.11",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@orpc/client": "2.0.0-beta.43",
+    "@stariva/tsconfig": "workspace:*",
+    "@types/node": "26.6.5",
+    "typescript": "7.0.2"
+  }
+}

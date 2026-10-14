@@ -1,8 +1,13 @@
+import { RPCJsonSerializer } from "@orpc/client";
 import {
   defaultShouldDehydrateQuery,
+  hashKey,
   QueryClient,
 } from "@tanstack/react-query";
-import SuperJSON from "superjson";
+
+// Те же типы, что oRPC передаёт по сети (Date, Map, Set, BigInt…): данные
+// и ключи запросов переживают гидрацию без потерь
+const serializer = new RPCJsonSerializer();
 
 export const createQueryClient = () =>
   new QueryClient({
@@ -11,9 +16,19 @@ export const createQueryClient = () =>
         // With SSR, we usually want to set some default staleTime
         // above 0 to avoid refetching immediately on the client
         staleTime: 30 * 1000,
+        queryKeyHashFn: (queryKey) => {
+          const { json, meta } = serializer.serialize(queryKey);
+          return hashKey([
+            json,
+            meta?.map((entry) => JSON.stringify(entry)).sort(),
+          ]);
+        },
       },
       dehydrate: {
-        serializeData: SuperJSON.serialize,
+        serializeData: (data) => {
+          const { json, meta } = serializer.serialize(data);
+          return { json, meta };
+        },
         shouldDehydrateQuery: (query) =>
           defaultShouldDehydrateQuery(query) ||
           query.state.status === "pending",
@@ -27,7 +42,7 @@ export const createQueryClient = () =>
         },
       },
       hydrate: {
-        deserializeData: SuperJSON.deserialize,
+        deserializeData: (data) => serializer.deserialize(data),
       },
     },
   });

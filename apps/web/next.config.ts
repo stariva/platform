@@ -80,6 +80,7 @@ const config: NextConfig = {
     "@stariva/db",
     "@stariva/emails",
     "@stariva/storage",
+    "@stariva/web-api",
     "@t3-oss/env-nextjs",
     "@t3-oss/env-core",
   ],

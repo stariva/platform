@@ -10,8 +10,9 @@ COPY . .
 RUN turbo prune @stariva/jobs --docker
 
 # 2. Install production deps and bundle our sources for Node. The bundle keeps
-#    node_modules external: the Hatchet SDK starts its heartbeat thread from a
-#    file inside its own package, so it must stay on disk as-is
+#    only the Hatchet SDK external: it starts its heartbeat thread from a file
+#    inside its own package, so it must stay on disk as-is. Everything else is
+#    bundled, including the TypeScript contract from @stariva/web-api
 FROM base AS installer
 WORKDIR /repo
 COPY --from=pruner /repo/out/json/ .

@@ -26,7 +26,7 @@ mock.module("@/lib/workshops/video-access", () => ({
   isVideoSignRateLimited: async () => false,
   logVideoAccess: async () => {},
 }));
-mock.module("@/lib/workshops/video-renditions", () => ({
+mock.module("@stariva/web-api", () => ({
   getReadyRendition: async () => ({
     hlsPrefix: "workshops/test/hls/lesson/attempt",
   }),

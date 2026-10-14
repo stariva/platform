@@ -17,9 +17,9 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@hookform/resolvers": "^5.9.1",
-    "@orpc/client": "^1.15.6",
-    "@orpc/next": "^1.14.11",
-    "@orpc/tanstack-query": "^1.15.6",
+    "@orpc/client": "2.0.0-beta.43",
+    "@orpc/server": "2.0.0-beta.43",
+    "@orpc/tanstack-query": "2.0.0-beta.43",
     "@stariva/api": "workspace:*",
     "@stariva/auth": "workspace:*",
     "@stariva/config": "workspace:*",
@@ -42,7 +42,6 @@
     "react-dom": "19.3.0",
     "react-hook-form": "^7.90.0",
     "recharts": "^3.10.1",
-    "superjson": "2.2.6",
     "zod": "4.6.7"
   },
   "devDependencies": {
