@@ -12,7 +12,6 @@ import {
   hasBriefContent,
   isPreorder,
 } from "@/lib/workshops-data";
-import { MaterialsList } from "./materials-list";
 import { PreorderNotice } from "./preorder-notice";
 import { WorkshopBrief } from "./workshop-brief";
 
@@ -31,12 +30,17 @@ export default async function AccountCoursePage({
   const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
 
+  const materialFiles = workshop.materialFiles ?? [];
   const brief =
-    workshop.materials.length > 0 || hasBriefContent(workshop.brief) ? (
+    workshop.materials.length > 0 ||
+    materialFiles.length > 0 ||
+    hasBriefContent(workshop.brief) ? (
       <WorkshopBrief
+        slug={slug}
         title={workshop.title}
         materials={workshop.materials}
         brief={workshop.brief}
+        files={materialFiles}
       />
     ) : null;
 
@@ -109,11 +113,8 @@ export default async function AccountCoursePage({
         )}
       </div>
 
+      {/* PDF курса — внутри брифа, рядом со списком материалов */}
       {brief}
-
-      {workshop.materialFiles && workshop.materialFiles.length > 0 && (
-        <MaterialsList slug={slug} materials={workshop.materialFiles} />
-      )}
 
       <div className="border border-espresso/10 rounded-2xl overflow-hidden bg-white">
         {lessons.map((lesson, i) => {
