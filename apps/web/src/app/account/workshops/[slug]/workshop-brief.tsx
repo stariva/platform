@@ -17,7 +17,7 @@ export function WorkshopBrief({ title, materials, brief }: WorkshopBriefProps) {
   return (
     <section
       aria-labelledby="workshop-brief-title"
-      className="bg-white border border-espresso/10 rounded-2xl p-6 sm:p-8 mb-6"
+      className="bg-white border border-espresso/10 rounded-2xl p-6 sm:p-8 mt-6 mb-6"
     >
       <p className="label-caps text-[11px] text-taupe mb-2">Перед началом</p>
       <h3
