@@ -130,7 +130,10 @@ export function ProductGallery({ images, name, badge }: ProductGalleryProps) {
 
   return (
     <>
-      <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-2xl bg-sand">
+      <div
+        className="relative mb-4 aspect-[3/4] overflow-hidden rounded-2xl bg-sand"
+        data-cart-fly-source
+      >
         <button
           type="button"
           aria-label={`Открыть фото ${index + 1} из ${list.length} на весь экран`}
