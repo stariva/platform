@@ -115,6 +115,7 @@ export default async function CrmClientPage({
               createdAt: deal.createdAt.toISOString(),
               lastPaidAt: iso(deal.lastPaidAt),
             }))}
+            campaigns={client.campaigns}
           />
         </div>
 

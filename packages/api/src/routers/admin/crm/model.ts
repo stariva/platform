@@ -81,6 +81,8 @@ export interface Deal {
   userId: string | null;
   // Для ручной продажи — карточка клиента
   clientId: string | null;
+  // Для ручной продажи — реклама, выбранная вручную; её выручка идёт туда
+  campaignId: string | null;
 }
 
 export interface ClientRecord {
@@ -228,13 +230,21 @@ function toClient(
   ]);
   const userIds = unique(byDate.map((d) => d.userId));
 
-  const tagged = byDate.find((deal) => deal.attribution);
-  const touch = tagged?.attribution?.first ?? null;
+  // Самый ранний заказ, по которому известна реклама: метка или выбор вручную
+  const origin = byDate.find(
+    (deal) =>
+      deal.campaignId || normalizeUtm(deal.attribution?.first.utm_source),
+  );
+  const touch = origin?.campaignId
+    ? null
+    : (origin?.attribution?.first ?? null);
   let source: ClientSource;
   if (record?.sourceManual) {
     source = record.campaignId
       ? { kind: "campaign", campaignId: record.campaignId, manual: true }
       : { kind: "none", manual: true };
+  } else if (origin?.campaignId) {
+    source = { kind: "campaign", campaignId: origin.campaignId, manual: true };
   } else if (touch && normalizeUtm(touch.utm_source)) {
     const campaignId = matchCampaign(touch, campaigns);
     source = campaignId
@@ -379,13 +389,17 @@ export function buildReport(
       entry.buyers += 1;
     }
     for (const deal of client.deals) {
+      // Ручной заказ с выбранной рекламой приносит деньги ей, а не источнику клиента
+      const target = deal.campaignId
+        ? row({ kind: "campaign", campaignId: deal.campaignId, manual: true })
+        : entry;
       const first = deal.payments.reduce<Date | null>(
         (min, payment) => (!min || payment.at < min ? payment.at : min),
         null,
       );
-      if (first && within(first, period)) entry.paidDeals += 1;
+      if (first && within(first, period)) target.paidDeals += 1;
       for (const payment of deal.payments) {
-        if (within(payment.at, period)) entry.revenue += payment.amount;
+        if (within(payment.at, period)) target.revenue += payment.amount;
       }
     }
   }

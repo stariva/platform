@@ -65,6 +65,7 @@ const learning: NavItem[] = [
 const marketing: NavItem[] = [
   { title: "Сводка", url: "/crm", icon: IconChartBar },
   { title: "Клиенты", url: "/crm/clients", icon: IconAddressBook },
+  { title: "Индивидуальный заказ", url: "/crm/orders/new", icon: IconPlus },
   {
     title: "Кампании и расходы",
     url: "/crm/campaigns",

@@ -125,7 +125,10 @@ export const crmClients = pgTable(
   ],
 );
 
-/** Продажа мимо сайта: Авито, перевод на карту, мастер-класс вживую. */
+/**
+ * Заказ мимо корзины сайта: индивидуальный заказ по заявке или из
+ * мессенджера, продажа на Авито, мастер-класс вживую.
+ */
 export const crmSales = pgTable(
   "crm_sales",
   {
@@ -139,12 +142,19 @@ export const crmSales = pgTable(
     // Копейки
     amount: integer("amount").notNull(),
     description: text("description").notNull(),
+    // С какой рекламы пришёл этот заказ; null — как у клиента
+    campaignId: text("campaign_id").references(() => adCampaigns.id, {
+      onDelete: "set null",
+    }),
+    // Заявка с сайта («Обсудим вашу идею»), из которой вырос заказ
+    requestNumber: integer("request_number"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (table) => [
     index("crm_sales_client_idx").on(table.clientId),
+    uniqueIndex("crm_sales_request_idx").on(table.requestNumber),
     check("crm_sales_amount_positive", sql`${table.amount} > 0`),
   ],
 );

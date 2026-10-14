@@ -12,6 +12,7 @@ import {
   clients,
   removeClient,
   removeSale,
+  saleForRequest,
   saveClient,
 } from "./clients";
 import { report } from "./report";
@@ -24,6 +25,7 @@ export const adminCrmRouter = {
   removeClient,
   addSale,
   removeSale,
+  saleForRequest,
   campaigns,
   campaign,
   saveCampaign,

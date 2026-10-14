@@ -8,8 +8,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
-  Label,
   Table,
   TableBody,
   TableCell,
@@ -21,19 +19,19 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { STATUS_LABELS } from "~/components/orders/order-meta";
 import { WORKSHOP_ORDER_STATUS_LABELS } from "~/components/workshops/workshop-orders-table";
 import { orpc } from "~/orpc/react";
+import type { CampaignOption } from "./client-form";
 import {
   DEAL_KIND_LABELS,
   dateTime,
   dealHref,
   rubles,
-  todayInMoscow,
   utmLabel,
 } from "./crm-meta";
+import { CustomOrderForm } from "./custom-order-form";
 
 export interface DealView {
   kind: "product" | "workshop" | "manual";
@@ -45,6 +43,9 @@ export interface DealView {
   lastPaidAt: string | null;
   utmSource: string | null;
   utmCampaign: string | null;
+  // Ручной заказ: выбранная реклама и заявка, из которой он вырос
+  campaignId: string | null;
+  requestNumber: number | null;
 }
 
 /** Подпись статуса заказа или записи; у ручной продажи статуса нет. */
@@ -64,49 +65,33 @@ function statusLabel(deal: DealView) {
 export function ClientDeals({
   clientKey,
   deals,
+  campaigns,
 }: {
   clientKey: string;
   deals: DealView[];
+  campaigns: CampaignOption[];
 }) {
   const router = useRouter();
   const confirm = useConfirm();
-  const [soldOn, setSoldOn] = useState(todayInMoscow);
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-
-  const addSale = useMutation({
-    ...orpc.admin.crm.addSale.mutationOptions(),
-    onSuccess: ({ key }) => {
-      toast.success("Продажа добавлена");
-      setAmount("");
-      setDescription("");
-      if (key !== clientKey) {
-        router.replace(`/crm/clients/${encodeURIComponent(key)}`);
-      }
-      router.refresh();
-    },
-    onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
-  });
+  const campaignNames = new Map(campaigns.map((c) => [c.id, c.name]));
 
   const removeSale = useMutation({
     ...orpc.admin.crm.removeSale.mutationOptions(),
     onSuccess: () => {
-      toast.success("Продажа удалена");
+      toast.success("Заказ удалён");
       router.refresh();
     },
     onError: (error: Error) => toast.error(error.message || "Не удалилось"),
   });
-
-  const parsedAmount = Number(amount.replace(",", ".").replace(/\s/g, ""));
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Заказы и продажи</CardTitle>
         <CardDescription>
-          Заказы и записи с сайта подтягиваются сами. Продажи на Авито, по
-          переводу или вживую добавьте ниже — они войдут в выручку источника
-          клиента.
+          Заказы и записи с сайта подтягиваются сами. Индивидуальные заказы,
+          продажи на Авито или вживую добавьте ниже и выберите, с какой рекламы
+          они пришли.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -116,7 +101,7 @@ export function ClientDeals({
               <TableRow>
                 <TableHead>Что</TableHead>
                 <TableHead>Когда</TableHead>
-                <TableHead>Метка</TableHead>
+                <TableHead>Реклама</TableHead>
                 <TableHead className="text-right">Оплачено</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
@@ -153,13 +138,25 @@ export function ClientDeals({
                           {DEAL_KIND_LABELS[deal.kind]}
                         </Badge>
                         {status && <Badge variant="secondary">{status}</Badge>}
+                        {deal.requestNumber && (
+                          <Link
+                            href={`/requests/${deal.requestNumber}`}
+                            className="text-xs underline"
+                          >
+                            заявка №{deal.requestNumber}
+                          </Link>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="align-top text-sm whitespace-nowrap">
                       {dateTime.format(new Date(deal.createdAt))}
                     </TableCell>
                     <TableCell className="text-muted-foreground align-top text-xs">
-                      {utmLabel(deal.utmSource, deal.utmCampaign) || "—"}
+                      {(deal.campaignId &&
+                        (campaignNames.get(deal.campaignId) ??
+                          "кампания удалена")) ||
+                        utmLabel(deal.utmSource, deal.utmCampaign) ||
+                        "—"}
                     </TableCell>
                     <TableCell className="text-right align-top tabular-nums">
                       {deal.paid > 0 ? rubles.format(deal.paid) : "—"}
@@ -170,11 +167,11 @@ export function ClientDeals({
                           size="sm"
                           variant="ghost"
                           disabled={removeSale.isPending}
-                          aria-label="Удалить продажу"
+                          aria-label="Удалить заказ"
                           onClick={async () => {
                             if (
                               await confirm({
-                                title: "Удалить продажу?",
+                                title: "Удалить заказ?",
                                 description: `${deal.label} — ${rubles.format(deal.paid)}`,
                                 confirmLabel: "Удалить",
                                 destructive: true,
@@ -195,60 +192,12 @@ export function ClientDeals({
           </Table>
         </div>
 
-        <form
-          className="grid gap-3 sm:grid-cols-[150px_140px_minmax(0,1fr)_auto] sm:items-end"
-          onSubmit={(event) => {
-            event.preventDefault();
-            addSale.mutate({
-              key: clientKey,
-              soldOn,
-              amount: parsedAmount,
-              description,
-            });
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="sale-date">Дата</Label>
-            <Input
-              id="sale-date"
-              type="date"
-              required
-              max={todayInMoscow()}
-              value={soldOn}
-              onChange={(event) => setSoldOn(event.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sale-amount">Сумма, ₽</Label>
-            <Input
-              id="sale-amount"
-              inputMode="decimal"
-              required
-              placeholder="4500"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sale-description">Что купил</Label>
-            <Input
-              id="sale-description"
-              required
-              maxLength={300}
-              placeholder="Кашпо, Авито"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={
-              addSale.isPending || !(parsedAmount > 0) || !description.trim()
-            }
-          >
-            {addSale.isPending ? "Добавляем…" : "Добавить продажу"}
-          </Button>
-        </form>
+        <div className="space-y-2 border-t pt-4">
+          <h3 className="text-sm font-semibold">
+            Индивидуальный заказ или продажа вне сайта
+          </h3>
+          <CustomOrderForm clientKey={clientKey} campaigns={campaigns} />
+        </div>
       </CardContent>
     </Card>
   );
