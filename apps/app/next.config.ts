@@ -53,6 +53,7 @@ export default async function createNextConfig(): Promise<NextConfig> {
       "@stariva/db",
       "@stariva/ui",
       "@stariva/validators",
+      "@stariva/web-api",
       "@t3-oss/env-nextjs",
       "@t3-oss/env-core",
     ],

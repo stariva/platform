@@ -6,7 +6,7 @@
  *
  *   bun --env-file=../../.env scripts/push-ozon-stock.ts
  */
-import { pushStockToOzon } from "@/lib/ozon/stock-push";
+import { pushStockToOzon } from "../src/services/ozon-stock";
 
 const result = await pushStockToOzon();
 console.log(`Остаток принят Ozon: ${result.updated.join(", ") || "—"}`);

@@ -1,8 +1,10 @@
 import { expect, mock, test } from "bun:test";
-import type { WebClient } from "../contract";
+import type { ReminderSweepResult, WebClient } from "../contract";
 
+// Окружение читается один раз на процесс: задаём секреты всех тестов
 const secret = "synthetic-jobs-secret-0123456789abcdef";
 process.env.JOBS_SECRET = secret;
+process.env.REVALIDATE_SECRET = "synthetic-admin-secret-0123456789abcdef";
 
 const storage = await import("@stariva/storage");
 mock.module("@stariva/storage", () => ({
@@ -25,6 +27,7 @@ const { RPCLink } = await import("@orpc/client/fetch");
 const { RPCHandler } = await import("@orpc/server/fetch");
 const {
   AttemptLostError,
+  RemindersFailedError,
   createWebORPCContext,
   WEB_RPC_PATH,
   webErrorStatusMap,
@@ -35,6 +38,14 @@ const handler = new RPCHandler(webRouter, {
   errorStatusMap: webErrorStatusMap,
 });
 let lastStatus = 0;
+let sweep: ReminderSweepResult = { checked: 0, delivered: 0, failed: 0 };
+let sweeps = 0;
+const services = {
+  runWorkshopReminderSweep: async () => {
+    sweeps++;
+    return sweep;
+  },
+};
 
 // Клиент как у воркера, но запросы уходят прямо в обработчик витрины:
 // проверяем весь путь по проводу, включая коды ошибок и HTTP-статусы
@@ -48,7 +59,10 @@ function client(authorization: string): WebClient {
         const request = new Request(url, init);
         const { matched, response } = await handler.handle(request, {
           prefix: WEB_RPC_PATH,
-          context: createWebORPCContext({ headers: request.headers }),
+          context: createWebORPCContext({
+            headers: request.headers,
+            services,
+          }),
         });
         const result = matched ? response : new Response(null, { status: 404 });
         lastStatus = result.status;
@@ -97,4 +111,30 @@ test("claim returns null when nothing is queued", async () => {
   expect(await client(`Bearer ${secret}`).jobs.videos.claim()).toEqual({
     job: null,
   });
+});
+
+test("reminder sweep requires the jobs secret", async () => {
+  sweeps = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.reminders.sweep());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(sweeps).toBe(0);
+});
+
+test("reminder sweep returns the summary", async () => {
+  sweep = { checked: 3, delivered: 2, failed: 0 };
+  expect(await client(`Bearer ${secret}`).jobs.reminders.sweep()).toEqual(
+    sweep,
+  );
+  expect(lastStatus).toBe(200);
+});
+
+test("reminder sweep fails so Hatchet retries undelivered messages", async () => {
+  sweep = { checked: 3, delivered: 1, failed: 2 };
+  const [error, , definedError] = await safe(
+    client(`Bearer ${secret}`).jobs.reminders.sweep(),
+  );
+  expect(error).toBeInstanceOf(RemindersFailedError);
+  expect(definedError?.code).toBe("REMINDERS_FAILED");
+  expect(definedError?.data).toEqual(sweep);
+  expect(lastStatus).toBe(500);
 });

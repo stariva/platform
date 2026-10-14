@@ -72,6 +72,17 @@ const fail = jobs.videos.fail.handler(async ({ input }) => {
   await failRendition(input, input.error);
 });
 
+/**
+ * Повторный прогон безопасен: отправленное помечено и второй раз не уйдёт.
+ * Поэтому при сбоях отдаём ошибку, и Hatchet повторяет прогон целиком.
+ */
+const sweep = jobs.reminders.sweep.handler(async ({ context, errors }) => {
+  const result = await context.services.runWorkshopReminderSweep();
+  if (result.failed > 0) throw errors.REMINDERS_FAILED({ data: result });
+  return result;
+});
+
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
+  reminders: { sweep },
 };

@@ -162,6 +162,7 @@
     "packages/api": {
       "name": "@stariva/api",
       "dependencies": {
+        "@orpc/client": "2.0.0-beta.43",
         "@orpc/server": "2.0.0-beta.43",
         "@stariva/auth": "workspace:*",
         "@stariva/config": "workspace:*",
@@ -169,6 +170,7 @@
         "@stariva/emails": "workspace:*",
         "@stariva/storage": "workspace:*",
         "@stariva/validators": "workspace:*",
+        "@stariva/web-api": "workspace:*",
         "better-auth": "1.7.7",
         "zod": "4.6.7",
       },
