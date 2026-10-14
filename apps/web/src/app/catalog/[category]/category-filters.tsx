@@ -181,6 +181,7 @@ function ProductCard({
   return (
     <motion.div
       className="flex flex-col"
+      data-cart-fly-scope
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.04 * Math.min(index, 8) }}
@@ -190,7 +191,10 @@ function ProductCard({
         className="group block"
       >
         {/* Image */}
-        <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-sand">
+        <div
+          className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-sand"
+          data-cart-fly-source
+        >
           <ProductCardImages
             images={product.images}
             alt={product.name}

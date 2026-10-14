@@ -49,8 +49,9 @@ export function ElkaModels({ items }: { items: ModelWithProduct[] }) {
               <article
                 key={model.slug}
                 className="flex flex-col rounded-[28px] bg-parchment overflow-hidden"
+                data-cart-fly-scope
               >
-                <div className="relative aspect-[4/5] bg-linen">
+                <div className="relative aspect-[4/5] bg-linen" data-cart-fly-source>
                   <Image
                     src={image}
                     alt={`${model.name}, ${model.size}`}
