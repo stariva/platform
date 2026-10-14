@@ -2,8 +2,12 @@ import { COMMON_ERROR_STATUS_MAP } from "@orpc/server";
 import {
   AdminNotConfiguredError,
   AttemptLostError,
+  CustomOrderConflictError,
+  CustomOrderSaveFailedError,
+  CustomOrderUnavailableError,
   JobsNotConfiguredError,
   LessonNotFoundError,
+  NewsletterFailedError,
   OzonNotConfiguredError,
   OzonRequestFailedError,
   PlaylistMissingError,
@@ -27,6 +31,10 @@ export const webErrorStatusMap = {
   [OzonNotConfiguredError.code]: 503,
   [OzonRequestFailedError.code]: 502,
   [LessonNotFoundError.code]: 404,
+  [NewsletterFailedError.code]: 502,
+  [CustomOrderUnavailableError.code]: 503,
+  [CustomOrderConflictError.code]: 409,
+  [CustomOrderSaveFailedError.code]: 503,
 } satisfies Record<string, number>;
 
 /** Коды ошибок, для которых у API витрины есть свой HTTP-статус. */

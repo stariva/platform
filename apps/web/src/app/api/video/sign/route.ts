@@ -1,9 +1,8 @@
 import { env } from "@stariva/config";
 import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
-import { getReadyRendition } from "@stariva/web-api";
+import { getReadyRendition, hasAccess } from "@stariva/web-api";
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
-import { hasAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { clientIp } from "@/lib/visitor";
 import {

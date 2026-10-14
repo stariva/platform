@@ -1,6 +1,7 @@
+import { hasAccess } from "@stariva/web-api";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { grantAccess, hasAccess } from "@/lib/account/access";
+import { grantAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";

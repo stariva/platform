@@ -21,12 +21,14 @@ mock.module("@stariva/storage", () => ({
 mock.module("@/lib/auth/session", () => ({
   getSession: async () => session,
 }));
-mock.module("@/lib/account/access", () => ({ hasAccess: async () => true }));
 mock.module("@/lib/workshops/video-access", () => ({
   isVideoSignRateLimited: async () => false,
   logVideoAccess: async () => {},
 }));
+const webApi = await import("@stariva/web-api");
 mock.module("@stariva/web-api", () => ({
+  ...webApi,
+  hasAccess: async () => true,
   getReadyRendition: async () => ({
     hlsPrefix: "workshops/test/hls/lesson/attempt",
   }),

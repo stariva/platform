@@ -1,6 +1,6 @@
+import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { hasAccess } from "@/lib/account/access";
 import { issueCertificateIfComplete } from "@/lib/account/certificates";
 import { getSession } from "@/lib/auth/session";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";

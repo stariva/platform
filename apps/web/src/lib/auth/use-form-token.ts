@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { webApi } from "@/lib/web-api";
 import { FORM_TOKEN_HEADER, FORM_TOKEN_REFRESH_MS } from "./form-token-shared";
 
 /**
@@ -15,10 +16,8 @@ export function useFormToken() {
     let active = true;
     async function load() {
       try {
-        const res = await fetch("/api/form-token", { cache: "no-store" });
-        if (!res.ok) return;
-        const data: { token?: string } = await res.json();
-        if (active && data.token) token.current = data.token;
+        const { token: issued } = await webApi.forms.formToken();
+        if (active) token.current = issued;
       } catch {
         // Токена нет — сервер откажет в отправке, а пользователь обновит страницу.
       }

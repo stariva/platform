@@ -135,7 +135,7 @@ export function parseAttribution(
 
 /** Для обработчиков заказов: атрибуция из заголовка Cookie запроса. */
 export function attributionFromRequest(
-  request: Request,
+  request: Pick<Request, "headers">,
 ): CampaignAttribution | null {
   for (const part of request.headers.get("cookie")?.split(";") ?? []) {
     const separator = part.indexOf("=");
