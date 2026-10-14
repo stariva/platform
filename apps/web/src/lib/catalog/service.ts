@@ -1,10 +1,10 @@
 import { logger } from "@stariva/config";
 import { cache } from "react";
-import { fetchPublishedProducts } from "./catalog/products-db";
-import { fetchPublishedReviews } from "./catalog/reviews-db";
-import { isPurchasable } from "./in-stock";
-import type { Product, Review } from "./ozon-types";
-import { categories, sectionRank } from "./products";
+import { isPurchasable } from "@/lib/in-stock";
+import { categories, sectionRank } from "@/lib/products";
+import { fetchPublishedProducts } from "./products-db";
+import { fetchPublishedReviews } from "./reviews-db";
+import type { Product, Review } from "./types";
 
 export interface ProductsResult {
   products: Product[];
@@ -170,4 +170,4 @@ export async function getRatingSummary(
   return summarizeRatings(await getReviews({ productId }));
 }
 
-export { categories } from "./products";
+export { categories } from "@/lib/products";

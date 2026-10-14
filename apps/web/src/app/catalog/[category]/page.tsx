@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
-import { categories, getProductsByCategory } from "@/lib/ozon-service";
+import { categories, getProductsByCategory } from "@/lib/catalog/service";
 import {
   getCategoryBySlug,
   LAMPSHADE_SUBCATEGORY,

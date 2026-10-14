@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { CartValidationLine } from "@/lib/cart/validation";
+import { getProductsResult } from "@/lib/catalog/service";
 import {
   isCatalogProductBuyable,
   isMadeToOrderBuyable,
@@ -8,7 +9,6 @@ import {
   priceInKopecks,
 } from "@/lib/commerce/catalog";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
-import { getProductsResult } from "@/lib/ozon-service";
 
 export const runtime = "nodejs";
 

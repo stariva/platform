@@ -1,6 +1,6 @@
 import type { ProductRow } from "@stariva/db/schema";
+import type { Product } from "@/lib/catalog/types";
 import { toShortDescription } from "@/lib/ozon/transformers";
-import type { Product } from "@/lib/ozon-types";
 
 const PLACEHOLDER_IMAGE =
   "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg";
@@ -42,6 +42,8 @@ export function productRowToProduct(row: ProductRow): Product {
     careInstructions: row.careInstructions ?? undefined,
     color: row.color ?? undefined,
     sizes: row.sizes.length > 0 ? row.sizes : undefined,
+    bestFor: row.bestFor ?? undefined,
+    highlights: row.highlights.length > 0 ? row.highlights : undefined,
     featured: row.featured,
     seoTitle: row.seoTitle ?? undefined,
     seoDescription: row.seoDescription ?? undefined,

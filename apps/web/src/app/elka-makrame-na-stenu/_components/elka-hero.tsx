@@ -4,13 +4,12 @@ import { TrackedLink } from "@/components/stariva/tracked-link";
 import { ORDER_DEADLINE_LABEL } from "@/lib/elka/data";
 import { TREES_BUSINESS_ID, TREES_MODELS_ID } from "../_data";
 
-const facts = [
-  { value: "2–3 дня", label: "под заказ" },
-  { value: "100%", label: "хлопковый шнур" },
-  { value: "по РФ", label: "доставка" },
-];
-
-export function ElkaHero() {
+export function ElkaHero({ leadTime }: { leadTime: string }) {
+  const facts = [
+    { value: leadTime, label: "под заказ" },
+    { value: "100%", label: "хлопковый шнур" },
+    { value: "по РФ", label: "доставка" },
+  ];
   return (
     <section className="bg-parchment">
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12 pt-28 lg:pt-36 pb-16 lg:pb-24 grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-16 items-center">

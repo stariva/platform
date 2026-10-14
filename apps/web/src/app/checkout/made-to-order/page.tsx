@@ -335,7 +335,7 @@ export default function MadeToOrderCheckoutPage() {
                     <FormLabel>Город и доставка (необязательно)</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Например, Казань, пункт СДЭК"
+                        placeholder="Например, Казань, пункт выдачи Ozon"
                         disabled={submitting}
                         {...field}
                       />

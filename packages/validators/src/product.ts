@@ -26,6 +26,7 @@ export const PRODUCT_CATEGORIES = {
       pannos: "Панно",
       placemats: "Плейсменты",
       planters: "Игрушки и прочее",
+      trees: "Ёлки",
     },
   },
 } as const;
@@ -51,6 +52,7 @@ const subcategoryIds = [
   "pannos",
   "placemats",
   "planters",
+  "trees",
 ] as const;
 
 /** Максимум для integer в PostgreSQL, цена хранится в копейках. */
@@ -86,6 +88,16 @@ export const productFormSchema = z
     dimensions: optionalText(300),
     careInstructions: optionalText(1000),
     sizes: z.array(z.string().trim().min(1).max(20)).max(20),
+    bestFor: optionalText(300),
+    highlights: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1)
+          .max(200, "Каждое преимущество — не длиннее 200 символов"),
+      )
+      .max(10, "Не больше 10 преимуществ"),
     madeToOrder: z.boolean(),
     leadTimeMinDays: days,
     leadTimeMaxDays: days,

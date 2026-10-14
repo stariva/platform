@@ -2,7 +2,7 @@
 // Всё плетётся вручную под конкретного покупателя, поэтому в карточках товаров
 // показываем, что размер и цвет подбираются, а для одежды — снимаются мерки.
 
-import type { Product, ProductCategory } from "@/lib/ozon-types";
+import type { Product, ProductCategory } from "@/lib/catalog/types";
 
 export interface MeasurementField {
   id: string;
@@ -31,8 +31,11 @@ export interface MadeToOrderConfig {
   cta: string;
 }
 
+/** Срок изготовления, если у изделия в каталоге не задан свой. */
+const DEFAULT_LEAD_TIME_DAYS = { min: 2, max: 4 };
+
 /** Срок изготовления изделий на заказ — совпадает с FAQ. */
-export const MADE_TO_ORDER_DAYS = "2–4 дня";
+export const MADE_TO_ORDER_DAYS = formatLeadTime(DEFAULT_LEAD_TIME_DAYS);
 
 export const CUSTOM_SIZE = "По меркам";
 /** Прежний выбор «свой размер» для сумок и интерьера — в карточке его больше нет. */
@@ -170,13 +173,26 @@ function pluralDays(n: number) {
   return "дней";
 }
 
+function formatLeadTime({ min, max }: { min: number; max: number }): string {
+  const range = min === max ? `${max}` : `${min}–${max}`;
+  return `${range} ${pluralDays(max)}`;
+}
+
 /** Срок изготовления изделия: свой из каталога или общий MADE_TO_ORDER_DAYS. */
 export function madeToOrderLeadTime(
   product: Pick<Product, "leadTimeDays">,
 ): string {
-  const lead = product.leadTimeDays;
-  if (!lead) return MADE_TO_ORDER_DAYS;
-  const range =
-    lead.min === lead.max ? `${lead.max}` : `${lead.min}–${lead.max}`;
-  return `${range} ${pluralDays(lead.max)}`;
+  return formatLeadTime(product.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS);
+}
+
+/** Общий срок для нескольких изделий: от самого короткого до самого долгого. */
+export function madeToOrderLeadTimeOf(
+  products: Pick<Product, "leadTimeDays">[],
+): string {
+  const ranges = products.map((p) => p.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS);
+  if (ranges.length === 0) return MADE_TO_ORDER_DAYS;
+  return formatLeadTime({
+    min: Math.min(...ranges.map((r) => r.min)),
+    max: Math.max(...ranges.map((r) => r.max)),
+  });
 }

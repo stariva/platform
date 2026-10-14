@@ -1,4 +1,4 @@
-import type { ProductCategory, ProductSubcategory } from "../ozon-types";
+import type { ProductCategory, ProductSubcategory } from "../catalog/types";
 
 export function mapOfferIdToCategory(offerId: string): {
   category: ProductCategory;

@@ -1,4 +1,4 @@
-import type { Product } from "./ozon-types";
+import type { Product } from "./catalog/types";
 import { productSectionKey } from "./products";
 
 interface HomeCopy {

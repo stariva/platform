@@ -59,8 +59,9 @@ export const metadata: Metadata = {
 };
 
 export default async function ElkaMakramePage() {
-  const { items, workshop } = await loadElkaData("elka_workshop");
-  const reviewProductId = items.find((item) => item.product)?.product?.id;
+  const { trees: treesResult, workshop } = await loadElkaData("elka_workshop");
+  const trees = treesResult.products;
+  const reviewProductId = trees[0]?.id;
 
   return (
     <>
@@ -110,7 +111,7 @@ export default async function ElkaMakramePage() {
           message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по ёлке макраме."
           source="elka_faq"
         />
-        <ElkaReadyTrees items={items} />
+        <ElkaReadyTrees trees={trees} />
         <LegacyModelsRedirect />
       </main>
       <Footer />

@@ -1,4 +1,6 @@
+import type { Product } from "@/lib/catalog/types";
 import { ORDER_DEADLINE_LABEL } from "@/lib/elka/data";
+import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 
 /** Своё у страницы готовых ёлок; общее с мастер-классом — в lib/elka. */
 
@@ -86,15 +88,47 @@ export const COMPARISON = [
   },
 ];
 
-export const BUSINESS_POINTS = [
-  {
-    title: "Два размера",
-    text: "70–75 × 150 см — для лобби и зала, 45 × 100 см — для ресепшена и небольших стен.",
-  },
-  {
-    title: "Спокойные оттенки",
-    text: "Бежевый, натуральный, молочный и хаки — легко впишутся в интерьер.",
-  },
+const lowerFirst = (text: string) =>
+  text.charAt(0).toLowerCase() + text.slice(1);
+const upperFirst = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Размеры и оттенки — из ёлок в базе, остальное про работу с бизнесом. */
+export function businessPoints(trees: Product[]) {
+  const sizes = trees
+    .filter((tree) => tree.dimensions)
+    .map((tree) =>
+      tree.bestFor
+        ? `${tree.dimensions} — ${lowerFirst(tree.bestFor)}`
+        : tree.dimensions,
+    );
+  const colors = [
+    ...new Set(
+      trees.flatMap((tree) =>
+        (tree.color ?? "")
+          .split(",")
+          .map((color) => color.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ),
+  ];
+  return [
+    ...(sizes.length > 0
+      ? [{ title: "Размеры", text: `${sizes.join("; ")}.` }]
+      : []),
+    ...(colors.length > 0
+      ? [
+          {
+            title: "Спокойные оттенки",
+            text: `${upperFirst(colors.join(", "))} — легко впишутся в интерьер.`,
+          },
+        ]
+      : []),
+    ...BUSINESS_TERMS,
+  ];
+}
+
+const BUSINESS_TERMS = [
   {
     title: "Партия для сети",
     text: "Одинаковые ёлки для нескольких филиалов или номерного фонда отеля.",
@@ -105,21 +139,41 @@ export const BUSINESS_POINTS = [
   },
 ];
 
-export const FAQ = [
-  {
-    question: "Ёлка успеет к Новому году?",
-    answer: `Да. Под заказ ёлка плетётся 2–3 рабочих дня, доставка по России — 2–7 дней. Чтобы точно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Ёлка из наличия уходит в доставку на следующий день.`,
-  },
+/** Размеры и сроки в ответах — из ёлок в базе. */
+export function buildFaq(trees: Product[]) {
+  const sizes = trees
+    .filter((tree) => tree.dimensions)
+    .map((tree) =>
+      tree.color
+        ? `${tree.dimensions} (${lowerFirst(tree.color)})`
+        : tree.dimensions,
+    );
+  return [
+    {
+      question: "Ёлка успеет к Новому году?",
+      answer: `Да. Под заказ ёлка плетётся ${madeToOrderLeadTimeOf(trees)}, доставка по России — 2–7 дней. Чтобы точно получить ёлку к празднику, оформите заказ до ${ORDER_DEADLINE_LABEL}. Ёлка из наличия уходит в доставку на следующий день.`,
+    },
+    ...FAQ_HANGING,
+    {
+      question: "Можно ли заказать другой цвет или размер?",
+      answer:
+        sizes.length > 0
+          ? `Ёлки есть в таких размерах: ${sizes.join("; ")}. Других размеров нет.`
+          : "Размеры и оттенки ёлок уточните у Ольги — она подскажет, что можно сплести к празднику.",
+    },
+    ...FAQ_REST,
+  ];
+}
+
+const FAQ_HANGING = [
   {
     question: "Как повесить ёлку макраме на стену?",
     answer:
       "Ёлка вешается на стену за деревянную звезду — достаточно одного гвоздя, крючка или самоклеящегося крючка на 2–3 кг. Сверлить стену не обязательно.",
   },
-  {
-    question: "Можно ли заказать другой цвет или размер?",
-    answer:
-      "Ёлки есть в двух размерах: бежевая — 70–75 × 150 см (бежевый, натуральный или молочный оттенок) и хаки — 45 × 100 см. Других размеров нет.",
-  },
+];
+
+const FAQ_REST = [
   {
     question: "Можно ли заказать ёлки для отеля, ресторана или офиса?",
     answer:

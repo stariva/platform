@@ -7,6 +7,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { blogPosts } from "@/lib/blog";
+import { getProducts } from "@/lib/catalog/service";
 import { CONTACTS } from "@/lib/contacts";
 import {
   COLORS,
@@ -17,7 +18,7 @@ import {
   SIZES,
 } from "@/lib/custom-order/pricing";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
-import { getProducts } from "@/lib/ozon-service";
+import { productHref } from "@/lib/products";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
@@ -88,10 +89,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   interior: "Декор интерьера",
 };
 
-function productUrl(category: string, slug: string): string {
-  return `/catalog/${category}/${slug}`;
-}
-
 /** Очень простой нечёткий матч по русскому тексту. */
 function matches(haystack: string, needle: string): boolean {
   const h = haystack.toLowerCase();
@@ -105,7 +102,7 @@ function matches(haystack: string, needle: string): boolean {
 // ─── Определения инструментов ───────────────────────────────────────────────
 
 export const chatTools = {
-  // Поиск готовых изделий из каталога (товары Ozon).
+  // Поиск готовых изделий из каталога (таблица products).
   searchProducts: tool({
     description:
       "Найти изделия из каталога Stariva. inStock=true — есть в наличии, можно сразу купить на сайте; madeToOrder=true — можно сплести под заказ в размере и цвете клиента, оформляется через мастера (одно изделие может быть и тем, и другим); если оба false — изделия сейчас нет, предложи похожее или написать мастеру. Используй, когда клиент хочет что-то купить, спрашивает что есть в наличии, просит подобрать готовое изделие или интересуется ценой конкретного товара. Можно фильтровать по категории, ключевым словам и максимальной цене.",
@@ -166,7 +163,7 @@ export const chatTools = {
         image: p.images?.[0],
         category: p.category,
         categoryLabel: CATEGORY_LABELS[p.category] ?? p.category,
-        url: productUrl(p.category, p.slug),
+        url: productHref(p),
         inStock: p.inStock,
         madeToOrder: p.madeToOrder,
         shortDescription: p.shortDescription,
@@ -354,7 +351,7 @@ export const chatTools = {
       phone: CONTACTS.phone,
       schedule: "Пн–Сб с 10:00 до 20:00, воскресенье — выходной",
       master: "Ольга Карпычева, основатель бренда (с 2018 года)",
-      marketplace: "Готовые изделия — на Ozon",
+      shop: "Готовые изделия — на сайте: оплата онлайн, доставка в пункт выдачи Ozon",
     }),
   }),
 } as const;

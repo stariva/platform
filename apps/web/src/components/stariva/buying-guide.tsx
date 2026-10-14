@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Product } from "@/lib/ozon-types";
+import type { Product } from "@/lib/catalog/types";
 
 export function BuyingGuide({ product }: { product: Product }) {
   const lampshade = product.subcategory === "lampshades";

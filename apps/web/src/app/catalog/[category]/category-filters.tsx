@@ -13,9 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Product } from "@/lib/catalog/types";
 import { getProductMadeToOrder } from "@/lib/made-to-order";
-import type { Product } from "@/lib/ozon-types";
-import { formatPrice, productSectionKey } from "@/lib/products";
+import { formatPrice, productHref, productSectionKey } from "@/lib/products";
 
 interface CategoryFiltersProps {
   products: Product[];
@@ -186,10 +186,7 @@ function ProductCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.04 * Math.min(index, 8) }}
     >
-      <Link
-        href={`/catalog/${product.category}/${product.slug}`}
-        className="group block"
-      >
+      <Link href={productHref(product)} className="group block">
         {/* Image */}
         <div
           className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-sand"

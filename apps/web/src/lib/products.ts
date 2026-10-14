@@ -1,4 +1,4 @@
-import type { Category, Product } from "./ozon-types";
+import type { Category, Product } from "./catalog/types";
 
 export const categories: Category[] = [
   {
@@ -63,6 +63,7 @@ export const categories: Category[] = [
       { slug: "pannos", name: "Панно", categorySlug: "interior" },
       { slug: "placemats", name: "Плейсменты", categorySlug: "interior" },
       { slug: "planters", name: "Игрушки и прочее", categorySlug: "interior" },
+      { slug: "trees", name: "Ёлки", categorySlug: "interior" },
     ],
   },
 ];
@@ -139,6 +140,13 @@ export function sectionRank(
 ): number {
   const key = productSectionKey(product);
   return sectionFilters.findIndex((s) => s.slug === key);
+}
+
+/** Адрес карточки товара на витрине. */
+export function productHref(
+  product: Pick<Product, "category" | "slug">,
+): string {
+  return `/catalog/${product.category}/${product.slug}`;
 }
 
 export function getCategoryBySlug(slug: string): Category | undefined {

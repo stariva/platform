@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Product } from "./ozon-types";
+import type { Product } from "./catalog/types";
 import { productFeed, xmlEscape } from "./product-feed";
 
 const product: Product = {

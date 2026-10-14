@@ -17,15 +17,15 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { descriptionWithoutLead } from "@/lib/catalog/description-lead";
+import type { RatingSummary } from "@/lib/catalog/service";
+import type { Category, Product } from "@/lib/catalog/types";
 import { CONTACTS } from "@/lib/contacts";
 import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
 import {
   getProductMadeToOrder,
   madeToOrderLeadTime,
 } from "@/lib/made-to-order";
-import type { RatingSummary } from "@/lib/ozon-service";
-import type { Category, Product } from "@/lib/ozon-types";
-import { formatPrice, getProductSection } from "@/lib/products";
+import { formatPrice, getProductSection, productHref } from "@/lib/products";
 import { formatRating, pluralRatings, ratingSourcesLabel } from "@/lib/ratings";
 import { ProductGallery } from "./product-gallery";
 
@@ -619,7 +619,7 @@ export function ProductDetails({
                   transition={{ duration: 0.5, delay: 0.08 * i }}
                 >
                   <Link
-                    href={`/catalog/${p.category}/${p.slug}`}
+                    href={productHref(p)}
                     className="group block bg-parchment rounded-2xl overflow-hidden border border-espresso/8 hover:shadow-[0_8px_32px_rgba(44,36,27,0.10)] hover:-translate-y-0.5 transition-all duration-300"
                   >
                     <div className="relative aspect-[3/4] overflow-hidden bg-sand">

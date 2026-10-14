@@ -31,6 +31,8 @@ export const productSubcategory = pgEnum("product_subcategory", [
   "baskets",
   "totes",
   "crossbody",
+  // В конце: ADD VALUE дописывает значение последним
+  "trees",
 ]);
 
 export const productStatus = pgEnum("product_status", [
@@ -72,6 +74,9 @@ export const products = pgTable(
     dimensions: text("dimensions"),
     careInstructions: text("care_instructions"),
     sizes: text("sizes").array().notNull().default(sql`'{}'::text[]`),
+    // Текст для витрины: «Лучше всего для: …» и короткие преимущества
+    bestFor: text("best_for"),
+    highlights: text("highlights").array().notNull().default(sql`'{}'::text[]`),
 
     // ── Под заказ ──
     madeToOrder: boolean("made_to_order").notNull().default(true),

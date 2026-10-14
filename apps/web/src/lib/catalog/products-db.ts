@@ -1,6 +1,6 @@
 import { asc, db, eq } from "@stariva/db";
 import { products } from "@stariva/db/schema";
-import type { Product } from "@/lib/ozon-types";
+import type { Product } from "@/lib/catalog/types";
 import { productRowToProduct } from "./product-row";
 
 /** Опубликованные товары в порядке витрины. */

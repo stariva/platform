@@ -40,6 +40,13 @@ export interface OzonInfo {
 const selectClass =
   "border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
+/** Текст поля → список без пустых элементов. */
+const splitList = (value: string, separator: string) =>
+  value
+    .split(separator)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 const toNullableNumber = (value: unknown) =>
   value === "" || value === null || value === undefined ? null : Number(value);
 
@@ -58,6 +65,8 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   dimensions: "",
   careInstructions: "",
   sizes: [],
+  bestFor: "",
+  highlights: [],
   madeToOrder: true,
   leadTimeMinDays: null,
   leadTimeMaxDays: null,
@@ -392,12 +401,7 @@ export function ProductForm({
                     defaultValue={field.value.join(", ")}
                     // Не onBlur: при отправке по Enter blur может не случиться
                     onChange={(event) =>
-                      field.onChange(
-                        event.target.value
-                          .split(",")
-                          .map((size) => size.trim())
-                          .filter(Boolean),
-                      )
+                      field.onChange(splitList(event.target.value, ","))
                     }
                   />
                 </FieldRow>
@@ -412,6 +416,43 @@ export function ProductForm({
                 />
               </FieldRow>
             </div>
+            <div className="sm:col-span-2">
+              <FieldRow
+                label="Лучше всего для"
+                htmlFor="bestFor"
+                hint="Например: гостиная, лобби отеля, зал ресторана"
+                error={errors.bestFor?.message}
+              >
+                <Input id="bestFor" {...register("bestFor")} />
+              </FieldRow>
+            </div>
+            <Controller
+              control={control}
+              name="highlights"
+              render={({ field }) => (
+                <div className="sm:col-span-2">
+                  <FieldRow
+                    label="Преимущества"
+                    htmlFor="highlights"
+                    hint="По одному на строку, до 10. Сейчас показываются на карточках ёлок"
+                    error={
+                      errors.highlights?.message ??
+                      errors.highlights?.find?.((item) => item?.message)
+                        ?.message
+                    }
+                  >
+                    <Textarea
+                      id="highlights"
+                      rows={3}
+                      defaultValue={field.value.join("\n")}
+                      onChange={(event) =>
+                        field.onChange(splitList(event.target.value, "\n"))
+                      }
+                    />
+                  </FieldRow>
+                </div>
+              )}
+            />
           </CardContent>
         </Card>
 

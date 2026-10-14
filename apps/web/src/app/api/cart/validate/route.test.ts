@@ -1,8 +1,8 @@
 import { mock, test } from "bun:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import type { ProductsResult } from "@/lib/ozon-service";
-import type { Product } from "@/lib/ozon-types";
+import type { ProductsResult } from "@/lib/catalog/service";
+import type { Product } from "@/lib/catalog/types";
 
 const product: Product = {
   id: "ozon-1",
@@ -25,7 +25,7 @@ const product: Product = {
 
 let catalog: ProductsResult = { products: [], status: "available" };
 
-mock.module("@/lib/ozon-service", () => ({
+mock.module("@/lib/catalog/service", () => ({
   getProductsResult: async () => catalog,
 }));
 

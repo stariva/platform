@@ -1,4 +1,4 @@
-import type { Product } from "@/lib/ozon-types";
+import type { Product } from "@/lib/catalog/types";
 
 /**
  * Общее для страниц ёлки: мастер-класса (/elka-makrame) и готовых ёлок
@@ -29,63 +29,17 @@ export const WORKSHOP_RELEASE_LABEL = "20 октября";
 /** Выход мастер-класса по большой ёлке. */
 export const BONUS_RELEASE_LABEL = "3 ноября";
 
+/** Подкатегория каталога, товары которой показываются на страницах ёлки. */
+export const TREES_SUBCATEGORY = "trees";
+
+/** Подпись ёлки «70–75 × 150 см · Хаки» — одна на всех страницах. */
+export function treeDetails(tree: Pick<Product, "dimensions" | "color">) {
+  return [tree.dimensions, tree.color].filter(Boolean).join(" · ");
+}
+
 /** Заказ до этой даты успевает к празднику: 2–3 дня плетения и доставка. */
 export const ORDER_DEADLINE_DAY = 20;
 export const ORDER_DEADLINE_LABEL = `${ORDER_DEADLINE_DAY} декабря`;
-
-export interface TreeModel {
-  slug: string;
-  href: string;
-  name: string;
-  color: string;
-  size: string;
-  fallbackPrice: number;
-  fallbackOldPrice?: number;
-  fallbackImage: string;
-  bestFor: string;
-  highlights: string[];
-}
-
-/** Модель и её карточка на Ozon — карточки может не быть, тогда цена и фото из модели. */
-export interface ModelWithProduct {
-  model: TreeModel;
-  product?: Product;
-}
-
-export const TREE_MODELS: TreeModel[] = [
-  {
-    slug: "elka-panno-makrame-0687",
-    href: "/catalog/interior/elka-panno-makrame-0687",
-    name: "Ёлка в технике макраме, бежевая",
-    color: "Бежевый, натуральный, молочный",
-    size: "70–75 × 150 см",
-    fallbackPrice: 4200,
-    fallbackOldPrice: 11500,
-    fallbackImage: "/images/elka/elka-cream-interior.jpg",
-    bestFor: "Гостиная, лобби отеля, зал ресторана",
-    highlights: [
-      "Заметна с порога — работает как фотозона",
-      "Три оттенка: бежевый, натуральный, молочный",
-      "Вешается за звезду на один крючок — без сверления",
-    ],
-  },
-  {
-    slug: "elka-panno-makrame-8124",
-    href: "/catalog/interior/elka-panno-makrame-8124",
-    name: "Ёлка в технике макраме, хаки",
-    color: "Хаки",
-    size: "45 × 100 см",
-    fallbackPrice: 3400,
-    fallbackOldPrice: 10000,
-    fallbackImage: "/images/elka/elka-green-festive.jpg",
-    bestFor: "Детская, прихожая, салон, ресепшен",
-    highlights: [
-      "Компактная — для небольших стен",
-      "Глубокий природный оттенок",
-      "Вешается за звезду на один крючок — без сверления",
-    ],
-  },
-];
 
 /** Фото ёлки у покупателя с идеей украшения — для галереи на обеих страницах. */
 export interface CustomerLook {

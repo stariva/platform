@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
+import type { Product } from "@/lib/catalog/types";
 import {
   CUSTOM_SIZE,
   type MadeToOrderConfig,
@@ -40,7 +41,6 @@ import {
   PHOTO_COLOR,
   PHOTO_SIZE,
 } from "@/lib/made-to-order";
-import type { Product } from "@/lib/ozon-types";
 import { formatPrice } from "@/lib/products";
 
 interface MadeToOrderProps {

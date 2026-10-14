@@ -1,7 +1,8 @@
-import type { Product } from "./ozon-types";
+import type { Product } from "./catalog/types";
 import {
   categories,
   LAMPSHADE_SUBCATEGORY,
+  productHref,
   productSectionKey,
   sectionFilters,
 } from "./products";
@@ -49,7 +50,7 @@ export function productFeed(products: Product[], now = new Date()) {
             `<picture>${xmlEscape(new URL(src, SITE_URL).href)}</picture>`,
         )
         .join("");
-      return `<offer id="${xmlEscape(p.id)}" available="true"><url>${xmlEscape(`${SITE_URL}/catalog/${p.category}/${p.slug}`)}</url><price>${p.price.toFixed(2)}</price><currencyId>RUR</currencyId><categoryId>${categoryId}</categoryId>${pictures}<name>${xmlEscape(p.name)}</name><vendor>Stariva</vendor><description>${xmlEscape(p.description || p.shortDescription || p.name)}</description>${p.material ? `<param name="Материал">${xmlEscape(p.material)}</param>` : ""}${p.dimensions ? `<param name="Размеры">${xmlEscape(p.dimensions)}</param>` : ""}</offer>`;
+      return `<offer id="${xmlEscape(p.id)}" available="true"><url>${xmlEscape(`${SITE_URL}${productHref(p)}`)}</url><price>${p.price.toFixed(2)}</price><currencyId>RUR</currencyId><categoryId>${categoryId}</categoryId>${pictures}<name>${xmlEscape(p.name)}</name><vendor>Stariva</vendor><description>${xmlEscape(p.description || p.shortDescription || p.name)}</description>${p.material ? `<param name="Материал">${xmlEscape(p.material)}</param>` : ""}${p.dimensions ? `<param name="Размеры">${xmlEscape(p.dimensions)}</param>` : ""}</offer>`;
     });
   return `<?xml version="1.0" encoding="UTF-8"?><yml_catalog date="${now.toISOString()}"><shop><name>Stariva</name><company>Stariva</company><url>${SITE_URL}</url><currencies><currency id="RUR" rate="1"/></currencies><categories>${feedCategories.map((c, i) => `<category id="${i + 1}">${xmlEscape(c.name)}</category>`).join("")}</categories><offers>${offers.join("")}</offers></shop></yml_catalog>`;
 }

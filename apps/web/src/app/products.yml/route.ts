@@ -1,4 +1,4 @@
-import { getProducts } from "@/lib/ozon-service";
+import { getProducts } from "@/lib/catalog/service";
 import { productFeed } from "@/lib/product-feed";
 
 export const dynamic = "force-dynamic";

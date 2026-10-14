@@ -19,6 +19,8 @@ const row: ProductRow = {
   dimensions: null,
   careInstructions: null,
   sizes: [],
+  bestFor: null,
+  highlights: [],
   madeToOrder: true,
   leadTimeMinDays: null,
   leadTimeMaxDays: null,
@@ -41,6 +43,8 @@ test("converts kopecks to rubles and fills storefront defaults", () => {
   assert.equal(product.oldPrice, undefined);
   assert.equal(product.material, "100% хлопок");
   assert.equal(product.sizes, undefined);
+  assert.equal(product.bestFor, undefined);
+  assert.equal(product.highlights, undefined);
   assert.equal(product.shortDescription, "Первый абзац. Второй абзац.");
   assert.equal(product.ozonUrl, "https://www.ozon.ru/product/4804740135");
   assert.equal(product.leadTimeDays, undefined);
@@ -69,4 +73,14 @@ test("falls back to a placeholder image and exposes the lead time", () => {
     "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg",
   ]);
   assert.deepEqual(product.leadTimeDays, { min: 5, max: 7 });
+});
+
+test("passes the showcase texts through", () => {
+  const product = productRowToProduct({
+    ...row,
+    bestFor: "Гостиная, лобби отеля",
+    highlights: ["Заметна с порога", "Без сверления"],
+  });
+  assert.equal(product.bestFor, "Гостиная, лобби отеля");
+  assert.deepEqual(product.highlights, ["Заметна с порога", "Без сверления"]);
 });

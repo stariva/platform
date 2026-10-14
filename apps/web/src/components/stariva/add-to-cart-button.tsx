@@ -11,8 +11,8 @@ import {
   useCart,
 } from "@/lib/cart/cart-context";
 import { flyToCart } from "@/lib/cart/fly-to-cart";
+import type { Product } from "@/lib/catalog/types";
 import { isPurchasable } from "@/lib/in-stock";
-import type { Product } from "@/lib/ozon-types";
 import { cn } from "@/lib/utils";
 
 /** Сколько кнопка показывает «Добавлено», прежде чем вернуться в обычный вид. */
