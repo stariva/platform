@@ -20,7 +20,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       },
     }));
     const secret = crypto.randomUUID();
-    mock.module("@/env", () => ({ env: { JOBS_SECRET: secret } }));
+    process.env.JOBS_SECRET = secret;
     const { db, eq, sql } = await import("@stariva/db");
     const { videoRenditions, workshops } = await import("@stariva/db/schema");
     expect(await db.select({ id: workshops.id }).from(workshops)).toHaveLength(
@@ -33,18 +33,29 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       failRendition,
       PROCESSING_LEASE_MS,
     } = await import("./video-renditions");
-    const { POST: heartbeat } = await import(
-      "../../app/api/workshops/videos/heartbeat/route"
-    );
-    const { POST: uploadUrls } = await import(
-      "../../app/api/workshops/videos/upload-urls/route"
-    );
-    const { POST: complete } = await import(
-      "../../app/api/workshops/videos/complete/route"
-    );
-    const { POST: fail } = await import(
-      "../../app/api/workshops/videos/fail/route"
-    );
+    const { createRouterClient, ORPCError } = await import("@orpc/server");
+    const { webRouter } = await import("../router");
+    const api = createRouterClient(webRouter, {
+      context: {
+        headers: new Headers({ authorization: `Bearer ${secret}` }),
+      },
+    }).jobs.videos;
+    // Процедура → HTTP-статус, который увидел бы воркер
+    const handle =
+      (procedure: (input: never) => Promise<unknown>) =>
+      async (input: object) => ({
+        status: await procedure(input as never).then(
+          () => 200,
+          (error: unknown) => {
+            if (error instanceof ORPCError) return error.status;
+            throw error;
+          },
+        ),
+      });
+    const heartbeat = handle(api.heartbeat);
+    const uploadUrls = handle(api.uploadUrls);
+    const complete = handle(api.complete);
+    const fail = handle(api.fail);
     const id = crypto.randomUUID();
     const videoKey = `workshops/${id}/lesson.mp4`;
     const read = async () =>
@@ -57,12 +68,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
         .update(videoRenditions)
         .set({ leaseUntil: sql`now() - interval '1 second'` })
         .where(eq(videoRenditions.videoKey, videoKey));
-    const request = (body: object) =>
-      new Request("https://example.test/api/workshops/videos/test", {
-        method: "POST",
-        headers: { authorization: `Bearer ${secret}` },
-        body: JSON.stringify({ videoKey, ...body }),
-      });
+    const request = (body: object) => ({ videoKey, ...body });
 
     await db.insert(workshops).values({
       id,

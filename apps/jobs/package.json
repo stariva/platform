@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "build": "bun build src/index.ts --target=node --packages=external --outdir=dist",
+    "build": "bun build src/index.ts --target=node --external @hatchet-dev/typescript-sdk --outdir=dist",
     "dev": "bun --env-file=../../.env --watch src/index.ts",
     "start": "node dist/index.js",
     "format": "biome format .",
@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@hatchet-dev/typescript-sdk": "1.36.0",
+    "@orpc/client": "^1.15.6",
+    "@stariva/web-api": "workspace:*",
     "zod": "4.6.7"
   },
   "devDependencies": {
