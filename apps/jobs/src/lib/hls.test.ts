@@ -70,7 +70,10 @@ function uploadServer(delayMs: number) {
     Object.fromEntries(
       files.map((file) => [
         file,
-        { url: `${server.url}${file}`, contentType: "application/octet-stream" },
+        {
+          url: `${server.url}${file}`,
+          contentType: "application/octet-stream",
+        },
       ]),
     );
   return { received, getTargets, stop: () => server.stop(true) };
@@ -129,9 +132,7 @@ describe.skipIf(process.platform === "win32")("segmentAndUpload", () => {
       // кусок, который ffmpeg дописывает после проверки, и на шаг таймера
       expect(peakBytes).toBeLessThan(pauseBytes + 2 * MB);
       const lines = log.mock.calls.map((call) => String(call[0]));
-      expect(lines.some((line) => line.includes("ffmpeg на паузе"))).toBe(
-        true,
-      );
+      expect(lines.some((line) => line.includes("ffmpeg на паузе"))).toBe(true);
       expect(lines.some((line) => line.includes("ffmpeg продолжает"))).toBe(
         true,
       );
