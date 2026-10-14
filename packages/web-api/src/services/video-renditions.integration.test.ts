@@ -1,6 +1,10 @@
 import { expect, mock, test } from "bun:test";
 
 // Use a migrated disposable database with an empty workshops table (remove seeds).
+// Run this file on its own: it points POSTGRES_URL at that database at run
+// time, and in a full run other files load @stariva/db before that happens.
+//   RENDITION_TEST_DATABASE_URL=postgres://…@127.0.0.1/stariva_rendition_test \
+//     bun test src/services/video-renditions.integration.test.ts
 test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
   "rendition attempts fence stale workers and isolate their uploads",
   async () => {
@@ -13,6 +17,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
     const uploadKeys: string[] = [];
     mock.module("@stariva/storage", () => ({
       ...storage,
+      isStorageConfigured: () => true,
       objectExists: (key: string) => playlistExists(key),
       createUploadUrl: async (key: string) => {
         uploadKeys.push(key);
@@ -31,6 +36,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       extendRenditionLease,
       failRendition,
       PROCESSING_LEASE_MS,
+      WORKER_LOST_ERROR,
     } = await import("./video-renditions");
     const { createRouterClient, ORPCError } = await import("@orpc/server");
     const { webRouter } = await import("../router");
@@ -205,6 +211,19 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       expect(failed?.leaseUntil?.getTime()).toBeGreaterThan(Date.now());
       await expire();
       expect(await claimNextVideo()).toBeNull();
+
+      // The worker vanished on the last attempt: the video must not stay
+      // "processing" forever with an empty reason.
+      await db
+        .update(videoRenditions)
+        .set({ status: "processing", error: null })
+        .where(eq(videoRenditions.videoKey, videoKey));
+      await expire();
+      expect(await claimNextVideo()).toBeNull();
+      const [abandoned] = await read();
+      expect(abandoned?.status).toBe("failed");
+      expect(abandoned?.error).toBe(WORKER_LOST_ERROR);
+      expect(abandoned?.attempts).toBe(3);
     } finally {
       await db
         .delete(videoRenditions)

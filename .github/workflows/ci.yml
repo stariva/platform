@@ -2,7 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: ["*"]
+    # "**", а не "*": одна звёздочка не матчит слеш, и PR в ветки вида
+    # claude/… (stacked PR) уходили без CI
+    branches: ["**"]
   push:
     branches: ["main"]
   merge_group:

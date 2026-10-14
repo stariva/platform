@@ -4,6 +4,19 @@ import { NodePgSession } from "drizzle-orm/node-postgres";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { Client } from "pg";
 
+const NON_TRANSACTIONAL_MARKER = /^-- migrate:non-transactional\r?\n/;
+
+/**
+ * Миграция помечена первой строкой `-- migrate:non-transactional`. На
+ * Windows-чекауте файлы приходят с CRLF: без `\r?` метку не узнавали, и
+ * CONCURRENTLY падал внутри транзакции.
+ */
+export function isNonTransactionalMigration(
+  firstStatement: string | undefined,
+): boolean {
+  return NON_TRANSACTIONAL_MARKER.test(firstStatement ?? "");
+}
+
 export async function migrate(
   client: Client,
   migrationsFolder = fileURLToPath(
@@ -27,7 +40,7 @@ export async function migrate(
     Record<string, never>
   >(client, dialect, undefined);
   for (const migration of readMigrationFiles(config)) {
-    if (migration.sql[0]?.startsWith("-- migrate:non-transactional\n")) {
+    if (isNonTransactionalMigration(migration.sql[0])) {
       // Bootstrap the same journal as Drizzle, then run each statement in
       // autocommit mode (required by CONCURRENTLY and batch COMMITs).
       await dialect.migrate([], session, config);

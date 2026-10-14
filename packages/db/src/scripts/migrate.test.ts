@@ -9,7 +9,21 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "pg";
-import { fixOwnership, migrate } from "./migrate";
+import { fixOwnership, isNonTransactionalMigration, migrate } from "./migrate";
+
+test.each([
+  ["-- migrate:non-transactional\nDROP INDEX CONCURRENTLY x;", true],
+  // Windows-чекаут: файлы миграций приходят с CRLF
+  ["-- migrate:non-transactional\r\nDROP INDEX CONCURRENTLY x;", true],
+  ["CREATE TABLE x (id int);", false],
+  ["-- migrate:non-transactional-ish\nSELECT 1;", false],
+  [undefined, false],
+] as const)(
+  "recognises the non-transactional marker in %p",
+  (sql, expected) => {
+    expect(isNonTransactionalMigration(sql)).toBe(expected);
+  },
+);
 
 test.each(["110022", "90624", "invalid"])(
   "rejects server version %s before any schema writes",
