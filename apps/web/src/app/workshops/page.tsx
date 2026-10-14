@@ -172,7 +172,6 @@ function WorkshopCard({ workshop }: { workshop: Workshop }) {
 
 export default async function WorkshopsPage() {
   const workshops = await fetchPublishedWorkshops();
-  const featured = workshops.filter((w) => w.featured);
   const _rest = workshops.filter((w) => !w.featured);
 
   return (
@@ -273,23 +272,6 @@ export default async function WorkshopsPage() {
       </div>
 
       <main className="max-w-6xl mx-auto px-6 md:px-10 py-16 md:py-20">
-        {/* Featured */}
-        {featured.length > 0 && (
-          <section className="mb-16">
-            <div className="flex items-baseline gap-4 mb-8">
-              <h2 className="font-serif text-3xl text-espresso">
-                Популярные курсы
-              </h2>
-              <div className="h-px flex-1 bg-espresso/10" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {featured.map((w) => (
-                <WorkshopCard key={w.slug} workshop={w} />
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* Category sections */}
         {(["lampshades", "clothing", "interior"] as WorkshopCategory[]).map(
           (cat) => {
