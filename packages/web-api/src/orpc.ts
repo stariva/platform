@@ -3,6 +3,8 @@ import type { Session } from "@stariva/auth";
 import { logger } from "@stariva/config";
 import {
   type CustomOrderRequest,
+  type LessonVideoResult,
+  type MaterialUrlResult,
   type ReminderSweepResult,
   webContract,
 } from "./contract";
@@ -19,6 +21,32 @@ export interface WebServices {
   /** Уведомление мастеру о подписке: apps/web/src/lib/newsletter.ts */
   subscribeToNewsletter: (email: string, source?: string) => Promise<void>;
   customOrders: CustomOrderServices;
+  workshopFiles: WorkshopFileServices;
+  /** Сброс кэша страниц Next: revalidatePath живёт в витрине. */
+  revalidatePaths: (paths: string[]) => void;
+}
+
+/**
+ * Видео и файлы мастер-классов: каталог курсов, журнал просмотров и подпись
+ * HLS-пропуска живут в витрине (apps/web/src/lib/workshops/signed-media.ts).
+ */
+export interface WorkshopFileServices {
+  /**
+   * Ссылка на видео урока. Заголовки нужны для IP, user-agent и cookie
+   * сессии, к которой привязан HLS-пропуск.
+   */
+  signLessonVideo: (input: {
+    slug: string;
+    lessonId: string;
+    userId: string | null;
+    headers: Headers;
+  }) => Promise<LessonVideoResult>;
+  /** Ссылка на PDF-материал курса. */
+  signMaterial: (input: {
+    slug: string;
+    key: string;
+    userId: string | null;
+  }) => Promise<MaterialUrlResult>;
 }
 
 /** Заявки на изделия: apps/web/src/lib/custom-order */

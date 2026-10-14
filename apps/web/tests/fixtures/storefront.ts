@@ -28,8 +28,13 @@ const handler = new RPCHandler({
         () => body as typeof complete,
       ),
     },
+    revalidate: implement(webContract).admin.revalidate.handler(({ input }) => {
+      revalidated.push(input.paths);
+      return { revalidated: input.paths.length };
+    }),
   },
 });
+const revalidated: string[][] = [];
 const timeouts: number[] = [];
 const realSetTimeout = globalThis.setTimeout;
 globalThis.setTimeout = ((fn: () => void, ms?: number) => {
@@ -42,9 +47,6 @@ globalThis.fetch = mock(async (input, init) => {
   assert.equal(new URL(request.url).protocol, "https:");
   assert.equal(request.method, "POST");
   assert.equal(request.headers.get("authorization"), "Bearer fixture");
-  if (new URL(request.url).pathname === "/api/revalidate") {
-    return Response.json({ revalidated: true });
-  }
   const { matched, response } = await handler.handle(request, {
     prefix: WEB_RPC_PATH,
     context: {},
@@ -84,4 +86,8 @@ for (const url of [
   assert.equal(calls, before);
 }
 env.STOREFRONT_URL = "https://store.example";
-assert.equal(await revalidateStorefront(["/"]), true);
+assert.equal(await revalidateStorefront(["/", "/", "/catalog"]), true);
+assert.deepEqual(revalidated, [["/", "/catalog"]]);
+// Невалидный путь отбивает контракт витрины: кэш не сбрасывается
+assert.equal(await revalidateStorefront(["https://evil.example/"]), false);
+assert.equal(await revalidateStorefront([]), false);

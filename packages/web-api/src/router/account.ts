@@ -38,4 +38,62 @@ const saveLessonProgress = account.saveLessonProgress.handler(
   },
 );
 
-export const accountRouter = { workshopAccess, saveLessonProgress };
+const lessonVideo = account.lessonVideo.handler(
+  async ({ input, context, errors }) => {
+    const result = await context.services.workshopFiles.signLessonVideo({
+      ...input,
+      userId: context.session?.user.id ?? null,
+      headers: context.headers,
+    });
+    switch (result.status) {
+      case "ok":
+        return {
+          url: result.url,
+          type: result.type,
+          expiresIn: result.expiresIn,
+        };
+      case "lesson_not_found":
+        throw errors.LESSON_NOT_FOUND();
+      case "video_not_uploaded":
+        throw errors.VIDEO_NOT_UPLOADED();
+      case "files_unavailable":
+        throw errors.FILES_UNAVAILABLE();
+      case "not_released":
+        throw errors.LESSON_NOT_RELEASED({ message: result.message });
+      case "rate_limited":
+        throw errors.VIDEO_RATE_LIMITED();
+      case "unauthorized":
+        throw new ORPCError("UNAUTHORIZED");
+      case "forbidden":
+        throw new ORPCError("FORBIDDEN");
+    }
+  },
+);
+
+const materialUrl = account.materialUrl.handler(
+  async ({ input, context, errors }) => {
+    const result = await context.services.workshopFiles.signMaterial({
+      ...input,
+      userId: context.session?.user.id ?? null,
+    });
+    switch (result.status) {
+      case "ok":
+        return { url: result.url };
+      case "not_found":
+        throw errors.MATERIAL_NOT_FOUND();
+      case "files_unavailable":
+        throw errors.FILES_UNAVAILABLE();
+      case "unauthorized":
+        throw new ORPCError("UNAUTHORIZED");
+      case "forbidden":
+        throw new ORPCError("FORBIDDEN");
+    }
+  },
+);
+
+export const accountRouter = {
+  workshopAccess,
+  saveLessonProgress,
+  lessonVideo,
+  materialUrl,
+};

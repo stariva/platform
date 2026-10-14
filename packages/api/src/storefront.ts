@@ -14,20 +14,6 @@ function storefrontTarget() {
   return { origin: url.origin, secret };
 }
 
-function storefrontRequest(path: string, body: unknown, timeoutMs: number) {
-  const target = storefrontTarget();
-  if (!target) return null;
-  return fetch(new URL(path, target.origin), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${target.secret}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-}
-
 /** Типизированный клиент API витрины (@stariva/web-api) с секретом админки. */
 function storefrontApi(timeoutMs: number): WebClient | null {
   const target = storefrontTarget();
@@ -83,22 +69,20 @@ export async function pushStorefrontStockToOzon(
  * равно обновятся сами в течение часа.
  */
 export async function revalidateStorefront(paths: string[]): Promise<boolean> {
+  if (paths.length === 0) return false;
   try {
-    const res = await storefrontRequest(
-      "/api/revalidate",
-      { paths: [...new Set(paths)] },
-      5000,
-    );
-    if (!res) {
+    const api = storefrontApi(5000);
+    if (!api) {
       logger.warn("storefront.revalidate.not_configured");
       return false;
     }
-    if (!res.ok) {
-      logger.warn("storefront.revalidate.failed", { status: res.status });
-    }
-    return res.ok;
+    await api.admin.revalidate({ paths: [...new Set(paths)] });
+    return true;
   } catch (error) {
-    logger.warn("storefront.revalidate.error", { error: String(error) });
+    logger.warn("storefront.revalidate.failed", {
+      code: error instanceof ORPCError ? error.code : undefined,
+      error: String(error),
+    });
     return false;
   }
 }

@@ -10,6 +10,7 @@ import {
   webErrorStatusMap,
   webRouter,
 } from "@stariva/web-api";
+import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { issueFormToken } from "@/lib/auth/antispam";
 import { auth } from "@/lib/auth/server";
@@ -21,6 +22,7 @@ import {
 import { createCustomOrderServices } from "@/lib/custom-order/services";
 import { subscribeToNewsletter } from "@/lib/newsletter";
 import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
+import { workshopFileServices } from "@/lib/workshops/signed-media";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +42,14 @@ const services: WebServices = {
     dispatchRequest,
     after,
   }),
+  workshopFiles: workshopFileServices,
+  revalidatePaths(paths) {
+    for (const path of paths) {
+      // Шаблон маршрута вроде /catalog/[category]/[slug] сбрасывает все его страницы
+      if (path.includes("[")) revalidatePath(path, "page");
+      else revalidatePath(path);
+    }
+  },
 };
 
 const handler = new RPCHandler(webRouter, {
