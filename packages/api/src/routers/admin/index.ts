@@ -1,4 +1,5 @@
 import { adminChatsRouter } from "./chats";
+import { adminCrmRouter } from "./crm";
 import { adminOrdersRouter } from "./orders";
 import { adminProductsRouter } from "./products";
 import { adminRequestsRouter } from "./requests";
@@ -16,4 +17,5 @@ export const adminRouter = {
   users: adminUsersRouter,
   stats: adminStatsRouter,
   chats: adminChatsRouter,
+  crm: adminCrmRouter,
 };

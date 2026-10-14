@@ -2,6 +2,7 @@ export * from "./attribution";
 export * from "./auth";
 export * from "./chat";
 export * from "./commerce";
+export * from "./crm";
 export * from "./custom-order";
 export * from "./integrations";
 export * from "./post";

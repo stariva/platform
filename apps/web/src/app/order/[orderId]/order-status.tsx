@@ -169,7 +169,10 @@ export function OrderStatus({ orderId }: { orderId: string }) {
       : madeToOrderHints[order.status];
 
   return (
-    <div className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto">
+    <div
+      data-analytics-private
+      className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto"
+    >
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <span className="label-caps text-terracotta text-xs">
