@@ -43,6 +43,7 @@ import {
   STATUSES_BY_KIND,
   statusVariant,
 } from "./order-meta";
+import { ReceiptsPanel } from "./receipts-panel";
 
 type UpdateInput = Parameters<typeof orpc.admin.orders.update.call>[0];
 type OrderStatus = NonNullable<UpdateInput["status"]>;
@@ -287,6 +288,20 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
         </Card>
 
         {order.kind === "made_to_order" && <MadeToOrderStage order={order} />}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Чеки</CardTitle>
+            <CardDescription>
+              {order.kind === "made_to_order"
+                ? "Чек на каждую оплату: предоплату и доплату."
+                : "Чек на оплату заказа."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReceiptsPanel target={{ kind: "product", orderId: order.id }} />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

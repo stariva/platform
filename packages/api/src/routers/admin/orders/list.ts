@@ -1,7 +1,9 @@
 import {
+  count,
   desc,
   eq,
   inArray,
+  orderReceipts,
   productOrderItems,
   productOrders,
 } from "@stariva/db";
@@ -25,30 +27,41 @@ export const list = adminProcedure
       .orderBy(desc(productOrders.createdAt))
       .limit(ORDERS_LIMIT);
 
-    const items =
-      orders.length === 0
-        ? []
-        : await context.db
-            .select()
-            .from(productOrderItems)
-            .where(
-              inArray(
-                productOrderItems.orderId,
-                orders.map((order) => order.id),
-              ),
-            );
+    const orderIds = orders.map((order) => order.id);
+    const [items, receipts] =
+      orderIds.length === 0
+        ? [[], []]
+        : await Promise.all([
+            context.db
+              .select()
+              .from(productOrderItems)
+              .where(inArray(productOrderItems.orderId, orderIds)),
+            context.db
+              .select({
+                orderId: orderReceipts.productOrderId,
+                total: count(),
+              })
+              .from(orderReceipts)
+              .where(inArray(orderReceipts.productOrderId, orderIds))
+              .groupBy(orderReceipts.productOrderId),
+          ]);
+    const receiptCounts = new Map(
+      receipts.map((row) => [row.orderId, row.total]),
+    );
 
     const products = await loadItemProducts(
       context.db,
       items.map((item) => item.productSlug),
     );
 
-    return orders.map((order) =>
-      toAdminOrder(
+    return orders.map((order) => ({
+      ...toAdminOrder(
         order,
         items.filter((item) => item.orderId === order.id),
         [],
         products,
       ),
-    );
+      // Сколько чеков привязано — список подсвечивает оплаченные без чека
+      receiptCount: receiptCounts.get(order.id) ?? 0,
+    }));
   });

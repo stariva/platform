@@ -12,6 +12,7 @@ import {
   type VisitorInfo,
   visitorPlace,
 } from "~/components/visitors/visitor-card";
+import { WorkshopReceiptsButton } from "./workshop-receipts-button";
 
 const rub = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -52,6 +53,7 @@ export interface WorkshopOrderRow {
   createdAt: Date;
   paidAt: Date | null;
   telegramLinked: boolean;
+  receiptCount: number;
   preorder: boolean;
   utmSource: string | null;
   utmCampaign: string | null;
@@ -66,7 +68,7 @@ export function WorkshopOrdersTable({
   rows: WorkshopOrderRow[];
   showWorkshop: boolean;
 }) {
-  const columns = showWorkshop ? 6 : 5;
+  const columns = showWorkshop ? 7 : 6;
   return (
     <div className="rounded-lg border">
       <Table>
@@ -78,6 +80,7 @@ export function WorkshopOrdersTable({
             <TableHead>Когда</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead className="text-right">Сумма</TableHead>
+            <TableHead>Чек</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -155,6 +158,16 @@ export function WorkshopOrdersTable({
               </TableCell>
               <TableCell className="text-right align-top tabular-nums">
                 {rub.format(row.amount)}
+              </TableCell>
+              <TableCell className="align-top">
+                {(row.receiptCount > 0 || row.status === "paid") && (
+                  <WorkshopReceiptsButton
+                    orderId={row.id}
+                    title={`${row.userName} · ${row.workshopTitle ?? row.workshopSlug}`}
+                    count={row.receiptCount}
+                    needed={row.status === "paid" && row.receiptCount === 0}
+                  />
+                )}
               </TableCell>
             </TableRow>
           ))}

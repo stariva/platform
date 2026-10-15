@@ -70,6 +70,21 @@ export interface AdminOrderView {
     createdAt: string;
     paidAt: string | null;
   }[];
+  /** Сколько чеков привязано; есть только в списке заказов. */
+  receiptCount?: number;
+}
+
+/**
+ * Оплаченный заказ, к которому ещё не привязан ни один чек. Отменённые и
+ * возвращённые не подсвечиваем — там чек мог уже не понадобиться.
+ */
+export function needsReceipt(order: AdminOrderView): boolean {
+  return (
+    order.receiptCount === 0 &&
+    Boolean(order.paidAt || order.depositPaidAt) &&
+    order.status !== "canceled" &&
+    order.status !== "refunded"
+  );
 }
 
 type DateFields =

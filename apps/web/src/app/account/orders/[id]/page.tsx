@@ -24,9 +24,14 @@ export default async function AccountOrderPage({
     <ProductOrderView
       order={details.order}
       view={details.view}
+      receipts={details.receipts}
       paymentReturn={paymentReturn}
     />
   ) : (
-    <WorkshopOrderView view={details.view} paymentReturn={paymentReturn} />
+    <WorkshopOrderView
+      view={details.view}
+      receipts={details.receipts}
+      paymentReturn={paymentReturn}
+    />
   );
 }
