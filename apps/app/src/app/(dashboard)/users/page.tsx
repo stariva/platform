@@ -124,7 +124,11 @@ export default async function UsersPage({
                           href={`/users/${item.id}`}
                           className="font-medium hover:underline"
                         >
-                          {item.name}
+                          {item.name?.trim() || (
+                            <span className="text-muted-foreground">
+                              Без имени
+                            </span>
+                          )}
                         </Link>
                         {item.username && (
                           <div className="text-muted-foreground text-xs">
