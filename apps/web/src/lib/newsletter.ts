@@ -39,7 +39,7 @@ async function sendToTelegram(email: string, source?: string): Promise<void> {
   ].filter((l) => l !== "");
 
   const res = await telegramFetch(env.TELEGRAM_PROXY_URL)(
-    telegramApiUrl(token, "sendMessage", env.TG_API_PROXY_URL),
+    telegramApiUrl(token, "sendMessage"),
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

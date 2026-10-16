@@ -176,22 +176,7 @@ test("a failed channel is logged even when the other one delivered", async () =>
   assert.equal(errors.length, 1);
   assert.match(String(errors[0]?.[1]), /email_failed/);
 });
-test("Telegram requests go through the reverse proxy when configured", async () => {
-  const urls: string[] = [];
-  await deliverNotification(
-    notification,
-    { ...config, telegramApiUrl: "https://proxy.example.test/" },
-    fakeFetch((url) => {
-      urls.push(url);
-      return url.includes("resend")
-        ? Response.json({ id: "receipt" })
-        : Response.json({ ok: true });
-    }),
-  );
-  assert.ok(urls.includes("https://proxy.example.test/bottest/sendMessage"));
-  assert.ok(!urls.some((url) => url.includes("api.telegram.org")));
-});
-test("Telegram requests default to api.telegram.org without a proxy", async () => {
+test("Telegram requests go to api.telegram.org", async () => {
   const urls: string[] = [];
   await deliverNotification(
     notification,

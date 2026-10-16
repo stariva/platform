@@ -16,9 +16,7 @@ export interface Notification {
 export interface DeliveryConfig {
   telegramToken?: string;
   telegramChatId?: string;
-  /** Обратный прокси вместо api.telegram.org. */
-  telegramApiUrl?: string;
-  /** fetch для запросов к Telegram (например, через HTTP-прокси). */
+  /** fetch для запросов к Telegram (например, через HTTP-прокси 3proxy). */
   telegramFetch?: typeof fetch;
   /** Таймаут одного запроса к Telegram; по умолчанию 10 с. */
   telegramTimeoutMs?: number;
@@ -53,11 +51,7 @@ export async function deliverNotification(
         // Plain text chunks never break HTML entities or caption tags.
         for (let offset = 0; offset < message.length; offset += 3500) {
           const res = await telegramRequest(
-            telegramApiUrl(
-              config.telegramToken ?? "",
-              "sendMessage",
-              config.telegramApiUrl,
-            ),
+            telegramApiUrl(config.telegramToken ?? "", "sendMessage"),
             {
               method: "POST",
               signal: AbortSignal.timeout(config.telegramTimeoutMs ?? 10_000),
@@ -83,11 +77,7 @@ export async function deliverNotification(
             "inspiration",
           );
           const res = await telegramRequest(
-            telegramApiUrl(
-              config.telegramToken ?? "",
-              "sendDocument",
-              config.telegramApiUrl,
-            ),
+            telegramApiUrl(config.telegramToken ?? "", "sendDocument"),
             {
               method: "POST",
               body: form,
