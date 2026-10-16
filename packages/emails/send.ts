@@ -11,8 +11,15 @@ export const resend = env.RESEND_API_KEY
   ? new Resend(env.RESEND_API_KEY)
   : null;
 
+/** Файл во вложении письма (например, PDF-бриф мастер-класса). */
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+}
+
 export interface Emails {
   idempotencyKey?: string;
+  attachments?: EmailAttachment[];
   react: ReactNode;
   subject: string;
   to: string[];
@@ -32,6 +39,7 @@ export const sendEmail = async (email: Emails) => {
       to: email.to,
       html: await render(email.react),
       subject: email.subject,
+      ...(email.attachments?.length ? { attachments: email.attachments } : {}),
     };
     const transporter = nodemailer.createTransport({
       host: env.EMAIL_SANDBOX_HOST,
@@ -52,6 +60,7 @@ export const sendEmail = async (email: Emails) => {
       from: email.from ?? env.EMAIL_FROM,
       subject: email.subject,
       react: email.react,
+      ...(email.attachments?.length ? { attachments: email.attachments } : {}),
     },
     email.idempotencyKey ? { idempotencyKey: email.idempotencyKey } : undefined,
   );

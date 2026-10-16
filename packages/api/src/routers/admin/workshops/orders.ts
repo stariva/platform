@@ -17,6 +17,7 @@ import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
 import { workshopReceiptsExpected } from "../receipts/summary";
+import { briefMissing, briefSentAt, workshopHasBrief } from "./brief";
 
 /** Экранирует % и _ в поисковой строке, чтобы они искались как обычные символы. */
 function escapeLike(value: string) {
@@ -81,6 +82,8 @@ export const ordersList = adminProcedure
           createdAt: orders.createdAt,
           paidAt: orders.paidAt,
           telegramLinked: sql<boolean>`${orders.telegramChatId} is not null`,
+          hasBrief: workshopHasBrief,
+          briefSentAt,
           receiptCount: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id})::int`,
           receiptsUnsent: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id} and ${orderReceipts.emailedAt} is null and coalesce(${orders.contactEmail}, ${user.email}) <> '')::int`,
           attribution: orders.attribution,
@@ -109,6 +112,7 @@ export const ordersList = adminProcedure
           slug: orders.workshopSlug,
           title: workshops.title,
           paid: sql<number>`(count(*) filter (where ${orders.status} = 'paid'))::int`,
+          briefMissing: sql<number>`(count(*) filter (where ${briefMissing}))::int`,
         })
         .from(orders)
         .leftJoin(workshops, eq(workshops.slug, orders.workshopSlug))
@@ -141,6 +145,7 @@ export const ordersList = adminProcedure
         slug: row.slug,
         title: row.title ?? row.slug,
         paid: row.paid,
+        briefMissing: row.briefMissing,
       })),
     };
   });

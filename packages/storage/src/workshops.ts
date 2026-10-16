@@ -61,6 +61,20 @@ export function workshopMaterialKey(slug: string, fileName: string): string {
   return `${workshopStoragePrefix(slug)}/materials/${base || "file"}-${shortId()}.pdf`;
 }
 
+/**
+ * Имя PDF-материала во вложении письма — по подписи из админки:
+ * «Бриф «Ёлка макраме»» → «Бриф «Ёлка макраме».pdf».
+ */
+export function workshopMaterialFileName(label: string): string {
+  const base = label
+    .replace(/[\\/:*?"<>|\p{Cc}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\.pdf$/i, "")
+    .slice(0, 100);
+  return `${base || "Материалы"}.pdf`;
+}
+
 /** Ключ картинки курса в публичном бакете (хеш содержимого — кэш навсегда). */
 export function workshopImageKey(
   slug: string,

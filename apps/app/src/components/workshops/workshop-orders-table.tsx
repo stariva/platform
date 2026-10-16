@@ -12,6 +12,7 @@ import {
   type VisitorInfo,
   visitorPlace,
 } from "~/components/visitors/visitor-card";
+import { WorkshopBriefButton } from "./workshop-brief-button";
 import { WorkshopReceiptsButton } from "./workshop-receipts-button";
 
 const rub = new Intl.NumberFormat("ru-RU", {
@@ -53,6 +54,10 @@ export interface WorkshopOrderRow {
   createdAt: Date;
   paidAt: Date | null;
   telegramLinked: boolean;
+  /** У курса есть PDF-бриф. */
+  hasBrief: boolean;
+  /** Когда бриф ушёл письмом; null — не уходил. */
+  briefSentAt: Date | null;
   receiptCount: number;
   receiptsExpected: number;
   receiptsUnsent: number;
@@ -70,7 +75,7 @@ export function WorkshopOrdersTable({
   rows: WorkshopOrderRow[];
   showWorkshop: boolean;
 }) {
-  const columns = showWorkshop ? 7 : 6;
+  const columns = showWorkshop ? 8 : 7;
   return (
     <div className="rounded-lg border">
       <Table>
@@ -83,6 +88,7 @@ export function WorkshopOrdersTable({
             <TableHead>Статус</TableHead>
             <TableHead className="text-right">Сумма</TableHead>
             <TableHead>Чек</TableHead>
+            <TableHead>Бриф</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -169,6 +175,15 @@ export function WorkshopOrdersTable({
                     count={row.receiptCount}
                     needed={row.receiptCount < row.receiptsExpected}
                     unsent={row.receiptsUnsent > 0}
+                  />
+                )}
+              </TableCell>
+              <TableCell className="align-top">
+                {row.status === "paid" && row.hasBrief && (
+                  <WorkshopBriefButton
+                    orderId={row.id}
+                    sentAt={row.briefSentAt}
+                    buyer={row.contactEmail || row.userEmail}
                   />
                 )}
               </TableCell>

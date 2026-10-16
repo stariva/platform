@@ -10,13 +10,22 @@ import {
 import {
   StarivaWorkshopEmail,
   sendEmail,
+  sendWorkshopBriefEmail,
+  type WorkshopBriefFile,
   type WorkshopEmailKind,
 } from "@stariva/emails";
+import { loadWorkshopMaterials } from "@stariva/storage";
 import { and, between, eq, gte, inArray, isNotNull, or } from "drizzle-orm";
 import { baseEnv, env } from "@/env";
 import {
+  type DeliveryConfig,
+  deliverNotification,
+} from "@/lib/custom-order/delivery";
+import { notificationConfigured } from "@/lib/custom-order/inbox";
+import {
   claimOrderNotification,
   completeOrderNotification,
+  markOrderNotificationSent,
   type NotificationChannel,
   releaseOrderNotification,
   type WorkshopOrder,
@@ -27,11 +36,6 @@ import {
   isClientBotConfigured,
   sendClientMessage,
 } from "@/lib/telegram/client-bot";
-import {
-  type DeliveryConfig,
-  deliverNotification,
-} from "@/lib/custom-order/delivery";
-import { notificationConfigured } from "@/lib/custom-order/inbox";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
 import { googleCalendarUrl } from "./calendar";
 import { earnsPreorderBonus } from "./preorder-bonus";
@@ -126,9 +130,12 @@ function telegramText(kind: ReminderKind, target: Target): string {
   }
 }
 
+/** PDF-бриф письмом: вложением в письме о покупке или отдельным письмом. */
+const BRIEF = "brief";
+
 async function claimed(
   target: Target,
-  kind: WorkshopEmailKind,
+  kind: WorkshopEmailKind | typeof BRIEF,
   channel: NotificationChannel,
   send: () => Promise<void>,
 ): Promise<boolean> {
@@ -147,7 +154,27 @@ async function claimed(
 }
 
 /**
+ * PDF-бриф для вложения в письмо о покупке. Не скачался — письмо о покупке
+ * уйдёт без него: доступ к урокам важнее, а бриф дошлёт отдельным письмом
+ * ближайший прогон напоминаний.
+ */
+async function briefForBookedEmail(
+  target: Target,
+): Promise<WorkshopBriefFile[]> {
+  if (target.workshop.materialFiles.length === 0) return [];
+  try {
+    return await loadWorkshopMaterials(target.workshop.materialFiles);
+  } catch (error) {
+    logger.error("workshop.brief_attachment.failed", error, {
+      orderId: target.order.id,
+    });
+    return [];
+  }
+}
+
+/**
  * Отправляет письмо о покупке или напоминание, резервируя уведомление от дублей.
+ * К письму о покупке прикладывает PDF-бриф и отмечает, что бриф отправлен.
  * Возвращает false без токена доступа или резерва, true после отправки;
  * при ошибке освобождает резерв и пробрасывает ошибку для повторной попытки.
  */
@@ -157,11 +184,16 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
   const accessToken = order.accessToken;
   const release = upcomingRelease(workshop);
 
-  return claimed(target, kind, "email", () =>
-    sendEmail({
+  return claimed(target, kind, "email", async () => {
+    const brief = kind === "booked" ? await briefForBookedEmail(target) : [];
+    await sendEmail({
       idempotencyKey: `workshop:${order.id}:${kind}:email`,
       to: [target.email],
       subject: emailSubject(kind, target),
+      attachments: brief.map(({ filename, content }) => ({
+        filename,
+        content,
+      })),
       react: StarivaWorkshopEmail({
         kind,
         workshopTitle: workshop.title,
@@ -185,9 +217,43 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
           orderedAt: order.createdAt,
           releaseAt: workshop.releaseAt,
         }),
+        attachedFiles:
+          brief.length > 0 ? brief.map((file) => file.label) : undefined,
       }),
-    }).then(() => undefined),
-  );
+    });
+    if (brief.length === 0) return;
+    // Подтверждаем booked только вместе с brief. Повторная попытка использует
+    // тот же ключ идемпотентности письма о покупке.
+    try {
+      await markOrderNotificationSent(order.id, BRIEF, "email");
+    } catch (error) {
+      logger.error("workshop.brief_mark.failed", error, {
+        orderId: order.id,
+      });
+      throw error;
+    }
+  });
+}
+
+/**
+ * Отдельное письмо с PDF-брифом — если он не ушёл вложением в письме о
+ * покупке. Тот же ключ идемпотентности использует рассылка из админки.
+ */
+function deliverBrief(target: Target) {
+  const { order, workshop } = target;
+  if (!order.accessToken || workshop.materialFiles.length === 0) {
+    return Promise.resolve(false);
+  }
+  const accessUrl = workshopAccessUrl(order.accessToken);
+  return claimed(target, BRIEF, "email", async () => {
+    await sendWorkshopBriefEmail({
+      idempotencyKey: `workshop:${order.id}:${BRIEF}:email`,
+      to: target.email,
+      workshopTitle: workshop.title,
+      accessUrl,
+      files: await loadWorkshopMaterials(workshop.materialFiles),
+    });
+  });
 }
 
 interface StaffChannel {
@@ -351,6 +417,16 @@ export async function runWorkshopReminderSweep(now = new Date()) {
       order.paidAt.getTime() >= now.getTime() - REMINDER_LOOKBEHIND_MS;
     if (recentlyPaid && !isSent(target, "booked", "email")) {
       jobs.push(() => deliverEmail(target, "booked"));
+    }
+    // Бриф не приложился к письму о покупке — шлём отдельно. Ждём, пока уйдёт
+    // само письмо о покупке: вдруг бриф уйдёт вместе с ним.
+    if (
+      recentlyPaid &&
+      workshop.materialFiles.length > 0 &&
+      isSent(target, "booked", "email") &&
+      !isSent(target, BRIEF, "email")
+    ) {
+      jobs.push(() => deliverBrief(target));
     }
     if (order.paidAt.getTime() >= now.getTime() - STAFF_RETRY_MS) {
       for (const staffChannel of staffChannels) {

@@ -15,7 +15,13 @@ const target = {
     telegramChatId: null,
     telegramToken: null,
   },
-  workshop: { slug: "test", title: "Test", releaseAt: null, materials: [] },
+  workshop: {
+    slug: "test",
+    title: "Test",
+    releaseAt: null,
+    materials: [],
+    materialFiles: [],
+  },
   email: "buyer@example.test",
 };
 const telegramConfigured = !["email-only", "unconfigured"].includes(
@@ -49,6 +55,10 @@ mock.module("@stariva/emails", () => ({
   sendEmail: async () => {
     buyerEmails++;
   },
+  sendWorkshopBriefEmail: async () => {},
+}));
+mock.module("@stariva/storage", () => ({
+  loadWorkshopMaterials: async () => [],
 }));
 
 interface Notice {
@@ -94,6 +104,7 @@ mock.module("../../src/lib/payments/orders", () => ({
   releaseOrderNotification: async (id: string) => {
     notices.delete(id);
   },
+  markOrderNotificationSent: async () => {},
 }));
 
 const attempts = { telegram: 0, email: 0 };

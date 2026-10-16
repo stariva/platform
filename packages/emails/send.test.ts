@@ -19,6 +19,18 @@ mock.module("nodemailer", () => ({
 }));
 const { sendEmail } = await import("./send");
 
+test("passes attachments to Resend only when there are any", async () => {
+  const attachments = [
+    { filename: "Бриф.pdf", content: Buffer.from("%PDF-1.4") },
+  ];
+  const email = { to: ["buyer@example.test"], subject: "Test", react: null };
+  await sendEmail({ ...email, attachments });
+  await sendEmail({ ...email, attachments: [] });
+  expect(send.mock.calls[0]?.[0]).toMatchObject({ attachments });
+  expect(send.mock.calls[1]?.[0]).not.toHaveProperty("attachments");
+  send.mockClear();
+});
+
 test("passes the deterministic key as Resend options only", async () => {
   const email = {
     to: ["buyer@example.test"],
