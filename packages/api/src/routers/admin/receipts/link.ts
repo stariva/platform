@@ -31,7 +31,21 @@ export function parseReceiptLink(raw: string): ReceiptLink | null {
   };
 }
 
-export type ReceiptCheck = "found" | "not_found" | "unavailable";
+const CHECK_TIMEOUT_MS = 10_000;
+
+export type ReceiptCheck =
+  | { status: "found" }
+  | { status: "not_found" }
+  /** `reason` — что именно пошло не так, по-русски, чтобы показать в админке. */
+  | { status: "unavailable"; reason: string };
+
+/** Код сетевой ошибки (ENOTFOUND, ECONNRESET…) — fetch прячет его в `cause`. */
+function networkCode(error: unknown): string | null {
+  const cause = error instanceof Error ? error.cause : null;
+  const code =
+    cause && typeof cause === "object" && "code" in cause ? cause.code : null;
+  return typeof code === "string" ? code : null;
+}
 
 /**
  * Есть ли такой чек в ФНС: существующий отдаёт картинку, неизвестный — 422.
@@ -42,15 +56,32 @@ export async function checkReceipt(
   fetchImpl: typeof fetch = fetch,
 ): Promise<ReceiptCheck> {
   try {
-    const res = await fetchImpl(url, { signal: AbortSignal.timeout(10_000) });
+    const res = await fetchImpl(url, {
+      signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+    });
     await res.body?.cancel();
-    if (res.ok && res.headers.get("content-type")?.startsWith("image/")) {
-      return "found";
+    const type = res.headers.get("content-type") ?? "";
+    if (res.ok && type.startsWith("image/")) return { status: "found" };
+    if (res.status === 404 || res.status === 422) {
+      return { status: "not_found" };
     }
-    return res.status === 404 || res.status === 422
-      ? "not_found"
-      : "unavailable";
-  } catch {
-    return "unavailable";
+    return {
+      status: "unavailable",
+      reason: res.ok
+        ? `вместо картинки чека пришёл другой ответ (${type || "без типа"})`
+        : `сервис ответил ошибкой ${res.status}`,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      return {
+        status: "unavailable",
+        reason: `сервис не ответил за ${CHECK_TIMEOUT_MS / 1000} секунд`,
+      };
+    }
+    const code = networkCode(error);
+    return {
+      status: "unavailable",
+      reason: code ? `нет соединения (${code})` : "нет соединения",
+    };
   }
 }

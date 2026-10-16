@@ -45,21 +45,48 @@ const respond = (status: number, type: string) =>
     })) as unknown as typeof fetch;
 
 test("an image means the receipt exists", async () => {
-  expect(await checkReceipt(PRINT, respond(200, "image/png"))).toBe("found");
+  expect(await checkReceipt(PRINT, respond(200, "image/png"))).toEqual({
+    status: "found",
+  });
 });
 
 test("422 from the tax service means no such receipt", async () => {
-  expect(await checkReceipt(PRINT, respond(422, "application/json"))).toBe(
-    "not_found",
-  );
+  expect(await checkReceipt(PRINT, respond(422, "application/json"))).toEqual({
+    status: "not_found",
+  });
 });
 
-test("outages are not mistaken for a missing receipt", async () => {
-  expect(await checkReceipt(PRINT, respond(502, "text/html"))).toBe(
-    "unavailable",
-  );
-  const failing = (async () => {
-    throw new Error("network");
+const failingWith = (error: Error) =>
+  (async () => {
+    throw error;
   }) as unknown as typeof fetch;
-  expect(await checkReceipt(PRINT, failing)).toBe("unavailable");
+
+test("outages are not mistaken for a missing receipt, and say why", async () => {
+  expect(await checkReceipt(PRINT, respond(502, "text/html"))).toEqual({
+    status: "unavailable",
+    reason: "сервис ответил ошибкой 502",
+  });
+  expect(await checkReceipt(PRINT, respond(200, "text/html"))).toEqual({
+    status: "unavailable",
+    reason: "вместо картинки чека пришёл другой ответ (text/html)",
+  });
+
+  const timeout = new Error("timed out");
+  timeout.name = "TimeoutError";
+  expect(await checkReceipt(PRINT, failingWith(timeout))).toEqual({
+    status: "unavailable",
+    reason: "сервис не ответил за 10 секунд",
+  });
+
+  const refused = new Error("fetch failed", {
+    cause: Object.assign(new Error("refused"), { code: "ECONNREFUSED" }),
+  });
+  expect(await checkReceipt(PRINT, failingWith(refused))).toEqual({
+    status: "unavailable",
+    reason: "нет соединения (ECONNREFUSED)",
+  });
+  expect(await checkReceipt(PRINT, failingWith(new Error("x")))).toEqual({
+    status: "unavailable",
+    reason: "нет соединения",
+  });
 });

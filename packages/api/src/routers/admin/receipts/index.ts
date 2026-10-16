@@ -194,14 +194,18 @@ const attach = adminProcedure
     if (duplicate) throw duplicate;
 
     const check = await checkReceipt(link.url);
-    if (check === "not_found") {
+    if (check.status === "not_found") {
       throw new ORPCError("BAD_REQUEST", {
         message: "ФНС не нашла такой чек — проверьте ссылку",
       });
     }
-    if (check === "unavailable") {
+    if (check.status === "unavailable") {
+      logger.warn("receipts.check.unavailable", {
+        reason: check.reason,
+        url: link.url,
+      });
       throw new ORPCError("BAD_GATEWAY", {
-        message: "Сервис «Мой налог» не ответил, попробуйте через минуту",
+        message: `Не удалось проверить чек в «Мой налог»: ${check.reason}. Попробуйте через минуту`,
       });
     }
 
