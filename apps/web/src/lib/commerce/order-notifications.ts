@@ -6,6 +6,7 @@ import {
   type Notification,
 } from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
+import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { siteUrl } from "@/lib/workshops/notifications";
 import { paymentOutcome } from "./made-to-order-flow";
 import {
@@ -46,9 +47,7 @@ function send(
     photoType: null,
   };
   return deliverNotification(notification, {
-    telegramToken: env.TELEGRAM_BOT_TOKEN,
-    telegramChatId: env.TELEGRAM_CHAT_ID,
-    telegramApiUrl: env.TG_API_PROXY_URL,
+    ...telegramStaffConfig(),
     emailKey: baseEnv.RESEND_API_KEY,
     emailFrom: env.ORDER_EMAIL_FROM,
     emailTo: env.ORDER_EMAIL_TO,

@@ -36,6 +36,7 @@ import {
   isClientBotConfigured,
   sendClientMessage,
 } from "@/lib/telegram/client-bot";
+import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
 import { googleCalendarUrl } from "./calendar";
 import { earnsPreorderBonus } from "./preorder-bonus";
@@ -266,11 +267,7 @@ function configuredStaffChannels(): StaffChannel[] {
   if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
     channels.push({
       channel: "staff-telegram",
-      config: {
-        telegramToken: env.TELEGRAM_BOT_TOKEN,
-        telegramChatId: env.TELEGRAM_CHAT_ID,
-        telegramApiUrl: env.TG_API_PROXY_URL,
-      },
+      config: telegramStaffConfig(),
     });
   }
   if (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_FROM && env.ORDER_EMAIL_TO) {

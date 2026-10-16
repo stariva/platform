@@ -1,5 +1,6 @@
 import { env } from "@/env";
 import { telegramApiUrl } from "./api-url";
+import { telegramFetch } from "./fetch";
 
 /**
  * Клиентский бот: пишет покупателям, которые сами нажали «Напоминать в
@@ -34,25 +35,25 @@ export async function sendClientMessage(
   if (!token) throw new Error("telegram_client_bot_not_configured");
 
   const withButton = button?.url.startsWith("https://");
-  const res = await fetch(
+  const res = await telegramFetch(env.TELEGRAM_PROXY_URL)(
     telegramApiUrl(token, "sendMessage", env.TG_API_PROXY_URL),
     {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: html,
-      parse_mode: "HTML",
-      link_preview_options: { is_disabled: true },
-      ...(withButton
-        ? {
-            reply_markup: {
-              inline_keyboard: [[{ text: button?.text, url: button?.url }]],
-            },
-          }
-        : {}),
-    }),
-    signal: AbortSignal.timeout(10_000),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: html,
+        parse_mode: "HTML",
+        link_preview_options: { is_disabled: true },
+        ...(withButton
+          ? {
+              reply_markup: {
+                inline_keyboard: [[{ text: button?.text, url: button?.url }]],
+              },
+            }
+          : {}),
+      }),
+      signal: AbortSignal.timeout(10_000),
     },
   );
   if (!res.ok) {

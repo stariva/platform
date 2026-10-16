@@ -5,6 +5,7 @@ import {
   deliverNotification,
   missingEmailSettings,
 } from "./delivery";
+
 const notification = {
   id: "test-request",
   message: "Тест & <эскиз>",
