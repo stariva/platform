@@ -8,10 +8,10 @@ import { env } from "./env";
 import {
   type EmailAttachment,
   type OutgoingEmail,
-  requestedEmailProviders,
+  selectedEmailProviders,
 } from "./providers";
 
-export { type EmailAttachment, resend } from "./providers";
+export type { EmailAttachment } from "./providers";
 
 export interface Emails {
   idempotencyKey?: string;
@@ -68,15 +68,15 @@ export const sendEmailHtml = async (email: EmailHtml) =>
  * наружу, только когда не отправил ни один.
  */
 async function deliver(email: OutgoingEmail) {
-  const requested = requestedEmailProviders();
-  const chain = requested.filter((provider) => provider.isConfigured());
-  for (const provider of requested) {
-    if (!chain.includes(provider)) {
+  const chain = selectedEmailProviders().filter((provider) => {
+    const configured = provider.isConfigured();
+    if (!configured) {
       logger.warn(
         `${provider.label} is selected in EMAIL_PROVIDER / EMAIL_FALLBACK_PROVIDER but its credentials are missing.`,
       );
     }
-  }
+    return configured;
+  });
   if (chain.length === 0) {
     logger.warn(
       "No email provider is configured. Set RESEND_API_KEY or POSTBOX_ACCESS_KEY_ID and POSTBOX_SECRET_ACCESS_KEY in your .env file for emails to work.",
@@ -84,14 +84,14 @@ async function deliver(email: OutgoingEmail) {
     return;
   }
   let lastError: unknown;
-  for (const provider of chain) {
+  for (const [index, provider] of chain.entries()) {
     try {
       await provider.send(email);
       return;
     } catch (error) {
       logger.error(`${provider.label} failed to send email`, error, {
         to: email.to,
-        willRetryWith: chain[chain.indexOf(provider) + 1]?.label,
+        willRetryWith: chain[index + 1]?.label,
       });
       lastError = error;
     }

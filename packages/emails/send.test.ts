@@ -68,7 +68,9 @@ const email = { to: ["buyer@example.test"], subject: "Test", react: null };
 const realFetch = globalThis.fetch;
 const postbox = mock(
   async (_url: unknown, _init?: RequestInit) =>
-    new Response(JSON.stringify({ MessageId: "synthetic-id" }), { status: 200 }),
+    new Response(JSON.stringify({ MessageId: "synthetic-id" }), {
+      status: 200,
+    }),
 );
 
 function resetMocks() {
@@ -108,7 +110,10 @@ test("sends through the Postbox REST API when it is the default provider", async
         Simple: {
           Subject: { Data: "Test", Charset: "UTF-8" },
           Body: {
-            Html: { Data: expect.stringContaining("<!DOCTYPE html"), Charset: "UTF-8" },
+            Html: {
+              Data: expect.stringContaining("<!DOCTYPE html"),
+              Charset: "UTF-8",
+            },
           },
         },
       },
@@ -140,8 +145,14 @@ test("sends attachments to Postbox as base64, downloading linked ones", async ()
     expect(
       JSON.parse(String(sent?.[1]?.body)).Content.Simple.Attachments,
     ).toEqual([
-      { FileName: "Бриф.pdf", RawContent: Buffer.from("%PDF-1.4").toString("base64") },
-      { FileName: "Схема.pdf", RawContent: Buffer.from("%PDF-linked").toString("base64") },
+      {
+        FileName: "Бриф.pdf",
+        RawContent: Buffer.from("%PDF-1.4").toString("base64"),
+      },
+      {
+        FileName: "Схема.pdf",
+        RawContent: Buffer.from("%PDF-linked").toString("base64"),
+      },
     ]);
   } finally {
     postbox.mockImplementation(
@@ -174,7 +185,8 @@ test("falls back from Postbox to Resend when Postbox rejects the request", async
   env.EMAIL_PROVIDER = "postbox";
   env.EMAIL_FALLBACK_PROVIDER = "resend";
   postbox.mockImplementationOnce(
-    async () => new Response('{"message":"sender not verified"}', { status: 403 }),
+    async () =>
+      new Response('{"message":"sender not verified"}', { status: 403 }),
   );
   try {
     await sendEmail(email);

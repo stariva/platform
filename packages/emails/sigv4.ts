@@ -76,10 +76,7 @@ export function signRequest(input: SignInput): Record<string, string> {
   ].join("\n");
 
   const signingKey = hmac(
-    hmac(
-      hmac(hmac(`AWS4${input.secretAccessKey}`, date), region),
-      service,
-    ),
+    hmac(hmac(hmac(`AWS4${input.secretAccessKey}`, date), region), service),
     "aws4_request",
   );
   const signature = createHmac("sha256", signingKey)

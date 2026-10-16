@@ -26,33 +26,29 @@ export type OutgoingEmail = {
 } & ({ react: ReactNode } | { html: string });
 
 export interface EmailProvider {
-  name: EmailProviderName;
   label: string;
   isConfigured: () => boolean;
   send: (email: OutgoingEmail) => Promise<void>;
 }
 
-export const resend = env.RESEND_API_KEY
-  ? new Resend(env.RESEND_API_KEY)
-  : null;
-
-const withAttachments = (email: OutgoingEmail) =>
-  email.attachments?.length ? { attachments: email.attachments } : {};
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 const resendProvider: EmailProvider = {
-  name: "resend",
   label: "Resend",
   isConfigured: () => resend !== null,
   async send(email) {
     if (!resend) throw new Error("Resend is not configured");
-    const body = "html" in email ? { html: email.html } : { react: email.react };
+    const body =
+      "html" in email ? { html: email.html } : { react: email.react };
     const { error } = await resend.emails.send(
       {
         to: email.to,
         from: email.from,
         subject: email.subject,
         ...body,
-        ...withAttachments(email),
+        ...(email.attachments?.length
+          ? { attachments: email.attachments }
+          : {}),
       },
       email.idempotencyKey
         ? { idempotencyKey: email.idempotencyKey }
@@ -65,26 +61,36 @@ const resendProvider: EmailProvider = {
 const POSTBOX_REGION = "ru-central1";
 // В подписи запросов Postbox сервис называется ses, а не postbox.
 const POSTBOX_SERVICE = "ses";
+const POSTBOX_TIMEOUT_MS = 30_000;
+
+/** Ключ доступа сервисного аккаунта Postbox или null, если он не задан. */
+const postboxCredentials = () =>
+  env.POSTBOX_ACCESS_KEY_ID && env.POSTBOX_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: env.POSTBOX_ACCESS_KEY_ID,
+        secretAccessKey: env.POSTBOX_SECRET_ACCESS_KEY,
+      }
+    : null;
 
 /** Postbox принимает вложения только содержимым (base64): ссылки качаем сами. */
 async function postboxAttachment(attachment: EmailAttachment) {
+  let content: Buffer;
   if ("content" in attachment) {
-    return {
-      FileName: attachment.filename,
-      RawContent: attachment.content.toString("base64"),
-    };
-  }
-  const res = await fetch(attachment.path, {
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) {
-    throw new Error(
-      `Attachment ${attachment.filename} download failed: HTTP ${res.status}`,
-    );
+    content = attachment.content;
+  } else {
+    const res = await fetch(attachment.path, {
+      signal: AbortSignal.timeout(POSTBOX_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      throw new Error(
+        `Attachment ${attachment.filename} download failed: HTTP ${res.status}`,
+      );
+    }
+    content = Buffer.from(await res.arrayBuffer());
   }
   return {
     FileName: attachment.filename,
-    RawContent: Buffer.from(await res.arrayBuffer()).toString("base64"),
+    RawContent: content.toString("base64"),
   };
 }
 
@@ -94,14 +100,11 @@ async function postboxAttachment(attachment: EmailAttachment) {
  * postbox.sender; адрес отправителя должен быть подтверждён в Postbox.
  */
 const postboxProvider: EmailProvider = {
-  name: "postbox",
   label: "Yandex Postbox",
-  isConfigured: () =>
-    Boolean(env.POSTBOX_ACCESS_KEY_ID && env.POSTBOX_SECRET_ACCESS_KEY),
+  isConfigured: () => postboxCredentials() !== null,
   async send(email) {
-    if (!env.POSTBOX_ACCESS_KEY_ID || !env.POSTBOX_SECRET_ACCESS_KEY) {
-      throw new Error("Postbox is not configured");
-    }
+    const credentials = postboxCredentials();
+    if (!credentials) throw new Error("Postbox is not configured");
     const html = "html" in email ? email.html : await render(email.react);
     const attachments = email.attachments?.length
       ? await Promise.all(email.attachments.map(postboxAttachment))
@@ -124,8 +127,7 @@ const postboxProvider: EmailProvider = {
       url,
       headers: { "content-type": "application/json" },
       body,
-      accessKeyId: env.POSTBOX_ACCESS_KEY_ID,
-      secretAccessKey: env.POSTBOX_SECRET_ACCESS_KEY,
+      ...credentials,
       region: POSTBOX_REGION,
       service: POSTBOX_SERVICE,
     });
@@ -134,7 +136,7 @@ const postboxProvider: EmailProvider = {
       method: "POST",
       headers,
       body,
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(POSTBOX_TIMEOUT_MS),
     });
     if (!res.ok) {
       const details = (await res.text().catch(() => "")).slice(0, 500);
@@ -149,8 +151,8 @@ const providers: Record<EmailProviderName, EmailProvider> = {
 };
 
 /** Провайдеры по порядку попыток: основной (EMAIL_PROVIDER), затем запасной. */
-export function requestedEmailProviders(): EmailProvider[] {
-  const names = [env.EMAIL_PROVIDER ?? "resend", env.EMAIL_FALLBACK_PROVIDER];
+export function selectedEmailProviders(): EmailProvider[] {
+  const names = [env.EMAIL_PROVIDER, env.EMAIL_FALLBACK_PROVIDER];
   return [...new Set(names)]
     .filter((name): name is EmailProviderName => Boolean(name))
     .map((name) => providers[name]);
