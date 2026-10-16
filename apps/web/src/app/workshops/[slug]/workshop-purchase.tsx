@@ -28,6 +28,8 @@ interface WorkshopPurchaseProps {
   onBuyClick?: () => void;
   /** Цель аналитики для серверных страниц, где функцию в onBuyClick не передать. */
   buyGoal?: string;
+  /** Предзаказ: уроки откроются позже, поэтому обещаем напоминание о старте. */
+  preorder?: boolean;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -63,6 +65,7 @@ export function WorkshopPurchase({
   buyLabel,
   onBuyClick,
   buyGoal,
+  preorder = false,
 }: WorkshopPurchaseProps) {
   const { data: session, isPending: sessionPending } = useSession();
   const [owned, setOwned] = useState<boolean | null>(null);
@@ -261,8 +264,9 @@ export function WorkshopPurchase({
               </p>
             ) : null}
             <p id={`${emailId}-hint`} className="text-[13px] text-taupe mt-1.5">
-              Без регистрации и пароля: пришлём ссылку на уроки и напомним о
-              старте.
+              {preorder
+                ? "Без регистрации и пароля: пришлём ссылку на уроки и напомним о старте."
+                : "Без регистрации и пароля: пришлём ссылку на уроки на этот email."}
             </p>
           </div>
           <ConsentCheckbox

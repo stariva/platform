@@ -629,6 +629,7 @@ export default async function WorkshopDetailPage({
                         : undefined
                     }
                     buyGoal={preorder ? "workshop_preorder" : undefined}
+                    preorder={Boolean(preorder)}
                   />
 
                   <p className="text-center text-xs text-taupe leading-relaxed">

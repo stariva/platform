@@ -21,6 +21,7 @@ export function WorkshopPreorderButton({
       price={price}
       title={title}
       returnPath={`${WORKSHOP_PATH}#${WORKSHOP_SECTION_ID}`}
+      preorder
       buyLabel={`Оформить предзаказ за ${formatPrice(price)}`}
       onBuyClick={() => reachGoal("elka_workshop_preorder", { price })}
     />
