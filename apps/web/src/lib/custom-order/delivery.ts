@@ -20,6 +20,8 @@ export interface DeliveryConfig {
   telegramApiUrl?: string;
   /** fetch для запросов к Telegram (например, через HTTP-прокси). */
   telegramFetch?: typeof fetch;
+  /** Таймаут одного запроса к Telegram; по умолчанию 10 с. */
+  telegramTimeoutMs?: number;
   emailKey?: string;
   emailFrom?: string;
   emailTo?: string;
@@ -58,7 +60,7 @@ export async function deliverNotification(
             ),
             {
               method: "POST",
-              signal: AbortSignal.timeout(10_000),
+              signal: AbortSignal.timeout(config.telegramTimeoutMs ?? 10_000),
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 chat_id: config.telegramChatId,
@@ -87,7 +89,13 @@ export async function deliverNotification(
               "sendDocument",
               config.telegramApiUrl,
             ),
-            { method: "POST", body: form, signal: AbortSignal.timeout(15_000) },
+            {
+              method: "POST",
+              body: form,
+              signal: AbortSignal.timeout(
+                (config.telegramTimeoutMs ?? 10_000) + 5_000,
+              ),
+            },
           );
           if (!res.ok || !(await res.json()).ok)
             throw new Error("telegram_photo_failed");

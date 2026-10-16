@@ -53,7 +53,7 @@ export async function sendClientMessage(
             }
           : {}),
       }),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(env.TELEGRAM_PROXY_URL ? 30_000 : 10_000),
     },
   );
   if (!res.ok) {
