@@ -6,7 +6,7 @@ import {
   productOrderItems,
   productOrders,
 } from "@stariva/db/schema";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getProductsResult } from "@/lib/catalog/service";
 import {
   type MadeToOrderPaymentType,
@@ -183,7 +183,7 @@ export async function listAccountOrders(
 /** Чек НПД из «Мой налог», привязанный к заказу. */
 export interface AccountReceipt {
   number: string;
-  /** Картинка чека на сайте ФНС. */
+  /** Картинка чека: наша копия, а если её нет — на сайте ФНС. */
   url: string;
 }
 
@@ -199,7 +199,10 @@ async function receiptsOf(
   orderId: string,
 ): Promise<AccountReceipt[]> {
   return db
-    .select({ number: orderReceipts.number, url: orderReceipts.url })
+    .select({
+      number: orderReceipts.number,
+      url: sql<string>`coalesce(${orderReceipts.imageUrl}, ${orderReceipts.url})`,
+    })
     .from(orderReceipts)
     .where(eq(column, orderId))
     .orderBy(asc(orderReceipts.createdAt));

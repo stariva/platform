@@ -13,6 +13,12 @@ import {
   workshops,
 } from "@stariva/db";
 import { sendReceiptEmail } from "@stariva/emails";
+import {
+  detectImageType,
+  isPublicStorageConfigured,
+  receiptImageKey,
+  uploadPublicObject,
+} from "@stariva/storage";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -72,10 +78,56 @@ function targetOf(receipt: ReceiptRow): Target {
     : { kind: "workshop", orderId: receipt.workshopOrderId ?? "" };
 }
 
+/** Картинка чека для покупателя: наша копия, а если её нет — на сервисе ФНС. */
+const receiptImage = (receipt: ReceiptRow) => receipt.imageUrl ?? receipt.url;
+
+/**
+ * Кладёт копию картинки чека в наш бакет и возвращает её адрес. Без бакета
+ * или при сбое — null: чек остаётся со ссылкой на ФНС, привязка не срывается.
+ */
+async function storeCopy(
+  receipt: Pick<ReceiptRow, "inn" | "number">,
+  image: Uint8Array,
+): Promise<string | null> {
+  const contentType = detectImageType(image);
+  if (!contentType || !isPublicStorageConfigured()) return null;
+  try {
+    return await uploadPublicObject(
+      receiptImageKey(receipt.inn, receipt.number, contentType),
+      image,
+      contentType,
+    );
+  } catch (error) {
+    logger.error("receipts.copy.failed", error, {
+      inn: receipt.inn,
+      number: receipt.number,
+    });
+    return null;
+  }
+}
+
+/**
+ * Чеку, привязанному до появления копий, снимает копию сейчас — пока ФНС
+ * отвечает. Не получилось — чек уходит со ссылкой на ФНС, как раньше.
+ */
+async function ensureCopy(db: Database, receipt: ReceiptRow) {
+  if (receipt.imageUrl) return receipt;
+  const check = await checkReceipt(receipt.url, { attempts: 2 });
+  if (check.status !== "found") return receipt;
+  const imageUrl = await storeCopy(receipt, check.image);
+  if (!imageUrl) return receipt;
+  const [updated] = await db
+    .update(orderReceipts)
+    .set({ imageUrl })
+    .where(eq(orderReceipts.id, receipt.id))
+    .returning();
+  return updated ?? receipt;
+}
+
 const toReceipt = (receipt: ReceiptRow) => ({
   id: receipt.id,
   number: receipt.number,
-  url: receipt.url,
+  url: receiptImage(receipt),
   createdAt: receipt.createdAt,
   emailedAt: receipt.emailedAt,
   emailedTo: receipt.emailedTo,
@@ -87,18 +139,19 @@ const toReceipt = (receipt: ReceiptRow) => ({
  */
 async function emailReceipt(
   db: Database,
-  receipt: ReceiptRow,
+  stored: ReceiptRow,
   order: { to: string | null; subject: string },
 ): Promise<{ receipt: ReceiptRow; emailError: string | null }> {
   if (!order.to) {
-    return { receipt, emailError: "У покупателя нет email" };
+    return { receipt: stored, emailError: "У покупателя нет email" };
   }
+  const receipt = await ensureCopy(db, stored);
   try {
     await sendReceiptEmail({
       to: order.to,
       subject: order.subject,
       receiptNumber: receipt.number,
-      receiptUrl: receipt.url,
+      receiptUrl: receiptImage(receipt),
     });
   } catch (error) {
     logger.error("receipts.email.failed", error, { receiptId: receipt.id });
@@ -209,6 +262,8 @@ const attach = adminProcedure
       });
     }
 
+    const imageUrl = await storeCopy(link, check.image);
+
     const [receipt] = await context.db
       .insert(orderReceipts)
       .values({
@@ -217,6 +272,7 @@ const attach = adminProcedure
         inn: link.inn,
         number: link.number,
         url: link.url,
+        imageUrl,
       })
       .onConflictDoNothing()
       .returning();
