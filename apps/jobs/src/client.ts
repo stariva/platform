@@ -2,6 +2,12 @@ import { HatchetClient } from "@hatchet-dev/typescript-sdk/v1";
 // Сначала проверка окружения: без неё клиент упал бы с менее понятной ошибкой
 import "./env";
 
+// Токен читает SDK сам; проверяем здесь, потому что env.ts общий с Trigger.dev,
+// где Hatchet не нужен
+if (!process.env.HATCHET_CLIENT_TOKEN) {
+  throw new Error("Не задан HATCHET_CLIENT_TOKEN");
+}
+
 /**
  * Общий клиент Hatchet. Токен берётся из HATCHET_CLIENT_TOKEN автоматически
  * (облако https://cloud.onhatchet.run → Settings → API Tokens или свой движок).

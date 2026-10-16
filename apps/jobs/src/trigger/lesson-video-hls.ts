@@ -1,54 +1,44 @@
-import { ConcurrencyLimitStrategy } from "@hatchet-dev/typescript-sdk/v1";
 import { safe } from "@orpc/client";
 import { AttemptLostError } from "@stariva/web-api/contract";
-import { hatchet } from "../client";
+import { schedules } from "@trigger.dev/sdk";
 import { probe, segmentAndUpload, withTempDir } from "../lib/hls";
 import { webApi } from "../lib/web-api";
 
 // Больше за один прогон не берём: следующий прогон через 10 минут доберёт
 const MAX_VIDEOS_PER_RUN = 5;
-// Как часто воркер сообщает сайту, что жив (аренда на сайте — 20 минут)
+// Как часто задача сообщает сайту, что жива (аренда на сайте — 20 минут)
 const HEARTBEAT_MS = 5 * 60_000;
 
 /**
- * Нарезка видео уроков в HLS — каждые 10 минут.
+ * Нарезка видео уроков в HLS — каждые 10 минут, в облаке Trigger.dev.
  *
  * Сайт держит очередь (таблица video_renditions) и выдаёт ссылки: на
- * исходник в бакете и на загрузку кусков. Воркер только запускает ffmpeg,
- * доступа к базе и ключей от бакета у него нет. Пока видео не нарезано,
+ * исходник в бакете и на загрузку кусков. Задача только запускает ffmpeg,
+ * доступа к базе и ключей от бакета у неё нет. Пока видео не нарезано,
  * плеер показывает исходный MP4, после — куски через сайт.
  *
- * Одновременно идёт один прогон: ffmpeg нагружает процессор, а новый прогон
- * по расписанию, пока старый режет длинное видео, просто пропускается.
+ * Одновременно идёт один прогон (queue.concurrencyLimit): ffmpeg нагружает
+ * процессор, а прогоны по расписанию, пока старый режет длинное видео,
+ * встают в очередь и, когда доходят, сразу видят пустую очередь сайта.
  *
- * Куски заливаются по ходу нарезки (segmentAndUpload), так что воркеру не
- * нужно ни памяти, ни диска под всё видео. Пока идёт работа, воркер раз в
- * 5 минут продлевает аренду; если под убьют, видео вернётся в очередь через
- * 20 минут.
+ * Куски заливаются по ходу нарезки (segmentAndUpload), поэтому машине не
+ * нужны ни память, ни диск под всё видео. Пока идёт работа, задача раз в
+ * 5 минут продлевает аренду; если машину убьют, видео вернётся в очередь
+ * через 20 минут. Повторы ведёт сайт, поэтому ретраев Trigger.dev нет.
  */
-export const lessonVideoHlsWorkflow = hatchet.workflow({
-  name: "lesson-video-hls",
-  on: {
-    cron: "*/10 * * * *",
-  },
-  concurrency: {
-    expression: "'lesson-video-hls'",
-    maxRuns: 1,
-    limitStrategy: ConcurrencyLimitStrategy.CANCEL_NEWEST,
-  },
-});
-
-lessonVideoHlsWorkflow.task({
-  name: "cut-pending-videos",
-  // Повторы ведёт сайт: упавшее видео вернётся в очередь после паузы
-  retries: 0,
-  executionTimeout: "6h",
-  fn: async (_input, ctx) => {
+export const lessonVideoHls = schedules.task({
+  id: "lesson-video-hls",
+  cron: "*/10 * * * *",
+  machine: "medium-1x",
+  maxDuration: 6 * 60 * 60,
+  queue: { concurrencyLimit: 1 },
+  retry: { maxAttempts: 1 },
+  run: async (_payload, { signal }) => {
     const ready: string[] = [];
     const failed: string[] = [];
 
     for (let i = 0; i < MAX_VIDEOS_PER_RUN; i++) {
-      if (ctx.cancelled) break;
+      if (signal.aborted) break;
       const { job } = await webApi.jobs.videos.claim();
       if (!job) break;
 
@@ -56,11 +46,11 @@ lessonVideoHlsWorkflow.task({
       console.log(
         `[lesson-video-hls] ${job.videoKey}: попытка ${job.attemptId}`,
       );
-      // Останавливаем ffmpeg, если Hatchet отменил задачу или сайт отдал
+      // Останавливаем ffmpeg, если Trigger.dev отменил запуск или сайт отдал
       // видео другой попытке (наша аренда истекла)
       const abort = new AbortController();
       const onCancel = () => abort.abort(new Error("task cancelled"));
-      ctx.abortController.signal.addEventListener("abort", onCancel);
+      signal.addEventListener("abort", onCancel);
       const heartbeat = setInterval(async () => {
         const [error] = await safe(webApi.jobs.videos.heartbeat(attempt));
         // Попытка уже не наша; сетевой сбой переждём до следующего раза
@@ -108,7 +98,7 @@ lessonVideoHlsWorkflow.task({
           });
       } finally {
         clearInterval(heartbeat);
-        ctx.abortController.signal.removeEventListener("abort", onCancel);
+        signal.removeEventListener("abort", onCancel);
       }
     }
 
