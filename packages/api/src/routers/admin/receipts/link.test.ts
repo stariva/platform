@@ -106,9 +106,18 @@ test("outages are not mistaken for a missing receipt, and say why", async () => 
     status: "unavailable",
     reason: "нет соединения (ECONNREFUSED)",
   });
+  // Bun кладёт код в саму ошибку, а не в cause
+  const bunRefused = Object.assign(new TypeError("Unable to connect"), {
+    code: "ECONNRESET",
+  });
+  expect(await checkReceipt(PRINT, once(failingWith(bunRefused)))).toEqual({
+    status: "unavailable",
+    reason: "нет соединения (ECONNRESET)",
+  });
+  // Без кода — хотя бы текст ошибки
   expect(await checkReceipt(PRINT, once(failingWith(new Error("x"))))).toEqual({
     status: "unavailable",
-    reason: "нет соединения",
+    reason: "нет соединения (x)",
   });
 });
 

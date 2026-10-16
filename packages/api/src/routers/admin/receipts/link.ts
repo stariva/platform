@@ -42,12 +42,23 @@ export type ReceiptCheck =
   /** `reason` — что именно пошло не так, по-русски, чтобы показать в админке. */
   | { status: "unavailable"; reason: string };
 
-/** Код сетевой ошибки (ENOTFOUND, ECONNRESET…) — fetch прячет его в `cause`. */
-function networkCode(error: unknown): string | null {
-  const cause = error instanceof Error ? error.cause : null;
+const codeOf = (value: unknown): string | null => {
   const code =
-    cause && typeof cause === "object" && "code" in cause ? cause.code : null;
+    value && typeof value === "object" && "code" in value ? value.code : null;
   return typeof code === "string" ? code : null;
+};
+
+/**
+ * Что не так с сетью: код (ENOTFOUND, ECONNRESET…) или, если кода нет,
+ * текст ошибки. Bun кладёт код в саму ошибку, Node — в `cause`.
+ */
+function networkDetail(error: unknown): string | null {
+  const cause = error instanceof Error ? error.cause : null;
+  const code = codeOf(error) ?? codeOf(cause);
+  if (code) return code;
+  const message =
+    cause instanceof Error ? cause.message : (error as Error | null)?.message;
+  return message ? message.slice(0, 120) : null;
 }
 
 export interface CheckOptions {
@@ -122,10 +133,10 @@ async function checkOnce(
         reason: `сервис не ответил за ${timeoutMs / 1000} с`,
       };
     }
-    const code = networkCode(error);
+    const detail = networkDetail(error);
     return {
       status: "unavailable",
-      reason: code ? `нет соединения (${code})` : "нет соединения",
+      reason: detail ? `нет соединения (${detail})` : "нет соединения",
     };
   }
 }
