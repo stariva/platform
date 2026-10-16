@@ -1,9 +1,9 @@
 import { render } from "@react-email/components";
-import nodemailer from "nodemailer";
 import type { ReactNode } from "react";
 import { Resend } from "resend";
 
 import { env } from "./env";
+import { signRequest } from "./sigv4";
 
 export type EmailProviderName = "resend" | "postbox";
 
@@ -62,41 +62,84 @@ const resendProvider: EmailProvider = {
   },
 };
 
-let postboxTransport: ReturnType<typeof nodemailer.createTransport> | null =
-  null;
+const POSTBOX_REGION = "ru-central1";
+// В подписи запросов Postbox сервис называется ses, а не postbox.
+const POSTBOX_SERVICE = "ses";
+
+/** Postbox принимает вложения только содержимым (base64): ссылки качаем сами. */
+async function postboxAttachment(attachment: EmailAttachment) {
+  if ("content" in attachment) {
+    return {
+      FileName: attachment.filename,
+      RawContent: attachment.content.toString("base64"),
+    };
+  }
+  const res = await fetch(attachment.path, {
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Attachment ${attachment.filename} download failed: HTTP ${res.status}`,
+    );
+  }
+  return {
+    FileName: attachment.filename,
+    RawContent: Buffer.from(await res.arrayBuffer()).toString("base64"),
+  };
+}
 
 /**
- * Yandex Cloud Postbox по SMTP. Логин — идентификатор API-ключа сервисного
- * аккаунта (с областью yc.postbox.send), пароль — секретная часть ключа.
- * Адрес отправителя должен быть подтверждён в Postbox.
+ * Yandex Cloud Postbox через AWS-совместимый REST API (SendEmail, SESv2).
+ * Запрос подписывается статическим ключом сервисного аккаунта с ролью
+ * postbox.sender; адрес отправителя должен быть подтверждён в Postbox.
  */
 const postboxProvider: EmailProvider = {
   name: "postbox",
   label: "Yandex Postbox",
   isConfigured: () =>
-    Boolean(env.POSTBOX_SMTP_USER && env.POSTBOX_SMTP_PASSWORD),
+    Boolean(env.POSTBOX_ACCESS_KEY_ID && env.POSTBOX_SECRET_ACCESS_KEY),
   async send(email) {
-    postboxTransport ??= nodemailer.createTransport({
-      host: env.POSTBOX_SMTP_HOST,
-      port: env.POSTBOX_SMTP_PORT,
-      // 465 — SMTPS; на 587 соединение поднимается через STARTTLS.
-      secure: env.POSTBOX_SMTP_PORT === 465,
-      requireTLS: env.POSTBOX_SMTP_PORT !== 465,
-      auth: {
-        user: env.POSTBOX_SMTP_USER,
-        pass: env.POSTBOX_SMTP_PASSWORD,
+    if (!env.POSTBOX_ACCESS_KEY_ID || !env.POSTBOX_SECRET_ACCESS_KEY) {
+      throw new Error("Postbox is not configured");
+    }
+    const html = "html" in email ? email.html : await render(email.react);
+    const attachments = email.attachments?.length
+      ? await Promise.all(email.attachments.map(postboxAttachment))
+      : undefined;
+    const body = JSON.stringify({
+      FromEmailAddress: email.from,
+      Destination: { ToAddresses: email.to },
+      Content: {
+        Simple: {
+          Subject: { Data: email.subject, Charset: "UTF-8" },
+          Body: { Html: { Data: html, Charset: "UTF-8" } },
+          ...(attachments ? { Attachments: attachments } : {}),
+        },
       },
-      connectionTimeout: 10_000,
-      socketTimeout: 30_000,
+    });
+    const url = new URL("/v2/email/outbound-emails", env.POSTBOX_ENDPOINT);
+    // Host подставит сам fetch; в подписи он учитывается внутри signRequest.
+    const { host: _host, ...headers } = signRequest({
+      method: "POST",
+      url,
+      headers: { "content-type": "application/json" },
+      body,
+      accessKeyId: env.POSTBOX_ACCESS_KEY_ID,
+      secretAccessKey: env.POSTBOX_SECRET_ACCESS_KEY,
+      region: POSTBOX_REGION,
+      service: POSTBOX_SERVICE,
     });
     // Postbox не знает ключа идемпотентности: повторную отправку он не отсечёт.
-    await postboxTransport.sendMail({
-      from: email.from,
-      to: email.to,
-      subject: email.subject,
-      html: "html" in email ? email.html : await render(email.react),
-      ...withAttachments(email),
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body,
+      signal: AbortSignal.timeout(30_000),
     });
+    if (!res.ok) {
+      const details = (await res.text().catch(() => "")).slice(0, 500);
+      throw new Error(`Postbox error: HTTP ${res.status} ${details}`.trim());
+    }
   },
 };
 

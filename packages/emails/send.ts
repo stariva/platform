@@ -79,7 +79,7 @@ async function deliver(email: OutgoingEmail) {
   }
   if (chain.length === 0) {
     logger.warn(
-      "No email provider is configured. Set RESEND_API_KEY or POSTBOX_SMTP_USER and POSTBOX_SMTP_PASSWORD in your .env file for emails to work.",
+      "No email provider is configured. Set RESEND_API_KEY or POSTBOX_ACCESS_KEY_ID and POSTBOX_SECRET_ACCESS_KEY in your .env file for emails to work.",
     );
     return;
   }

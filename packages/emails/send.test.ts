@@ -11,10 +11,9 @@ const env: Record<string, unknown> = {
   EMAIL_SANDBOX_HOST: "localhost",
   EMAIL_PROVIDER: "resend",
   EMAIL_FALLBACK_PROVIDER: undefined,
-  POSTBOX_SMTP_HOST: "postbox.example.test",
-  POSTBOX_SMTP_PORT: 465,
-  POSTBOX_SMTP_USER: "synthetic-key-id",
-  POSTBOX_SMTP_PASSWORD: "synthetic-secret",
+  POSTBOX_ENDPOINT: "https://postbox.example.test",
+  POSTBOX_ACCESS_KEY_ID: "synthetic-key-id",
+  POSTBOX_SECRET_ACCESS_KEY: "synthetic-secret",
 };
 mock.module("./env", () => ({ env }));
 mock.module("resend", () => ({
@@ -66,27 +65,97 @@ test("passes the deterministic key as Resend options only", async () => {
 
 const email = { to: ["buyer@example.test"], subject: "Test", react: null };
 
-test("sends through Postbox SMTP when it is the default provider", async () => {
+const realFetch = globalThis.fetch;
+const postbox = mock(
+  async (_url: unknown, _init?: RequestInit) =>
+    new Response(JSON.stringify({ MessageId: "synthetic-id" }), { status: 200 }),
+);
+
+function resetMocks() {
   send.mockClear();
   smtp.mockClear();
+  postbox.mockClear();
+  globalThis.fetch = postbox as unknown as typeof fetch;
+}
+
+function restore() {
+  globalThis.fetch = realFetch;
+  env.EMAIL_PROVIDER = "resend";
+  env.EMAIL_FALLBACK_PROVIDER = undefined;
+  env.POSTBOX_SECRET_ACCESS_KEY = "synthetic-secret";
+}
+
+test("sends through the Postbox REST API when it is the default provider", async () => {
+  resetMocks();
   env.EMAIL_PROVIDER = "postbox";
   try {
     await sendEmail(email);
-    expect(smtp).toHaveBeenCalledTimes(1);
-    expect(smtp.mock.calls[0]?.[0]).toMatchObject({
-      from: env.EMAIL_FROM,
-      to: email.to,
-      subject: email.subject,
-    });
     expect(send).not.toHaveBeenCalled();
+    expect(postbox).toHaveBeenCalledTimes(1);
+    const [url, init] = postbox.mock.calls[0] ?? [];
+    expect(String(url)).toBe(
+      "https://postbox.example.test/v2/email/outbound-emails",
+    );
+    const headers = init?.headers as Record<string, string>;
+    expect(headers.Authorization).toMatch(
+      /^AWS4-HMAC-SHA256 Credential=synthetic-key-id\/\d{8}\/ru-central1\/ses\/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=[0-9a-f]{64}$/,
+    );
+    expect(headers).not.toHaveProperty("host");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      FromEmailAddress: env.EMAIL_FROM,
+      Destination: { ToAddresses: email.to },
+      Content: {
+        Simple: {
+          Subject: { Data: "Test", Charset: "UTF-8" },
+          Body: {
+            Html: { Data: expect.stringContaining("<!DOCTYPE html"), Charset: "UTF-8" },
+          },
+        },
+      },
+    });
   } finally {
-    env.EMAIL_PROVIDER = "resend";
+    restore();
+  }
+});
+
+test("sends attachments to Postbox as base64, downloading linked ones", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  postbox.mockImplementation(async (url) =>
+    String(url).includes("outbound-emails")
+      ? new Response(JSON.stringify({ MessageId: "synthetic-id" }))
+      : new Response("%PDF-linked"),
+  );
+  try {
+    await sendEmail({
+      ...email,
+      attachments: [
+        { filename: "Бриф.pdf", content: Buffer.from("%PDF-1.4") },
+        { filename: "Схема.pdf", path: "https://storage.example.test/s.pdf" },
+      ],
+    });
+    const sent = postbox.mock.calls.find(([url]) =>
+      String(url).includes("outbound-emails"),
+    );
+    expect(
+      JSON.parse(String(sent?.[1]?.body)).Content.Simple.Attachments,
+    ).toEqual([
+      { FileName: "Бриф.pdf", RawContent: Buffer.from("%PDF-1.4").toString("base64") },
+      { FileName: "Схема.pdf", RawContent: Buffer.from("%PDF-linked").toString("base64") },
+    ]);
+  } finally {
+    postbox.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ MessageId: "synthetic-id" }), {
+          status: 200,
+        }),
+    );
+    restore();
   }
 });
 
 test("falls back to the second provider when the first one fails", async () => {
-  send.mockClear();
-  smtp.mockClear();
+  resetMocks();
   env.EMAIL_FALLBACK_PROVIDER = "postbox";
   send.mockImplementationOnce(async () => ({
     error: { message: "resend is down" },
@@ -94,44 +163,52 @@ test("falls back to the second provider when the first one fails", async () => {
   try {
     await sendEmail(email);
     expect(send).toHaveBeenCalledTimes(1);
-    expect(smtp).toHaveBeenCalledTimes(1);
+    expect(postbox).toHaveBeenCalledTimes(1);
   } finally {
-    env.EMAIL_FALLBACK_PROVIDER = undefined;
+    restore();
+  }
+});
+
+test("falls back from Postbox to Resend when Postbox rejects the request", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  env.EMAIL_FALLBACK_PROVIDER = "resend";
+  postbox.mockImplementationOnce(
+    async () => new Response('{"message":"sender not verified"}', { status: 403 }),
+  );
+  try {
+    await sendEmail(email);
+    expect(postbox).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(1);
+  } finally {
+    restore();
   }
 });
 
 test("throws the last error when every provider fails", async () => {
-  smtp.mockClear();
+  resetMocks();
   env.EMAIL_FALLBACK_PROVIDER = "postbox";
   send.mockImplementationOnce(async () => ({ error: { message: "down" } }));
-  smtp.mockImplementationOnce(async () => {
-    throw new Error("smtp down");
-  });
+  postbox.mockImplementationOnce(
+    async () => new Response("unavailable", { status: 503 }),
+  );
   try {
-    await expect(sendEmail(email)).rejects.toThrow("smtp down");
+    await expect(sendEmail(email)).rejects.toThrow("Postbox error: HTTP 503");
   } finally {
-    env.EMAIL_FALLBACK_PROVIDER = undefined;
+    restore();
   }
 });
 
-test("uses the fallback when the primary has no credentials", async () => {
-  send.mockClear();
-  smtp.mockClear();
-  const key = env.RESEND_API_KEY;
-  env.EMAIL_FALLBACK_PROVIDER = "postbox";
-  env.POSTBOX_SMTP_PASSWORD = "synthetic-secret";
-  // Resend client is created at import time, so drop it through the provider flag.
-  const { resend } = await import("./send");
-  expect(resend).not.toBeNull();
-  env.RESEND_API_KEY = key;
+test("skips a provider without credentials and uses the next one", async () => {
+  resetMocks();
   env.EMAIL_PROVIDER = "postbox";
   env.EMAIL_FALLBACK_PROVIDER = "resend";
+  env.POSTBOX_SECRET_ACCESS_KEY = undefined;
   try {
     await sendEmail(email);
-    expect(smtp).toHaveBeenCalledTimes(1);
-    expect(send).not.toHaveBeenCalled();
+    expect(postbox).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
   } finally {
-    env.EMAIL_PROVIDER = "resend";
-    env.EMAIL_FALLBACK_PROVIDER = undefined;
+    restore();
   }
 });
