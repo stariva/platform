@@ -68,7 +68,8 @@ export function ReceiptsPanel({ target }: { target: Target }) {
       </p>
     );
   }
-  const { to, receipts } = query.data;
+  const { to, receipts, expected } = query.data;
+  const unsent = receipts.filter((receipt) => !receipt.emailedAt).length;
 
   async function confirmRemove(id: string, number: string) {
     if (
@@ -86,6 +87,20 @@ export function ReceiptsPanel({ target }: { target: Target }) {
 
   return (
     <div className="space-y-4">
+      {receipts.length < expected && (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          Оплат: {expected}, чеков: {receipts.length}. Добавьте чек на
+          оставшуюся оплату.
+        </p>
+      )}
+      {unsent > 0 && to && (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          {unsent === 1
+            ? "Чек привязан, но покупателю не отправлен."
+            : `Чеков не отправлено покупателю: ${unsent}.`}{" "}
+          Нажмите «Отправить» рядом с чеком.
+        </p>
+      )}
       {receipts.length > 0 && (
         <ul className="space-y-2">
           {receipts.map((receipt) => (

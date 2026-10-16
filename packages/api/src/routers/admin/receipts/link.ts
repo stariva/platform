@@ -1,6 +1,3 @@
-/** ИНН Ольги — тот же, что в реквизитах продавца (apps/web/src/lib/legal.ts). */
-export const SELLER_INN = "502480197143";
-
 const RECEIPT_HOST = "lknpd.nalog.ru";
 // /api/v1/receipt/<ИНН>/<номер>/print — так «Мой налог» делится чеком;
 // /json и ссылку без хвоста тоже принимаем, ведут к тому же чеку

@@ -174,7 +174,12 @@ export function OrdersTable({ orders }: { orders: AdminOrderView[] }) {
                         {STATUS_LABELS[order.status] ?? order.status}
                       </Badge>
                       {needsReceipt(order) && (
-                        <Badge variant="outline">без чека</Badge>
+                        <Badge variant="outline">
+                          {order.receiptCount ? "не хватает чека" : "без чека"}
+                        </Badge>
+                      )}
+                      {(order.receiptsUnsent ?? 0) > 0 && (
+                        <Badge variant="outline">чек не отправлен</Badge>
                       )}
                     </div>
                   </TableCell>

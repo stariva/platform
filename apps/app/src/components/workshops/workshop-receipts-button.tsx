@@ -18,12 +18,15 @@ export function WorkshopReceiptsButton({
   title,
   count,
   needed,
+  unsent,
 }: {
   orderId: string;
   title: string;
   count: number;
   /** Оплачено, а чека нет — кнопка заметнее. */
   needed: boolean;
+  /** Чек привязан, но покупателю не отправлен. */
+  unsent: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -31,10 +34,16 @@ export function WorkshopReceiptsButton({
     <>
       <Button
         size="sm"
-        variant={needed ? "default" : "outline"}
+        variant={needed || unsent ? "default" : "outline"}
         onClick={() => setOpen(true)}
       >
-        {count > 0 ? `Чеки · ${count}` : needed ? "Добавить чек" : "Чек"}
+        {unsent
+          ? "Отправить чек"
+          : count > 0
+            ? `Чеки · ${count}`
+            : needed
+              ? "Добавить чек"
+              : "Чек"}
       </Button>
       <Dialog
         open={open}

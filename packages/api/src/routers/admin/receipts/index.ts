@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { logger } from "@stariva/config";
+import { SELLER_INN } from "@stariva/config/seller";
 import {
   and,
   asc,
@@ -15,7 +16,8 @@ import { sendReceiptEmail } from "@stariva/emails";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { checkReceipt, parseReceiptLink, SELLER_INN } from "./link";
+import { checkReceipt, parseReceiptLink } from "./link";
+import { loadReceiptsExpected } from "./summary";
 
 /** Заказ, к которому привязан чек: на товары или на мастер-класс. */
 const target = z.object({
@@ -130,7 +132,12 @@ const forOrder = adminProcedure
           : eq(orderReceipts.workshopOrderId, input.orderId),
       )
       .orderBy(asc(orderReceipts.createdAt));
-    return { to: order.to, receipts: rows.map(toReceipt) };
+    return {
+      to: order.to,
+      receipts: rows.map(toReceipt),
+      // Сколько чеков положено по числу оплат — карточка заказа предупреждает о нехватке
+      expected: await loadReceiptsExpected(context.db, input),
+    };
   });
 
 /**

@@ -1,3 +1,4 @@
+import { SELLER_INN } from "@stariva/config/seller";
 import { type NextRequest, NextResponse } from "next/server";
 import { workSteps } from "@/app/resort/_data";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
@@ -12,7 +13,7 @@ const contacts = {
   email: "info@stariva.ru",
 };
 
-const requisites = "Самозанятая Карпычева О. А. · ИНН 502480197143";
+const requisites = `Самозанятая Карпычева О. А. · ИНН ${SELLER_INN}`;
 
 const products = [
   {
