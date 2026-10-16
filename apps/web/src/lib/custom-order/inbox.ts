@@ -92,6 +92,7 @@ async function notify(item: Notification) {
   return deliverNotification(item, {
     telegramToken: env.TELEGRAM_BOT_TOKEN,
     telegramChatId: env.TELEGRAM_CHAT_ID,
+    telegramApiUrl: env.TG_API_PROXY_URL,
     emailKey: baseEnv.RESEND_API_KEY,
     emailFrom: env.ORDER_EMAIL_FROM,
     emailTo: env.ORDER_EMAIL_TO,

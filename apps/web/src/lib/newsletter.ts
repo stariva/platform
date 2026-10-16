@@ -1,5 +1,6 @@
 import { baseEnv, env } from "@/env";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { telegramApiUrl } from "@/lib/telegram/api-url";
 
 /**
  * Уведомление мастеру о новой подписке на рассылку. Telegram обязателен:
@@ -36,7 +37,9 @@ async function sendToTelegram(email: string, source?: string): Promise<void> {
     `<i>Согласия на обработку ПДн и рассылку получены, редакция ${LEGAL_VERSION}, ${new Date().toISOString()}</i>`,
   ].filter((l) => l !== "");
 
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const res = await fetch(
+    telegramApiUrl(token, "sendMessage", env.TG_API_PROXY_URL),
+    {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -45,7 +48,8 @@ async function sendToTelegram(email: string, source?: string): Promise<void> {
       parse_mode: "HTML",
       disable_web_page_preview: true,
     }),
-  });
+    },
+  );
   if (!res.ok) {
     throw new Error(`telegram_message_failed_${res.status}`);
   }

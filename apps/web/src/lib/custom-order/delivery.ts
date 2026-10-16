@@ -1,3 +1,5 @@
+import { telegramApiUrl } from "@/lib/telegram/api-url";
+
 /** Testable without environment, database or real recipients. */
 export interface Notification {
   id: string;
@@ -14,6 +16,8 @@ export interface Notification {
 export interface DeliveryConfig {
   telegramToken?: string;
   telegramChatId?: string;
+  /** Обратный прокси вместо api.telegram.org. */
+  telegramApiUrl?: string;
   emailKey?: string;
   emailFrom?: string;
   emailTo?: string;
@@ -44,7 +48,11 @@ export async function deliverNotification(
         // Plain text chunks never break HTML entities or caption tags.
         for (let offset = 0; offset < message.length; offset += 3500) {
           const res = await request(
-            `https://api.telegram.org/bot${config.telegramToken}/sendMessage`,
+            telegramApiUrl(
+              config.telegramToken ?? "",
+              "sendMessage",
+              config.telegramApiUrl,
+            ),
             {
               method: "POST",
               signal: AbortSignal.timeout(10_000),
@@ -71,7 +79,11 @@ export async function deliverNotification(
             "inspiration",
           );
           const res = await request(
-            `https://api.telegram.org/bot${config.telegramToken}/sendDocument`,
+            telegramApiUrl(
+              config.telegramToken ?? "",
+              "sendDocument",
+              config.telegramApiUrl,
+            ),
             { method: "POST", body: form, signal: AbortSignal.timeout(15_000) },
           );
           if (!res.ok || !(await res.json()).ok)

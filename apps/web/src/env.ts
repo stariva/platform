@@ -40,6 +40,9 @@ export const env = createEnv({
     // Telegram Bot API — для отправки заявок на индивидуальный заказ
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
+    // Обратный прокси вместо https://api.telegram.org, если Telegram
+    // недоступен с сервера. Относится к обоим ботам.
+    TG_API_PROXY_URL: z.string().url().optional(),
 
     // Клиентский Telegram-бот: напоминания покупателям мастер-классов, которые
     // сами нажали «Получать напоминания в Telegram». Отдельный бот от TELEGRAM_BOT_TOKEN,
@@ -100,6 +103,7 @@ export const env = createEnv({
     LANGFUSE_BASE_URL: process.env.LANGFUSE_BASE_URL,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+    TG_API_PROXY_URL: process.env.TG_API_PROXY_URL,
     TELEGRAM_CLIENT_BOT_TOKEN: process.env.TELEGRAM_CLIENT_BOT_TOKEN,
     TELEGRAM_CLIENT_BOT_USERNAME: process.env.TELEGRAM_CLIENT_BOT_USERNAME,
     TELEGRAM_CLIENT_WEBHOOK_SECRET: process.env.TELEGRAM_CLIENT_WEBHOOK_SECRET,
