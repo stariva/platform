@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { rubles } from "~/components/crm/crm-meta";
 import { SiteHeader } from "~/components/layout";
+import { ArchiveRequest } from "~/components/requests/archive-request";
 import { DeliveryBadge } from "~/components/requests/requests-table";
 import { VisitorCard } from "~/components/visitors/visitor-card";
 import { api } from "~/orpc/server";
@@ -60,9 +61,15 @@ export default async function RequestPage({
           {sale ? (
             <>
               <span className="text-sm">
-                Заказ записан в CRM: {rubles.format(sale.amount)}
+                Заказ записан: {rubles.format(sale.amount)}
                 {sale.campaignName && ` · ${sale.campaignName}`}
               </span>
+              <Link
+                href={`/crm/orders/${sale.id}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Открыть заказ
+              </Link>
               <Link
                 href={`/crm/clients/${encodeURIComponent(sale.clientId)}`}
                 className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -76,11 +83,16 @@ export default async function RequestPage({
                 href={`/crm/orders/new?request=${request.number}`}
                 className={buttonVariants({ size: "sm" })}
               >
-                Записать индивидуальный заказ
+                Оформить заказ
               </Link>
+              <ArchiveRequest
+                number={request.number}
+                archived={request.archivedAt !== null}
+              />
               <span className="text-muted-foreground text-sm">
-                когда договоритесь и клиент оплатит — с выбором рекламы, откуда
-                он пришёл
+                {request.archivedAt
+                  ? "Заявка в архиве и не висит в «Новых» на доске заказов"
+                  : "По заявке пока не оформлен заказ"}
               </span>
             </>
           )}

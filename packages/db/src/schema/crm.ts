@@ -126,8 +126,39 @@ export const crmClients = pgTable(
 );
 
 /**
+ * Площадка, где оформлен заказ мимо корзины сайта. Не путать с рекламным
+ * каналом: клиент мог прийти с рекламы во ВКонтакте, а купить на Авито.
+ */
+export type OrderChannel =
+  | "avito"
+  | "ozon"
+  | "wildberries"
+  | "yandex_market"
+  | "yarmarka"
+  | "telegram"
+  | "whatsapp"
+  | "instagram"
+  | "vk"
+  | "offline"
+  | "other";
+
+/**
+ * Этап заказа вне сайта. done и canceled — закрытые; у отменённого заказа
+ * оплаты не идут в выручку: деньги считаются возвращёнными.
+ */
+export type CrmOrderStatus =
+  | "new"
+  | "awaiting_payment"
+  | "in_production"
+  | "ready"
+  | "shipped"
+  | "done"
+  | "canceled";
+
+/**
  * Заказ мимо корзины сайта: индивидуальный заказ по заявке или из
- * мессенджера, продажа на Авито, мастер-класс вживую.
+ * мессенджера, заказ на Авито, Ozon или Ярмарке Мастеров, продажа вживую.
+ * Ведётся по этапам, деньги — отдельными оплатами (crm_sale_payments).
  */
 export const crmSales = pgTable(
   "crm_sales",
@@ -138,23 +169,69 @@ export const crmSales = pgTable(
     clientId: text("client_id")
       .notNull()
       .references(() => crmClients.id, { onDelete: "cascade" }),
+    // День заказа по Москве
     soldOn: date("sold_on", { mode: "string" }).notNull(),
-    // Копейки
+    // Сумма заказа в копейках; 0 — цена ещё не согласована
     amount: integer("amount").notNull(),
     description: text("description").notNull(),
+    channel: text("channel").$type<OrderChannel>().notNull().default("other"),
+    status: text("status").$type<CrmOrderStatus>().notNull().default("new"),
+    // Номер заказа или отправления на площадке
+    externalNumber: text("external_number"),
+    // Срок, к которому обещали сделать или отправить
+    dueOn: date("due_on", { mode: "string" }),
+    trackingNumber: text("tracking_number"),
+    notes: text("notes"),
+    // Комиссия площадки и доставка за наш счёт, копейки
+    fee: integer("fee").notNull().default(0),
     // С какой рекламы пришёл этот заказ; null — как у клиента
     campaignId: text("campaign_id").references(() => adCampaigns.id, {
       onDelete: "set null",
     }),
     // Заявка с сайта («Обсудим вашу идею»), из которой вырос заказ
     requestNumber: integer("request_number"),
+    statusChangedAt: timestamp("status_changed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    // Когда заказ стал выполненным или отменённым
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date())
       .notNull(),
   },
   (table) => [
     index("crm_sales_client_idx").on(table.clientId),
     uniqueIndex("crm_sales_request_idx").on(table.requestNumber),
-    check("crm_sales_amount_positive", sql`${table.amount} > 0`),
+    check("crm_sales_amount_not_negative", sql`${table.amount} >= 0`),
+    check("crm_sales_fee_not_negative", sql`${table.fee} >= 0`),
+  ],
+);
+
+/** Деньги по заказу вне сайта: предоплата, доплата или вся сумма сразу. */
+export const crmSalePayments = pgTable(
+  "crm_sale_payments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    saleId: text("sale_id")
+      .notNull()
+      .references(() => crmSales.id, { onDelete: "cascade" }),
+    // День поступления по Москве; выручка периода — по этим дням
+    paidOn: date("paid_on", { mode: "string" }).notNull(),
+    // Копейки
+    amount: integer("amount").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("crm_sale_payments_sale_idx").on(table.saleId),
+    check("crm_sale_payments_amount_positive", sql`${table.amount} > 0`),
   ],
 );

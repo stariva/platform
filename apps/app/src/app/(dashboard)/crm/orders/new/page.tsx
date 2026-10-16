@@ -34,8 +34,8 @@ function orderTitle(productType: string | null, description: string | null) {
 }
 
 /**
- * Индивидуальный заказ: клиент, реклама, с которой он пришёл, сумма и что
- * заказал. Из заявки (?request=1042) имя, контакт и описание подставляются.
+ * Новый заказ вне сайта: клиент, площадка, что заказал, сумма, этап и
+ * реклама. Из заявки (?request=1042) имя, контакт и описание подставляются.
  */
 export default async function NewCustomOrderPage({
   searchParams,
@@ -71,13 +71,20 @@ export default async function NewCustomOrderPage({
       phone: contact.phone,
       email: contact.email,
       description: orderTitle(request.productType, request.description),
+      notes: [
+        request.description,
+        request.contact && `Контакт из заявки: ${request.contact}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+        .slice(0, 4000),
     };
   }
 
   return (
     <>
-      <SiteHeader title="Индивидуальный заказ" />
-      <div className="max-w-xl space-y-4 px-4 pb-10 lg:px-6">
+      <SiteHeader title="Новый заказ" />
+      <div className="max-w-2xl space-y-4 px-4 pb-10 lg:px-6">
         {existing ? (
           <Card>
             <CardHeader>
@@ -89,10 +96,16 @@ export default async function NewCustomOrderPage({
                 {existing.campaignName && ` · ${existing.campaignName}`}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-wrap gap-2">
+              <Link
+                href={`/crm/orders/${existing.id}`}
+                className={buttonVariants()}
+              >
+                Открыть заказ
+              </Link>
               <Link
                 href={`/crm/clients/${encodeURIComponent(existing.clientId)}`}
-                className={buttonVariants()}
+                className={buttonVariants({ variant: "outline" })}
               >
                 Открыть клиента
               </Link>
@@ -102,19 +115,17 @@ export default async function NewCustomOrderPage({
           <Card>
             <CardHeader>
               <CardTitle>
-                {request
-                  ? `Индивидуальный заказ по заявке №${request.number}`
-                  : "Индивидуальный заказ"}
+                {request ? `Заказ по заявке №${request.number}` : "Новый заказ"}
               </CardTitle>
               <CardDescription>
-                Для заказов, оплаченных мимо корзины сайта: по заявке, из
-                мессенджера, на Авито. Выберите рекламу, с которой пришёл
-                клиент, — в сводке выручка заказа пойдёт ей.
+                Для заказов мимо корзины сайта: с Авито, Ozon, Ярмарки Мастеров,
+                из мессенджеров, по заявке, вживую. Заказ появится на доске
+                «Заказы в работе», а его выручка — в аналитике.
                 {request?.contact && (
                   <>
                     {" "}
                     Контакт из заявки: <b>{request.contact}</b> — если это не
-                    телефон и не почта, запишите его в заметки клиента.
+                    телефон и не почта, он останется в заметках заказа.
                   </>
                 )}
               </CardDescription>

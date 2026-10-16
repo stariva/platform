@@ -1,5 +1,6 @@
 "use client";
 
+import type { CrmOrderStatus } from "@stariva/db/schema";
 import {
   Button,
   Input,
@@ -16,22 +17,23 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { orpc } from "~/orpc/react";
 import type { CampaignOption } from "./client-form";
-import { CHANNEL_LABELS, todayInMoscow } from "./crm-meta";
+import {
+  OrderFields,
+  type OrderFieldsValue,
+  orderInput,
+  useOrderFields,
+} from "./order-fields";
+import { CRM_STATUS_LABELS, CRM_STATUSES, parseRubles } from "./work-meta";
 
-/** Реклама не выбрана: выручка идёт источнику клиента. */
-const CLIENT_SOURCE = "client";
-
-export interface CustomOrderDraft {
+export interface CustomOrderDraft extends Partial<OrderFieldsValue> {
   name: string;
   phone: string;
   email: string;
-  description: string;
-  campaignId: string | null;
 }
 
 /**
- * Индивидуальный заказ или продажа мимо сайта с выбором рекламы, с которой
- * пришёл клиент. С clientKey пишется к этому клиенту; без него — по имени и
+ * Новый заказ вне сайта: площадка, состав, сумма, этап и уже полученные
+ * деньги. С clientKey пишется к этому клиенту; без него — по имени и
  * контактам: известный клиент найдётся по телефону или почте, иначе заведётся.
  */
 export function CustomOrderForm({
@@ -51,47 +53,39 @@ export function CustomOrderForm({
   const [name, setName] = useState(draft?.name ?? "");
   const [phone, setPhone] = useState(draft?.phone ?? "");
   const [email, setEmail] = useState(draft?.email ?? "");
-  const [campaign, setCampaign] = useState(draft?.campaignId ?? CLIENT_SOURCE);
-  const [soldOn, setSoldOn] = useState(todayInMoscow);
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState(draft?.description ?? "");
+  const [fields, setFields] = useOrderFields(draft);
+  const [status, setStatus] = useState<CrmOrderStatus>("new");
+  const [paid, setPaid] = useState("");
 
   const add = useMutation({
     ...orpc.admin.crm.addSale.mutationOptions(),
-    onSuccess: ({ key }) => {
+    onSuccess: ({ id }) => {
       toast.success("Заказ записан");
-      if (key !== clientKey) {
-        router.push(`/crm/clients/${encodeURIComponent(key)}`);
-      } else {
-        setAmount("");
-        setDescription("");
-      }
+      router.push(`/crm/orders/${id}`);
       router.refresh();
     },
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
   });
 
-  const options = campaigns.filter((c) => !c.archived || c.id === campaign);
-  const labels: Record<string, string> = {
-    [CLIENT_SOURCE]: clientKey ? "Как у клиента" : "Не знаю / не с рекламы",
-    ...Object.fromEntries(
-      options.map((c) => [c.id, `${c.name} · ${CHANNEL_LABELS[c.channel]}`]),
-    ),
-  };
-  const parsedAmount = Number(amount.replace(",", ".").replace(/\s/g, ""));
+  const amount = parseRubles(fields.amount);
 
   return (
     <form
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
+        const input = orderInput(fields);
+        const parsedPaid = parseRubles(paid);
+        if (input === null || parsedPaid === null) {
+          toast.error("Проверьте сумму заказа, комиссию и оплату");
+          return;
+        }
         add.mutate({
+          ...input,
           key: clientKey,
           client: clientKey ? undefined : { name, phone, email },
-          soldOn,
-          amount: parsedAmount,
-          description,
-          campaignId: campaign === CLIENT_SOURCE ? null : campaign,
+          status,
+          paid: parsedPaid,
           requestNumber,
         });
       }}
@@ -139,79 +133,67 @@ export function CustomOrderForm({
         </>
       )}
 
-      <div className="space-y-1.5">
-        <Label htmlFor="order-campaign">С какой рекламы</Label>
-        <Select
-          value={campaign}
-          onValueChange={(value) => {
-            if (value) setCampaign(value);
-          }}
-        >
-          <SelectTrigger id="order-campaign" className="w-full">
-            <SelectValue>
-              {(value: string) => labels[value] ?? "Кампания удалена"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={CLIENT_SOURCE}>
-              {labels[CLIENT_SOURCE]}
-            </SelectItem>
-            {options.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {labels[option.id]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-muted-foreground text-xs">
-          Выручка заказа пойдёт этой рекламе. Нужной нет — заведите её в
-          «Кампаниях и расходах».
-        </p>
-      </div>
+      <OrderFields
+        value={fields}
+        onChange={setFields}
+        campaigns={campaigns}
+        clientKnown={Boolean(clientKey)}
+      />
 
-      <div className="grid gap-4 sm:grid-cols-[160px_160px]">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="order-date">Дата оплаты</Label>
-          <Input
-            id="order-date"
-            type="date"
-            required
-            max={todayInMoscow()}
-            value={soldOn}
-            onChange={(event) => setSoldOn(event.target.value)}
-          />
+          <Label htmlFor="order-status">Этап</Label>
+          <Select
+            value={status}
+            onValueChange={(next) => {
+              if (next) setStatus(next as CrmOrderStatus);
+            }}
+          >
+            <SelectTrigger id="order-status" className="w-full">
+              <SelectValue>
+                {(next: CrmOrderStatus) => CRM_STATUS_LABELS[next]}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {CRM_STATUSES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {CRM_STATUS_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="order-amount">Сумма, ₽</Label>
-          <Input
-            id="order-amount"
-            inputMode="decimal"
-            required
-            placeholder="12000"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-          />
+          <Label htmlFor="order-paid">Уже оплачено, ₽</Label>
+          <div className="flex gap-2">
+            <Input
+              id="order-paid"
+              inputMode="decimal"
+              placeholder="0"
+              value={paid}
+              onChange={(event) => setPaid(event.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={amount === null || amount <= 0}
+              onClick={() => setPaid(fields.amount)}
+            >
+              Всё
+            </Button>
+          </div>
         </div>
       </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="order-description">Что заказал</Label>
-        <Input
-          id="order-description"
-          required
-          maxLength={300}
-          placeholder="Панно 120×80 по своим размерам"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-      </div>
+      <p className="text-muted-foreground -mt-2 text-xs">
+        Деньги запишутся оплатой в дату заказа. Предоплату и доплату потом
+        добавите в карточке заказа.
+      </p>
 
       <Button
         type="submit"
         disabled={
           add.isPending ||
-          !(parsedAmount > 0) ||
-          !description.trim() ||
+          !fields.description.trim() ||
           (!clientKey && !name.trim())
         }
       >

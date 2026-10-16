@@ -2,6 +2,7 @@ import {
   adCampaigns,
   adExpenses,
   crmClients,
+  crmSalePayments,
   crmSales,
   type Database,
   eq,
@@ -34,6 +35,7 @@ export async function loadCrm(db: Database) {
     expenses,
     records,
     sales,
+    salePaymentRows,
     productRows,
     paymentRows,
     workshopRows,
@@ -42,6 +44,7 @@ export async function loadCrm(db: Database) {
     db.select().from(adExpenses),
     db.select().from(crmClients),
     db.select().from(crmSales),
+    db.select().from(crmSalePayments),
     db
       .select({
         id: productOrders.id,
@@ -55,6 +58,9 @@ export async function loadCrm(db: Database) {
         amountTotal: productOrders.amountTotal,
         createdAt: productOrders.createdAt,
         paidAt: productOrders.paidAt,
+        paymentDueAt: productOrders.paymentDueAt,
+        approvedAt: productOrders.approvedAt,
+        depositPaidAt: productOrders.depositPaidAt,
         attribution: productOrders.attribution,
       })
       .from(productOrders),
@@ -95,6 +101,16 @@ export async function loadCrm(db: Database) {
       amount: payment.amount,
     });
     paymentsByOrder.set(payment.orderId, list);
+  }
+
+  // Полдень, чтобы день не съехал при переводе часовых поясов
+  const noon = (day: string) =>
+    new Date(moscowDay(day).getTime() + 12 * 3600_000);
+  const paymentsBySale = new Map<string, Deal["payments"]>();
+  for (const payment of salePaymentRows) {
+    const list = paymentsBySale.get(payment.saleId) ?? [];
+    list.push({ at: noon(payment.paidOn), amount: payment.amount });
+    paymentsBySale.set(payment.saleId, list);
   }
 
   const deals: Deal[] = [
@@ -145,16 +161,16 @@ export async function loadCrm(db: Database) {
         campaignId: null,
       }),
     ),
-    ...sales.map((sale): Deal => {
-      // Полдень, чтобы день продажи не съехал при переводе часовых поясов
-      const at = new Date(moscowDay(sale.soldOn).getTime() + 12 * 3600_000);
-      return {
+    ...sales.map(
+      (sale): Deal => ({
         kind: "manual",
         id: sale.id,
         label: sale.description,
-        status: "paid",
-        createdAt: at,
-        payments: [{ at, amount: sale.amount }],
+        status: sale.status,
+        createdAt: noon(sale.soldOn),
+        // Отменённый заказ не приносит денег: оплата считается возвращённой
+        payments:
+          sale.status === "canceled" ? [] : (paymentsBySale.get(sale.id) ?? []),
         attribution: null,
         name: null,
         phone: null,
@@ -162,12 +178,22 @@ export async function loadCrm(db: Database) {
         userId: null,
         clientId: sale.clientId,
         campaignId: sale.campaignId,
-      };
-    }),
+      }),
+    ),
   ];
 
   const clients = buildClients(deals, records, campaigns);
-  return { campaigns, expenses, records, sales, clients };
+  return {
+    campaigns,
+    expenses,
+    records,
+    sales,
+    clients,
+    deals,
+    productRows,
+    workshopRows,
+    paymentsBySale,
+  };
 }
 
 export type CrmData = Awaited<ReturnType<typeof loadCrm>>;

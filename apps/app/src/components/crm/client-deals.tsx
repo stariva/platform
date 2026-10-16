@@ -20,8 +20,6 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "~/components/confirm-dialog";
-import { STATUS_LABELS } from "~/components/orders/order-meta";
-import { WORKSHOP_ORDER_STATUS_LABELS } from "~/components/workshops/workshop-orders-table";
 import { orpc } from "~/orpc/react";
 import type { CampaignOption } from "./client-form";
 import {
@@ -32,6 +30,7 @@ import {
   utmLabel,
 } from "./crm-meta";
 import { CustomOrderForm } from "./custom-order-form";
+import { statusLabel } from "./work-meta";
 
 export interface DealView {
   kind: "product" | "workshop" | "manual";
@@ -46,19 +45,6 @@ export interface DealView {
   // Ручной заказ: выбранная реклама и заявка, из которой он вырос
   campaignId: string | null;
   requestNumber: number | null;
-}
-
-/** Подпись статуса заказа или записи; у ручной продажи статуса нет. */
-function statusLabel(deal: DealView) {
-  if (deal.kind === "manual") return null;
-  if (deal.kind === "workshop") {
-    return (
-      WORKSHOP_ORDER_STATUS_LABELS[
-        deal.status as keyof typeof WORKSHOP_ORDER_STATUS_LABELS
-      ] ?? deal.status
-    );
-  }
-  return STATUS_LABELS[deal.status] ?? deal.status;
 }
 
 /** Заказы, записи и ручные продажи клиента; продажу мимо сайта можно добавить. */
@@ -89,9 +75,9 @@ export function ClientDeals({
       <CardHeader>
         <CardTitle>Заказы и продажи</CardTitle>
         <CardDescription>
-          Заказы и записи с сайта подтягиваются сами. Индивидуальные заказы,
-          продажи на Авито или вживую добавьте ниже и выберите, с какой рекламы
-          они пришли.
+          Заказы и записи с сайта подтягиваются сами. Заказы с Авито, Ozon, из
+          мессенджеров или вживую добавьте ниже — они появятся на доске «Заказы
+          в работе».
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -137,7 +123,7 @@ export function ClientDeals({
                         <Badge variant="outline">
                           {DEAL_KIND_LABELS[deal.kind]}
                         </Badge>
-                        {status && <Badge variant="secondary">{status}</Badge>}
+                        <Badge variant="secondary">{status}</Badge>
                         {deal.requestNumber && (
                           <Link
                             href={`/requests/${deal.requestNumber}`}
@@ -193,9 +179,7 @@ export function ClientDeals({
         </div>
 
         <div className="space-y-2 border-t pt-4">
-          <h3 className="text-sm font-semibold">
-            Индивидуальный заказ или продажа вне сайта
-          </h3>
+          <h3 className="text-sm font-semibold">Новый заказ вне сайта</h3>
           <CustomOrderForm clientKey={clientKey} campaigns={campaigns} />
         </div>
       </CardContent>
