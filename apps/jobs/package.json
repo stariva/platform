@@ -14,8 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hatchet-dev/typescript-sdk": "1.36.0",
-    "@orpc/client": "2.0.0-beta.43",
+    "@hatchet-dev/typescript-sdk": "1.38.0",
+    "@orpc/client": "2.0.0-beta.44",
     "@stariva/web-api": "workspace:*",
     "zod": "4.6.7"
   },

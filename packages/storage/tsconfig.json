@@ -1,7 +1,7 @@
 {
   "extends": "@stariva/tsconfig/base.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["bun", "node"],
     "rootDir": "./src"
   },
   "include": ["src/**/*"],
