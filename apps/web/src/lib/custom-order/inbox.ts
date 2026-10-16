@@ -5,6 +5,7 @@ import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { baseEnv, env } from "@/env";
 import { formatTouch } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { formatVisitor } from "@/lib/visitor";
 import {
   deliverNotification,
@@ -90,9 +91,7 @@ export async function saveRequest(
 }
 async function notify(item: Notification) {
   return deliverNotification(item, {
-    telegramToken: env.TELEGRAM_BOT_TOKEN,
-    telegramChatId: env.TELEGRAM_CHAT_ID,
-    telegramApiUrl: env.TG_API_PROXY_URL,
+    ...telegramStaffConfig(),
     emailKey: baseEnv.RESEND_API_KEY,
     emailFrom: env.ORDER_EMAIL_FROM,
     emailTo: env.ORDER_EMAIL_TO,

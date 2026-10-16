@@ -18,6 +18,10 @@ export interface DeliveryConfig {
   telegramChatId?: string;
   /** Обратный прокси вместо api.telegram.org. */
   telegramApiUrl?: string;
+  /** fetch для запросов к Telegram (например, через HTTP-прокси). */
+  telegramFetch?: typeof fetch;
+  /** Таймаут одного запроса к Telegram; по умолчанию 10 с. */
+  telegramTimeoutMs?: number;
   emailKey?: string;
   emailFrom?: string;
   emailTo?: string;
@@ -39,6 +43,7 @@ export async function deliverNotification(
       `[notifications] ${title}: на почту не отправлено — не заданы ${missingEmail.join(", ")}`,
     );
   }
+  const telegramRequest = config.telegramFetch ?? request;
   const telegramConfigured = Boolean(
     config.telegramToken && config.telegramChatId,
   );
@@ -47,7 +52,7 @@ export async function deliverNotification(
       (async () => {
         // Plain text chunks never break HTML entities or caption tags.
         for (let offset = 0; offset < message.length; offset += 3500) {
-          const res = await request(
+          const res = await telegramRequest(
             telegramApiUrl(
               config.telegramToken ?? "",
               "sendMessage",
@@ -55,7 +60,7 @@ export async function deliverNotification(
             ),
             {
               method: "POST",
-              signal: AbortSignal.timeout(10_000),
+              signal: AbortSignal.timeout(config.telegramTimeoutMs ?? 10_000),
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 chat_id: config.telegramChatId,
@@ -78,13 +83,19 @@ export async function deliverNotification(
             }),
             "inspiration",
           );
-          const res = await request(
+          const res = await telegramRequest(
             telegramApiUrl(
               config.telegramToken ?? "",
               "sendDocument",
               config.telegramApiUrl,
             ),
-            { method: "POST", body: form, signal: AbortSignal.timeout(15_000) },
+            {
+              method: "POST",
+              body: form,
+              signal: AbortSignal.timeout(
+                (config.telegramTimeoutMs ?? 10_000) + 5_000,
+              ),
+            },
           );
           if (!res.ok || !(await res.json()).ok)
             throw new Error("telegram_photo_failed");
