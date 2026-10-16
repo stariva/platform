@@ -1,0 +1,1 @@
+ALTER TABLE "order_receipts" ADD COLUMN "image_url" text;

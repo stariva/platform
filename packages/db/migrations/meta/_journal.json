@@ -197,6 +197,13 @@
       "when": 1792007793123,
       "tag": "0027_order_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792137795921,
+      "tag": "0028_receipt_image_url",
+      "breakpoints": true
     }
   ]
 }

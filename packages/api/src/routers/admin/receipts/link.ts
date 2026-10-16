@@ -36,7 +36,8 @@ const CHECK_TIMEOUT_MS = 5_000;
 const CHECK_DELAY_MS = 300;
 
 export type ReceiptCheck =
-  | { status: "found" }
+  /** `image` — сама картинка чека: её сохраняем у себя, чтобы не зависеть от ФНС. */
+  | { status: "found"; image: Uint8Array; contentType: string }
   | { status: "not_found" }
   /** `reason` — что именно пошло не так, по-русски, чтобы показать в админке. */
   | { status: "unavailable"; reason: string };
@@ -96,9 +97,15 @@ async function checkOnce(
     const res = await fetchImpl(url, {
       signal: AbortSignal.timeout(timeoutMs),
     });
-    await res.body?.cancel();
     const type = res.headers.get("content-type") ?? "";
-    if (res.ok && type.startsWith("image/")) return { status: "found" };
+    if (res.ok && type.startsWith("image/")) {
+      return {
+        status: "found",
+        image: new Uint8Array(await res.arrayBuffer()),
+        contentType: type.split(";")[0] ?? type,
+      };
+    }
+    await res.body?.cancel();
     if (res.status === 404 || res.status === 422) {
       return { status: "not_found" };
     }

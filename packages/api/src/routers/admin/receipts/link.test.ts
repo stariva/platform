@@ -61,9 +61,13 @@ const retrying = (fetchImpl: typeof fetch) => ({
   delayMs: 0,
 });
 
-test("an image means the receipt exists", async () => {
-  expect(await checkReceipt(PRINT, once(respond(200, "image/png")))).toEqual({
+test("an image means the receipt exists, and comes back with it", async () => {
+  expect(
+    await checkReceipt(PRINT, once(respond(200, "image/png; charset=binary"))),
+  ).toEqual({
     status: "found",
+    image: new TextEncoder().encode("x"),
+    contentType: "image/png",
   });
 });
 
@@ -120,7 +124,7 @@ test("a one-off hang is retried and the receipt is still found", async () => {
       headers: { "content-type": "image/png" },
     });
   }) as unknown as typeof fetch;
-  expect(await checkReceipt(PRINT, retrying(flaky))).toEqual({
+  expect(await checkReceipt(PRINT, retrying(flaky))).toMatchObject({
     status: "found",
   });
   expect(calls).toBe(2);

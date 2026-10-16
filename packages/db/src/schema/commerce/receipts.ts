@@ -31,8 +31,11 @@ export const orderReceipts = pgTable(
     // ИНН продавца и номер чека из ссылки lknpd.nalog.ru/api/v1/receipt/<ИНН>/<номер>/print
     inn: text("inn").notNull(),
     number: text("number").notNull(),
-    // Картинка чека на сервисе ФНС — её получает покупатель
+    // Картинка чека на сервисе ФНС
     url: text("url").notNull(),
+    // Наша копия картинки в публичном бакете: покупатель получает её, а не
+    // ссылку на ФНС, которая бывает недоступна. null — копию не снимали
+    imageUrl: text("image_url"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
