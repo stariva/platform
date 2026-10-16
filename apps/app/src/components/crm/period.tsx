@@ -72,6 +72,9 @@ export function resolvePeriod(params: PeriodParams) {
         from: customFrom.success ? customFrom.data : undefined,
         to: customTo.success ? customTo.data : undefined,
       };
+  if (!preset && range.from && range.to && range.from > range.to) {
+    [range.from, range.to] = [range.to, range.from];
+  }
   return { today, preset, range };
 }
 

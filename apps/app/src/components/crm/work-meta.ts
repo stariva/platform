@@ -125,6 +125,13 @@ export function plural(count: number, one: string, few: string, many: string) {
 export const days = (count: number) =>
   `${count} ${plural(count, "день", "дня", "дней")}`;
 
-/** Сумма в рублях из поля формы: «12 000,50» → 12000.5; пусто — 0. */
-export const parseRubles = (value: string) =>
-  Number(value.replace(",", ".").replace(/\s/g, "")) || 0;
+/** Рубли: пробелы между тысячами, запятая или точка перед копейками; пусто — 0. */
+export function parseRubles(value: string): number | null {
+  const normalized = value.trim().replace(/[\u00a0\u202f]/g, " ");
+  if (!normalized) return 0;
+  if (!/^(?:\d+|\d{1,3}(?: \d{3})+)(?:[.,]\d{1,2})?$/.test(normalized)) {
+    return null;
+  }
+  const amount = Number(normalized.replace(/ /g, "").replace(",", "."));
+  return Number.isFinite(amount) ? amount : null;
+}

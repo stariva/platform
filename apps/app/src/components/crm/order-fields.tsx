@@ -49,18 +49,23 @@ export const emptyOrderFields = (
 });
 
 /** Поля формы → вход `addSale` / `updateOrder`. */
-export const orderInput = (value: OrderFieldsValue) => ({
-  channel: value.channel,
-  externalNumber: value.externalNumber,
-  description: value.description,
-  amount: parseRubles(value.amount),
-  soldOn: value.soldOn,
-  dueOn: value.dueOn || null,
-  fee: parseRubles(value.fee),
-  campaignId: value.campaignId,
-  trackingNumber: value.trackingNumber,
-  notes: value.notes,
-});
+export const orderInput = (value: OrderFieldsValue) => {
+  const amount = parseRubles(value.amount);
+  const fee = parseRubles(value.fee);
+  if (amount === null || fee === null) return null;
+  return {
+    channel: value.channel,
+    externalNumber: value.externalNumber,
+    description: value.description,
+    amount,
+    soldOn: value.soldOn,
+    dueOn: value.dueOn || null,
+    fee,
+    campaignId: value.campaignId,
+    trackingNumber: value.trackingNumber,
+    notes: value.notes,
+  };
+};
 
 export function useOrderFields(draft?: Partial<OrderFieldsValue>) {
   return useState(() => emptyOrderFields(draft));

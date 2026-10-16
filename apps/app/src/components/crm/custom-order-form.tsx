@@ -74,12 +74,18 @@ export function CustomOrderForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
+        const input = orderInput(fields);
+        const parsedPaid = parseRubles(paid);
+        if (input === null || parsedPaid === null) {
+          toast.error("Проверьте сумму заказа, комиссию и оплату");
+          return;
+        }
         add.mutate({
-          ...orderInput(fields),
+          ...input,
           key: clientKey,
           client: clientKey ? undefined : { name, phone, email },
           status,
-          paid: parseRubles(paid),
+          paid: parsedPaid,
           requestNumber,
         });
       }}
@@ -170,7 +176,7 @@ export function CustomOrderForm({
             <Button
               type="button"
               variant="outline"
-              disabled={!(amount > 0)}
+              disabled={amount === null || amount <= 0}
               onClick={() => setPaid(fields.amount)}
             >
               Всё

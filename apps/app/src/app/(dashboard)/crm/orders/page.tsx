@@ -37,6 +37,7 @@ import { api } from "~/orpc/server";
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 100;
+const BOARD_PAGE_SIZE = 500;
 
 const STAGES = Object.keys(STAGE_LABELS) as [Stage, ...Stage[]];
 const CHANNELS = Object.keys(CHANNEL_LABELS) as [WorkChannel, ...WorkChannel[]];
@@ -153,25 +154,37 @@ function Filters({ params }: { params: Params }) {
 
 /** Доска: колонки этапов в работе, в каждой — сначала просроченные. */
 async function Board({ params }: { params: Params }) {
-  const { items, stages } = await api.admin.crm.orders({
-    view: "active",
+  const input = {
+    view: "active" as const,
     channel: params.channel,
     type: params.type,
     query: params.q,
-    limit: 500,
-  });
-  const orders = items.filter((order) => order.kind !== "request");
-  const requests = items.length - orders.length;
-  const overdue = items.filter((order) => order.overdue).length;
-  const toCollect = items.reduce((sum, order) => sum + order.toCollect, 0);
-  const amount = orders.reduce((sum, order) => sum + order.amount, 0);
+    limit: BOARD_PAGE_SIZE,
+  };
+  const { items, stages, kinds, total } = await api.admin.crm.orders(input);
+  for (
+    let offset = BOARD_PAGE_SIZE;
+    offset < total;
+    offset += BOARD_PAGE_SIZE
+  ) {
+    const page = await api.admin.crm.orders({ ...input, offset });
+    items.push(...page.items);
+  }
+  const orders = kinds.reduce(
+    (sum, row) => sum + (row.kind === "request" ? 0 : row.count),
+    0,
+  );
+  const requests = kinds.find((row) => row.kind === "request")?.count ?? 0;
+  const overdue = stages.reduce((sum, row) => sum + row.overdue, 0);
+  const toCollect = stages.reduce((sum, row) => sum + row.toCollect, 0);
+  const amount = stages.reduce((sum, row) => sum + row.amount, 0);
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="Заказов в работе"
-          value={orders.length}
+          value={orders}
           hint={`На сумму ${rubles.format(amount)}`}
         />
         <Stat

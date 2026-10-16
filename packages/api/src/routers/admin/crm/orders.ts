@@ -335,7 +335,11 @@ function byUrgency(a: WorkOrderView, b: WorkOrderView) {
     if (!b.dueOn) return -1;
     return a.dueOn < b.dueOn ? -1 : 1;
   }
-  return a.createdAt.getTime() - b.createdAt.getTime();
+  return (
+    a.createdAt.getTime() - b.createdAt.getTime() ||
+    a.kind.localeCompare(b.kind) ||
+    a.id.localeCompare(b.id)
+  );
 }
 
 const periodOf = (input: { from?: string; to?: string }): Period => ({
@@ -406,6 +410,14 @@ export const orders = adminProcedure
       };
     });
 
+    // Полные счётчики по источникам, независимо от этапа и страницы карточек.
+    const kinds = (["product", "workshop", "manual", "request"] as const).map(
+      (kind) => ({
+        kind,
+        count: scoped.filter((order) => order.kind === kind).length,
+      }),
+    );
+
     const found = scoped
       .filter((order) => !input.stage || order.stage === input.stage)
       .map((order) => orderView(order, today, now));
@@ -419,6 +431,7 @@ export const orders = adminProcedure
       items: found.slice(input.offset, input.offset + input.limit),
       total: found.length,
       stages,
+      kinds,
     };
   });
 

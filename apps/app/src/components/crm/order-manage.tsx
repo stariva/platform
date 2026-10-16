@@ -156,7 +156,12 @@ export function OrderEditForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        save.mutate({ id, ...orderInput(fields) });
+        const input = orderInput(fields);
+        if (input === null) {
+          toast.error("Проверьте сумму заказа и комиссию");
+          return;
+        }
+        save.mutate({ id, ...input });
       }}
     >
       <OrderFields
@@ -275,6 +280,10 @@ export function OrderPayments({
         className="space-y-3"
         onSubmit={(event) => {
           event.preventDefault();
+          if (parsed === null || parsed <= 0) {
+            toast.error("Укажите сумму оплаты больше нуля");
+            return;
+          }
           add.mutate({ saleId, paidOn, amount: parsed, note });
         }}
       >
@@ -311,7 +320,7 @@ export function OrderPayments({
         <Button
           type="submit"
           variant="outline"
-          disabled={add.isPending || !(parsed > 0)}
+          disabled={add.isPending || parsed === null || parsed <= 0}
         >
           {add.isPending ? "Записываем…" : "Записать оплату"}
         </Button>

@@ -92,7 +92,7 @@ export default async function RequestPage({
               <span className="text-muted-foreground text-sm">
                 {request.archivedAt
                   ? "Заявка в архиве и не висит в «Новых» на доске заказов"
-                  : "Пока заказа нет, заявка висит в «Новых» на доске заказов"}
+                  : "По заявке пока не оформлен заказ"}
               </span>
             </>
           )}
