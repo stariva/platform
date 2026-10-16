@@ -2,7 +2,8 @@ import { expect, mock, test } from "bun:test";
 
 // Importing the router creates a pool; these tests only use the fake DB below.
 const originalUrl = process.env.POSTGRES_URL;
-process.env.POSTGRES_URL ??= "postgres://postgres@localhost/workshop_remove_test";
+process.env.POSTGRES_URL ??=
+  "postgres://postgres@localhost/workshop_remove_test";
 const { removeOrder } = await import("./remove-order");
 if (originalUrl === undefined) delete process.env.POSTGRES_URL;
 
