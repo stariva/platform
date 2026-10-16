@@ -51,6 +51,7 @@ export const lessonVideoHls = schedules.task({
       const abort = new AbortController();
       const onCancel = () => abort.abort(new Error("task cancelled"));
       signal.addEventListener("abort", onCancel);
+      if (signal.aborted) onCancel();
       const heartbeat = setInterval(async () => {
         const [error] = await safe(webApi.jobs.videos.heartbeat(attempt));
         // Попытка уже не наша; сетевой сбой переждём до следующего раза
