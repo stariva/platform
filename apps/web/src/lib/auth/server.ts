@@ -87,6 +87,7 @@ export const auth = initAuth({
       // Аккаунт создаётся только регистрацией: там берём согласие на
       // обработку персональных данных. Ссылка лишь пускает в существующий.
       disableSignUp: true,
+      expiresIn: 60 * 60, // 1 час (по умолчанию 5 минут)
       sendMagicLink: async ({ email, url, metadata }, ctx) => {
         if (captureMagicLink(metadata, url)) return;
         // Ответ одинаковый для любого email, но письмо с заведомо нерабочей
