@@ -15,10 +15,26 @@ import {
   saleForRequest,
   saveClient,
 } from "./clients";
+import {
+  addPayment,
+  analytics,
+  order,
+  orders,
+  removePayment,
+  setOrderStatus,
+  updateOrder,
+} from "./orders";
 import { report } from "./report";
 
 export const adminCrmRouter = {
   report,
+  analytics,
+  orders,
+  order,
+  updateOrder,
+  setOrderStatus,
+  addPayment,
+  removePayment,
   clients,
   client,
   saveClient,

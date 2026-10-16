@@ -36,6 +36,8 @@ export const customOrderRequests = pgTable(
       .defaultNow()
       .notNull(),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    // Мастер разобрала заявку без заказа: не ответили, не договорились
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("custom_order_requests_number_idx").on(table.number),

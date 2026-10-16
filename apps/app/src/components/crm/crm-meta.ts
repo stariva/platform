@@ -79,9 +79,10 @@ export function paybackTone(revenue: number, spend: number) {
     : "text-destructive";
 }
 
-/** Где посмотреть сделку: заказ, запись на мастер-класс или нигде. */
+/** Где посмотреть сделку: заказ с сайта, запись на мастер-класс или заказ вне сайта. */
 export function dealHref(deal: { kind: string; id: string }) {
   if (deal.kind === "product") return `/orders/${deal.id}`;
+  if (deal.kind === "manual") return `/crm/orders/${deal.id}`;
   if (deal.kind === "workshop") {
     return `/workshop-orders?status=all&q=${encodeURIComponent(deal.id)}`;
   }

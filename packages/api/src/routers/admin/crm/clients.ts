@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import {
   adCampaigns,
   crmClients,
+  crmSalePayments,
   crmSales,
   type Database,
   eq,
@@ -18,7 +19,12 @@ import {
   normalizePhone,
   sourceKey,
 } from "./model";
-import { daySchema } from "./report";
+import {
+  assertCampaign,
+  CRM_ORDER_STATUSES,
+  orderColumns,
+  orderFields,
+} from "./orders";
 import {
   byId,
   clientSummary,
@@ -332,14 +338,15 @@ async function cardFor(
 
 /**
  * Заказ мимо корзины сайта: индивидуальный заказ по заявке или из
- * мессенджера, продажа на Авито. Клиента задают ключом карточки или
- * контактами — по ним найдётся уже известный клиент, иначе заведётся новый.
- * Выбранная реклама получает выручку заказа; если источник клиента ещё не
- * известен, она же становится его источником.
+ * мессенджера, заказ на Авито, Ozon, Ярмарке Мастеров, продажа вживую.
+ * Клиента задают ключом карточки или контактами — по ним найдётся уже
+ * известный клиент, иначе заведётся новый. Выбранная реклама получает
+ * выручку заказа. Уже полученные деньги (paid) записываются оплатой в день
+ * заказа.
  */
 export const addSale = adminProcedure
   .input(
-    z.object({
+    orderFields.extend({
       key: keySchema.optional(),
       client: z
         .object({
@@ -348,40 +355,39 @@ export const addSale = adminProcedure
           email: optionalText(200),
         })
         .optional(),
-      soldOn: daySchema,
-      amount: z.number().positive().max(21_474_836.47),
-      description: z.string().trim().min(1).max(300),
-      campaignId: z.string().min(1).nullable().default(null),
+      status: z.enum(CRM_ORDER_STATUSES).default("new"),
+      paid: z.number().min(0).max(21_474_836.47).default(0),
       requestNumber: z.number().int().positive().optional(),
     }),
   )
   .handler(async ({ context, input }) => {
-    if (input.campaignId) {
-      const [campaign] = await context.db
-        .select({ id: adCampaigns.id })
-        .from(adCampaigns)
-        .where(eq(adCampaigns.id, input.campaignId));
-      if (!campaign) {
-        throw new ORPCError("BAD_REQUEST", { message: "Кампания не найдена" });
-      }
-    }
+    await assertCampaign(context.db, input.campaignId);
+    const closed = input.status === "done" || input.status === "canceled";
     try {
       return await context.db.transaction(async (tx) => {
         const clientId = await cardFor(tx, input);
         const [sale] = await tx
           .insert(crmSales)
           .values({
+            ...orderColumns(input),
             clientId,
-            soldOn: input.soldOn,
-            amount: toKopecks(input.amount),
-            description: input.description,
-            campaignId: input.campaignId,
+            status: input.status,
+            closedAt: closed ? new Date() : null,
             requestNumber: input.requestNumber ?? null,
           })
           .returning();
+        if (!sale) throw new Error("crm_sale_insert_failed");
+        if (input.paid > 0) {
+          await tx.insert(crmSalePayments).values({
+            saleId: sale.id,
+            paidOn: input.soldOn,
+            amount: toKopecks(input.paid),
+          });
+        }
         return {
           key: clientId,
-          sale: sale && { ...sale, amount: rubles(sale.amount) },
+          id: sale.id,
+          sale: { ...sale, amount: rubles(sale.amount) },
         };
       });
     } catch (error) {
@@ -402,6 +408,7 @@ export const saleForRequest = adminProcedure
       .select({
         id: crmSales.id,
         clientId: crmSales.clientId,
+        status: crmSales.status,
         amount: crmSales.amount,
         soldOn: crmSales.soldOn,
         campaignName: adCampaigns.name,

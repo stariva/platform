@@ -25,6 +25,7 @@ export interface RequestRow {
   deliveredAt: Date | null;
   attempts: number;
   lockedUntil: Date | null;
+  archivedAt?: Date | null;
 }
 
 /** Состояние отправки уведомления о заявке в Telegram или на почту. */
@@ -85,6 +86,7 @@ export function RequestsTable({ rows }: { rows: RequestRow[] }) {
                     <Badge variant="secondary">{row.productType}</Badge>
                   )}
                   {row.hasPhoto && <Badge variant="outline">есть фото</Badge>}
+                  {row.archivedAt && <Badge variant="outline">в архиве</Badge>}
                   <DeliveryBadge
                     deliveredAt={row.deliveredAt}
                     attempts={row.attempts}

@@ -16,8 +16,10 @@ import {
 import {
   IconAddressBook,
   IconChartBar,
+  IconChartPie,
   IconExternalLink,
   IconInbox,
+  IconLayoutKanban,
   IconMessageChatbot,
   IconMessageStar,
   IconPackage,
@@ -39,7 +41,10 @@ type NavItem = { title: string; url: string; icon: typeof IconPackage };
 const matchesPath = (pathname: string, url: string) =>
   pathname === url || pathname.startsWith(`${url}/`);
 
-/** Active item = the longest matching url in its group, so "/products" stays inactive on "/products/new". */
+/**
+ * Active item = the longest matching url across the whole menu, so "/products"
+ * stays inactive on "/products/new" and "/crm" on "/crm/orders".
+ */
 const activeUrl = (pathname: string, items: NavItem[]) =>
   items
     .filter((item) => matchesPath(pathname, item.url))
@@ -52,8 +57,12 @@ const catalog: NavItem[] = [
 ];
 
 const sales: NavItem[] = [
-  { title: "Заказы", url: "/orders", icon: IconShoppingBag },
+  { title: "Заказы в работе", url: "/crm/orders", icon: IconLayoutKanban },
+  { title: "Новый заказ", url: "/crm/orders/new", icon: IconPlus },
+  { title: "Аналитика", url: "/crm/analytics", icon: IconChartPie },
+  { title: "Заказы с сайта", url: "/orders", icon: IconShoppingBag },
   { title: "Заявки", url: "/requests", icon: IconInbox },
+  { title: "Клиенты", url: "/crm/clients", icon: IconAddressBook },
 ];
 
 const learning: NavItem[] = [
@@ -64,8 +73,6 @@ const learning: NavItem[] = [
 
 const marketing: NavItem[] = [
   { title: "Сводка", url: "/crm", icon: IconChartBar },
-  { title: "Клиенты", url: "/crm/clients", icon: IconAddressBook },
-  { title: "Индивидуальный заказ", url: "/crm/orders/new", icon: IconPlus },
   {
     title: "Кампании и расходы",
     url: "/crm/campaigns",
@@ -78,6 +85,14 @@ const customers: NavItem[] = [
   { title: "Чат с Никой", url: "/chats", icon: IconMessageChatbot },
 ];
 
+const allItems = [
+  ...catalog,
+  ...sales,
+  ...marketing,
+  ...learning,
+  ...customers,
+];
+
 /** Навигация админки с активным разделом, ссылкой на витрину и меню пользователя. */
 export function AppSidebar({
   user,
@@ -88,13 +103,14 @@ export function AppSidebar({
   storefrontUrl?: string;
 }) {
   const pathname = usePathname();
+  const active = activeUrl(pathname, allItems);
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/products" />}>
+            <SidebarMenuButton size="lg" render={<Link href="/crm/orders" />}>
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary font-serif text-sidebar-primary-foreground">
                 S
               </div>
@@ -114,7 +130,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={item.url === activeUrl(pathname, catalog)}
+                  isActive={item.url === active}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -131,7 +147,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={item.url === activeUrl(pathname, sales)}
+                  isActive={item.url === active}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -148,7 +164,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={item.url === activeUrl(pathname, marketing)}
+                  isActive={item.url === active}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -165,7 +181,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={item.url === activeUrl(pathname, learning)}
+                  isActive={item.url === active}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
@@ -182,7 +198,7 @@ export function AppSidebar({
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  isActive={item.url === activeUrl(pathname, customers)}
+                  isActive={item.url === active}
                   render={<Link href={item.url} />}
                 >
                   <item.icon />
