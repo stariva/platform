@@ -31,7 +31,9 @@ export function parseReceiptLink(raw: string): ReceiptLink | null {
   };
 }
 
-const CHECK_TIMEOUT_MS = 10_000;
+const CHECK_ATTEMPTS = 3;
+const CHECK_TIMEOUT_MS = 5_000;
+const CHECK_DELAY_MS = 300;
 
 export type ReceiptCheck =
   | { status: "found" }
@@ -47,17 +49,52 @@ function networkCode(error: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
+export interface CheckOptions {
+  fetchImpl?: typeof fetch;
+  /** Сколько раз спросить ФНС, прежде чем сдаться. */
+  attempts?: number;
+  /** Сколько ждать один ответ. */
+  timeoutMs?: number;
+  /** Пауза между попытками. */
+  delayMs?: number;
+}
+
 /**
  * Есть ли такой чек в ФНС: существующий отдаёт картинку, неизвестный — 422.
  * Сумму так не сверить — JSON чека закрыт авторизацией.
+ *
+ * Сервис ФНС изредка зависает на одном запросе и тут же отвечает на
+ * следующий, поэтому лучше несколько коротких попыток, чем одна долгая.
+ * Повторяем только сбои — «найден» и «не найден» окончательны.
  */
 export async function checkReceipt(
   url: string,
-  fetchImpl: typeof fetch = fetch,
+  {
+    fetchImpl = fetch,
+    attempts = CHECK_ATTEMPTS,
+    timeoutMs = CHECK_TIMEOUT_MS,
+    delayMs = CHECK_DELAY_MS,
+  }: CheckOptions = {},
+): Promise<ReceiptCheck> {
+  let result = await checkOnce(url, fetchImpl, timeoutMs);
+  for (let attempt = 2; attempt <= attempts; attempt++) {
+    if (result.status !== "unavailable") return result;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    result = await checkOnce(url, fetchImpl, timeoutMs);
+  }
+  return result.status === "unavailable" && attempts > 1
+    ? { ...result, reason: `${result.reason}, попыток: ${attempts}` }
+    : result;
+}
+
+async function checkOnce(
+  url: string,
+  fetchImpl: typeof fetch,
+  timeoutMs: number,
 ): Promise<ReceiptCheck> {
   try {
     const res = await fetchImpl(url, {
-      signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     await res.body?.cancel();
     const type = res.headers.get("content-type") ?? "";
@@ -75,7 +112,7 @@ export async function checkReceipt(
     if (error instanceof Error && error.name === "TimeoutError") {
       return {
         status: "unavailable",
-        reason: `сервис не ответил за ${CHECK_TIMEOUT_MS / 1000} секунд`,
+        reason: `сервис не ответил за ${timeoutMs / 1000} с`,
       };
     }
     const code = networkCode(error);
