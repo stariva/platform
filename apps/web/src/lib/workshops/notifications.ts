@@ -190,9 +190,9 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
       idempotencyKey: `workshop:${order.id}:${kind}:email`,
       to: [target.email],
       subject: emailSubject(kind, target),
-      attachments: brief.map(({ filename, content }) => ({
+      attachments: brief.map(({ filename, url }) => ({
         filename,
-        content,
+        path: url,
       })),
       react: StarivaWorkshopEmail({
         kind,

@@ -20,7 +20,11 @@ const email = mock(async ({ to }: { to: string; idempotencyKey?: string }) => {
 });
 mock.module("@stariva/emails", () => ({ sendWorkshopBriefEmail: email }));
 const load = mock(async () => [
-  { label: "Бриф", filename: "brief.pdf", content: Buffer.from("%PDF") },
+  {
+    label: "Бриф",
+    filename: "brief.pdf",
+    url: "https://storage.example.test/brief.pdf?signature=synthetic",
+  },
 ]);
 mock.module("@stariva/storage", () => ({ loadWorkshopMaterials: load }));
 

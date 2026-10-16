@@ -11,11 +11,14 @@ export const resend = env.RESEND_API_KEY
   ? new Resend(env.RESEND_API_KEY)
   : null;
 
-/** Файл во вложении письма (например, PDF-бриф мастер-класса). */
-export interface EmailAttachment {
-  filename: string;
-  content: Buffer;
-}
+/**
+ * Файл во вложении письма (например, PDF-бриф мастер-класса): либо содержимое,
+ * либо ссылка, по которой Resend скачает файл сам. Ссылка — для крупных файлов:
+ * тело запроса от 30 КБ с нашего хоста до Resend не доходит.
+ */
+export type EmailAttachment =
+  | { filename: string; content: Buffer }
+  | { filename: string; path: string };
 
 export interface Emails {
   idempotencyKey?: string;

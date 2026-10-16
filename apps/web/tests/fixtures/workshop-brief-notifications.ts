@@ -37,7 +37,7 @@ mock.module("@stariva/config", () => ({ logger: { error: logError } }));
 const pdf = {
   label: "Бриф",
   filename: "Бриф.pdf",
-  content: Buffer.from("%PDF"),
+  url: "https://storage.example.test/brief.pdf?signature=synthetic",
 };
 let storageFails = scenario === "storage-fails";
 const storageError = new Error("storage down");
@@ -147,7 +147,7 @@ if (scenario === "mark-fails") {
 } else if (scenario === "attached") {
   // Бриф ушёл вложением в письме о покупке — отдельно его не шлём
   assert.deepEqual(bookedEmails[0]?.attachments, [
-    { filename: pdf.filename, content: pdf.content },
+    { filename: pdf.filename, path: pdf.url },
   ]);
   assert.equal(sent.get("synthetic-order:brief:email"), now);
   assert.deepEqual(await runWorkshopReminderSweep(now), {

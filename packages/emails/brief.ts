@@ -3,12 +3,12 @@ import StarivaWorkshopBriefEmail, {
 } from "./emails/stariva-workshop-brief";
 import { sendEmail } from "./send";
 
-/** PDF-материал курса, уже скачанный из закрытого бакета. */
+/** PDF-материал курса в закрытом бакете и временная ссылка на него. */
 export interface WorkshopBriefFile {
   /** Подпись из админки: «Бриф «Ёлка макраме»». */
   label: string;
   filename: string;
-  content: Buffer;
+  url: string;
 }
 
 /**
@@ -37,6 +37,6 @@ export async function sendWorkshopBriefEmail({
       accessUrl,
       files: files.map((file) => file.label),
     }),
-    attachments: files.map(({ filename, content }) => ({ filename, content })),
+    attachments: files.map(({ filename, url }) => ({ filename, path: url })),
   });
 }
