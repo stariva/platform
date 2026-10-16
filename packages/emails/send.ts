@@ -3,22 +3,15 @@ import { logger } from "@stariva/config";
 import nodemailer from "nodemailer";
 import type Mail from "nodemailer/lib/mailer";
 import type { ReactNode } from "react";
-import { Resend } from "resend";
 
 import { env } from "./env";
+import {
+  type EmailAttachment,
+  type OutgoingEmail,
+  requestedEmailProviders,
+} from "./providers";
 
-export const resend = env.RESEND_API_KEY
-  ? new Resend(env.RESEND_API_KEY)
-  : null;
-
-/**
- * Файл во вложении письма (например, PDF-бриф мастер-класса): либо содержимое,
- * либо ссылка, по которой Resend скачает файл сам. Ссылка — для крупных файлов:
- * тело запроса от 30 КБ с нашего хоста до Resend не доходит.
- */
-export type EmailAttachment =
-  | { filename: string; content: Buffer }
-  | { filename: string; path: string };
+export { type EmailAttachment, resend } from "./providers";
 
 export interface Emails {
   idempotencyKey?: string;
@@ -51,43 +44,57 @@ export const sendEmail = async (email: Emails) => {
     });
     return transporter.sendMail(mailOptions);
   }
-  if (!resend) {
-    logger.warn(
-      "Resend is not configured. You need to add a RESEND_API_KEY in your .env file for emails to work.",
-    );
-    return Promise.resolve();
-  }
-  const { error } = await resend.emails.send(
-    {
-      to: email.to,
-      from: email.from ?? env.EMAIL_FROM,
-      subject: email.subject,
-      react: email.react,
-      ...(email.attachments?.length ? { attachments: email.attachments } : {}),
-    },
-    email.idempotencyKey ? { idempotencyKey: email.idempotencyKey } : undefined,
-  );
-  if (error) {
-    logger.error("Resend failed to send email", error, { to: email.to });
-    throw new Error(`Resend error: ${error.message}`);
-  }
+  return deliver({
+    to: email.to,
+    from: email.from ?? env.EMAIL_FROM,
+    subject: email.subject,
+    react: email.react,
+    attachments: email.attachments,
+    idempotencyKey: email.idempotencyKey,
+  });
 };
 
-export const sendEmailHtml = async (email: EmailHtml) => {
-  if (!resend) {
-    logger.warn(
-      "Resend is not configured. You need to add a RESEND_API_KEY in your .env file for emails to work.",
-    );
-    return Promise.resolve();
-  }
-  const { error } = await resend.emails.send({
+export const sendEmailHtml = async (email: EmailHtml) =>
+  deliver({
     to: email.to,
     from: email.from ?? env.EMAIL_FROM,
     subject: email.subject,
     html: email.html,
   });
-  if (error) {
-    logger.error("Resend failed to send email", error, { to: email.to });
-    throw new Error(`Resend error: ${error.message}`);
+
+/**
+ * Отправляет письмо основным провайдером (EMAIL_PROVIDER); если он не
+ * настроен или отказал — запасным (EMAIL_FALLBACK_PROVIDER). Ошибка уходит
+ * наружу, только когда не отправил ни один.
+ */
+async function deliver(email: OutgoingEmail) {
+  const requested = requestedEmailProviders();
+  const chain = requested.filter((provider) => provider.isConfigured());
+  for (const provider of requested) {
+    if (!chain.includes(provider)) {
+      logger.warn(
+        `${provider.label} is selected in EMAIL_PROVIDER / EMAIL_FALLBACK_PROVIDER but its credentials are missing.`,
+      );
+    }
   }
-};
+  if (chain.length === 0) {
+    logger.warn(
+      "No email provider is configured. Set RESEND_API_KEY or POSTBOX_SMTP_USER and POSTBOX_SMTP_PASSWORD in your .env file for emails to work.",
+    );
+    return;
+  }
+  let lastError: unknown;
+  for (const provider of chain) {
+    try {
+      await provider.send(email);
+      return;
+    } catch (error) {
+      logger.error(`${provider.label} failed to send email`, error, {
+        to: email.to,
+        willRetryWith: chain[chain.indexOf(provider) + 1]?.label,
+      });
+      lastError = error;
+    }
+  }
+  throw lastError;
+}

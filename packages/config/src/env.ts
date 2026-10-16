@@ -18,7 +18,17 @@ export const env = createEnv({
     APP_URL: z.url().default("http://localhost:3000"),
 
     // Email
+    // Основной и запасной провайдер почты: письмо уходит основным, а если тот
+    // не настроен или отказал — запасным.
+    EMAIL_PROVIDER: z.enum(["resend", "postbox"]).default("resend"),
+    EMAIL_FALLBACK_PROVIDER: z.enum(["resend", "postbox"]).optional(),
     RESEND_API_KEY: z.string().optional(),
+    // Yandex Cloud Postbox (SMTP): логин — ID API-ключа сервисного аккаунта,
+    // пароль — его секрет.
+    POSTBOX_SMTP_HOST: z.string().default("postbox.cloud.yandex.net"),
+    POSTBOX_SMTP_PORT: z.coerce.number().int().default(465),
+    POSTBOX_SMTP_USER: z.string().optional(),
+    POSTBOX_SMTP_PASSWORD: z.string().optional(),
     EMAIL_SANDBOX_ENABLED: z.coerce.boolean().optional().default(false),
     EMAIL_SANDBOX_HOST: z.string().default("localhost"),
     EMAIL_FROM: z.string().default("Acme <onboarding@resend.dev>"),
@@ -56,7 +66,14 @@ export const env = createEnv({
     VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
     POSTGRES_URL: process.env.POSTGRES_URL,
     APP_URL: process.env.APP_URL,
+    // Пустое значение в .env — то же, что не заданное.
+    EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || undefined,
+    EMAIL_FALLBACK_PROVIDER: process.env.EMAIL_FALLBACK_PROVIDER || undefined,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    POSTBOX_SMTP_HOST: process.env.POSTBOX_SMTP_HOST || undefined,
+    POSTBOX_SMTP_PORT: process.env.POSTBOX_SMTP_PORT || undefined,
+    POSTBOX_SMTP_USER: process.env.POSTBOX_SMTP_USER,
+    POSTBOX_SMTP_PASSWORD: process.env.POSTBOX_SMTP_PASSWORD,
     EMAIL_SANDBOX_ENABLED: process.env.EMAIL_SANDBOX_ENABLED === "true",
     EMAIL_SANDBOX_HOST: process.env.EMAIL_SANDBOX_HOST,
     EMAIL_FROM: process.env.EMAIL_FROM,

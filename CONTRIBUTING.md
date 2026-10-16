@@ -77,7 +77,8 @@ cp .env.example .env
 Edit `.env` and add required values:
 - `POSTGRES_URL` — Neon database URL
 - `BETTER_AUTH_SECRET` — authentication secret
-- `RESEND_API_KEY` — API key for email sending
+- `RESEND_API_KEY` — API key for email sending (Resend)
+- Optional: `POSTBOX_SMTP_USER` / `POSTBOX_SMTP_PASSWORD` — Yandex Cloud Postbox SMTP credentials; pick the default with `EMAIL_PROVIDER` (`resend` | `postbox`) and a backup with `EMAIL_FALLBACK_PROVIDER`
 
 5. Push database schema:
 
