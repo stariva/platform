@@ -17,6 +17,11 @@ import { SiteHeader } from "~/components/layout";
 import { UserAccess } from "~/components/users/user-access";
 import { UserAvatar } from "~/components/users/user-avatar";
 import { UserDangerZone } from "~/components/users/user-danger-zone";
+import {
+  LOGIN_PAGE_SIZE,
+  MAX_LOGIN_LIMIT,
+  UserLoginHistory,
+} from "~/components/users/user-login-history";
 import { UserProfileForm } from "~/components/users/user-profile-form";
 import { api } from "~/orpc/server";
 
@@ -115,19 +120,46 @@ function OrdersTable({
   );
 }
 
+const LOGIN_TYPES = [
+  "sign_in",
+  "sign_in_failed",
+  "sign_out",
+  "password_reset",
+] as const;
+
 export default async function UserPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    logins?: string | string[];
+    loginType?: string | string[];
+  }>;
 }) {
   const { id } = await params;
-  const [user, workshops, chats] = await Promise.all([
+  const { logins: loginsParam, loginType: loginTypeParam } = await searchParams;
+  const requestedLimit = Number(
+    Array.isArray(loginsParam) ? loginsParam[0] : loginsParam,
+  );
+  const loginLimit = Number.isFinite(requestedLimit)
+    ? Math.min(
+        MAX_LOGIN_LIMIT,
+        Math.max(LOGIN_PAGE_SIZE, Math.floor(requestedLimit)),
+      )
+    : LOGIN_PAGE_SIZE;
+  const requestedType = Array.isArray(loginTypeParam)
+    ? loginTypeParam[0]
+    : loginTypeParam;
+  const loginType = LOGIN_TYPES.find((value) => value === requestedType);
+  const [user, workshops, chats, loginHistory] = await Promise.all([
     api.admin.users.byId({ id }).catch((error) => {
       if ((error as { code?: string }).code === "NOT_FOUND") notFound();
       throw error;
     }),
     api.admin.workshops.list(),
     api.admin.chats.list({ userId: id, limit: 20 }),
+    api.admin.users.loginHistory({ id, type: loginType, limit: loginLimit }),
   ]);
 
   return (
@@ -171,6 +203,13 @@ export default async function UserPage({
             workshops={workshops.map(({ slug, title }) => ({ slug, title }))}
           />
         </div>
+
+        <UserLoginHistory
+          userId={user.id}
+          data={loginHistory}
+          type={loginType}
+          limit={loginLimit}
+        />
 
         <OrdersTable
           title="Заказы на мастер-классы"
