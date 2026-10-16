@@ -17,6 +17,7 @@ import {
   dateTime,
   KIND_LABELS,
   NEEDS_ATTENTION,
+  needsReceipt,
   rubles,
   STATUS_LABELS,
   statusVariant,
@@ -168,9 +169,14 @@ export function OrdersTable({ orders }: { orders: AdminOrderView[] }) {
                     {rubles.format(order.amountTotal)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={statusVariant(order.status)}>
-                      {STATUS_LABELS[order.status] ?? order.status}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge variant={statusVariant(order.status)}>
+                        {STATUS_LABELS[order.status] ?? order.status}
+                      </Badge>
+                      {needsReceipt(order) && (
+                        <Badge variant="outline">без чека</Badge>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

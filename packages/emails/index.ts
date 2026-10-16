@@ -3,6 +3,7 @@ import ResetPasswordEmail from "./emails/reset-password";
 import StarivaChangeEmailEmail from "./emails/stariva-change-email";
 import StarivaMagicLinkEmail from "./emails/stariva-magic-link";
 import StarivaOrderEmail from "./emails/stariva-order";
+import StarivaReceiptEmail from "./emails/stariva-receipt";
 import StarivaResetPasswordEmail from "./emails/stariva-reset-password";
 import StarivaVerifyEmail from "./emails/stariva-verify-email";
 import StarivaWorkshopEmail from "./emails/stariva-workshop";
@@ -21,6 +22,7 @@ export type {
 } from "./emails/stariva-workshop";
 export { sendOrderStatusEmail } from "./order";
 export type { OrderEmailOrder } from "./order-email";
+export { sendReceiptEmail } from "./receipt";
 export { sendEmail, sendEmailHtml } from "./send";
 export {
   OtpSignInEmail,
@@ -28,6 +30,7 @@ export {
   StarivaChangeEmailEmail,
   StarivaMagicLinkEmail,
   StarivaOrderEmail,
+  StarivaReceiptEmail,
   StarivaResetPasswordEmail,
   StarivaVerifyEmail,
   StarivaWorkshopEmail,

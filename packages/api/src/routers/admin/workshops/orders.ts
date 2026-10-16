@@ -5,6 +5,7 @@ import {
   eq,
   ilike,
   or,
+  orderReceipts,
   orderStatus,
   orders,
   type SQL,
@@ -79,6 +80,7 @@ export const ordersList = adminProcedure
           createdAt: orders.createdAt,
           paidAt: orders.paidAt,
           telegramLinked: sql<boolean>`${orders.telegramChatId} is not null`,
+          receiptCount: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id})::int`,
           attribution: orders.attribution,
           visitor: orders.visitor,
         })

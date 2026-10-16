@@ -1,11 +1,16 @@
 import type { productOrders } from "@stariva/db/schema";
-import { ArrowLeftIcon, CheckIcon, MessageCircleIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  MessageCircleIcon,
+  ReceiptTextIcon,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { MadeToOrderPayment } from "@/app/order/[orderId]/made-to-order-payment";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
-import type { AccountOrder } from "@/lib/account/orders";
+import type { AccountOrder, AccountReceipt } from "@/lib/account/orders";
 import { isPaymentOverdue } from "@/lib/commerce/made-to-order-flow";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { measurementFieldsBySlug } from "@/lib/commerce/measurement-fields";
@@ -123,6 +128,28 @@ function PaymentReturnNotice({ awaiting }: { awaiting: boolean }) {
   );
 }
 
+/** Чеки из «Мой налог» — открываются на сайте ФНС. */
+function Receipts({ receipts }: { receipts: AccountReceipt[] }) {
+  if (receipts.length === 0) return null;
+  return (
+    <ul className="border-t border-espresso/8 pt-3 mt-3 space-y-1.5">
+      {receipts.map((receipt) => (
+        <li key={receipt.number}>
+          <a
+            href={receipt.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-espresso hover:underline underline-offset-4"
+          >
+            <ReceiptTextIcon className="size-4 text-taupe" aria-hidden="true" />
+            Чек №{receipt.number}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ItemsList({ view }: { view: AccountOrder }) {
   return (
     <ul className="divide-y divide-espresso/8">
@@ -204,10 +231,12 @@ function deliveryDetails(order: ProductOrderRow) {
 export async function ProductOrderView({
   order,
   view,
+  receipts,
   paymentReturn,
 }: {
   order: ProductOrderRow;
   view: AccountOrder;
+  receipts: AccountReceipt[];
   paymentReturn: boolean;
 }) {
   const madeToOrder = order.kind === "made_to_order";
@@ -349,6 +378,7 @@ export async function ProductOrderView({
                 )}
               </div>
             )}
+            <Receipts receipts={receipts} />
           </Card>
 
           <Card title="Доставка">
@@ -445,9 +475,11 @@ function HelpCard({ number }: { number: number | null }) {
 
 export function WorkshopOrderView({
   view,
+  receipts,
   paymentReturn,
 }: {
   view: AccountOrder;
+  receipts: AccountReceipt[];
   paymentReturn: boolean;
 }) {
   const item = view.items[0];
@@ -522,6 +554,7 @@ export function WorkshopOrderView({
                 </p>
               )}
             </div>
+            <Receipts receipts={receipts} />
           </Card>
           <HelpCard number={null} />
         </aside>
