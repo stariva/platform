@@ -2,7 +2,7 @@
 
 import { paths } from "@stariva/config";
 import { cn } from "@stariva/ui";
-import { Bell, Circle, Globe, Monitor, User } from "lucide-react";
+import { Bell, Circle, Globe, KeyRound, Monitor, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +16,11 @@ const sidebarNavItems = [
     title: "Account",
     href: paths.settings.root,
     icon: Circle,
+  },
+  {
+    title: "Password",
+    href: paths.settings.password,
+    icon: KeyRound,
   },
   {
     title: "Appearance",
