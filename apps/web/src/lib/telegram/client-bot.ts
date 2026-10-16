@@ -1,5 +1,6 @@
 import { env } from "@/env";
 import { telegramApiUrl } from "./api-url";
+import { telegramFetch } from "./fetch";
 
 /**
  * Клиентский бот: пишет покупателям, которые сами нажали «Напоминать в
@@ -34,7 +35,7 @@ export async function sendClientMessage(
   if (!token) throw new Error("telegram_client_bot_not_configured");
 
   const withButton = button?.url.startsWith("https://");
-  const res = await fetch(
+  const res = await telegramFetch(env.TELEGRAM_PROXY_URL)(
     telegramApiUrl(token, "sendMessage", env.TG_API_PROXY_URL),
     {
       method: "POST",

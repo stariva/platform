@@ -18,6 +18,8 @@ export interface DeliveryConfig {
   telegramChatId?: string;
   /** Обратный прокси вместо api.telegram.org. */
   telegramApiUrl?: string;
+  /** fetch для запросов к Telegram (например, через HTTP-прокси). */
+  telegramFetch?: typeof fetch;
   emailKey?: string;
   emailFrom?: string;
   emailTo?: string;
@@ -39,6 +41,7 @@ export async function deliverNotification(
       `[notifications] ${title}: на почту не отправлено — не заданы ${missingEmail.join(", ")}`,
     );
   }
+  const telegramRequest = config.telegramFetch ?? request;
   const telegramConfigured = Boolean(
     config.telegramToken && config.telegramChatId,
   );
@@ -47,7 +50,7 @@ export async function deliverNotification(
       (async () => {
         // Plain text chunks never break HTML entities or caption tags.
         for (let offset = 0; offset < message.length; offset += 3500) {
-          const res = await request(
+          const res = await telegramRequest(
             telegramApiUrl(
               config.telegramToken ?? "",
               "sendMessage",
@@ -78,7 +81,7 @@ export async function deliverNotification(
             }),
             "inspiration",
           );
-          const res = await request(
+          const res = await telegramRequest(
             telegramApiUrl(
               config.telegramToken ?? "",
               "sendDocument",
