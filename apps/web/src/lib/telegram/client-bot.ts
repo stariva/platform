@@ -36,7 +36,7 @@ export async function sendClientMessage(
 
   const withButton = button?.url.startsWith("https://");
   const res = await telegramFetch(env.TELEGRAM_PROXY_URL)(
-    telegramApiUrl(token, "sendMessage", env.TG_API_PROXY_URL),
+    telegramApiUrl(token, "sendMessage"),
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -6,7 +6,6 @@ export function telegramStaffConfig() {
   return {
     telegramToken: env.TELEGRAM_BOT_TOKEN,
     telegramChatId: env.TELEGRAM_CHAT_ID,
-    telegramApiUrl: env.TG_API_PROXY_URL,
     telegramFetch: telegramFetch(env.TELEGRAM_PROXY_URL),
     // Через прокси ответ бывает медленным
     telegramTimeoutMs: env.TELEGRAM_PROXY_URL ? 30_000 : undefined,

@@ -169,7 +169,7 @@ export async function retryPendingRequests() {
 /** При старте сервера: громко, если заявки и заказы не уходят на почту. */
 export function warnIfOrderEmailMissing() {
   console.info(
-    `[notifications] Telegram: токен ${env.TELEGRAM_BOT_TOKEN ? "задан" : "НЕ задан"}, чат ${env.TELEGRAM_CHAT_ID ? "задан" : "НЕ задан"}, HTTP-прокси ${telegramProxyHost(env.TELEGRAM_PROXY_URL)}, обратный прокси ${env.TG_API_PROXY_URL ? "задан" : "нет"}`,
+    `[notifications] Telegram: токен ${env.TELEGRAM_BOT_TOKEN ? "задан" : "НЕ задан"}, чат ${env.TELEGRAM_CHAT_ID ? "задан" : "НЕ задан"}, прокси (3proxy) ${telegramProxyHost(env.TELEGRAM_PROXY_URL)}`,
   );
   const missing = missingEmailSettings({
     emailKey: baseEnv.RESEND_API_KEY,
