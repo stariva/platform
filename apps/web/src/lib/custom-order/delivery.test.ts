@@ -43,16 +43,36 @@ test("both providers failing HTTP or transport never counts as delivered", async
     false,
   );
 });
-test("a validated email receipt is enough when Telegram fails", async () => {
+test("email alone does not count as delivered when Telegram is configured and fails", async () => {
+  const original = console.error;
+  console.error = () => {};
+  try {
+    assert.equal(
+      await deliverNotification(
+        notification,
+        config,
+        fakeFetch((url) =>
+          url.includes("resend")
+            ? Response.json({ id: "receipt" })
+            : Response.json({ ok: false }),
+        ),
+      ),
+      false,
+    );
+  } finally {
+    console.error = original;
+  }
+});
+test("a validated email receipt is enough when Telegram is not configured", async () => {
   assert.equal(
     await deliverNotification(
       notification,
-      config,
-      fakeFetch((url) =>
-        url.includes("resend")
-          ? Response.json({ id: "receipt" })
-          : Response.json({ ok: false }),
-      ),
+      {
+        emailKey: "test",
+        emailFrom: "from@example.test",
+        emailTo: "to@example.test",
+      },
+      fakeFetch(() => Response.json({ id: "receipt" })),
     ),
     true,
   );

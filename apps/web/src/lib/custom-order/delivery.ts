@@ -35,7 +35,10 @@ export async function deliverNotification(
       `[notifications] ${title}: на почту не отправлено — не заданы ${missingEmail.join(", ")}`,
     );
   }
-  if (config.telegramToken && config.telegramChatId) {
+  const telegramConfigured = Boolean(
+    config.telegramToken && config.telegramChatId,
+  );
+  if (telegramConfigured) {
     channels.push(
       (async () => {
         // Plain text chunks never break HTML entities or caption tags.
@@ -120,6 +123,9 @@ export async function deliverNotification(
       );
     }
   }
+  // Telegram — основной канал мастера: если он настроен, без него доставка
+  // не засчитывается и уведомление повторится. Почта — дубль.
+  if (telegramConfigured) return results[0]?.status === "fulfilled";
   return results.some((result) => result.status === "fulfilled");
 }
 
