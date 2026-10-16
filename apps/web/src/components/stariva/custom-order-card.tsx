@@ -31,7 +31,7 @@ const tips: Record<string, { subject: string; mention: string }> = {
     mention: "диаметр горшка, длину подвеса и количество",
   },
   placemat: {
-    subject: "плейсменты для стола",
+    subject: "плейсматы для стола",
     mention: "размер, форму и сколько штук нужно",
   },
 };

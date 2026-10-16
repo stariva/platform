@@ -46,7 +46,7 @@ export const categories: Category[] = [
     slug: "interior",
     name: "Декор интерьера",
     description:
-      "Панно, плейсменты и вигвамы — изделия, которые создают уют в вашем доме",
+      "Панно, плейсматы и вигвамы — изделия, которые создают уют в вашем доме",
     image:
       "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
     hero: {
@@ -61,7 +61,7 @@ export const categories: Category[] = [
       { slug: "lampshades", name: "Абажуры", categorySlug: "interior" },
       { slug: "tipis", name: "Вигвамы и кресла", categorySlug: "interior" },
       { slug: "pannos", name: "Панно", categorySlug: "interior" },
-      { slug: "placemats", name: "Плейсменты", categorySlug: "interior" },
+      { slug: "placemats", name: "Плейсматы", categorySlug: "interior" },
       { slug: "planters", name: "Игрушки и прочее", categorySlug: "interior" },
       { slug: "trees", name: "Ёлки", categorySlug: "interior" },
     ],
@@ -100,7 +100,7 @@ export const catalogSections = [
   {
     label: "Декор интерьера",
     href: "/catalog/interior",
-    desc: "Панно, вигвамы, плейсменты и аксессуары для дома",
+    desc: "Панно, вигвамы, плейсматы и аксессуары для дома",
     image:
       "https://cdn.stariva.ru/site/images/catalog/category-interior-macrame-v5.jpg",
   },
