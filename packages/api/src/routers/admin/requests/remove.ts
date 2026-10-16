@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { and, crmSales, customOrderRequests, eq, notExists } from "@stariva/db";
+import { customOrderRequests, eq } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -14,32 +14,29 @@ import { adminProcedure } from "../../../orpc";
 export const remove = adminProcedure
   .input(z.object({ number: z.number().int().positive() }))
   .handler(async ({ context, input }) => {
-    // Проверка заказа и удаление — одним запросом, чтобы заказ, записанный
-    // между ними, не остался со ссылкой на несуществующую заявку.
-    const [removed] = await context.db
-      .delete(customOrderRequests)
-      .where(
-        and(
-          eq(customOrderRequests.number, input.number),
-          notExists(
-            context.db
-              .select({ id: crmSales.id })
-              .from(crmSales)
-              .where(eq(crmSales.requestNumber, input.number)),
-          ),
-        ),
-      )
-      .returning({ number: customOrderRequests.number });
-    if (removed) return removed;
-
-    const [exists] = await context.db
-      .select({ number: customOrderRequests.number })
-      .from(customOrderRequests)
-      .where(eq(customOrderRequests.number, input.number));
-    if (!exists) {
-      throw new ORPCError("NOT_FOUND", { message: "Заявка не найдена" });
+    try {
+      // Внешний ключ запрещает удаление и при конкурентной записи заказа.
+      const [removed] = await context.db
+        .delete(customOrderRequests)
+        .where(eq(customOrderRequests.number, input.number))
+        .returning({ number: customOrderRequests.number });
+      if (removed) return removed;
+    } catch (error) {
+      const cause = (error as { cause?: unknown })?.cause;
+      const pg = (cause ?? error) as {
+        code?: string;
+        constraint?: string;
+      } | null;
+      if (
+        (pg?.code === "23503" || pg?.code === "23001") &&
+        pg.constraint ===
+          "crm_sales_request_number_custom_order_requests_number_fk"
+      ) {
+        throw new ORPCError("CONFLICT", {
+          message: "По заявке записан заказ — сначала удалите заказ",
+        });
+      }
+      throw error;
     }
-    throw new ORPCError("CONFLICT", {
-      message: "По заявке записан заказ — сначала удалите заказ",
-    });
+    throw new ORPCError("NOT_FOUND", { message: "Заявка не найдена" });
   });

@@ -1,0 +1,1 @@
+ALTER TABLE "crm_sales" ADD CONSTRAINT "crm_sales_request_number_custom_order_requests_number_fk" FOREIGN KEY ("request_number") REFERENCES "public"."custom_order_requests"("number") ON DELETE restrict ON UPDATE no action;

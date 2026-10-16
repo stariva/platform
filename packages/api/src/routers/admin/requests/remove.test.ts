@@ -7,17 +7,20 @@ process.env.POSTGRES_URL ??=
 const { remove } = await import("./remove");
 if (originalUrl === undefined) delete process.env.POSTGRES_URL;
 
-/** `deleted` — что вернёт delete…returning; `exists` — есть ли заявка при повторной проверке. */
-function request({ deleted, exists }: { deleted: boolean; exists: boolean }) {
+function request({
+  deleted = false,
+  error,
+}: {
+  deleted?: boolean;
+  error?: unknown;
+}) {
   const db = {
     delete: () => ({
       where: () => ({
-        returning: async () => (deleted ? [{ number: 1042 }] : []),
-      }),
-    }),
-    select: () => ({
-      from: () => ({
-        where: async () => (exists ? [{ number: 1042 }] : []),
+        returning: async () => {
+          if (error) throw error;
+          return deleted ? [{ number: 1042 }] : [];
+        },
       }),
     }),
   };
@@ -33,19 +36,40 @@ function request({ deleted, exists }: { deleted: boolean; exists: boolean }) {
 }
 
 test("remove deletes a request without an order", async () => {
-  await expect(request({ deleted: true, exists: true })).resolves.toEqual({
+  await expect(request({ deleted: true })).resolves.toEqual({
     number: 1042,
   });
 });
 
-test("remove refuses a request that already has an order", async () => {
-  await expect(request({ deleted: false, exists: true })).rejects.toMatchObject(
-    { code: "CONFLICT" },
-  );
+const foreignKeyError = {
+  code: "23503",
+  constraint: "crm_sales_request_number_custom_order_requests_number_fk",
+};
+
+test.each(
+  ["23503", "23001"].flatMap((code) => [
+    { ...foreignKeyError, code },
+    { cause: { ...foreignKeyError, code } },
+  ]),
+)(
+  "remove maps a direct or wrapped request FK violation to a conflict: %j",
+  async (error) => {
+    await expect(request({ error })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "По заявке записан заказ — сначала удалите заказ",
+    });
+  },
+);
+
+test.each([
+  new Error("database unavailable"),
+  { code: "23503", constraint: "another_fk" },
+  { code: "23001", constraint: "another_fk" },
+  { ...foreignKeyError, code: "23505" },
+])("remove propagates unrelated database errors: %j", async (error) => {
+  await expect(request({ error })).rejects.toBe(error);
 });
 
 test("remove reports a missing request", async () => {
-  await expect(
-    request({ deleted: false, exists: false }),
-  ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  await expect(request({})).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
