@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { rubles } from "~/components/crm/crm-meta";
 import { SiteHeader } from "~/components/layout";
 import { ArchiveRequest } from "~/components/requests/archive-request";
+import { RemoveRequest } from "~/components/requests/remove-request";
 import { DeliveryBadge } from "~/components/requests/requests-table";
 import { VisitorCard } from "~/components/visitors/visitor-card";
 import { api } from "~/orpc/server";
@@ -89,6 +90,7 @@ export default async function RequestPage({
                 number={request.number}
                 archived={request.archivedAt !== null}
               />
+              <RemoveRequest number={request.number} />
               <span className="text-muted-foreground text-sm">
                 {request.archivedAt
                   ? "Заявка в архиве и не висит в «Новых» на доске заказов"
