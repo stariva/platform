@@ -22,6 +22,7 @@ const { sendEmail } = await import("./send");
 test("passes attachments to Resend only when there are any", async () => {
   const attachments = [
     { filename: "Бриф.pdf", content: Buffer.from("%PDF-1.4") },
+    { filename: "Схема.pdf", path: "https://storage.example.test/scheme.pdf" },
   ];
   const email = { to: ["buyer@example.test"], subject: "Test", react: null };
   await sendEmail({ ...email, attachments });
