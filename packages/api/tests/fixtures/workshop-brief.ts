@@ -84,7 +84,7 @@ if (scenario?.startsWith("single")) {
   if (scenario === "single-send-fails") {
     await assert.rejects(result, {
       code: "BAD_GATEWAY",
-      message: "Письмо не ушло, попробуйте ещё раз",
+      message: "Письмо не ушло: provider down",
     });
     assert.equal(upsert.mock.calls.length, 0);
     assert.deepEqual(logError.mock.calls[0], [
@@ -117,7 +117,7 @@ if (scenario?.startsWith("single")) {
   const result = await call(sendMissingBriefs, input, { context });
   assert.deepEqual(result, {
     sent: 1,
-    failed: [second.to, "заказ order-3: нет email"],
+    failed: [`${second.to}: provider down`, "заказ order-3: нет email"],
     unmarked: markFails
       ? [{ orderId: recipient.orderId, to: recipient.to }]
       : [],
