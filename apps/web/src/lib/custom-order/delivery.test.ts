@@ -205,3 +205,26 @@ test("Telegram requests default to api.telegram.org without a proxy", async () =
   );
   assert.ok(urls.includes("https://api.telegram.org/bottest/sendMessage"));
 });
+test("the log names the Telegram status and description", async () => {
+  const errors: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => errors.push(args);
+  try {
+    assert.equal(
+      await deliverNotification(
+        notification,
+        { telegramToken: "test", telegramChatId: "test" },
+        fakeFetch(() =>
+          Response.json(
+            { ok: false, description: "Bad Request: chat not found" },
+            { status: 400 },
+          ),
+        ),
+      ),
+      false,
+    );
+  } finally {
+    console.error = original;
+  }
+  assert.match(String(errors[0]?.[1]), /HTTP 400 Bad Request: chat not found/);
+});
