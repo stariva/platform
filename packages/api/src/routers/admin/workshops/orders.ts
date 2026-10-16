@@ -82,7 +82,7 @@ export const ordersList = adminProcedure
           paidAt: orders.paidAt,
           telegramLinked: sql<boolean>`${orders.telegramChatId} is not null`,
           receiptCount: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id})::int`,
-          receiptsUnsent: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id} and ${orderReceipts.emailedAt} is null)::int`,
+          receiptsUnsent: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id} and ${orderReceipts.emailedAt} is null and coalesce(${orders.contactEmail}, ${user.email}) <> '')::int`,
           attribution: orders.attribution,
           visitor: orders.visitor,
         })
