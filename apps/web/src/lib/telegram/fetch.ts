@@ -9,6 +9,14 @@ const agents = new Map<string, ProxyAgent>();
  */
 export function telegramFetch(proxyUrl?: string): typeof fetch {
   if (!proxyUrl) return fetch;
+
+  // В Bun модуль undici подменён и dispatcher игнорируется: у его fetch свой
+  // параметр proxy
+  if (typeof Bun !== "undefined") {
+    return ((input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+      fetch(input, { ...init, proxy: proxyUrl } as never)) as never;
+  }
+
   let agent = agents.get(proxyUrl);
   if (!agent) {
     agent = new ProxyAgent(proxyUrl);
