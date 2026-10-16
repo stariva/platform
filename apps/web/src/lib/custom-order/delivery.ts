@@ -69,8 +69,7 @@ export async function deliverNotification(
               }),
             },
           );
-          if (!res.ok || !(await res.json()).ok)
-            throw new Error("telegram_message_failed");
+          await assertTelegramOk(res, "telegram_message_failed");
         }
         if (notification.photoBase64) {
           const form = new FormData();
@@ -97,8 +96,7 @@ export async function deliverNotification(
               ),
             },
           );
-          if (!res.ok || !(await res.json()).ok)
-            throw new Error("telegram_photo_failed");
+          await assertTelegramOk(res, "telegram_photo_failed");
         }
       })(),
     );
@@ -159,4 +157,16 @@ export function missingEmailSettings(config: DeliveryConfig): string[] {
     !config.emailFrom && "ORDER_EMAIL_FROM",
     !config.emailTo && "ORDER_EMAIL_TO",
   ].filter((name): name is string => Boolean(name));
+}
+
+/** Ошибка с кодом ответа и описанием от Telegram (или прокси) для лога. */
+async function assertTelegramOk(res: Response, code: string) {
+  const body = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    description?: string;
+  } | null;
+  if (res.ok && body?.ok) return;
+  throw new Error(
+    `${code}: HTTP ${res.status}${body?.description ? ` ${body.description}` : ""}`,
+  );
 }
