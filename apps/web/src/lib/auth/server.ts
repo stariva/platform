@@ -14,6 +14,7 @@ import {
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
 import { antispam } from "./antispam-plugin";
+import { loginAudit, recordLoginEvent } from "./login-audit";
 import { captureMagicLink } from "./magic-link-capture";
 import { verificationPageUrl } from "./verification-link";
 
@@ -34,6 +35,7 @@ const productionUrl = env.VERCEL_PROJECT_PRODUCTION_URL
  *
  * - Email + пароль с обязательным подтверждением email.
  * - Вход по магической ссылке (passwordless).
+ * - Журнал входов, неудачных попыток, выходов и сбросов пароля (login-audit).
  * - Защита от массовых регистраций без капчи: токен формы, лимиты по часу и
  *   суткам, пауза между письмами на один ящик (см. antispam-plugin).
  * - nextCookies() должен идти последним плагином — он включает установку
@@ -73,7 +75,15 @@ export const auth = initAuth({
       });
     },
   },
+  onPasswordReset: async ({ userId }, request) => {
+    await recordLoginEvent({
+      userId,
+      type: "password_reset",
+      headers: request?.headers,
+    });
+  },
   extraPlugins: [
+    loginAudit(),
     antispam({
       countRecentUnverified: async (since) => {
         const [row] = await db
