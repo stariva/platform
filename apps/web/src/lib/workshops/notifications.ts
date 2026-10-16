@@ -165,9 +165,8 @@ async function briefForBookedEmail(
   try {
     return await loadWorkshopMaterials(target.workshop.materialFiles);
   } catch (error) {
-    logger.error("workshop.brief_attachment.failed", {
+    logger.error("workshop.brief_attachment.failed", error, {
       orderId: target.order.id,
-      error: String(error),
     });
     return [];
   }
@@ -223,15 +222,15 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
       }),
     });
     if (brief.length === 0) return;
-    // Письмо уже ушло: сбой отметки не повод слать его заново. Худшее —
-    // прогон напоминаний дошлёт бриф ещё раз отдельным письмом.
+    // Подтверждаем booked только вместе с brief. Повторная попытка использует
+    // тот же ключ идемпотентности письма о покупке.
     try {
       await markOrderNotificationSent(order.id, BRIEF, "email");
     } catch (error) {
-      logger.error("workshop.brief_mark.failed", {
+      logger.error("workshop.brief_mark.failed", error, {
         orderId: order.id,
-        error: String(error),
       });
+      throw error;
     }
   });
 }

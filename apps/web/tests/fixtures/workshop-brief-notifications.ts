@@ -31,7 +31,8 @@ mock.module("../../src/env", () => ({
 mock.module("../../src/lib/custom-order/inbox", () => ({
   notificationConfigured: () => false,
 }));
-mock.module("@stariva/config", () => ({ logger: { error: () => {} } }));
+const logError = mock(() => {});
+mock.module("@stariva/config", () => ({ logger: { error: logError } }));
 
 const pdf = {
   label: "Бриф",
@@ -39,9 +40,10 @@ const pdf = {
   content: Buffer.from("%PDF"),
 };
 let storageFails = scenario === "storage-fails";
+const storageError = new Error("storage down");
 mock.module("@stariva/storage", () => ({
   loadWorkshopMaterials: async () => {
-    if (storageFails) throw new Error("storage down");
+    if (storageFails) throw storageError;
     return [pdf];
   },
 }));
@@ -61,6 +63,8 @@ mock.module("@stariva/emails", () => ({
 }));
 
 const sent = new Map<string, Date | null>();
+let markFails = scenario === "mark-fails";
+const markError = new Error("database down");
 mock.module("@stariva/db", () => ({
   db: {
     select: () => ({
@@ -102,6 +106,7 @@ mock.module("../../src/lib/payments/orders", () => ({
     kind: string,
     channel: NotificationChannel,
   ) => {
+    if (markFails) throw markError;
     sent.set(`${orderId}:${kind}:${channel}`, now);
   },
 }));
@@ -112,7 +117,34 @@ const { notifyWorkshopBooked, runWorkshopReminderSweep } = await import(
 await notifyWorkshopBooked(target.order.id);
 assert.equal(bookedEmails.length, 1);
 
-if (scenario === "attached") {
+if (scenario === "mark-fails") {
+  assert.equal(sent.has("synthetic-order:booked:email"), false);
+  assert.equal(sent.has("synthetic-order:brief:email"), false);
+  assert.deepEqual(logError.mock.calls[0], [
+    "workshop.brief_mark.failed",
+    markError,
+    { orderId: target.order.id },
+  ]);
+  // Пока БД не восстановилась, booked не подтверждается и отдельный brief не уходит.
+  assert.deepEqual(await runWorkshopReminderSweep(now), {
+    checked: 1,
+    delivered: 0,
+    failed: 1,
+  });
+  markFails = false;
+  assert.deepEqual(await runWorkshopReminderSweep(now), {
+    checked: 1,
+    delivered: 1,
+    failed: 0,
+  });
+  assert.deepEqual(
+    bookedEmails.map(({ idempotencyKey }) => idempotencyKey),
+    Array(3).fill("workshop:synthetic-order:booked:email"),
+  );
+  assert.equal(sent.get("synthetic-order:booked:email"), now);
+  assert.equal(sent.get("synthetic-order:brief:email"), now);
+  assert.equal(briefEmails.length, 0);
+} else if (scenario === "attached") {
   // Бриф ушёл вложением в письме о покупке — отдельно его не шлём
   assert.deepEqual(bookedEmails[0]?.attachments, [
     { filename: pdf.filename, content: pdf.content },
@@ -125,6 +157,11 @@ if (scenario === "attached") {
   });
   assert.equal(briefEmails.length, 0);
 } else {
+  assert.deepEqual(logError.mock.calls[0], [
+    "workshop.brief_attachment.failed",
+    storageError,
+    { orderId: target.order.id },
+  ]);
   // Хранилище не ответило — письмо о покупке всё равно ушло, без брифа
   assert.deepEqual(bookedEmails[0]?.attachments, []);
   assert.equal(sent.has("synthetic-order:brief:email"), false);

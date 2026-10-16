@@ -3,6 +3,7 @@
 import { Button, toast } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 
@@ -32,8 +33,9 @@ export function WorkshopBriefButton({
   const confirm = useConfirm();
   const send = useMutation({
     ...orpc.admin.workshops.sendBrief.mutationOptions(),
-    onSuccess: ({ to }) => {
-      toast.success(`Бриф отправлен на ${to}`);
+    onSuccess: ({ to, warning }) => {
+      if (warning) toast.warning(`${warning}: ${to}`);
+      else toast.success(`Бриф отправлен на ${to}`);
       router.refresh();
     },
     onError,
@@ -87,15 +89,26 @@ export function WorkshopBriefBulk({
 }) {
   const router = useRouter();
   const confirm = useConfirm();
+  const [unmarkedOrderIds, setUnmarkedOrderIds] = useState<string[]>([]);
   const send = useMutation({
     ...orpc.admin.workshops.sendMissingBriefs.mutationOptions(),
-    onSuccess: ({ sent, failed }) => {
+    onSuccess: ({ sent, failed, unmarked, recovered }) => {
+      setUnmarkedOrderIds(unmarked.map(({ orderId }) => orderId));
+      if (unmarked.length > 0) {
+        toast.warning(
+          `Письма отправлены, но отметки не сохранены: ${unmarked.length}. Нажмите «Сохранить отметки»`,
+        );
+      }
       if (failed.length > 0) {
         toast.warning(
           `Отправлено: ${sent}. Не ушло: ${failed.join(", ")} — попробуйте ещё раз`,
         );
-      } else {
-        toast.success(`Бриф отправлен: ${sent}`);
+      } else if (unmarked.length === 0) {
+        toast.success(
+          recovered > 0
+            ? `Отметки сохранены: ${recovered}`
+            : `Бриф отправлен: ${sent}`,
+        );
       }
       router.refresh();
     },
@@ -103,6 +116,13 @@ export function WorkshopBriefBulk({
   });
 
   async function sendAll() {
+    if (unmarkedOrderIds.length > 0) {
+      send.mutate({
+        workshop: workshop.slug,
+        recordOnlyOrderIds: unmarkedOrderIds,
+      });
+      return;
+    }
     if (
       await confirm({
         title: `Отправить бриф «${workshop.title}»?`,
@@ -117,11 +137,24 @@ export function WorkshopBriefBulk({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
       <span>
-        PDF-бриф «{workshop.title}» не получили письмом:{" "}
-        <b>{workshop.briefMissing}</b>
+        {unmarkedOrderIds.length > 0 ? (
+          <>
+            Письма отправлены, осталось сохранить отметки:{" "}
+            <b>{unmarkedOrderIds.length}</b>
+          </>
+        ) : (
+          <>
+            PDF-бриф «{workshop.title}» не получили письмом:{" "}
+            <b>{workshop.briefMissing}</b>
+          </>
+        )}
       </span>
       <Button size="sm" disabled={send.isPending} onClick={sendAll}>
-        {send.isPending ? "Отправляем…" : "Отправить всем"}
+        {send.isPending
+          ? "Выполняем…"
+          : unmarkedOrderIds.length > 0
+            ? "Сохранить отметки"
+            : "Отправить всем"}
       </Button>
     </div>
   );

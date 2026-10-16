@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // Isolate environment, database and provider mocks from other test modules.
-for (const scenario of ["attached", "storage-fails"]) {
+for (const scenario of ["attached", "storage-fails", "mark-fails"]) {
   test(`Workshop brief delivery: ${scenario}`, () => {
     const result = spawnSync(
       process.execPath,

@@ -5,6 +5,7 @@ import {
   asc,
   type Database,
   eq,
+  inArray,
   orders,
   type SQL,
   sql,
@@ -97,7 +98,37 @@ async function loadBrief(db: Database, slug: string) {
   }
 }
 
-/** Шлёт бриф и отмечает отправку — сайт после этого его не продублирует. */
+/** Сохраняет отметку отдельно от доставки: эту операцию безопасно повторять. */
+async function recordBriefSent(db: Database, orderId: string) {
+  try {
+    await db
+      .insert(workshopOrderNotifications)
+      .values({
+        orderId,
+        kind: BRIEF,
+        channel: "email",
+        sentAt: sql`now()`,
+        leaseUntil: null,
+      })
+      .onConflictDoUpdate({
+        target: [
+          workshopOrderNotifications.orderId,
+          workshopOrderNotifications.kind,
+          workshopOrderNotifications.channel,
+        ],
+        set: { sentAt: sql`now()`, leaseUntil: null },
+      });
+    return { recorded: true, warning: null };
+  } catch (error) {
+    logger.error("workshops.brief.mark_failed", error, { orderId });
+    return {
+      recorded: false,
+      warning: "Письмо отправлено, но отметка не сохранена",
+    };
+  }
+}
+
+/** Ошибка доставки пробрасывается, сбой отметки возвращается отдельно. */
 async function sendTo(
   db: Database,
   recipient: Recipient & { to: string },
@@ -111,23 +142,7 @@ async function sendTo(
     accessUrl: accessUrl(recipient),
     files: brief.files,
   });
-  await db
-    .insert(workshopOrderNotifications)
-    .values({
-      orderId: recipient.orderId,
-      kind: BRIEF,
-      channel: "email",
-      sentAt: sql`now()`,
-      leaseUntil: null,
-    })
-    .onConflictDoUpdate({
-      target: [
-        workshopOrderNotifications.orderId,
-        workshopOrderNotifications.kind,
-        workshopOrderNotifications.channel,
-      ],
-      set: { sentAt: sql`now()`, leaseUntil: null },
-    });
+  return recordBriefSent(db, recipient.orderId);
 }
 
 /**
@@ -158,7 +173,7 @@ export const sendBrief = adminProcedure
     const brief = await loadBrief(context.db, recipient.slug);
     try {
       // Без ключа идемпотентности: повторная отправка — осознанное действие
-      await sendTo(context.db, { ...recipient, to }, brief);
+      return { to, ...(await sendTo(context.db, { ...recipient, to }, brief)) };
     } catch (error) {
       logger.error("workshops.brief.send_failed", error, {
         orderId: input.orderId,
@@ -167,7 +182,6 @@ export const sendBrief = adminProcedure
         message: "Письмо не ушло, попробуйте ещё раз",
       });
     }
-    return { to };
   });
 
 /**
@@ -178,21 +192,46 @@ export const sendBrief = adminProcedure
  * @example client.admin.workshops.sendMissingBriefs({ workshop: "elka-makrame" })
  */
 export const sendMissingBriefs = adminProcedure
-  .input(z.object({ workshop: z.string().trim().min(1).max(200) }))
+  .input(
+    z.object({
+      workshop: z.string().trim().min(1).max(200),
+      // Только заказы с подтверждённой доставкой и несохранённой отметкой.
+      // В этом режиме письма не отправляются даже после истечения окна Resend.
+      recordOnlyOrderIds: z.array(z.string().min(1)).min(1).optional(),
+    }),
+  )
   .handler(async ({ context, input }) => {
-    const brief = await loadBrief(context.db, input.workshop);
+    const brief = input.recordOnlyOrderIds
+      ? null
+      : await loadBrief(context.db, input.workshop);
     const recipients = await context.db
       .select(recipientColumns)
       .from(orders)
       .innerJoin(user, eq(user.id, orders.userId))
       .innerJoin(workshops, eq(workshops.slug, orders.workshopSlug))
-      .where(and(eq(orders.workshopSlug, input.workshop), briefMissing))
+      .where(
+        and(
+          eq(orders.workshopSlug, input.workshop),
+          briefMissing,
+          input.recordOnlyOrderIds
+            ? inArray(orders.id, input.recordOnlyOrderIds)
+            : undefined,
+        ),
+      )
       .orderBy(asc(orders.paidAt));
 
     let sent = 0;
+    let recovered = 0;
     const failed: string[] = [];
+    const unmarked: Array<{ orderId: string; to: string | null }> = [];
     for (const recipient of recipients) {
       const { to } = recipient;
+      if (!brief) {
+        const result = await recordBriefSent(context.db, recipient.orderId);
+        if (result.recorded) recovered++;
+        else unmarked.push({ orderId: recipient.orderId, to });
+        continue;
+      }
       if (!to) {
         failed.push(`заказ ${recipient.orderId}: нет email`);
         continue;
@@ -200,13 +239,16 @@ export const sendMissingBriefs = adminProcedure
       try {
         // Тот же ключ, что у сайта: письмо не задвоится, если сайт как раз
         // досылает бриф этому покупателю
-        await sendTo(
+        const result = await sendTo(
           context.db,
           { ...recipient, to },
           brief,
           `workshop:${recipient.orderId}:${BRIEF}:email`,
         );
         sent++;
+        if (!result.recorded) {
+          unmarked.push({ orderId: recipient.orderId, to });
+        }
       } catch (error) {
         logger.error("workshops.brief.send_failed", error, {
           orderId: recipient.orderId,
@@ -214,5 +256,5 @@ export const sendMissingBriefs = adminProcedure
         failed.push(to);
       }
     }
-    return { sent, failed };
+    return { sent, failed, unmarked, recovered };
   });
