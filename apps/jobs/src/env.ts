@@ -1,13 +1,11 @@
 import { z } from "zod";
 
 const schema = z.object({
-  /** JWT-токен воркера из Hatchet (Settings → API Tokens). Читает SDK. */
-  HATCHET_CLIENT_TOKEN: z.string().min(1),
   /** Адрес сайта, у которого воркер дёргает внутренние эндпоинты. */
   STOREFRONT_URL: z.url(),
   /** Общий с сайтом секрет для внутренних вызовов: `openssl rand -hex 32`. */
   JOBS_SECRET: z.string().min(32),
-  /** ffmpeg и ffprobe для нарезки видео в HLS; в образе стоят из apk. */
+  /** ffmpeg и ffprobe для нарезки видео в HLS; в Trigger.dev их ставит расширение. */
   FFMPEG_PATH: z.string().default("ffmpeg"),
   FFPROBE_PATH: z.string().default("ffprobe"),
 });

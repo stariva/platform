@@ -1,5 +1,7 @@
-import { lessonVideoHlsWorkflow } from "./lesson-video-hls";
 import { workshopRemindersWorkflow } from "./workshop-reminders";
 
-/** Все задания воркера. Новое задание — файл рядом и строка здесь. */
-export const workflows = [workshopRemindersWorkflow, lessonVideoHlsWorkflow];
+/**
+ * Все задания воркера Hatchet. Новое задание — файл рядом и строка здесь.
+ * Нарезка HLS живёт в Trigger.dev (src/trigger).
+ */
+export const workflows = [workshopRemindersWorkflow];
