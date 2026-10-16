@@ -269,6 +269,7 @@ function configuredStaffChannels(): StaffChannel[] {
       config: {
         telegramToken: env.TELEGRAM_BOT_TOKEN,
         telegramChatId: env.TELEGRAM_CHAT_ID,
+        telegramApiUrl: env.TG_API_PROXY_URL,
       },
     });
   }
