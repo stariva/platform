@@ -40,14 +40,14 @@ async function sendToTelegram(email: string, source?: string): Promise<void> {
   const res = await fetch(
     telegramApiUrl(token, "sendMessage", env.TG_API_PROXY_URL),
     {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: lines.join("\n"),
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: lines.join("\n"),
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
     },
   );
   if (!res.ok) {
