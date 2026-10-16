@@ -128,6 +128,11 @@ async function recordBriefSent(db: Database, orderId: string) {
   }
 }
 
+/** Причина сбоя доставки для админа: ответ почтового провайдера как есть. */
+function errorReason(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /** Ошибка доставки пробрасывается, сбой отметки возвращается отдельно. */
 async function sendTo(
   db: Database,
@@ -179,7 +184,7 @@ export const sendBrief = adminProcedure
         orderId: input.orderId,
       });
       throw new ORPCError("BAD_GATEWAY", {
-        message: "Письмо не ушло, попробуйте ещё раз",
+        message: `Письмо не ушло: ${errorReason(error)}`,
       });
     }
   });
@@ -253,7 +258,7 @@ export const sendMissingBriefs = adminProcedure
         logger.error("workshops.brief.send_failed", error, {
           orderId: recipient.orderId,
         });
-        failed.push(to);
+        failed.push(`${to}: ${errorReason(error)}`);
       }
     }
     return { sent, failed, unmarked, recovered };
