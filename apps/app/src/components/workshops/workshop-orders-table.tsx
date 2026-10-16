@@ -54,6 +54,8 @@ export interface WorkshopOrderRow {
   paidAt: Date | null;
   telegramLinked: boolean;
   receiptCount: number;
+  receiptsExpected: number;
+  receiptsUnsent: number;
   preorder: boolean;
   utmSource: string | null;
   utmCampaign: string | null;
@@ -160,12 +162,13 @@ export function WorkshopOrdersTable({
                 {rub.format(row.amount)}
               </TableCell>
               <TableCell className="align-top">
-                {(row.receiptCount > 0 || row.status === "paid") && (
+                {(row.receiptCount > 0 || row.receiptsExpected > 0) && (
                   <WorkshopReceiptsButton
                     orderId={row.id}
                     title={`${row.userName} · ${row.workshopTitle ?? row.workshopSlug}`}
                     count={row.receiptCount}
-                    needed={row.status === "paid" && row.receiptCount === 0}
+                    needed={row.receiptCount < row.receiptsExpected}
+                    unsent={row.receiptsUnsent > 0}
                   />
                 )}
               </TableCell>

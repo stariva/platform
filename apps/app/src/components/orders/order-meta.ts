@@ -72,19 +72,15 @@ export interface AdminOrderView {
   }[];
   /** Сколько чеков привязано; есть только в списке заказов. */
   receiptCount?: number;
+  /** Сколько чеков положено по числу оплат (отменённым и возвращённым — 0). */
+  receiptsExpected?: number;
+  /** Привязанные чеки, которые не отправлены покупателю. */
+  receiptsUnsent?: number;
 }
 
-/**
- * Оплаченный заказ, к которому ещё не привязан ни один чек. Отменённые и
- * возвращённые не подсвечиваем — там чек мог уже не понадобиться.
- */
+/** Чеков меньше, чем оплат: нет чека на предоплату, доплату или на весь заказ. */
 export function needsReceipt(order: AdminOrderView): boolean {
-  return (
-    order.receiptCount === 0 &&
-    Boolean(order.paidAt || order.depositPaidAt) &&
-    order.status !== "canceled" &&
-    order.status !== "refunded"
-  );
+  return (order.receiptCount ?? 0) < (order.receiptsExpected ?? 0);
 }
 
 type DateFields =

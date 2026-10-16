@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { workshopReceiptsExpected } from "../receipts/summary";
 
 /** Экранирует % и _ в поисковой строке, чтобы они искались как обычные символы. */
 function escapeLike(value: string) {
@@ -81,6 +82,7 @@ export const ordersList = adminProcedure
           paidAt: orders.paidAt,
           telegramLinked: sql<boolean>`${orders.telegramChatId} is not null`,
           receiptCount: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id})::int`,
+          receiptsUnsent: sql<number>`(select count(*) from ${orderReceipts} where ${orderReceipts.workshopOrderId} = ${orders.id} and ${orderReceipts.emailedAt} is null)::int`,
           attribution: orders.attribution,
           visitor: orders.visitor,
         })
@@ -122,6 +124,8 @@ export const ordersList = adminProcedure
     return {
       items: rows.map(({ amount, releaseAt, attribution, ...row }) => ({
         ...row,
+        // Чеков должно быть по числу оплат — по записи на курс одна
+        receiptsExpected: workshopReceiptsExpected(row.status),
         // Копейки → рубли, как в остальной админке
         amount: amount / 100,
         // Предзаказ — оформлен до старта уроков (как подарок в applyWorkshopPayment)

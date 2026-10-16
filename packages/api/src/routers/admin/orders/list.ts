@@ -1,15 +1,14 @@
 import {
-  count,
   desc,
   eq,
   inArray,
-  orderReceipts,
   productOrderItems,
   productOrders,
 } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { loadProductReceiptStats, receiptsExpected } from "../receipts/summary";
 import { loadItemProducts } from "./item-products";
 import { toAdminOrder } from "./shape";
 
@@ -28,40 +27,38 @@ export const list = adminProcedure
       .limit(ORDERS_LIMIT);
 
     const orderIds = orders.map((order) => order.id);
-    const [items, receipts] =
+    const [items, receiptStats] = await Promise.all([
       orderIds.length === 0
-        ? [[], []]
-        : await Promise.all([
-            context.db
-              .select()
-              .from(productOrderItems)
-              .where(inArray(productOrderItems.orderId, orderIds)),
-            context.db
-              .select({
-                orderId: orderReceipts.productOrderId,
-                total: count(),
-              })
-              .from(orderReceipts)
-              .where(inArray(orderReceipts.productOrderId, orderIds))
-              .groupBy(orderReceipts.productOrderId),
-          ]);
-    const receiptCounts = new Map(
-      receipts.map((row) => [row.orderId, row.total]),
-    );
+        ? []
+        : context.db
+            .select()
+            .from(productOrderItems)
+            .where(inArray(productOrderItems.orderId, orderIds)),
+      loadProductReceiptStats(context.db, orderIds),
+    ]);
 
     const products = await loadItemProducts(
       context.db,
       items.map((item) => item.productSlug),
     );
 
-    return orders.map((order) => ({
-      ...toAdminOrder(
-        order,
-        items.filter((item) => item.orderId === order.id),
-        [],
-        products,
-      ),
-      // Сколько чеков привязано — список подсвечивает оплаченные без чека
-      receiptCount: receiptCounts.get(order.id) ?? 0,
-    }));
+    return orders.map((order) => {
+      const stats = receiptStats.get(order.id);
+      const succeededPayments = stats?.succeededPayments ?? 0;
+      return {
+        ...toAdminOrder(
+          order,
+          items.filter((item) => item.orderId === order.id),
+          [],
+          products,
+        ),
+        // Список подсвечивает заказы, где чеков меньше, чем оплат, и чеки,
+        // которые не дошли до покупателя
+        receiptCount: stats?.count ?? 0,
+        receiptsExpected: receiptsExpected({ ...order, succeededPayments }),
+        // Без адреса письмо слать некуда — такой чек мастер передаёт сама
+        receiptsUnsent:
+          order.contactEmail || order.userId ? (stats?.unsent ?? 0) : 0,
+      };
+    });
   });
