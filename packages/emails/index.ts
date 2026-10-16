@@ -7,8 +7,10 @@ import StarivaReceiptEmail from "./emails/stariva-receipt";
 import StarivaResetPasswordEmail from "./emails/stariva-reset-password";
 import StarivaVerifyEmail from "./emails/stariva-verify-email";
 import StarivaWorkshopEmail from "./emails/stariva-workshop";
+import StarivaWorkshopBriefEmail from "./emails/stariva-workshop-brief";
 import WelcomeEmail from "./emails/welcome";
 
+export { sendWorkshopBriefEmail, type WorkshopBriefFile } from "./brief";
 export {
   isOrderEmailStatus,
   ORDER_EMAIL_STATUSES,
@@ -23,7 +25,7 @@ export type {
 export { sendOrderStatusEmail } from "./order";
 export type { OrderEmailOrder } from "./order-email";
 export { sendReceiptEmail } from "./receipt";
-export { sendEmail, sendEmailHtml } from "./send";
+export { type EmailAttachment, sendEmail, sendEmailHtml } from "./send";
 export {
   OtpSignInEmail,
   ResetPasswordEmail,
@@ -33,6 +35,7 @@ export {
   StarivaReceiptEmail,
   StarivaResetPasswordEmail,
   StarivaVerifyEmail,
+  StarivaWorkshopBriefEmail,
   StarivaWorkshopEmail,
   WelcomeEmail,
 };

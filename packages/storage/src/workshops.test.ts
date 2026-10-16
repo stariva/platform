@@ -6,6 +6,7 @@ import {
   isWorkshopKey,
   workshopHlsPrefix,
   workshopImageKey,
+  workshopMaterialFileName,
   workshopMaterialKey,
   workshopVideoKey,
 } from "./workshops";
@@ -83,4 +84,13 @@ test("isWorkshopKey only accepts the course's own folder", () => {
   assert.ok(!isWorkshopKey("a", "workshops/a/../b/x.mp4"));
   assert.ok(!isWorkshopKey("a", "products/a/x.jpg"));
   assert.ok(!isWorkshopKey("a", "workshops/a"));
+});
+
+test("material attachment is named after its label", () => {
+  assert.equal(
+    workshopMaterialFileName("Бриф «Ёлка макраме»"),
+    "Бриф «Ёлка макраме».pdf",
+  );
+  assert.equal(workshopMaterialFileName("a/b: c.PDF"), "a b c.pdf");
+  assert.equal(workshopMaterialFileName("  "), "Материалы.pdf");
 });

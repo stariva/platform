@@ -165,6 +165,15 @@ export async function getObjectText(key: string): Promise<string> {
   return res.Body.transformToString("utf-8");
 }
 
+/** Содержимое файла из закрытого бакета целиком (например, PDF во вложение письма). */
+export async function getObjectBytes(key: string): Promise<Buffer> {
+  const res = await getClient().send(
+    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+  );
+  if (!res.Body) throw new Error(`empty object: ${key}`);
+  return Buffer.from(await res.Body.transformToByteArray());
+}
+
 /** Есть ли файл в закрытом бакете. */
 export async function objectExists(key: string): Promise<boolean> {
   try {

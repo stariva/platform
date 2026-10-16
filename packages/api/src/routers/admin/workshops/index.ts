@@ -1,3 +1,4 @@
+import { sendBrief, sendMissingBriefs } from "./brief";
 import { byId } from "./by-id";
 import { list } from "./list";
 import { ordersList } from "./orders";
@@ -14,4 +15,6 @@ export const adminWorkshopsRouter = {
   remove,
   presignUpload,
   uploadImage,
+  sendBrief,
+  sendMissingBriefs,
 };

@@ -6,6 +6,7 @@ import {
   linkStyle,
   StarivaLayout,
 } from "./stariva-layout";
+import { AttachedFiles } from "./stariva-workshop-brief";
 
 /**
  * booked — сразу после оплаты; week, day, release — за неделю, за день и в
@@ -27,6 +28,8 @@ export interface StarivaWorkshopEmailProps {
   telegramUrl?: string;
   /** Подарок за предзаказ — в письме о покупке и во всех напоминаниях. */
   bonus?: { title: string; releaseLabel: string };
+  /** Подписи PDF-брифа во вложении — только в письме о покупке. */
+  attachedFiles?: string[];
 }
 
 const muted = { color: colors.darkGrey, fontSize: 14, lineHeight: "23px" };
@@ -142,6 +145,12 @@ export default function StarivaWorkshopEmail(
               : `${capitalize(props.bonus.releaseLabel)} в вашем кабинете бесплатно откроется ${props.bonus.title}.`}
           </Text>
         </Section>
+      )}
+      {props.kind === "booked" && props.attachedFiles && (
+        <AttachedFiles
+          files={props.attachedFiles}
+          hint="Что купить, где и как подготовиться. Распечатайте и возьмите с собой в магазин."
+        />
       )}
       {showMaterials && (
         <Section style={{ marginTop: 32 }}>

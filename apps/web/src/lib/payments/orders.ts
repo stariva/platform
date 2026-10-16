@@ -181,6 +181,28 @@ export async function completeOrderNotification(
     );
 }
 
+/**
+ * Отмечает отправку, сделанную в составе другого письма: PDF-бриф ушёл
+ * вложением в письме о покупке — отдельное письмо с брифом уже не нужно.
+ */
+export async function markOrderNotificationSent(
+  orderId: string,
+  kind: string,
+  channel: NotificationChannel,
+): Promise<void> {
+  await db
+    .insert(workshopOrderNotifications)
+    .values({ orderId, kind, channel, sentAt: sql`now()`, leaseUntil: null })
+    .onConflictDoUpdate({
+      target: [
+        workshopOrderNotifications.orderId,
+        workshopOrderNotifications.kind,
+        workshopOrderNotifications.channel,
+      ],
+      set: { sentAt: sql`now()`, leaseUntil: null },
+    });
+}
+
 /** Ошибка отправки — освобождаем только свою аренду для следующей попытки. */
 export async function releaseOrderNotification(claimId: string): Promise<void> {
   await db

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { z } from "zod";
 import { SiteHeader } from "~/components/layout";
+import { WorkshopBriefBulk } from "~/components/workshops/workshop-brief-button";
 import {
   WORKSHOP_ORDER_STATUS_LABELS,
   WorkshopOrdersTable,
@@ -101,6 +102,12 @@ export default async function WorkshopOrdersPage({
   if (page > pages) redirect(pageHref(filters, pages));
 
   const allCount = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+  // Курсы, где кому-то из оплативших ещё не уходил PDF-бриф
+  const missingBriefs = workshops.filter(
+    (workshop) =>
+      workshop.briefMissing > 0 &&
+      (!filters.workshop || workshop.slug === filters.workshop),
+  );
 
   return (
     <>
@@ -115,6 +122,10 @@ export default async function WorkshopOrdersPage({
             заказ оформлен до старта уроков.
           </p>
         </div>
+
+        {missingBriefs.map((workshop) => (
+          <WorkshopBriefBulk key={workshop.slug} workshop={workshop} />
+        ))}
 
         {workshops.length > 1 && (
           <div className="flex flex-wrap gap-2">
