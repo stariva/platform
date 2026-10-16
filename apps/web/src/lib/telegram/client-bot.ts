@@ -1,4 +1,5 @@
 import { env } from "@/env";
+import { telegramApiUrl } from "./api-url";
 
 /**
  * Клиентский бот: пишет покупателям, которые сами нажали «Напоминать в
@@ -33,7 +34,9 @@ export async function sendClientMessage(
   if (!token) throw new Error("telegram_client_bot_not_configured");
 
   const withButton = button?.url.startsWith("https://");
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const res = await fetch(
+    telegramApiUrl(token, "sendMessage", env.TG_API_PROXY_URL),
+    {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -50,7 +53,8 @@ export async function sendClientMessage(
         : {}),
     }),
     signal: AbortSignal.timeout(10_000),
-  });
+    },
+  );
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     throw new Error(`telegram_send_failed_${res.status}: ${detail}`);
