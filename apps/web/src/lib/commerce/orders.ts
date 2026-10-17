@@ -45,6 +45,8 @@ export interface CreateProductOrderInput {
   contactName: string;
   contactPhone: string;
   contactEmail?: string;
+  /** Комментарий покупателя к заказу — попадает в customerNotes. */
+  comment?: string;
   items: OrderLineInput[];
   delivery: DeliverySelection;
   /** Выбранный пункт выдачи — чтобы мастер видел его адрес, а не только id. */
@@ -164,6 +166,7 @@ export async function createProductOrder(
       amountDelivery,
       amountTotal,
       currency: "RUB",
+      customerNotes: input.comment || null,
       deliveryMethod: input.delivery.method,
       deliveryPointId:
         input.delivery.method === "pickup" ? input.delivery.pointId : null,

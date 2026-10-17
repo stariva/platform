@@ -147,6 +147,15 @@ test("stock order message mentions the Ozon order", () => {
   assert.ok(!message.includes("Размер:"));
 });
 
+test("stock order message carries the buyer comment", () => {
+  const { message } = formatPaidOrderMessage(
+    { ...order, kind: "stock", customerNotes: "Позвоните перед доставкой" },
+    [{ ...item, ozonSku: 123, options: null }],
+  );
+
+  assert.ok(message.includes("Комментарий: Позвоните перед доставкой"));
+});
+
 test("details-updated message carries the delivery note", () => {
   const { title, message } = formatDetailsUpdatedMessage(
     { ...order, deliveryNote: "Казань, ПВЗ СДЭК" },
