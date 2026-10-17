@@ -1,4 +1,4 @@
-import { MessageCircleIcon } from "lucide-react";
+import { CheckIcon, MessageCircleIcon, XIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,29 +8,29 @@ import { Header } from "@/components/stariva/header";
 import { PhoneIcon } from "@/components/stariva/icons";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
+import { BULK_DISCOUNT, MAX_ORDER_ITEMS } from "@/lib/b2b/order";
 import { CONTACTS } from "@/lib/contacts";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { B2BOrder } from "./_components/b2b-order";
 
 const B2B_MESSAGE =
-  "Здравствуйте, Ольга! Хочу обсудить макраме для нашего заведения.";
+  "Здравствуйте, Ольга! Хочу заказать макраме для заведения. Пришлю фото места и размеры.";
 
 export const metadata: Metadata = {
-  title: "Декор для кафе и ресторанов — корпоративные заказы Stariva",
-  description:
-    "Макраме-декор для кафе, ресторанов, отелей и офисов. Абажуры, панно, зонирующие ширмы — заказы от 1 изделия, скидка 15% от 5 изделий. Бесплатная консультация.",
+  title: "Макраме для кафе, салона и гостевого дома",
+  description: `Абажуры, панно и кашпо из хлопка для небольших заведений: от 1 до ${MAX_ORDER_ITEMS} изделий, скидка ${BULK_DISCOUNT.percent}% от ${BULK_DISCOUNT.minItems} штук. Без выезда и замеров — по фото, доставка по России.`,
   alternates: { canonical: `${BASE_URL}/b2b` },
   openGraph: {
     type: "website",
-    title: "Декор для бизнеса — Stariva",
-    description:
-      "Макраме-декор для кафе, ресторанов, отелей и офисов. Заказы от 1 изделия, скидка 15% от 5 изделий.",
+    title: "Макраме для небольших заведений — Stariva",
+    description: `Абажуры, панно и кашпо для кофейни, салона или гостевого дома. До ${MAX_ORDER_ITEMS} изделий, заказ по фото, доставка по России.`,
     url: `${BASE_URL}/b2b`,
     images: [
       {
         url: `https://cdn.stariva.ru/site/images/b2b/hero-cafe-editorial.webp`,
         width: 1672,
         height: 941,
-        alt: "Макраме-декор для кафе — Stariva",
+        alt: "Абажуры макраме в небольшом кафе — Stariva",
       },
     ],
   },
@@ -38,145 +38,112 @@ export const metadata: Metadata = {
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-const advantages = [
-  {
-    number: "01",
-    title: "Авторский дизайн под ваш интерьер",
-    body: "Разрабатываем эскиз под конкретное помещение: размеры, стиль, высота потолков. Не шаблоны — концепция под ваш проект.",
-  },
-  {
-    number: "02",
-    title: "Долговечность без обслуживания",
-    body: "Натуральный хлопок не теряет форму годами. Раз в неделю — пылесос. Этого достаточно для поддержания вида в коммерческом помещении.",
-  },
-  {
-    number: "03",
-    title: "Фотозона в подарок",
-    body: "Красивое макраме само по себе создаёт точку притяжения для фото. Ваши гости публикуют — вы получаете органический охват без рекламного бюджета.",
-  },
-  {
-    number: "04",
-    title: "Акустический эффект",
-    body: "Плотное хлопковое плетение рассеивает звук. Абажуры и панно снижают реверберацию в залах с твёрдыми поверхностями — актуально для open-space кафе.",
-  },
-  {
-    number: "05",
-    title: "Документы для бухгалтерии",
-    body: "Работаем по договору, выставляем счёт, акт и чек НПД. Работаем как самозанятые. Подходит для корпоративных расходов.",
-  },
-  {
-    number: "06",
-    title: "Гарантия и поддержка",
-    body: "12 месяцев гарантии на конструкцию. Если изделие деформировалось по нашей вине — переделаем. Всегда на связи для консультаций по уходу.",
-  },
-];
-
 const useCases = [
   {
-    label: "Кафе и кофейни",
+    label: "Кофейни и пекарни",
     image: "https://cdn.stariva.ru/site/images/b2b/hero-cafe-editorial.webp",
     alt: "Хлопковые абажуры макраме над столиками светлой кофейни",
     objectPosition: "65% center",
-    items: [
-      "Абажуры над барной стойкой",
-      "Панно как фоновый декор",
-      "Зонирование столиков ширмами",
-      "Instagram-точка притяжения",
-    ],
+    items: ["2–6 абажуров над столиками", "Панно за стойкой", "Кашпо у окна"],
   },
   {
-    label: "Рестораны",
+    label: "Небольшие кафе и бары",
     image:
       "https://cdn.stariva.ru/site/images/b2b/project-restaurant-editorial.webp",
-    alt: "Плетёная перегородка макраме рядом с сервированным столом ресторана",
+    alt: "Плетёный декор макраме рядом с сервированным столом",
     objectPosition: "60% center",
     items: [
-      "Декоративные перегородки",
-      "Крупноформатные панно",
-      "Сезонные инсталляции",
-      "VIP-зоны и приватные кабинеты",
+      "Абажуры над баром",
+      "Панно как фон для фото",
+      "Кашпо с зеленью в зале",
     ],
   },
   {
-    label: "Отели и лобби",
+    label: "Гостевые дома и апартаменты",
     image:
       "https://cdn.stariva.ru/site/images/b2b/project-hotel-editorial.webp",
-    alt: "Панно из натурального хлопка за деревянной стойкой отеля",
+    alt: "Панно из натурального хлопка за деревянной стойкой",
     objectPosition: "center 45%",
     items: [
-      "Арт-объекты для холла",
-      "Декор номеров и сьютов",
-      "Навигационные зоны",
-      "Брендовые инсталляции",
+      "Панно над кроватью в каждом номере",
+      "Абажуры в номера",
+      "Панно у входа",
     ],
   },
   {
-    label: "Офисы и коворкинги",
+    label: "Салоны, студии, шоурумы",
     image:
       "https://cdn.stariva.ru/site/images/b2b/project-office-editorial.webp",
-    alt: "Светлый офис с рабочими столами и подвесными перегородками макраме",
+    alt: "Светлое помещение с подвесным декором макраме",
     objectPosition: "center center",
-    items: [
-      "Акустические панели",
-      "Зонирование open-space",
-      "Ресепшн и переговорные",
-      "Корпоративные подарки",
-    ],
+    items: ["Панно у ресепшна", "Абажуры в зоне ожидания", "Кашпо для зелени"],
   },
 ];
 
 const orderSteps = [
   {
     step: "01",
-    title: "Заявка",
-    desc: "Напишите в мессенджер или позвоните. Расскажите про помещение: площадь, высота потолков, стиль. Приложите фото если есть.",
+    title: "Напишите, что нужно",
+    desc: "Соберите заказ на этой странице или просто напишите в мессенджер: что, сколько и для какого места.",
   },
   {
     step: "02",
-    title: "Концепция",
-    desc: "В течение 2 рабочих дней предложим эскиз, подберём размеры и материалы. Бесплатно и без обязательств.",
+    title: "Пришлите фото",
+    desc: "Сфотографируйте место, где будут висеть изделия, и рулеткой измерьте стену или высоту потолка — подскажу, что именно мерить. Приезжать на замер не нужно.",
   },
   {
     step: "03",
-    title: "Договор и предоплата",
-    desc: "После согласования подписываем договор. Предоплата 50%, остаток — перед отгрузкой. Счёт, акт и чек НПД.",
+    title: "Согласуем и плету",
+    desc: "Подберу размеры и цвет, пришлю фото похожих работ и точную цену. Предоплата 50%, остаток — когда изделия готовы и вы увидели их на фото.",
   },
   {
     step: "04",
-    title: "Изготовление",
-    desc: "Срок зависит от объёма: от 2 недель для стандартных позиций до 6 недель для крупных инсталляций. Фотоотчёт по готовности.",
+    title: "Отправляю",
+    desc: "Упаковываю и отправляю СДЭК или Почтой по всей России. Панно и кашпо вешаются на обычный крючок, абажур — на ваш светильник.",
   },
-  {
-    step: "05",
-    title: "Доставка и монтаж",
-    desc: "Доставляем по России транспортной компанией. Для Москвы — возможен выезд мастера для монтажа и финальной настройки.",
-  },
+];
+
+const doList = [
+  `Абажуры, панно и кашпо — от 1 до ${MAX_ORDER_ITEMS} изделий`,
+  "Натуральный хлопок или один цвет на выбор",
+  "Фото готовых изделий перед отправкой",
+  "Чек НПД, по запросу — договор и акт",
+  "Гарантия 12 месяцев на плетение",
+];
+
+const dontList = [
+  "Выезд, замеры и монтаж",
+  "Дизайн-проект и визуализации",
+  "Перегородки во всю стену и крупные инсталляции",
+  `Заказы больше ${MAX_ORDER_ITEMS} изделий`,
+  "Подбор цвета по брендбуку и Pantone",
+  "Электрику: абажур идёт без патрона и провода",
 ];
 
 const faqItems = [
   {
     q: "Какой минимальный заказ?",
-    a: "Минимальный заказ — одно изделие. При заказе от 5 изделий — скидка 15%.",
-  },
-  {
-    q: "Можно ли заказать изделия в фирменных цветах компании?",
-    a: "Да. Хлопок красим натуральными красителями. Подбираем цвет под ваш брендбук или интерьер — по образцу или Pantone-коду. Стоимость крашения обсуждается отдельно.",
+    a: `Одно изделие. Верхняя граница — ${MAX_ORDER_ITEMS}: всё плету сама, и больше за один заказ не успею сделать в срок.`,
   },
   {
     q: "Как быстро сделаете?",
-    a: "Стандартные позиции — 2–3 недели от предоплаты. Крупные инсталляции (от 5 изделий или нестандартные размеры) — 4–6 недель. Сроки фиксируем в договоре.",
+    a: "До 5 изделий — 2–3 недели, до 12 — 3–4 недели, до 20 — 4–6 недель от предоплаты. Если у вас дата открытия, напишите её сразу — скажу, успеваю ли.",
   },
   {
-    q: "Делаете ли монтаж?",
-    a: "Для Москвы и Подмосковья — да, выезд мастера для монтажа и регулировки. Для других регионов — подробные инструкции по монтажу, всё крепится стандартными крюками.",
+    q: "Как понять размер без замера?",
+    a: "По фото и паре цифр: ширина стены, высота потолка, размер стола или стойки. Подскажу, что измерить, и предложу размер. Перед плетением согласуем его письменно.",
   },
   {
-    q: "Есть ли скидки на оптовые заказы?",
-    a: "Да. При заказе от 5 изделий — скидка 15%. От 10 изделий — индивидуальная цена и приоритет в очереди производства.",
+    q: "Кто будет вешать?",
+    a: "Вы сами или ваш мастер. Панно и кашпо — на обычный крючок или гвоздь, абажур надевается на светильник. Электрику подключает электрик.",
   },
   {
-    q: "Какие документы предоставляете?",
-    a: "Договор подряда, счёт на оплату, акт выполненных работ и чек НПД. Работаем официально как самозанятые.",
+    q: "Есть скидка?",
+    a: `От ${BULK_DISCOUNT.minItems} изделий в одном заказе — ${BULK_DISCOUNT.percent}%.`,
+  },
+  {
+    q: "Какие документы даёте?",
+    a: "Я самозанятая: выдаю чек НПД, его можно провести как расход. Если бухгалтерии нужны договор и акт — подготовлю.",
   },
 ];
 
@@ -215,58 +182,45 @@ export default function B2BPage() {
               Для бизнеса
             </p>
             <h1 className="font-serif text-white text-[clamp(3rem,6.5vw,6rem)] leading-[0.95] tracking-tight text-balance">
-              Декор, который
+              Макраме для
               <br />
-              <em className="not-italic text-linen">работает на вас</em>
+              <em className="not-italic text-linen">небольшого заведения</em>
             </h1>
             <p className="mt-8 text-white/70 text-lg lg:text-xl max-w-lg leading-[1.75]">
-              Макраме для кафе, ресторанов, отелей и офисов. Авторский дизайн,
-              корпоративные документы, гарантия 12 месяцев.
+              Абажуры, панно и кашпо для кофейни, салона или гостевого дома — от
+              1 до {MAX_ORDER_ITEMS} изделий. Плету сама, заказ по фото,
+              отправляю готовое по России.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
+              <a
+                href="#order"
+                className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-white text-espresso label-caps-md hover:bg-linen transition-colors duration-300"
+              >
+                Посчитать заказ
+              </a>
               <ContactMasterButton
                 source="b2b_hero"
                 message={B2B_MESSAGE}
-                className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-white text-espresso label-caps-md hover:bg-linen transition-colors duration-300"
-              >
-                <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
-                Обсудить проект
-              </ContactMasterButton>
-              <a
-                href="#process"
                 className="inline-flex items-center gap-3 px-8 py-4 rounded-full border border-white/30 text-white label-caps-md hover:border-white/60 transition-colors duration-300"
               >
-                Как работаем
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M7 2v10M3 8l4 4 4-4"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
+                <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
+                Написать Ольге
+              </ContactMasterButton>
             </div>
           </div>
 
-          {/* Кейс-числа */}
           <div className="mt-14 flex flex-wrap gap-px border border-white/10 rounded-xl overflow-hidden w-fit">
             {[
-              { value: "50+", label: "коммерческих\nпроектов" },
-              { value: "12", label: "месяцев\nгарантии" },
-              { value: "2–6", label: "недели\nизготовления" },
-              { value: "100%", label: "натуральный\nхлопок" },
-            ].map((s, i) => (
+              { value: `1–${MAX_ORDER_ITEMS}`, label: "изделий\nв заказе" },
+              {
+                value: `−${BULK_DISCOUNT.percent}%`,
+                label: `от ${BULK_DISCOUNT.minItems}\nизделий`,
+              },
+              { value: "2–6", label: "недель\nизготовления" },
+              { value: "0", label: "выездов —\nвсё по фото" },
+            ].map((s) => (
               <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: static list
-                key={i}
+                key={s.label}
                 className="px-7 py-5 bg-white/8 backdrop-blur-sm flex flex-col gap-1 min-w-[110px]"
               >
                 <span className="font-serif text-3xl lg:text-4xl text-white leading-none">
@@ -289,9 +243,9 @@ export default function B2BPage() {
               Подходит для
             </p>
             <h2 className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-espresso leading-[1.05]">
-              Любой коммерческой
+              Небольших
               <br />
-              <span className="text-taupe">площадки</span>
+              <span className="text-taupe">помещений</span>
             </h2>
           </div>
 
@@ -337,47 +291,6 @@ export default function B2BPage() {
         </div>
       </section>
 
-      {/* ── Advantages ────────────────────────────────────────────────────── */}
-      <section className="py-28 lg:py-40 bg-sand">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
-          <div className="mb-16 lg:mb-20 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div>
-              <p className="label-caps text-terracotta tracking-widest mb-4">
-                Почему Stariva
-              </p>
-              <h2 className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-espresso leading-[1.05]">
-                Преимущества
-                <br />
-                <span className="text-taupe">для бизнеса</span>
-              </h2>
-            </div>
-            <p className="text-taupe text-base leading-[1.8] max-w-sm lg:text-right">
-              Работаем с коммерческими объектами с 2020 года. Больше 50
-              реализованных проектов по всей России.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-espresso/8 border border-espresso/8 rounded-2xl overflow-hidden">
-            {advantages.map((adv) => (
-              <div
-                key={adv.number}
-                className="bg-sand p-8 lg:p-10 flex flex-col gap-4"
-              >
-                <span className="font-serif text-5xl text-espresso/10 leading-none select-none">
-                  {adv.number}
-                </span>
-                <h3 className="font-serif text-xl lg:text-2xl text-espresso leading-tight">
-                  {adv.title}
-                </h3>
-                <p className="text-taupe leading-[1.8] text-[14px]">
-                  {adv.body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── Process ──────────────────────────────────────────────────────── */}
       <section
         id="process"
@@ -386,10 +299,10 @@ export default function B2BPage() {
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
           <div className="mb-16 lg:mb-20">
             <p className="label-caps text-linen/50 tracking-widest mb-4">
-              Процесс
+              Как заказать
             </p>
             <h2 className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-parchment leading-[1.05]">
-              Как мы работаем
+              Четыре шага, всё онлайн
             </h2>
           </div>
 
@@ -403,7 +316,7 @@ export default function B2BPage() {
                   {item.step}
                 </div>
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-16">
-                  <h3 className="font-serif text-xl lg:text-2xl text-parchment lg:w-48 flex-shrink-0">
+                  <h3 className="font-serif text-xl lg:text-2xl text-parchment lg:w-56 flex-shrink-0">
                     {item.title}
                   </h3>
                   <p className="text-parchment/70 text-[14px] leading-[1.85] lg:max-w-2xl">
@@ -417,8 +330,72 @@ export default function B2BPage() {
         </div>
       </section>
 
+      {/* ── Do / don't ───────────────────────────────────────────────────── */}
+      <section className="py-28 lg:py-40 bg-sand">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
+          <div className="mb-16 lg:mb-20 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div>
+              <p className="label-caps text-terracotta tracking-widest mb-4">
+                Честно о формате
+              </p>
+              <h2 className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-espresso leading-[1.05]">
+                Что делаю
+                <br />
+                <span className="text-taupe">и чего не делаю</span>
+              </h2>
+            </div>
+            <p className="text-taupe text-base leading-[1.8] max-w-sm lg:text-right">
+              Всё плету я одна, поэтому беру заказы, которые могу сделать хорошо
+              и в срок.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-espresso/8 border border-espresso/8 rounded-2xl overflow-hidden">
+            <div className="bg-sand p-8 lg:p-10">
+              <h3 className="font-serif text-2xl text-espresso mb-6">Делаю</h3>
+              <ul className="space-y-4">
+                {doList.map((item) => (
+                  <li
+                    key={item}
+                    className="flex gap-3 text-espresso/80 leading-relaxed"
+                  >
+                    <CheckIcon
+                      className="mt-1 size-4 shrink-0 text-terracotta"
+                      strokeWidth={1.6}
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-sand p-8 lg:p-10">
+              <h3 className="font-serif text-2xl text-espresso mb-6">
+                Не делаю
+              </h3>
+              <ul className="space-y-4">
+                {dontList.map((item) => (
+                  <li
+                    key={item}
+                    className="flex gap-3 text-taupe leading-relaxed"
+                  >
+                    <XIcon
+                      className="mt-1 size-4 shrink-0 text-espresso/40"
+                      strokeWidth={1.6}
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Order ────────────────────────────────────────────────────────── */}
+      <B2BOrder />
+
       {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-      <section className="py-28 lg:py-40">
+      <section className="py-28 lg:py-40 bg-sand">
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-14">
@@ -426,16 +403,16 @@ export default function B2BPage() {
                 FAQ
               </p>
               <h2 className="font-serif text-[clamp(2rem,4vw,3.5rem)] text-espresso leading-[1.1]">
-                Вопросы о корпоративных заказах
+                Частые вопросы
               </h2>
             </div>
             <div className="space-y-3">
               {faqItems.map((item) => (
                 <details
                   key={item.q}
-                  className="group border border-espresso/10 rounded-xl overflow-hidden"
+                  className="group border border-espresso/10 rounded-xl overflow-hidden bg-parchment"
                 >
-                  <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none text-espresso hover:bg-sand transition-colors">
+                  <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer list-none text-espresso hover:bg-white transition-colors">
                     <span className="font-serif text-[17px] leading-snug">
                       {item.q}
                     </span>
@@ -473,28 +450,26 @@ export default function B2BPage() {
       <section className="py-28 lg:py-40 bg-sand">
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
-            {/* Left: text */}
             <div className="lg:col-span-6">
               <p className="label-caps text-terracotta tracking-widest mb-4">
-                Начнём?
+                Проще написать?
               </p>
               <h2 className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] text-espresso leading-[1.05] text-balance mb-6">
-                Расскажите о вашем проекте
+                Пришлите фото — подскажу, что подойдёт
               </h2>
               <p className="text-taupe text-base leading-[1.8] max-w-md">
-                Консультация бесплатная. Обычно отвечаю в течение часа в рабочее
-                время. Фото помещения поможет предложить точное решение.
+                Сфотографируйте помещение и напишите, сколько примерно изделий
+                нужно. Обычно отвечаю в течение часа в рабочее время.
               </p>
               <div className="mt-8 pt-6 border-t border-espresso/12 text-sm text-espresso/60 label-caps">
-                Пн–Сб, 10:00–20:00 МСК
+                {CONTACTS.hours}
               </div>
             </div>
 
-            {/* Right: contacts */}
             <div className="lg:col-span-6 bg-parchment border border-espresso/10 rounded-2xl p-8 lg:p-10 flex flex-col gap-4">
               <p className="text-espresso/60 text-[14px] leading-[1.75]">
-                Удобнее всего в мессенджере — Telegram, WhatsApp или MAX. Можно
-                сразу прислать фото и замеры.
+                Удобнее всего в Telegram, WhatsApp или MAX — туда сразу можно
+                прислать фото.
               </p>
               <ContactMasterButton
                 source="b2b_contacts"
@@ -505,7 +480,7 @@ export default function B2BPage() {
                   className="w-5 h-5 shrink-0"
                   strokeWidth={1.3}
                 />
-                <span className="label-caps-md">Написать мастеру</span>
+                <span className="label-caps-md">Написать Ольге</span>
               </ContactMasterButton>
               <a
                 href={CONTACTS.phoneHref}
@@ -515,7 +490,7 @@ export default function B2BPage() {
                 <span className="font-serif text-xl">{CONTACTS.phone}</span>
               </a>
               <p className="text-espresso/70 text-[11px] label-caps pt-2 border-t border-espresso/8">
-                Работаем по договору — самозанятые, документы для бухгалтерии
+                Чек НПД, по запросу — договор и акт
               </p>
             </div>
           </div>
@@ -526,72 +501,40 @@ export default function B2BPage() {
       <section className="py-16 lg:py-20 border-t border-espresso/8">
         <div className="max-w-[1440px] mx-auto px-6 lg:px-14 flex flex-col sm:flex-row items-center justify-between gap-6">
           <p className="text-taupe text-sm">
-            Смотрите примеры изделий в нашем каталоге
+            Готовые изделия можно посмотреть в каталоге
           </p>
           <div className="flex flex-wrap gap-4">
-            <Link
-              href="/catalog"
-              className="inline-flex items-center gap-2 label-caps-md text-espresso border border-espresso/15 px-6 py-3 rounded-full hover:border-espresso transition-colors"
-            >
-              Каталог
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                aria-hidden="true"
+            {[
+              { href: "/abazhury", label: "Абажуры" },
+              { href: "/catalog", label: "Каталог" },
+              {
+                href: "/blog/makrame-dlya-kafe-i-restoranov-kommercheskiy-dekor",
+                label: "Статья о декоре для кафе",
+              },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center gap-2 label-caps-md text-espresso border border-espresso/15 px-6 py-3 rounded-full hover:border-espresso transition-colors"
               >
-                <path
-                  d="M2 6h8M7 3l3 3-3 3"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-            <Link
-              href="/designers"
-              className="inline-flex items-center gap-2 label-caps-md text-espresso border border-espresso/15 px-6 py-3 rounded-full hover:border-espresso transition-colors"
-            >
-              Дизайнерам интерьера
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M2 6h8M7 3l3 3-3 3"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-            <Link
-              href="/blog/makrame-dlya-kafe-i-restoranov-kommercheskiy-dekor"
-              className="inline-flex items-center gap-2 label-caps-md text-espresso border border-espresso/15 px-6 py-3 rounded-full hover:border-espresso transition-colors"
-            >
-              Статья о декоре для кафе
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M2 6h8M7 3l3 3-3 3"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
+                {link.label}
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M2 6h8M7 3l3 3-3 3"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
