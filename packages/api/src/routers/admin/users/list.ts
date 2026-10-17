@@ -1,7 +1,7 @@
 import { count, desc, ilike, or, sql, user } from "@stariva/db";
 import { z } from "zod";
 
-import { adminProcedure, isAdminEmail } from "../../../orpc";
+import { adminProcedure, isAdminUser } from "../../../orpc";
 
 /** Экранирует % и _ в поисковой строке, чтобы они искались как обычные символы. */
 function escapeLike(value: string) {
@@ -67,7 +67,7 @@ export const list = adminProcedure
     return {
       items: rows.map((row) => ({
         ...row,
-        isAdmin: isAdminEmail(row.email),
+        isAdmin: isAdminUser(row),
       })),
       total: totals?.total ?? 0,
     };

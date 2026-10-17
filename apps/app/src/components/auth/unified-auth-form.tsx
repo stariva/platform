@@ -263,17 +263,7 @@ export function UnifiedAuthForm({
                   Войти
                 </Link>
               </>
-            ) : (
-              <>
-                Нет аккаунта?{" "}
-                <Link
-                  href={paths.auth.signup}
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  Зарегистрироваться
-                </Link>
-              </>
-            )}
+            ) : null}
           </div>
         </div>
       </CardContent>

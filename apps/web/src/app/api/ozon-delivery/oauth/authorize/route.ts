@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import { env } from "@/env";
+import { getAdminSession } from "@/lib/auth/session";
 
 export const runtime = "nodejs";
 
 /**
  * Служебный роут для одноразовой настройки OAuth Ozon Доставки.
- * Открой его в браузере под своей учёткой продавца — редиректнёт на
+ * Только для администратора: войди на сайт под адресом из ADMIN_EMAILS и
+ * открой его в браузере под своей учёткой продавца — редиректнёт на
  * страницу авторизации Ozon. После подтверждения продавцом Ozon вернёт
  * code на /api/ozon-delivery/oauth/callback, который обменяет его на
  * refresh_token.
  */
 export async function GET() {
+  // Иначе любой продавец Ozon подменил бы токен магазина своим
+  if (!(await getAdminSession())) {
+    return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
+  }
+
   if (!env.OZON_DELIVERY_CLIENT_ID || !env.OZON_DELIVERY_REDIRECT_URI) {
     return NextResponse.json(
       {

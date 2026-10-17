@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { env } from "@/env";
+import { getAdminSession } from "@/lib/auth/session";
 import { persistOzonDeliveryRefreshToken } from "@/lib/ozon-delivery/auth";
 
 export const runtime = "nodejs";
@@ -27,6 +28,11 @@ const callbackQuerySchema = z.object({
  * OZON_DELIVERY_REFRESH_TOKEN — дальше access_token обновляется сам.
  */
 export async function GET(request: NextRequest) {
+  // Иначе любой продавец Ozon подменил бы токен магазина своим
+  if (!(await getAdminSession())) {
+    return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
+  }
+
   const parsedQuery = callbackQuerySchema.safeParse(
     Object.fromEntries(request.nextUrl.searchParams),
   );
