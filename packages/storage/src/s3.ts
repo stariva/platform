@@ -174,6 +174,21 @@ export async function getObjectBytes(key: string): Promise<Buffer> {
   return Buffer.from(await res.Body.transformToByteArray());
 }
 
+/** Файл из закрытого бакета потоком — отдать через сайт, не держа в памяти. */
+export async function getObjectStream(key: string): Promise<{
+  body: ReadableStream;
+  contentLength?: number;
+}> {
+  const res = await getClient().send(
+    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+  );
+  if (!res.Body) throw new Error(`empty object: ${key}`);
+  return {
+    body: res.Body.transformToWebStream(),
+    contentLength: res.ContentLength,
+  };
+}
+
 /** Есть ли файл в закрытом бакете. */
 export async function objectExists(key: string): Promise<boolean> {
   try {
