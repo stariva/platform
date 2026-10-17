@@ -9,13 +9,13 @@ import { PartnersProcess } from "./_components/partners-process";
 import { faq, PARTNER_TERMS } from "./_data";
 
 export const metadata: Metadata = {
-  title: "Партнёрам: 10% за приведённых клиентов",
-  description: `Рекомендуйте изделия макраме ручной работы Stariva и получайте ${PARTNER_TERMS.referralReward} с каждого оплаченного заказа. Без анкет и договоров — просто напишите Ольге.`,
+  title: `Партнёрам: скидка ${PARTNER_TERMS.clientDiscount} вашим клиенткам`,
+  description: `Рекомендуйте изделия макраме ручной работы Stariva: клиентка, которая назовёт ваше имя, получит скидку ${PARTNER_TERMS.clientDiscount} на первый заказ. Без анкет и договоров.`,
   alternates: { canonical: `${BASE_URL}/partners` },
   openGraph: {
     type: "website",
     title: "Партнёрам — Stariva",
-    description: `Приводите клиентов и получайте ${PARTNER_TERMS.referralReward} с заказа.`,
+    description: `Посоветуйте Stariva — клиентка получит скидку ${PARTNER_TERMS.clientDiscount}.`,
     url: `${BASE_URL}/partners`,
     images: [
       {
