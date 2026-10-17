@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { issueFormToken } from "@/lib/auth/antispam";
 import { auth } from "@/lib/auth/server";
+import { orderServices } from "@/lib/commerce/order-services";
 import {
   dispatchRequest,
   notificationConfigured,
@@ -43,6 +44,7 @@ const services: WebServices = {
     after,
   }),
   workshopFiles: workshopFileServices,
+  orders: orderServices,
   revalidatePaths(paths) {
     for (const path of paths) {
       // Шаблон маршрута вроде /catalog/[category]/[slug] сбрасывает все его страницы

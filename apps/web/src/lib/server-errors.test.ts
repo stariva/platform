@@ -21,13 +21,13 @@ test("sanitizeError wraps non-Error values", () => {
 
 test("requestProperties drops query and hides secret ids", () => {
   const properties = requestProperties(
-    { path: "/api/orders/abc123/pay?token=secret", method: "POST" },
-    { routePath: "/api/orders/[orderId]/pay", routeType: "route" },
+    { path: "/api/workshops/access/abc123?token=secret", method: "POST" },
+    { routePath: "/api/workshops/access/[token]", routeType: "route" },
   );
   assert.deepEqual(properties, {
-    request_path: "/api/orders/:id/pay",
+    request_path: "/api/workshops/access/:token",
     request_method: "POST",
-    route_path: "/api/orders/[orderId]/pay",
+    route_path: "/api/workshops/access/[token]",
     route_type: "route",
   });
 });

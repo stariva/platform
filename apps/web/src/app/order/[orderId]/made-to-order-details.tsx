@@ -1,8 +1,8 @@
 "use client";
 
+import type { OrderItem } from "@stariva/web-api/contract";
 import { useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,31 +10,15 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { measurementEntrySchema } from "@/lib/commerce/made-to-order-options";
 import { CUSTOM_SIZE, OWN_SIZE } from "@/lib/made-to-order";
+import { formErrorMessage, webApi } from "@/lib/web-api";
 
-export const madeToOrderItemSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  quantity: z.number().int().positive(),
-  price: z.number().int().nonnegative(),
-  options: z
-    .object({
-      size: z.string(),
-      color: z.string(),
-      measurements: z.array(z.object({ label: z.string(), value: z.string() })),
-      comment: z.string().optional(),
-    })
-    .nullable(),
-  measurementFields: z.array(
-    z.object({ id: z.string(), label: z.string(), hint: z.string() }),
-  ),
-});
-
-type OrderItem = z.infer<typeof madeToOrderItemSchema>;
+/** Позиция заказа без обложки: в кабинете её тянут отдельно. */
+type DetailsItem = Omit<OrderItem, "image">;
 
 interface Props {
   orderId: string;
   phone: string;
-  items: OrderItem[];
+  items: DetailsItem[];
   customerNotes: string | null;
   deliveryNote: string | null;
   onSaved: () => Promise<void> | void;
@@ -111,28 +95,22 @@ export function MadeToOrderDetails({
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/details`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone,
-          items: payloadItems,
-          customerNotes: notes.trim(),
-          deliveryNote: delivery.trim(),
-        }),
+      await webApi.orders.updateDetails({
+        orderId,
+        phone,
+        items: payloadItems,
+        customerNotes: notes.trim(),
+        deliveryNote: delivery.trim(),
       });
-      const data: unknown = await res.json().catch(() => null);
-      if (!res.ok) {
-        const error = z.object({ error: z.string() }).safeParse(data);
-        toast.error(
-          error.success ? error.data.error : "Не удалось сохранить детали",
-        );
-        return;
-      }
       toast.success("Спасибо! Мастер увидит ваши уточнения.");
       await onSaved();
-    } catch {
-      toast.error("Не удалось сохранить детали. Попробуйте ещё раз.");
+    } catch (error) {
+      toast.error(
+        formErrorMessage(
+          error,
+          "Не удалось сохранить детали. Попробуйте ещё раз.",
+        ),
+      );
     } finally {
       setSaving(false);
     }

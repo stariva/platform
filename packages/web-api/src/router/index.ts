@@ -3,6 +3,7 @@ import { accountRouter } from "./account";
 import { adminRouter } from "./admin";
 import { formsRouter } from "./forms";
 import { jobsRouter } from "./jobs";
+import { ordersRouter } from "./orders";
 
 /** `os.router` сверяет реализацию с контрактом ещё и в рантайме. */
 export const webRouter = os.router({
@@ -10,6 +11,7 @@ export const webRouter = os.router({
   admin: adminRouter,
   account: accountRouter,
   forms: formsRouter,
+  orders: ordersRouter,
 });
 
 export type WebRouter = typeof webRouter;
