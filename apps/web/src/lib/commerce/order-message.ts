@@ -105,6 +105,7 @@ export function formatPaidOrderMessage(
       "",
       "Изделия:",
       ...itemLines(items),
+      order.customerNotes && `\nКомментарий: ${order.customerNotes}`,
       order.ozonOrderId && `\nЗаказ Ozon Доставка: ${order.ozonOrderId}`,
     ]),
   };

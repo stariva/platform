@@ -26,6 +26,7 @@ const bodySchema = z.object({
   contactName: z.string().min(1).max(120),
   contactPhone: z.string().min(5).max(32),
   contactEmail: z.string().email().optional(),
+  comment: z.string().trim().max(1500).optional(),
   items: z
     .array(
       z.object({
@@ -117,6 +118,7 @@ export async function POST(request: NextRequest) {
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,
+    comment: data.comment,
     items,
     delivery: data.delivery,
     pickupPoint,

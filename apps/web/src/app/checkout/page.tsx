@@ -236,6 +236,7 @@ export default function CheckoutPage() {
           contactName: contact.name,
           contactPhone: contact.phone,
           contactEmail: contact.email || undefined,
+          comment: contact.comment || undefined,
           items: items.map((item) => ({
             productSlug: item.productSlug,
             quantity: item.quantity,
@@ -405,6 +406,11 @@ export default function CheckoutPage() {
                       {contact.phone}
                       {contact.email && ` · ${contact.email}`}
                     </p>
+                    {contact.comment && (
+                      <p className="whitespace-pre-line">
+                        Комментарий: {contact.comment}
+                      </p>
+                    )}
                   </>
                 )
               }
