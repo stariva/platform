@@ -1,5 +1,6 @@
 import { logger } from "@stariva/config";
 import { cache } from "react";
+import { z } from "zod";
 import { isPurchasable } from "@/lib/in-stock";
 import { categories, sectionRank } from "@/lib/products";
 import { fetchPublishedProducts } from "./products-db";
@@ -53,6 +54,12 @@ export async function getProductBySlug(
   return products.find((p) => p.slug === slug);
 }
 
+const productSlugSchema = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+
 /**
  * Товар по устаревшему адресу. Slug — это название с Ozon плюс последние
  * четыре цифры Ozon ID, поэтому после переименования хвост остаётся прежним.
@@ -61,6 +68,7 @@ export async function getProductBySlug(
 export async function getProductByStaleSlug(
   slug: string,
 ): Promise<Product | undefined> {
+  if (!productSlugSchema.safeParse(slug).success) return undefined;
   const suffix = slug.match(/-(\d{4})$/)?.[0];
   if (!suffix) return undefined;
   const matches = (await getProducts()).filter((p) => p.slug.endsWith(suffix));
