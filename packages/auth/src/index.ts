@@ -17,6 +17,32 @@ function withWwwVariants(urls: string[]): string[] {
   return [...origins];
 }
 
+/**
+ * Адрес из списка администраторов ADMIN_EMAILS (через запятую, без учёта
+ * регистра). Сам по себе прав не даёт — см. isAdminUser.
+ *
+ * @example ADMIN_EMAILS=admin@example.com,ops@example.com
+ */
+export function isAdminEmail(email: string): boolean {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return adminEmails.includes(email.trim().toLowerCase());
+}
+
+/**
+ * Права администратора: адрес из ADMIN_EMAILS и подтверждённая почта.
+ * Без подтверждения любой мог бы зарегистрироваться на адрес админа, ещё не
+ * заведённый в базе, и сразу получить админку.
+ */
+export function isAdminUser(user: {
+  email: string;
+  emailVerified: boolean;
+}): boolean {
+  return user.emailVerified === true && isAdminEmail(user.email);
+}
+
 export function initAuth<
   TExtraPlugins extends BetterAuthPlugin[] = [],
 >(options: {
@@ -34,6 +60,11 @@ export function initAuth<
    * false to preserve existing app behavior.
    */
   requireEmailVerification?: boolean;
+  /**
+   * Запретить создание аккаунтов (регистрация по паролю и вход по коду на
+   * новый адрес). Войти можно только в уже существующий аккаунт.
+   */
+  disableSignUp?: boolean;
   /**
    * Called to deliver the email-verification link (sent on sign-up when
    * `requireEmailVerification` is enabled).
@@ -92,6 +123,7 @@ export function initAuth<
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: options.requireEmailVerification ?? false,
+      disableSignUp: options.disableSignUp ?? false,
       onPasswordReset: async ({ user }, request) => {
         await options.onPasswordReset?.({ userId: user.id }, request);
       },
@@ -152,6 +184,7 @@ export function initAuth<
         productionURL: options.productionUrl,
       }),
       emailOTP({
+        disableSignUp: options.disableSignUp ?? false,
         async sendVerificationOTP(data) {
           if (options.sendEmail) {
             await options.sendEmail({

@@ -4,7 +4,11 @@ import { profileFormSchema } from "@stariva/validators";
 import { protectedProcedure } from "../../orpc";
 
 /**
- * Update profile fields: username, email, bio.
+ * Update profile fields: username, bio.
+ *
+ * Email is intentionally NOT written here: it is the login and the key to
+ * admin rights (ADMIN_EMAILS), so it may only change through better-auth's
+ * verified change-email flow.
  */
 export const updateProfile = protectedProcedure
   .input(profileFormSchema)
@@ -13,7 +17,6 @@ export const updateProfile = protectedProcedure
       .update(user)
       .set({
         username: input.username,
-        email: input.email,
         bio: input.bio,
         updatedAt: new Date(),
       })

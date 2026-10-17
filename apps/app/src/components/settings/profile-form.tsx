@@ -106,10 +106,11 @@ export function ProfileForm({
           id="email"
           type="email"
           placeholder="email@example.com"
+          readOnly
           {...form.register("email")}
         />
         <p className="text-sm text-muted-foreground">
-          Подтверждённые адреса можно изменить в настройках почты.
+          Почта — это логин, здесь её не изменить.
         </p>
       </div>
 

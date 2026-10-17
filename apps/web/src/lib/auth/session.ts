@@ -1,3 +1,4 @@
+import { isAdminUser } from "@stariva/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -25,4 +26,13 @@ export async function requireSession(callbackPath?: string): Promise<Session> {
     redirect(target);
   }
   return session;
+}
+
+/**
+ * Сессия администратора (подтверждённая почта из ADMIN_EMAILS) или null —
+ * для служебных роутов витрины, которые нельзя открывать покупателям.
+ */
+export async function getAdminSession(): Promise<Session | null> {
+  const session = await getSession();
+  return session && isAdminUser(session.user) ? session : null;
 }

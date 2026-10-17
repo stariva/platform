@@ -23,6 +23,12 @@ export const auth = initAuth({
   baseUrl,
   productionUrl,
   secret: env.AUTH_SECRET,
+  // Админка: аккаунты здесь не заводят, а вход по паролю — только с
+  // подтверждённой почтой (вход по коду из письма подтверждает её сам).
+  // Иначе на адрес из ADMIN_EMAILS, которого ещё нет в базе, мог бы
+  // зарегистрироваться кто угодно.
+  disableSignUp: true,
+  requireEmailVerification: true,
   extraPlugins: [nextCookies()],
   // sendEmail is used by the internal emailOTP plugin and password reset
   sendEmail: async ({

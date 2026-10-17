@@ -3,4 +3,5 @@ export { ForgotPasswordForm } from "./forgot-password-form";
 export { LoginForm } from "./login-form";
 export { OTPForm } from "./otp-form";
 export { ResetPasswordForm } from "./reset-password-form";
+export { SignOutButton } from "./sign-out-button";
 export { UnifiedAuthForm } from "./unified-auth-form";

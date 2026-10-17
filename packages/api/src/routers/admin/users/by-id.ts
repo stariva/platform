@@ -12,7 +12,7 @@ import {
 } from "@stariva/db";
 import { z } from "zod";
 
-import { adminProcedure, isAdminEmail } from "../../../orpc";
+import { adminProcedure, isAdminUser } from "../../../orpc";
 
 /**
  * Карточка пользователя: профиль, доступы к мастер-классам, заказы на
@@ -89,7 +89,7 @@ export const byId = adminProcedure
 
     return {
       ...found,
-      isAdmin: isAdminEmail(found.email),
+      isAdmin: isAdminUser(found),
       sessionsCount: sessions?.total ?? 0,
       access,
       // Суммы в копейках — переводим в рубли, как в остальной админке

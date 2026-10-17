@@ -10,7 +10,7 @@
  *   user.*          – current user profile & account settings  (protected)
  *   post.list       – paginated list of posts                  (public)
  *   post.byId       – single post by UUID                      (public)
- *   post.create     – create a post                            (protected)
+ *   post.create     – create a post                            (admin)
  *   post.delete     – delete a post                            (admin)
  *   admin.users.*   – user management                          (admin)
  *   admin.stats.*   – system-wide statistics                   (admin)

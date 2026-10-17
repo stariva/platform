@@ -17,7 +17,7 @@
  */
 
 import { ORPCError, os } from "@orpc/server";
-import type { Session } from "@stariva/auth";
+import { isAdminUser, type Session } from "@stariva/auth";
 import { logger } from "@stariva/config";
 import { db } from "@stariva/db";
 
@@ -94,28 +94,20 @@ export const protectedProcedure = publicProcedure.use(({ context, next }) => {
  * Admin (privileged) procedure
  *
  * Builds on `protectedProcedure` and additionally verifies that the
- * authenticated user has admin privileges.
- *
- * Admin access is granted to emails listed in the ADMIN_EMAILS environment
- * variable (comma-separated).
+ * authenticated user has admin privileges: an email listed in ADMIN_EMAILS
+ * (comma-separated) that the user has verified.
  *
  * @example ADMIN_EMAILS=admin@example.com,ops@example.com
  */
-export function isAdminEmail(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return adminEmails.includes(email.toLowerCase());
-}
-
 export const adminProcedure = protectedProcedure.use(({ context, next }) => {
-  if (!isAdminEmail(context.session.user.email)) {
+  if (!isAdminUser(context.session.user)) {
     throw new ORPCError("FORBIDDEN", { message: "Admin access required" });
   }
 
   return next();
 });
+
+export { isAdminEmail, isAdminUser } from "@stariva/auth";
 
 // Export the context type for use in other files
 export type ORPCContext = ReturnType<typeof createORPCContext>;
