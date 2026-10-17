@@ -11,7 +11,7 @@ import { defineConfig } from "@trigger.dev/sdk";
  */
 export default defineConfig({
   // ID проекта из дашборда (proj_…); для деплоя берётся из TRIGGER_PROJECT_REF
-  project: process.env.TRIGGER_PROJECT_REF ?? "proj_replace_me",
+  project: process.env.TRIGGER_PROJECT_REF ?? "proj_ctglskhjxwkysbtuzgxo",
   dirs: ["./src/trigger"],
   // Верхний предел для любой задачи; у нарезки свой, см. maxDuration в ней
   maxDuration: 6 * 60 * 60,
