@@ -2,6 +2,7 @@ import { MessageCircleIcon } from "lucide-react";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { PhoneIcon } from "@/components/stariva/icons";
 import { CONTACTS } from "@/lib/contacts";
+import { RESORT_MESSAGE } from "../_data";
 
 export function ResortContactStrip() {
   return (
@@ -9,16 +10,16 @@ export function ResortContactStrip() {
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div>
           <p className="font-serif text-white text-xl mb-1">
-            Остались вопросы?
+            Проще прислать фото?
           </p>
           <p className="text-parchment/60 text-[13px]">
-            Ответим в течение часа в рабочее время
+            Подскажу, что подойдёт. Отвечаю в рабочее время: {CONTACTS.hours}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <ContactMasterButton
             source="resort_strip"
-            message="Здравствуйте, Ольга! Хочу обсудить макраме для нашей базы отдыха."
+            message={RESORT_MESSAGE}
             className="inline-flex items-center gap-2.5 bg-white/10 border border-white/15 text-white px-5 py-2.5 rounded-full label-caps-md text-[11px] hover:bg-white/20 transition-colors"
           >
             <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />

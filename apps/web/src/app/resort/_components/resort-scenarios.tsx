@@ -7,13 +7,13 @@ export function ResortScenarios() {
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
         <div className="mb-14">
           <p className="label-caps text-terracotta text-[11px] mb-4">
-            Где используется
+            Где повесить
           </p>
           <h2
             className="font-serif text-near-black leading-tight max-w-xl"
             style={{ fontSize: "clamp(28px, 4vw, 48px)" }}
           >
-            Для каждого пространства — своё решение
+            Что заказывают базы отдыха
           </h2>
         </div>
 
@@ -31,25 +31,25 @@ export function ResortScenarios() {
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-near-black/40 to-transparent" />
-                <div className="absolute bottom-4 left-5 flex flex-wrap gap-1.5">
-                  {s.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="label-caps text-[11px] text-white bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/25"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
               </div>
               <div className="p-6">
                 <h3 className="font-serif text-near-black text-xl mb-3">
                   {s.title}
                 </h3>
-                <p className="text-dark-grey leading-relaxed text-[14px]">
+                <p className="text-dark-grey leading-relaxed text-[14px] mb-5">
                   {s.body}
                 </p>
+                <ul className="space-y-2.5 pt-5 border-t border-espresso/8">
+                  {s.items.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-center gap-3 text-espresso/70 text-sm"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-espresso/30 flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </article>
           ))}

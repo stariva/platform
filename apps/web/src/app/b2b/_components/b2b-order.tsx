@@ -23,14 +23,25 @@ const CHIP_CLASS =
 const STEP_CLASS =
   "inline-flex size-10 items-center justify-center rounded-full border border-espresso/15 text-espresso transition-colors hover:border-espresso disabled:opacity-30 disabled:hover:border-espresso/15";
 
+interface B2BOrderProps {
+  /** Метка для аналитики кнопок мессенджеров. */
+  source?: string;
+  /** Варианты «для какого места» — свои для каждой страницы. */
+  placeTypes?: readonly string[];
+  defaultQuantities?: Record<string, number>;
+}
+
 /**
  * Заказ для заведения: сколько каких изделий, цвет и место. Складывается
  * в готовое сообщение Ольге — заявка уходит через мессенджер.
  */
-export function B2BOrder() {
-  const [quantities, setQuantities] = useState<Record<string, number>>({
-    lampshade: 3,
-  });
+export function B2BOrder({
+  source = "b2b_order",
+  placeTypes = PLACE_TYPES,
+  defaultQuantities = { lampshade: 3 },
+}: B2BOrderProps) {
+  const [quantities, setQuantities] =
+    useState<Record<string, number>>(defaultQuantities);
   const [colorId, setColorId] = useState("natural");
   const [place, setPlace] = useState<string>();
   const [city, setCity] = useState("");
@@ -148,7 +159,7 @@ export function B2BOrder() {
                 Для какого места
               </legend>
               <div className="flex flex-wrap gap-2">
-                {PLACE_TYPES.map((type) => (
+                {placeTypes.map((type) => (
                   <button
                     key={type}
                     type="button"
@@ -228,7 +239,7 @@ export function B2BOrder() {
                 Список уже в сообщении. Следом пришлите фото места, где будут
                 висеть изделия.
               </p>
-              <ContactOptions source="b2b_order" message={message} />
+              <ContactOptions source={source} message={message} />
               <p className="mt-4 text-xs leading-relaxed text-taupe">
                 Отвечаю в рабочее время: {CONTACTS.hours}.
               </p>
