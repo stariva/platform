@@ -8,6 +8,35 @@ import { webApi } from "../lib/web-api";
 const MAX_VIDEOS_PER_RUN = 5;
 // Как часто задача сообщает сайту, что жива (аренда на сайте — 20 минут)
 const HEARTBEAT_MS = 5 * 60_000;
+// Ссылки на заливку: запрос зависал на минуту уже после успешного первого.
+// Повторяем с коротким таймаутом — зависший сокет рвётся, повтор идёт по новому
+const UPLOAD_URLS_TIMEOUT_MS = 15_000;
+const UPLOAD_URLS_ATTEMPTS = 4;
+
+/** Ссылки на заливку кусков; запрос идемпотентен, поэтому его можно повторять. */
+async function getUploadUrls(
+  attempt: { videoKey: string; attemptId: number },
+  files: string[],
+) {
+  for (let n = 1; ; n++) {
+    try {
+      const { uploads } = await webApi.jobs.videos.uploadUrls(
+        { ...attempt, files },
+        { context: { timeout: UPLOAD_URLS_TIMEOUT_MS } },
+      );
+      return uploads;
+    } catch (error) {
+      // Попытка не наша — повторять бессмысленно
+      if (error instanceof AttemptLostError || n >= UPLOAD_URLS_ATTEMPTS) {
+        throw error;
+      }
+      console.warn(
+        `[lesson-video-hls] ссылки на заливку, попытка ${n}/${UPLOAD_URLS_ATTEMPTS}:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+}
 
 /**
  * Нарезка видео уроков в HLS — каждые 10 минут, в облаке Trigger.dev.
@@ -66,13 +95,7 @@ export const lessonVideoHls = schedules.task({
             job.sourceUrl,
             source,
             dir,
-            async (batch) => {
-              const { uploads } = await webApi.jobs.videos.uploadUrls(
-                { ...attempt, files: batch },
-                { context: { timeout: 60_000 } },
-              );
-              return uploads;
-            },
+            (batch) => getUploadUrls(attempt, batch),
             { signal: abort.signal },
           );
           await webApi.jobs.videos.complete({
