@@ -75,7 +75,9 @@ export const env = createEnv({
     EMAIL_SANDBOX_ENABLED: process.env.EMAIL_SANDBOX_ENABLED === "true",
     EMAIL_SANDBOX_HOST: process.env.EMAIL_SANDBOX_HOST,
     EMAIL_FROM: process.env.EMAIL_FROM,
-    AUTH_SECRET: process.env.AUTH_SECRET,
+    // Better Auth сам читает и BETTER_AUTH_SECRET; в проде задан он, поэтому
+    // без запасного имени пропуска HLS не подписывались (503 not_configured)
+    AUTH_SECRET: process.env.AUTH_SECRET ?? process.env.BETTER_AUTH_SECRET,
     AWS_S3_ENDPOINT: process.env.AWS_S3_ENDPOINT,
     AWS_S3_FORCE_PATH_STYLE: process.env.AWS_S3_FORCE_PATH_STYLE,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
