@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { BuyingGuide } from "@/components/stariva/buying-guide";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
@@ -17,12 +17,17 @@ import {
 } from "@/lib/catalog/product-seo";
 import {
   getProductBySlug,
+  getProductByStaleSlug,
   getProductsByCategory,
   getReviews,
   summarizeRatings,
 } from "@/lib/catalog/service";
 import { madeToOrderLeadTime } from "@/lib/made-to-order";
-import { getCategoryBySlug, getProductSection } from "@/lib/products";
+import {
+  getCategoryBySlug,
+  getProductSection,
+  productHref,
+} from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { ProductDetails } from "./product-details";
 
@@ -165,6 +170,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const category = getCategoryBySlug(categorySlug);
 
   if (!product || !category || product.category !== categorySlug) {
+    // Переименованный или перенесённый товар: старый адрес остаётся в
+    // поиске и чужих ссылках, ведём на текущий
+    const current = product ?? (await getProductByStaleSlug(slug));
+    if (current) permanentRedirect(productHref(current));
     notFound();
   }
 
