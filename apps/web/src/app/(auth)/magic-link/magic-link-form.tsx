@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth/client";
 import { useFormToken } from "@/lib/auth/use-form-token";
+import { SentNotice } from "../sent-notice";
 
 const magicLinkSchema = z.object({
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
@@ -64,20 +65,28 @@ export function MagicLinkForm() {
 
   if (sent) {
     return (
-      <div className="text-center space-y-3 py-2">
-        <p className="text-espresso font-medium">Ссылка отправлена</p>
-        <p className="text-taupe text-sm leading-relaxed">
-          Проверьте почту <span className="text-espresso">{sent}</span> и
-          перейдите по ссылке, чтобы войти. Ссылка действует ограниченное время.
-        </p>
-        <p className="text-taupe text-sm leading-relaxed">
-          Письма нет? Возможно, аккаунта с этим адресом ещё нет —{" "}
-          <Link href="/sign-up" className="text-terracotta hover:underline">
-            зарегистрируйтесь
-          </Link>
-          .
-        </p>
-      </div>
+      <SentNotice
+        title="Ссылка отправлена"
+        email={sent}
+        onRetry={() => setSent(null)}
+        hint={
+          <>
+            <span className="font-medium text-espresso">Письма нет?</span>{" "}
+            Загляните в «Спам». Если и там пусто, возможно, аккаунта с этим
+            адресом ещё нет —{" "}
+            <Link
+              href="/sign-up"
+              className="text-espresso underline underline-offset-4 decoration-espresso/30 hover:decoration-espresso"
+            >
+              зарегистрируйтесь
+            </Link>
+            .
+          </>
+        }
+      >
+        Откройте письмо и перейдите по ссылке, чтобы войти. Ссылка действует
+        ограниченное время.
+      </SentNotice>
     );
   }
 
