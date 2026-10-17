@@ -1,11 +1,18 @@
+import { MessageCircleIcon } from "lucide-react";
 import Image from "next/image";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
+import { BULK_DISCOUNT, MAX_ORDER_ITEMS } from "@/lib/b2b/order";
+import { RESORT_MESSAGE } from "../_data";
 import { DownloadIcon } from "./download-icon";
 
 const stats = [
-  { value: "50+", label: "Проектов для отдыха" },
-  { value: "15 лет", label: "Срок службы изделий" },
-  { value: "24ч", label: "Подготовим КП" },
+  { value: `1–${MAX_ORDER_ITEMS}`, label: "изделий\nв заказе" },
+  {
+    value: `−${BULK_DISCOUNT.percent}%`,
+    label: `от ${BULK_DISCOUNT.minItems}\nизделий`,
+  },
+  { value: "2–6", label: "недель\nизготовления" },
+  { value: "0", label: "выездов —\nвсё по фото" },
 ];
 
 export function ResortHero() {
@@ -46,41 +53,51 @@ export function ResortHero() {
             className="text-white/75 leading-relaxed mb-10 max-w-xl"
             style={{ fontSize: "clamp(15px, 1.5vw, 18px)" }}
           >
-            Превращаем типовое пространство в атмосферное место, где гости
-            задерживаются и возвращаются. Натуральный хлопок, авторский дизайн,
-            монтаж под ключ.
+            Абажуры, панно и кашпо из хлопка для домиков, веранд и ресепшна —
+            серией в одном стиле. Плету сама, заказ по фото, отправляю готовое
+            по России.
           </p>
 
           <div className="flex flex-wrap gap-4">
             <a
-              href="/api/kp/resort"
-              target="_blank"
-              rel="noopener"
+              href="#order"
               className="inline-flex items-center gap-3 bg-terracotta text-parchment px-7 py-3.5 rounded-full label-caps-md hover:bg-terracotta-dark transition-colors"
             >
-              <DownloadIcon />
-              Открыть КП
+              Посчитать заказ
             </a>
             <ContactMasterButton
               source="resort_hero"
-              message="Здравствуйте, Ольга! Хочу обсудить макраме для нашей базы отдыха."
+              message={RESORT_MESSAGE}
               className="inline-flex items-center gap-3 bg-white/10 border border-white/25 text-white px-7 py-3.5 rounded-full label-caps-md hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
-              Обсудить проект
+              <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
+              Написать Ольге
             </ContactMasterButton>
           </div>
+          <a
+            href="/api/kp/resort"
+            target="_blank"
+            rel="noopener"
+            className="mt-6 inline-flex items-center gap-2 text-white/75 text-[13px] underline underline-offset-4 decoration-white/30 hover:text-white hover:decoration-white transition-colors"
+          >
+            <DownloadIcon />
+            Коммерческое предложение для руководства
+          </a>
         </div>
 
         {/* Stats row */}
-        <div className="mt-14 flex flex-wrap gap-8 lg:gap-16">
+        <div className="mt-14 flex flex-wrap gap-px border border-white/10 rounded-xl overflow-hidden w-fit">
           {stats.map((s) => (
-            <div key={s.label}>
-              <div className="font-serif text-white text-3xl leading-none mb-1">
+            <div
+              key={s.label}
+              className="px-7 py-5 bg-white/8 backdrop-blur-sm flex flex-col gap-1 min-w-[110px]"
+            >
+              <span className="font-serif text-white text-3xl lg:text-4xl leading-none">
                 {s.value}
-              </div>
-              <div className="label-caps text-white/75 text-[11px]">
+              </span>
+              <span className="label-caps text-white/75 text-[11px] leading-tight whitespace-pre">
                 {s.label}
-              </div>
+              </span>
             </div>
           ))}
         </div>

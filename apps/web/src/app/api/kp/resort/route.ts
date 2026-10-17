@@ -1,6 +1,8 @@
 import { SELLER_INN } from "@stariva/config/seller";
 import { type NextRequest, NextResponse } from "next/server";
-import { workSteps } from "@/app/resort/_data";
+import { ORDER_ITEM_TYPES, startingPrice } from "@/lib/b2b/order";
+import { ORDER_STEPS, ORDER_TERMS } from "@/lib/b2b/terms";
+import { CONTACTS } from "@/lib/contacts";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 const SITE_HOST = BASE_URL.replace(/^https?:\/\//, "");
@@ -15,44 +17,19 @@ const contacts = {
 
 const requisites = `Самозанятая Карпычева О. А. · ИНН ${SELLER_INN}`;
 
-const products = [
-  {
-    name: "Макраме-панно",
-    desc: "Настенное декоративное панно из натурального хлопка. Размеры 60×120 — 120×200 см. Плетение на деревянной жерди.",
-    price: "от 7 500 ₽",
-    usage: "Ресепшн, шатры, общие зоны",
-  },
-  {
-    name: "Абажур / светильник",
-    desc: "Абажур из хлопкового шнура на металлическом каркасе. Диаметр 30–60 см. Совместим со стандартным патроном Е27.",
-    price: "от 4 200 ₽",
-    usage: "Беседки, рестораны, SPA",
-  },
-  {
-    name: "Подвесное кресло-гамак",
-    desc: "Кресло из плотного хлопкового шнура 6 мм. Нагрузка до 120 кг. Крепёж на деревянную или металлическую балку.",
-    price: "от 12 000 ₽",
-    usage: "Террасы, глэмпинг, зоны отдыха",
-  },
-  {
-    name: "Макраме-ширма / занавеска",
-    desc: "Прозрачное плетение для зонирования пространства. Пропускает свет, создаёт приватность. Ширина 100–200 см.",
-    price: "от 9 500 ₽",
-    usage: "Открытые террасы, беседки",
-  },
-  {
-    name: "Панно с логотипом",
-    desc: "Индивидуальное изделие с названием или логотипом вашего объекта. Разработка эскиза включена в стоимость.",
-    price: "от 14 000 ₽",
-    usage: "Брендинг, фотозоны",
-  },
-  {
-    name: "Комплект для глэмпинга",
-    desc: "Панно + ловец снов + 2 кашпо — готовый комплект для одного номера. Единый стиль и готовые крепления.",
-    price: "от 18 000 ₽",
-    usage: "Глэмпинг, домики, шатры",
-  },
-];
+/** Где на базе отдыха обычно висит каждое изделие. */
+const usage: Record<string, string> = {
+  lampshade: "Домики, веранды под навесом, столовая",
+  panel: "Ресепшн, номера и домики, фотозона",
+  "plant-hanger": "Веранды, лобби, SPA",
+};
+
+const products = ORDER_ITEM_TYPES.map((type) => ({
+  name: type.label,
+  desc: type.hint,
+  price: startingPrice(type) ?? "по запросу",
+  usage: usage[type.id] ?? "",
+}));
 
 const photos = [
   {
@@ -68,17 +45,6 @@ const photos = [
     caption: "Ресепшн",
   },
   { src: "https://cdn.stariva.ru/site/images/resort/spa.png", caption: "SPA" },
-];
-
-const conditions = [
-  "Минимальный заказ — 1 изделие",
-  "Скидка 15% при заказе от 5 изделий",
-  "От 10 изделий — индивидуальная цена и приоритет в производстве",
-  "Срок производства: 3–5 недель для корпоративных заказов",
-  "Экспресс-производство +30% для заказов до 3 изделий",
-  "Доставка в пункты выдачи Ozon по всей России",
-  "Монтаж по Москве и МО — бесплатно при заказе от 5 изделий",
-  "Документы: договор, счёт, акт, чек НПД",
 ];
 
 const escapeHtml = (value: string) =>
@@ -420,7 +386,7 @@ export function GET(request: NextRequest) {
     </div>
     <p class="cover-eyebrow">Stariva · Коммерческое предложение</p>
     <h1 class="cover-title">Макраме-декор<br>для баз отдыха<br>и глэмпингов</h1>
-    <p class="cover-subtitle">Натуральный хлопок, авторский дизайн, монтаж под ключ. Превращаем типовые пространства в атмосферные места, куда гости возвращаются.</p>
+    <p class="cover-subtitle">Абажуры, панно и кашпо из натурального хлопка для домиков, веранд и ресепшна. Плету сама, заказ по фото, отправляю готовое по России.</p>
     <div class="cover-meta">
       <span>Подготовлено: ${formatDate(preparedAt)}</span>
       <span>Действительно до: ${formatDate(validUntil)}</span>
@@ -433,7 +399,7 @@ export function GET(request: NextRequest) {
       .map(
         (p) => `
     <figure class="photo">
-      <img src="${BASE_URL}${p.src}" alt="${escapeHtml(p.caption)}" loading="eager" />
+      <img src="${p.src}" alt="${escapeHtml(p.caption)}" loading="eager" />
       <figcaption>${escapeHtml(p.caption)}</figcaption>
     </figure>`,
       )
@@ -468,43 +434,39 @@ export function GET(request: NextRequest) {
             .join("")}
         </tbody>
       </table>
-      <p class="section-note">Цены указаны за одно изделие. Итоговая стоимость зависит от размера, цвета и сложности плетения — точный расчёт делаем по брифу.</p>
+      <p class="section-note">Цены — за одно изделие в натуральном цвете. Цветной шнур и крупный размер дороже; точную цену назову по фото места.</p>
     </section>
 
     <section class="section">
       <h2 class="section-title">Условия сотрудничества</h2>
       <div class="conditions-grid">
-        ${conditions
-          .map(
-            (c) => `
+        ${ORDER_TERMS.map(
+          (c) => `
         <div class="condition-item">
           <div class="condition-dot" aria-hidden="true"></div>
           <span class="condition-text">${escapeHtml(c)}</span>
         </div>`,
-          )
-          .join("")}
+        ).join("")}
       </div>
     </section>
 
     <section class="section">
-      <h2 class="section-title">Как мы работаем</h2>
+      <h2 class="section-title">Как заказать</h2>
       <div class="steps">
-        ${workSteps
-          .map(
-            (s) => `
+        ${ORDER_STEPS.map(
+          (s) => `
         <div class="step">
           <div class="step-num">${escapeHtml(s.step)}</div>
           <div class="step-title">${escapeHtml(s.title)}</div>
-          <div class="step-body">${escapeHtml(s.body)}</div>
+          <div class="step-body">${escapeHtml(s.desc)}</div>
         </div>`,
-          )
-          .join("")}
+        ).join("")}
       </div>
     </section>
 
     <section class="cta">
-      <h2 class="cta-title">Готовы обсудить ваш проект?</h2>
-      <p class="cta-body">Пришлите фото и размеры вашего пространства — подготовим индивидуальное предложение в течение 24 часов.</p>
+      <h2 class="cta-title">Пришлите фото — подскажу, что подойдёт</h2>
+      <p class="cta-body">Сфотографируйте место и напишите, сколько примерно изделий нужно. Отвечаю в рабочее время, ${CONTACTS.hours}.</p>
       <div class="cta-contacts">
         <div>
           <span class="cta-label">Telegram</span>

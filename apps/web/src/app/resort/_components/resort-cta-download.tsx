@@ -1,6 +1,7 @@
 import { MessageCircleIcon } from "lucide-react";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { CONTACTS } from "@/lib/contacts";
+import { RESORT_MESSAGE } from "../_data";
 import { DownloadIcon } from "./download-icon";
 
 export function ResortCtaDownload() {
@@ -20,9 +21,8 @@ export function ResortCtaDownload() {
             для вашего руководства
           </h2>
           <p className="text-dark-grey leading-relaxed mb-10 text-[15px] max-w-lg mx-auto">
-            Цены, фотографии, сроки и условия работы на одной странице.
-            Сохраните в PDF одной кнопкой и отправьте в WhatsApp, Telegram или
-            по email.
+            Изделия с ценами «от», сроки и условия на одной странице. Сохраните
+            в PDF одной кнопкой и перешлите тому, кто согласует бюджет.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -37,11 +37,11 @@ export function ResortCtaDownload() {
             </a>
             <ContactMasterButton
               source="resort_cta"
-              message="Здравствуйте, Ольга! Хочу обсудить макраме для нашей базы отдыха."
+              message={RESORT_MESSAGE}
               className="inline-flex items-center justify-center gap-3 bg-espresso text-parchment px-8 py-4 rounded-full label-caps-md text-[12px] hover:bg-near-black transition-colors"
             >
               <MessageCircleIcon className="w-4 h-4" strokeWidth={1.3} />
-              Написать мастеру
+              Написать Ольге
             </ContactMasterButton>
           </div>
 

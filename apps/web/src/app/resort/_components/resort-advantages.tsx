@@ -6,13 +6,13 @@ export function ResortAdvantages() {
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12">
         <div className="mb-14">
           <p className="label-caps text-terracotta text-[11px] mb-4">
-            Почему выбирают нас
+            Почему удобно
           </p>
           <h2
             className="font-serif text-near-black leading-tight max-w-lg"
             style={{ fontSize: "clamp(28px, 4vw, 48px)" }}
           >
-            Шесть причин работать со Stariva
+            Заказ без выезда за город
           </h2>
         </div>
 
