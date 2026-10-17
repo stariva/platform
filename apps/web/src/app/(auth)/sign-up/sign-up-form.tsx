@@ -11,6 +11,7 @@ import {
   PD_CONSENT_ERROR,
   PersonalDataConsentLabel,
 } from "@/components/stariva/consent-checkbox";
+import { PasswordHints } from "@/components/stariva/password-hints";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,12 +24,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { signUp } from "@/lib/auth/client";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-strength";
 import { useFormToken } from "@/lib/auth/use-form-token";
 
 const signUpSchema = z.object({
   name: z.string().trim().min(1, "Введите имя"),
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
-  password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+  password: z
+    .string()
+    .min(PASSWORD_MIN_LENGTH, "Пароль должен быть не короче 8 символов"),
   personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
@@ -161,10 +165,11 @@ export function SignUpForm() {
               <FormControl>
                 <PasswordInput
                   autoComplete="new-password"
-                  placeholder="Минимум 8 символов"
+                  placeholder="Придумайте пароль"
                   {...field}
                 />
               </FormControl>
+              <PasswordHints value={field.value} />
               <FormMessage />
             </FormItem>
           )}
