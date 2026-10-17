@@ -53,6 +53,20 @@ export async function getProductBySlug(
   return products.find((p) => p.slug === slug);
 }
 
+/**
+ * Товар по устаревшему адресу. Slug — это название с Ozon плюс последние
+ * четыре цифры Ozon ID, поэтому после переименования хвост остаётся прежним.
+ * Возвращает товар, только если хвост совпал ровно у одного.
+ */
+export async function getProductByStaleSlug(
+  slug: string,
+): Promise<Product | undefined> {
+  const suffix = slug.match(/-(\d{4})$/)?.[0];
+  if (!suffix) return undefined;
+  const matches = (await getProducts()).filter((p) => p.slug.endsWith(suffix));
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 /** Готовые изделия, которые можно сразу купить на сайте. */
 export async function getInStockProducts(): Promise<Product[]> {
   return (await getInStockProductsResult()).products;

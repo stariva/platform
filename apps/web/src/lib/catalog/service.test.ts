@@ -58,6 +58,7 @@ const {
   getInStockProducts,
   getInStockProductsResult,
   getReviews,
+  getProductByStaleSlug,
   getRatingSummary,
   summarizeRatings,
 } = await import("./service");
@@ -117,6 +118,18 @@ test("in-stock results filter purchasable products and retain catalog availabili
     products: [],
     status: "available",
   });
+});
+
+test("a renamed product is found by its old slug's Ozon ID tail, if the tail is unique", async () => {
+  const renamed = { ...product, slug: "servirovochnye-salfetki-6892" };
+  const other = { ...product, id: "other", slug: "abazhur-4756" };
+  fetchProducts.mockResolvedValue([renamed, other]);
+  assert.equal(await getProductByStaleSlug("pleysmaty-6892"), renamed);
+  assert.equal(await getProductByStaleSlug("pleysmaty-0001"), undefined);
+  assert.equal(await getProductByStaleSlug("no-tail"), undefined);
+
+  fetchProducts.mockResolvedValue([renamed, { ...other, slug: "poyas-6892" }]);
+  assert.equal(await getProductByStaleSlug("pleysmaty-6892"), undefined);
 });
 
 test("product reviews contain only that product, newest first", async () => {
