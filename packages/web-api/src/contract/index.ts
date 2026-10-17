@@ -3,6 +3,7 @@ import { accountContract } from "./account";
 import { adminContract } from "./admin";
 import { formsContract } from "./forms";
 import { jobsContract } from "./jobs";
+import { ordersContract } from "./orders";
 
 export {
   FilesUnavailableError,
@@ -38,6 +39,19 @@ export {
   RemindersFailedError,
   StorageNotConfiguredError,
 } from "./jobs";
+export {
+  measurementEntrySchema,
+  NothingToPayError,
+  type OrderDetails,
+  OrderDetailsLockedError,
+  type OrderItem,
+  OrderNotFoundError,
+  type OrderPaymentStep,
+  type OrderView,
+  PaymentCreateFailedError,
+  PaymentOverdueError,
+  PaymentsUnavailableError,
+} from "./orders";
 
 /**
  * Контракт API витрины (stariva.ru). Только схемы и ошибки, без реализации:
@@ -49,6 +63,7 @@ export const webContract = {
   admin: adminContract,
   account: accountContract,
   forms: formsContract,
+  orders: ordersContract,
 };
 
 export type WebContract = typeof webContract;

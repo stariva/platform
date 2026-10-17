@@ -11,8 +11,14 @@ import {
   LessonNotReleasedError,
   MaterialNotFoundError,
   NewsletterFailedError,
+  NothingToPayError,
+  OrderDetailsLockedError,
+  OrderNotFoundError,
   OzonNotConfiguredError,
   OzonRequestFailedError,
+  PaymentCreateFailedError,
+  PaymentOverdueError,
+  PaymentsUnavailableError,
   PlaylistMissingError,
   RemindersFailedError,
   StorageNotConfiguredError,
@@ -45,6 +51,12 @@ export const webErrorStatusMap = {
   [CustomOrderUnavailableError.code]: 503,
   [CustomOrderConflictError.code]: 409,
   [CustomOrderSaveFailedError.code]: 503,
+  [OrderNotFoundError.code]: 404,
+  [OrderDetailsLockedError.code]: 409,
+  [PaymentsUnavailableError.code]: 503,
+  [NothingToPayError.code]: 409,
+  [PaymentOverdueError.code]: 409,
+  [PaymentCreateFailedError.code]: 502,
 } satisfies Record<string, number>;
 
 /** Коды ошибок, для которых у API витрины есть свой HTTP-статус. */

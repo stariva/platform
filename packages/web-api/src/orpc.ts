@@ -5,6 +5,8 @@ import {
   type CustomOrderRequest,
   type LessonVideoResult,
   type MaterialUrlResult,
+  type OrderDetails,
+  type OrderView,
   type ReminderSweepResult,
   webContract,
 } from "./contract";
@@ -22,6 +24,7 @@ export interface WebServices {
   subscribeToNewsletter: (email: string, source?: string) => Promise<void>;
   customOrders: CustomOrderServices;
   workshopFiles: WorkshopFileServices;
+  orders: OrderServices;
   /** Сброс кэша страниц Next: revalidatePath живёт в витрине. */
   revalidatePaths: (paths: string[]) => void;
 }
@@ -47,6 +50,39 @@ export interface WorkshopFileServices {
     key: string;
     userId: string | null;
   }) => Promise<MaterialUrlResult>;
+}
+
+/** Результат начала оплаты; ошибки процедура превращает в типизированные. */
+export type OrderPaymentResult =
+  | { status: "ok"; confirmationUrl: string }
+  | { status: "not_found" }
+  | { status: "unavailable" }
+  | { status: "nothing_to_pay" }
+  | { status: "overdue" }
+  | { status: "failed" };
+
+/**
+ * Гостевые заказы: база, ЮKassa, Ozon Доставка и уведомления мастеру живут
+ * в витрине (apps/web/src/lib/commerce/order-services.ts). Заказ подтверждается
+ * телефоном: чужой или несовпавший телефон — `not_found`, как и нет заказа.
+ */
+export interface OrderServices {
+  /** Заказ глазами покупателя; null — нет заказа или телефон не совпал. */
+  view: (input: {
+    orderId: string;
+    phone: string;
+  }) => Promise<OrderView | null>;
+  /** `locked` — мастер уже согласовал заявку, дополнять поздно. */
+  updateDetails: (
+    input: OrderDetails & { orderId: string; phone: string },
+  ) => Promise<"ok" | "not_found" | "locked">;
+  /** Заголовки нужны, чтобы собрать адрес возврата, если он не задан в окружении. */
+  startPayment: (input: {
+    orderId: string;
+    phone: string;
+    returnTo?: "order" | "account";
+    headers: Headers;
+  }) => Promise<OrderPaymentResult>;
 }
 
 /** Заявки на изделия: apps/web/src/lib/custom-order */

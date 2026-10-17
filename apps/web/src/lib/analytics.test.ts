@@ -10,7 +10,6 @@ import {
 test("analyticsPath hides ids that open an order or a video without sign-in", () => {
   assert.equal(analyticsPath("/order/abc123"), "/order/status");
   assert.equal(analyticsPath("/order/abc123/pay"), "/order/status/pay");
-  assert.equal(analyticsPath("/api/orders/abc123/pay"), "/api/orders/:id/pay");
   assert.equal(
     analyticsPath("/api/video/hls/tok/index.m3u8"),
     "/api/video/hls/:token/index.m3u8",

@@ -54,7 +54,6 @@ export function analyticsUrl(value: string): string {
 /** По этим ссылкам открывают заказ или видео без входа — id в них работает как пароль. */
 const SECRET_PATHS: Array<[RegExp, string]> = [
   [/^\/order\/[^/]+/, "/order/status"],
-  [/^\/api\/orders\/[^/]+/, "/api/orders/:id"],
   [/^\/api\/video\/hls\/[^/]+/, "/api/video/hls/:token"],
   [/^\/api\/workshops\/access\/[^/]+/, "/api/workshops/access/:token"],
 ];
