@@ -14,10 +14,10 @@ export function PartnersHero() {
             className="font-serif leading-[1.1] mb-6 text-balance"
             style={{ fontSize: "clamp(36px, 5.5vw, 68px)" }}
           >
-            Приводите клиентов —
+            Посоветуйте Stariva —
             <br />
             <span className="italic">
-              получайте {PARTNER_TERMS.referralReward} с заказа
+              клиентка получит −{PARTNER_TERMS.clientDiscount}
             </span>
           </h1>
           <p
@@ -25,9 +25,9 @@ export function PartnersHero() {
             style={{ fontSize: "clamp(15px, 1.5vw, 18px)" }}
           >
             Знаете, кому подойдёт платье или декор макраме? Рекомендуйте
-            Stariva, а Ольга сама всё обсудит и сплетёт. С каждого оплаченного
-            заказа вы получаете {PARTNER_TERMS.referralReward}. Без анкет и
-            договоров — просто напишите.
+            Stariva: клиентка называет ваше имя и получает скидку{" "}
+            {PARTNER_TERMS.clientDiscount} на первый заказ, а Ольга сама всё
+            обсудит и сплетёт. Без анкет и договоров.
           </p>
 
           <ContactMasterButton

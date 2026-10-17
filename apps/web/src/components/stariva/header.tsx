@@ -46,7 +46,7 @@ const b2bLinks: NavLink[] = [
   {
     label: "Партнёрам",
     href: "/partners",
-    desc: "10% за приведённых клиентов",
+    desc: "Скидка 10% вашим клиенткам",
   },
 ];
 
