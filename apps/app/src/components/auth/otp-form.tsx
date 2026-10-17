@@ -110,7 +110,9 @@ export function OTPForm({ ...props }: React.ComponentProps<typeof Card>) {
     <Card {...props}>
       <CardHeader className="text-center">
         <CardTitle className="text-xl">Введите код подтверждения</CardTitle>
-        <CardDescription>Мы отправили 6-значный код на {email}.</CardDescription>
+        <CardDescription>
+          Мы отправили 6-значный код на {email}.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

@@ -25,9 +25,12 @@ export default function SettingsError({
 
       <div className="flex items-center justify-center rounded-lg border p-16">
         <div className="text-center space-y-3">
-          <h2 className="text-lg font-semibold">Не удалось загрузить настройки</h2>
+          <h2 className="text-lg font-semibold">
+            Не удалось загрузить настройки
+          </h2>
           <p className="text-muted-foreground text-sm max-w-sm">
-            {error.message || "Произошла непредвиденная ошибка. Попробуйте ещё раз."}
+            {error.message ||
+              "Произошла непредвиденная ошибка. Попробуйте ещё раз."}
           </p>
           {error.digest && (
             <p className="text-muted-foreground/60 font-mono text-xs">

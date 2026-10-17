@@ -20,7 +20,9 @@ import { authClient } from "~/auth/client";
 const passwordFormSchema = z
   .object({
     currentPassword: z.string().min(1, "Введите текущий пароль"),
-    newPassword: z.string().min(8, "Пароль должен содержать не менее 8 символов"),
+    newPassword: z
+      .string()
+      .min(8, "Пароль должен содержать не менее 8 символов"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

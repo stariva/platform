@@ -72,10 +72,13 @@ export function UnifiedAuthForm({
         });
         if (error) {
           if (error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
-            toast.error("Пользователь уже существует. Используйте другой email.");
+            toast.error(
+              "Пользователь уже существует. Используйте другой email.",
+            );
           } else {
             toast.error(
-              error.message || "Не удалось создать аккаунт. Попробуйте ещё раз.",
+              error.message ||
+                "Не удалось создать аккаунт. Попробуйте ещё раз.",
             );
           }
           return;
@@ -112,7 +115,9 @@ export function UnifiedAuthForm({
         type: "sign-in",
       });
       if (error) {
-        toast.error(error.message || "Не удалось отправить код. Попробуйте ещё раз.");
+        toast.error(
+          error.message || "Не удалось отправить код. Попробуйте ещё раз.",
+        );
         return;
       }
       localStorage.setItem("otp_email", data.email);
