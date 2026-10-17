@@ -139,29 +139,16 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               <span>/</span>
               <span className="text-white/80">{category.name}</span>
             </nav>
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-              <div>
-                <span className="label-caps text-linen/70 mb-3 block">
-                  {products.length} товаров
-                </span>
-                <h1 className="font-serif text-5xl lg:text-7xl text-white leading-[1.0] tracking-tight">
-                  {category.name}
-                </h1>
-                <p className="text-white/80 mt-4 max-w-md text-base leading-relaxed">
-                  {category.description}
-                </p>
-              </div>
-              {/* Sub-category quick links */}
-              <div className="flex flex-wrap gap-2">
-                {subcategories.map((sub) => (
-                  <span
-                    key={sub.slug}
-                    className="px-4 py-2 rounded-full border border-white/30 bg-espresso/35 backdrop-blur-sm text-white/85 label-caps text-[11px]"
-                  >
-                    {sub.name}
-                  </span>
-                ))}
-              </div>
+            <div>
+              <span className="label-caps text-linen/70 mb-3 block">
+                {products.length} товаров
+              </span>
+              <h1 className="font-serif text-5xl lg:text-7xl text-white leading-[1.0] tracking-tight">
+                {category.name}
+              </h1>
+              <p className="text-white/80 mt-4 max-w-md text-base leading-relaxed">
+                {category.description}
+              </p>
             </div>
           </div>
         </section>
