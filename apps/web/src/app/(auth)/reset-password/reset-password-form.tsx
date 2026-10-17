@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PasswordHints } from "@/components/stariva/password-hints";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,10 +18,13 @@ import {
 } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-strength";
 
 const resetPasswordSchema = z
   .object({
-    password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+    password: z
+      .string()
+      .min(PASSWORD_MIN_LENGTH, "Пароль должен быть не короче 8 символов"),
     confirm: z.string().min(8, "Пароль должен быть не короче 8 символов"),
   })
   .refine((data) => data.password === data.confirm, {
@@ -90,10 +94,11 @@ export function ResetPasswordForm() {
               <FormControl>
                 <PasswordInput
                   autoComplete="new-password"
-                  placeholder="Минимум 8 символов"
+                  placeholder="Придумайте пароль"
                   {...field}
                 />
               </FormControl>
+              <PasswordHints value={field.value} />
               <FormMessage />
             </FormItem>
           )}
