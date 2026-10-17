@@ -1,4 +1,5 @@
-import { expect, mock, test } from "bun:test";
+import { expect, mock, spyOn, test } from "bun:test";
+import { logger } from "@stariva/config";
 
 const send = mock(async (..._args: unknown[]) => ({
   error: null as { message: string } | null,
@@ -165,17 +166,129 @@ test("sends attachments to Postbox as base64, downloading linked ones", async ()
   }
 });
 
-test("falls back to the second provider when the first one fails", async () => {
+test("rejects an oversized attachment header before reading the body", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  const pull = mock(() => {});
+  const cancel = mock(() => {});
+  postbox.mockImplementationOnce(
+    async () =>
+      new Response(new ReadableStream({ pull, cancel }, { highWaterMark: 0 }), {
+        headers: { "content-length": String(10 * 1024 * 1024 + 1) },
+      }),
+  );
+  try {
+    await expect(
+      sendEmail({
+        ...email,
+        attachments: [
+          { filename: "brief.pdf", path: "https://storage.example.test/b.pdf" },
+        ],
+      }),
+    ).rejects.toThrow("exceeds Postbox's 10 MB size limit");
+    expect(pull).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(postbox).toHaveBeenCalledTimes(1);
+  } finally {
+    restore();
+  }
+});
+
+test.each([undefined, "1", "invalid"])(
+  "bounds attachment streams with content-length %s and cancels on overflow",
+  async (contentLength) => {
+    resetMocks();
+    env.EMAIL_PROVIDER = "postbox";
+    const chunk = new Uint8Array(5 * 1024 * 1024);
+    const pull = mock(
+      (controller: ReadableStreamDefaultController<Uint8Array>) => {
+        controller.enqueue(
+          pull.mock.calls.length <= 2 ? chunk : new Uint8Array(1),
+        );
+      },
+    );
+    const cancel = mock(() => {});
+    postbox.mockImplementationOnce(
+      async () =>
+        new Response(
+          new ReadableStream({ pull, cancel }, { highWaterMark: 0 }),
+          {
+            headers:
+              contentLength === undefined
+                ? {}
+                : { "content-length": contentLength },
+          },
+        ),
+    );
+    try {
+      await expect(
+        sendEmail({
+          ...email,
+          attachments: [
+            {
+              filename: "brief.pdf",
+              path: "https://storage.example.test/b.pdf",
+            },
+          ],
+        }),
+      ).rejects.toThrow("exceeds Postbox's 10 MB size limit");
+      expect(pull).toHaveBeenCalledTimes(3);
+      expect(cancel).toHaveBeenCalledTimes(1);
+      expect(postbox).toHaveBeenCalledTimes(1);
+    } finally {
+      restore();
+    }
+  },
+);
+
+test("rejects oversized in-memory Postbox attachments", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  try {
+    await expect(
+      sendEmail({
+        ...email,
+        attachments: [
+          {
+            filename: "brief.pdf",
+            content: Buffer.alloc(10 * 1024 * 1024 + 1),
+          },
+        ],
+      }),
+    ).rejects.toThrow("exceeds Postbox's 10 MB size limit");
+    expect(postbox).not.toHaveBeenCalled();
+  } finally {
+    restore();
+  }
+});
+
+test("falls back and logs recipient count and idempotency key without addresses", async () => {
   resetMocks();
   env.EMAIL_FALLBACK_PROVIDER = "postbox";
+  const errorLog = spyOn(logger, "error").mockImplementation(() => {});
+  const keyedEmail = {
+    ...email,
+    to: ["buyer@example.test", "other@example.test"],
+    idempotencyKey: "workshop:order:booked:email",
+  };
   send.mockImplementationOnce(async () => ({
     error: { message: "resend is down" },
   }));
   try {
-    await sendEmail(email);
+    await sendEmail(keyedEmail);
     expect(send).toHaveBeenCalledTimes(1);
     expect(postbox).toHaveBeenCalledTimes(1);
+    expect(errorLog).toHaveBeenCalledWith(
+      "Resend failed to send email",
+      expect.any(Error),
+      {
+        recipientCount: 2,
+        idempotencyKey: keyedEmail.idempotencyKey,
+        willRetryWith: "Yandex Postbox",
+      },
+    );
   } finally {
+    errorLog.mockRestore();
     restore();
   }
 });

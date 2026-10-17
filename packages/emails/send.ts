@@ -90,7 +90,8 @@ async function deliver(email: OutgoingEmail) {
       return;
     } catch (error) {
       logger.error(`${provider.label} failed to send email`, error, {
-        to: email.to,
+        recipientCount: email.to.length,
+        idempotencyKey: email.idempotencyKey,
         willRetryWith: chain[index + 1]?.label,
       });
       lastError = error;

@@ -62,6 +62,8 @@ const POSTBOX_REGION = "ru-central1";
 // В подписи запросов Postbox сервис называется ses, а не postbox.
 const POSTBOX_SERVICE = "ses";
 const POSTBOX_TIMEOUT_MS = 30_000;
+// Postbox limits the entire email, including attachments, to 10 MB.
+const POSTBOX_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 /** Ключ доступа сервисного аккаунта Postbox или null, если он не задан. */
 const postboxCredentials = () =>
@@ -74,6 +76,10 @@ const postboxCredentials = () =>
 
 /** Postbox принимает вложения только содержимым (base64): ссылки качаем сами. */
 async function postboxAttachment(attachment: EmailAttachment) {
+  const sizeError = () =>
+    new Error(
+      `Attachment ${attachment.filename} exceeds Postbox's 10 MB size limit`,
+    );
   let content: Buffer;
   if ("content" in attachment) {
     content = attachment.content;
@@ -86,8 +92,34 @@ async function postboxAttachment(attachment: EmailAttachment) {
         `Attachment ${attachment.filename} download failed: HTTP ${res.status}`,
       );
     }
-    content = Buffer.from(await res.arrayBuffer());
+    if (
+      Number(res.headers.get("content-length")) > POSTBOX_MAX_ATTACHMENT_BYTES
+    ) {
+      await res.body?.cancel().catch(() => {});
+      throw sizeError();
+    }
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const reader = res.body?.getReader();
+    if (reader) {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > POSTBOX_MAX_ATTACHMENT_BYTES) {
+            await reader.cancel().catch(() => {});
+            throw sizeError();
+          }
+          chunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    }
+    content = Buffer.concat(chunks, size);
   }
+  if (content.byteLength > POSTBOX_MAX_ATTACHMENT_BYTES) throw sizeError();
   return {
     FileName: attachment.filename,
     RawContent: content.toString("base64"),
