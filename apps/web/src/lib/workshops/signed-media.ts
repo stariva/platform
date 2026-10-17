@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { env } from "@stariva/config";
 import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import {
@@ -28,7 +29,6 @@ import {
 // Ссылка живёт 15 минут: плеер сам берёт новую, когда старая истекла, а
 // скопированная из браузера ссылка быстро перестаёт работать
 const VIDEO_URL_TTL_SECONDS = 60 * 15;
-const MATERIAL_URL_TTL_SECONDS = 300;
 
 /**
  * Ссылка на видео урока: на HLS-плейлист, если видео уже нарезано, иначе на
@@ -109,10 +109,36 @@ async function signLessonVideo({
   };
 }
 
+/** Стабильный идентификатор материала: учитывает весь ключ, включая каталог. */
+function materialFileId(key: string): string {
+  return `${createHash("sha256").update(key).digest("hex")}.pdf`;
+}
+
 /**
- * Ссылка на PDF-материал курса. Ключ обязан принадлежать материалам
+ * Проверяет доступ к PDF-материалу курса. Файл обязан быть в материалах
  * запрошенного мастер-класса — это защищает от попыток скачать произвольный
  * объект из бакета.
+ */
+async function authorizeMaterial(
+  slug: string,
+  matches: (key: string) => boolean,
+  userId: string | null,
+): Promise<
+  | { status: "ok"; key: string; label: string }
+  | Exclude<MaterialUrlResult, { status: "ok" }>
+> {
+  const workshop = await getWorkshopBySlug(slug, "owned");
+  const material = workshop?.materialFiles?.find((file) => matches(file.key));
+  if (!material) return { status: "not_found" };
+  if (!userId) return { status: "unauthorized" };
+  if (!(await hasAccess(userId, slug))) return { status: "forbidden" };
+  if (!isStorageConfigured()) return { status: "files_unavailable" };
+  return { status: "ok", key: material.key, label: material.label };
+}
+
+/**
+ * Ссылка на PDF-материал курса — на адрес сайта, а не в бакет: файл отдаёт
+ * /api/workshops/[slug]/materials/[file], ещё раз проверив доступ.
  */
 async function signMaterial({
   slug,
@@ -121,18 +147,25 @@ async function signMaterial({
 }: Parameters<
   WorkshopFileServices["signMaterial"]
 >[0]): Promise<MaterialUrlResult> {
-  const workshop = await getWorkshopBySlug(slug, "owned");
-  if (!workshop?.materialFiles?.some((material) => material.key === key)) {
-    return { status: "not_found" };
-  }
-  if (!userId) return { status: "unauthorized" };
-  if (!(await hasAccess(userId, slug))) return { status: "forbidden" };
-  if (!isStorageConfigured()) return { status: "files_unavailable" };
+  const result = await authorizeMaterial(slug, (k) => k === key, userId);
+  if (result.status !== "ok") return result;
+  return {
+    status: "ok",
+    url: `/api/workshops/${encodeURIComponent(slug)}/materials/${materialFileId(key)}`,
+  };
+}
 
-  const url = await getDownloadUrl(key, {
-    expiresIn: MATERIAL_URL_TTL_SECONDS,
-  });
-  return { status: "ok", url };
+/** Материал курса по идентификатору из адреса — для маршрута, который его отдаёт. */
+export function findMaterialFile(
+  slug: string,
+  fileId: string,
+  userId: string | null,
+) {
+  return authorizeMaterial(
+    slug,
+    (key) => materialFileId(key) === fileId,
+    userId,
+  );
 }
 
 export const workshopFileServices: WorkshopFileServices = {
