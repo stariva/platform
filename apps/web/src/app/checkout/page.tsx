@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  type CheckoutQuote,
+  DeliveryUnavailableError,
+  ItemsUnavailableError,
+} from "@stariva/web-api/contract";
+import {
   ArrowRightIcon,
   LockKeyholeIcon,
   ShoppingBagIcon,
@@ -9,7 +14,6 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { PickupPointPicker } from "@/components/checkout/pickup-point-picker";
 import { CheckoutProgress } from "@/components/stariva/checkout-progress";
 import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
@@ -26,12 +30,9 @@ import {
   localDateKey,
   pointKindLabel,
 } from "@/lib/ozon-delivery/format";
-import type {
-  DeliveryCheckoutResponse,
-  DeliverySelection,
-  PickupPoint,
-} from "@/lib/ozon-delivery/types";
+import type { DeliverySelection, PickupPoint } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
+import { formErrorMessage, webApi } from "@/lib/web-api";
 import { CheckoutSection, type SectionStatus } from "./checkout-section";
 import { ContactForm, type ContactFormValues } from "./contact-form";
 import {
@@ -49,31 +50,11 @@ import {
  */
 type Step = "contact" | "delivery" | "payment";
 
-const checkoutCreateResponseSchema = z.object({
-  confirmationUrl: z.url({ protocol: /^https?$/ }),
-  analytics: z.object({
-    id: z.string().min(1),
-    revenue: z.number().nonnegative(),
-    products: z.array(
-      z.object({
-        id: z.string().min(1),
-        name: z.string().min(1),
-        price: z.number().nonnegative(),
-        quantity: z.number().int().positive(),
-      }),
-    ),
-  }),
-});
-
-const unavailableItemsResponseSchema = z.object({
-  unavailableProductSlugs: z.array(z.string()).min(1),
-});
-
 type QuoteState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; quote: DeliveryCheckoutResponse };
+  | { status: "ready"; quote: CheckoutQuote };
 
 export default function CheckoutPage() {
   const { items: cartItems, hydrated, clear, remove } = useCart();
@@ -121,36 +102,35 @@ export default function CheckoutPage() {
     setQuoteState({ status: "loading" });
     (async () => {
       try {
-        const res = await fetch("/api/checkout/quote", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
+        const data = await webApi.checkout.quote(
+          {
             contactPhone: phone,
             items: items.map((i) => ({
               productSlug: i.productSlug,
               quantity: i.quantity,
             })),
             delivery: { method: "pickup", pointId },
-          }),
-        });
-        const data = await res.json();
+          },
+          { signal: controller.signal },
+        );
         if (controller.signal.aborted) return;
-        if (res.status === 409 && dropUnavailableItems(data)) return;
-        if (!res.ok || !data.available) {
+        if (!data.available) {
           setQuoteState({
             status: "error",
-            message:
-              data.error ?? data.reason ?? "Доставка в этот пункт недоступна",
+            message: data.reason ?? "Доставка в этот пункт недоступна",
           });
           return;
         }
         setQuoteState({ status: "ready", quote: data });
-      } catch {
+      } catch (error) {
         if (controller.signal.aborted) return;
+        if (error instanceof ItemsUnavailableError) {
+          dropUnavailableItems(error.data.unavailableProductSlugs);
+          return;
+        }
         setQuoteState({
           status: "error",
-          message: "Не удалось рассчитать доставку",
+          message: formErrorMessage(error, "Не удалось рассчитать доставку"),
         });
       }
     })();
@@ -160,12 +140,10 @@ export default function CheckoutPage() {
   /**
    * Корзина живёт в браузере, и товар могут раскупить, пока он в ней лежит.
    * Сервер отвечает списком таких товаров — убираем их, доставка
-   * пересчитается сама. Возвращает false, если это другая ошибка.
+   * пересчитается сама.
    */
-  function dropUnavailableItems(data: unknown): boolean {
-    const parsed = unavailableItemsResponseSchema.safeParse(data);
-    if (!parsed.success) return false;
-    const slugs = new Set(parsed.data.unavailableProductSlugs);
+  function dropUnavailableItems(unavailableProductSlugs: string[]) {
+    const slugs = new Set(unavailableProductSlugs);
     const names = items
       .filter((item) => slugs.has(item.productSlug))
       .map((item) => `«${item.name}»`);
@@ -177,25 +155,12 @@ export default function CheckoutPage() {
         ? `Товаров ${names.join(", ")} уже нет в наличии — мы убрали их из корзины`
         : `Товара ${names[0] ?? ""} уже нет в наличии — мы убрали его из корзины`,
     );
-    return true;
   }
 
   async function handleContactSubmit(data: ContactFormValues) {
     setCheckingPhone(true);
     try {
-      const res = await fetch("/api/checkout/delivery-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: data.phone }),
-      });
-      const resData = await res.json();
-      if (!res.ok) {
-        toast.error(
-          resData.error ??
-            "Доставка Ozon пока недоступна — напишите нам в Telegram @Olga_Stariva",
-        );
-        return;
-      }
+      const resData = await webApi.checkout.checkPhone({ phone: data.phone });
       if (!resData.available) {
         toast.error(resData.reason ?? "Доставка недоступна для этого телефона");
         return;
@@ -207,8 +172,15 @@ export default function CheckoutPage() {
         samePhone && quoteState.status === "ready" ? "payment" : "delivery",
       );
       reachGoal("checkout_contact_complete");
-    } catch {
-      toast.error("Не удалось проверить телефон. Попробуйте ещё раз.");
+    } catch (error) {
+      toast.error(
+        error instanceof DeliveryUnavailableError
+          ? "Доставка Ozon пока недоступна — напишите нам в Telegram @Olga_Stariva"
+          : formErrorMessage(
+              error,
+              "Не удалось проверить телефон. Попробуйте ещё раз.",
+            ),
+      );
     } finally {
       setCheckingPhone(false);
     }
@@ -222,6 +194,8 @@ export default function CheckoutPage() {
 
   async function handleConfirm() {
     if (quoteState.status !== "ready" || !selectedPoint || !contact) return;
+    // Форма уже не пропускает без согласия; здесь сужаем тип до того, что просит API
+    if (contact.personalDataConsent !== true) return;
     const delivery: DeliverySelection = {
       method: "pickup",
       pointId: selectedPoint.id,
@@ -229,47 +203,34 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/checkout/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactName: contact.name,
-          contactPhone: contact.phone,
-          contactEmail: contact.email || undefined,
-          items: items.map((item) => ({
-            productSlug: item.productSlug,
-            quantity: item.quantity,
-          })),
-          delivery,
-          personalDataConsent: contact.personalDataConsent === true,
-          offerAccepted: true,
-        }),
+      const created = await webApi.checkout.create({
+        contactName: contact.name,
+        contactPhone: contact.phone,
+        contactEmail: contact.email || undefined,
+        comment: contact.comment || undefined,
+        items: items.map((item) => ({
+          productSlug: item.productSlug,
+          quantity: item.quantity,
+        })),
+        delivery,
+        personalDataConsent: contact.personalDataConsent,
+        offerAccepted: true,
       });
-      const data: unknown = await res.json();
-      if (res.status === 409 && dropUnavailableItems(data)) {
-        setSubmitting(false);
-        return;
-      }
-      if (!res.ok) {
-        const error = z.object({ error: z.string() }).safeParse(data);
-        toast.error(
-          error.success ? error.data.error : "Не удалось создать заказ",
-        );
-        setSubmitting(false);
-        return;
-      }
-      const parsed = checkoutCreateResponseSchema.safeParse(data);
-      if (!parsed.success) {
-        toast.error("Не удалось создать заказ");
-        setSubmitting(false);
-        return;
-      }
-      await trackCreatedOrder(parsed.data.analytics);
+      await trackCreatedOrder(created.analytics);
       setRedirecting(true);
       clear("stock");
-      window.location.href = parsed.data.confirmationUrl;
-    } catch {
-      toast.error("Не удалось создать заказ. Попробуйте позже.");
+      window.location.href = created.confirmationUrl;
+    } catch (error) {
+      if (error instanceof ItemsUnavailableError) {
+        dropUnavailableItems(error.data.unavailableProductSlugs);
+      } else {
+        toast.error(
+          formErrorMessage(
+            error,
+            "Не удалось создать заказ. Попробуйте позже.",
+          ),
+        );
+      }
       setSubmitting(false);
     }
   }
@@ -405,6 +366,11 @@ export default function CheckoutPage() {
                       {contact.phone}
                       {contact.email && ` · ${contact.email}`}
                     </p>
+                    {contact.comment && (
+                      <p className="whitespace-pre-line">
+                        Комментарий: {contact.comment}
+                      </p>
+                    )}
                   </>
                 )
               }
@@ -622,7 +588,7 @@ function formatDelivery(kopecks: number): string {
  * «2 октября – 4 октября» по датам доставки из расчёта Ozon. Если заказ
  * разбит на несколько отправлений, ориентируемся на самое позднее.
  */
-function deliveryWindow(quote: DeliveryCheckoutResponse): string | null {
+function deliveryWindow(quote: CheckoutQuote): string | null {
   const latest = (dates: string[]) =>
     dates
       .map((iso) => new Date(iso))
@@ -630,12 +596,8 @@ function deliveryWindow(quote: DeliveryCheckoutResponse): string | null {
       .map(localDateKey)
       .sort()
       .at(-1);
-  const from = latest(
-    quote.splits.map((split) => split.deliveryMethod.logisticDateFrom),
-  );
-  const to = latest(
-    quote.splits.map((split) => split.deliveryMethod.logisticDateTo),
-  );
+  const from = latest(quote.shipments.map((shipment) => shipment.dateFrom));
+  const to = latest(quote.shipments.map((shipment) => shipment.dateTo));
   if (!from || !to) return null;
   return formatDateRange(from, to);
 }

@@ -51,5 +51,11 @@ export const admin = os.admin.use(timingMiddleware).use(requireAdminSecret);
 /** Публичные формы: без входа. */
 export const forms = os.forms.use(timingMiddleware);
 
+/** Гостевой заказ: без входа, покупателя подтверждает телефон из заказа. */
+export const orders = os.orders.use(timingMiddleware);
+
+/** Оформление заказа: без входа; вошедшего покупателя процедуры узнают сами. */
+export const checkout = os.checkout.use(timingMiddleware);
+
 /** Процедуры кабинета покупателя: вызывает браузер с cookie сессии. */
 export const account = os.account.use(timingMiddleware).use(withSession);

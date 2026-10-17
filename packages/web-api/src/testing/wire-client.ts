@@ -46,6 +46,17 @@ const idleServices: WebServices = {
       url: "https://storage.example.test/brief.pdf",
     }),
   },
+  orders: {
+    view: async () => null,
+    updateDetails: async () => "not_found",
+    startPayment: async () => ({ status: "not_found" }),
+  },
+  checkout: {
+    checkPhone: async () => ({ status: "unconfigured" }),
+    quote: async () => ({ status: "unconfigured" }),
+    create: async () => ({ status: "unconfigured" }),
+    requestMadeToOrder: async () => ({ status: "check_failed" }),
+  },
   revalidatePaths: () => {},
 };
 

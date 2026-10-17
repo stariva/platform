@@ -10,6 +10,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { customOrderRequests } from "./custom-order";
 
 /** Где крутится реклама: по каналу кампании складываются в сводке. */
 export type AdChannel =
@@ -189,7 +190,10 @@ export const crmSales = pgTable(
       onDelete: "set null",
     }),
     // Заявка с сайта («Обсудим вашу идею»), из которой вырос заказ
-    requestNumber: integer("request_number"),
+    requestNumber: integer("request_number").references(
+      () => customOrderRequests.number,
+      { onDelete: "restrict" },
+    ),
     statusChangedAt: timestamp("status_changed_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
 export const contactFormSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(120),
@@ -31,6 +32,7 @@ export const contactFormSchema = z.object({
     .email("Некорректный email")
     .optional()
     .or(z.literal("")),
+  comment: z.string().trim().max(1500, "Не больше 1500 символов").optional(),
   personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
@@ -46,6 +48,7 @@ const draftSchema = z.object({
   name: z.string().max(120),
   phone: z.string().max(32),
   email: z.string().max(254),
+  comment: z.string().max(1500).optional(),
 });
 
 function readDraft() {
@@ -67,6 +70,7 @@ function saveDraft(values: Partial<ContactFormValues>) {
         name: values.name ?? "",
         phone: values.phone ?? "",
         email: values.email ?? "",
+        comment: values.comment ?? "",
       }),
     );
   } catch {
@@ -94,6 +98,7 @@ export function ContactForm({
       name: "",
       phone: "",
       email: "",
+      comment: "",
       personalDataConsent: false,
     },
   });
@@ -182,6 +187,29 @@ export function ContactForm({
             )}
           />
         </div>
+        <FormField
+          control={form.control}
+          name="comment"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Комментарий к заказу{" "}
+                <span className="font-normal text-taupe">— необязательно</span>
+              </FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Пожелания по упаковке, подарок, удобное время связи…"
+                  disabled={busy}
+                  className="rounded-xl bg-parchment"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="personalDataConsent"

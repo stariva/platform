@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { useFormToken } from "@/lib/auth/use-form-token";
+import { SentNotice } from "../sent-notice";
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
@@ -52,13 +53,14 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div className="text-center space-y-3 py-2">
-        <p className="text-espresso font-medium">Письмо отправлено</p>
-        <p className="text-taupe text-sm leading-relaxed">
-          Если аккаунт с адресом <span className="text-espresso">{sent}</span>{" "}
-          существует, на него придёт ссылка для сброса пароля.
-        </p>
-      </div>
+      <SentNotice
+        title="Письмо отправлено"
+        email={sent}
+        onRetry={() => setSent(null)}
+      >
+        Если аккаунт с этим адресом существует, на него придёт ссылка для сброса
+        пароля.
+      </SentNotice>
     );
   }
 

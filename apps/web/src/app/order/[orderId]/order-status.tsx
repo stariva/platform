@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { OrderView } from "@stariva/web-api/contract";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -26,40 +27,9 @@ import {
   productOrderStatusLabels as statusLabels,
 } from "@/lib/commerce/order-status";
 import { formatPrice } from "@/lib/products";
-import {
-  MadeToOrderDetails,
-  madeToOrderItemSchema,
-} from "./made-to-order-details";
-import {
-  MadeToOrderPayment,
-  madeToOrderTermsSchema,
-} from "./made-to-order-payment";
-
-const orderResponseSchema = madeToOrderTermsSchema.extend({
-  number: z.number().int().positive(),
-  kind: z.enum(["stock", "made_to_order"]),
-  paid: z.boolean(),
-  status: z.string(),
-  amountTotal: z.number().int().nonnegative(),
-  amountDelivery: z.number().int().nonnegative(),
-  declineReason: z.string().nullable(),
-  createdAt: z.string(),
-  deliveryMethod: z.string(),
-  customerNotes: z.string().nullable(),
-  deliveryNote: z.string().nullable(),
-  trackingNumber: z.string().nullable(),
-  items: z.array(
-    madeToOrderItemSchema.extend({ image: z.string().nullable() }),
-  ),
-  postings: z.array(
-    z.object({
-      postingNumber: z.string(),
-      status: z.string(),
-    }),
-  ),
-});
-
-type OrderData = z.infer<typeof orderResponseSchema>;
+import { formErrorMessage, webApi } from "@/lib/web-api";
+import { MadeToOrderDetails } from "./made-to-order-details";
+import { MadeToOrderPayment } from "./made-to-order-payment";
 
 const orderLookupSchema = z.object({
   phone: z.string().trim().min(1, "Введите телефон"),
@@ -69,7 +39,7 @@ type OrderLookupFormValues = z.infer<typeof orderLookupSchema>;
 
 export function OrderStatus({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<OrderData | null>(null);
+  const [order, setOrder] = useState<OrderView | null>(null);
   // Телефон нужен и для повторной загрузки заказа, и для дополнения деталей
   const [phone, setPhone] = useState("");
 
@@ -81,28 +51,13 @@ export function OrderStatus({ orderId }: { orderId: string }) {
   /** Загружает заказ по телефону; возвращает false, если загрузить не удалось. */
   async function loadOrder(phoneValue: string): Promise<boolean> {
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneValue }),
-      });
-      const resData: unknown = await res.json();
-      if (!res.ok) {
-        const error = z.object({ error: z.string() }).safeParse(resData);
-        toast.error(error.success ? error.data.error : "Заказ не найден");
-        return false;
-      }
-      const parsed = orderResponseSchema.safeParse(resData);
-      if (!parsed.success) {
-        toast.error("Не удалось загрузить заказ");
-        return false;
-      }
-      setOrder(parsed.data);
+      const data = await webApi.orders.view({ orderId, phone: phoneValue });
+      setOrder(data);
       setPhone(phoneValue);
-      trackPaidOrder(orderId, parsed.data.amountTotal, parsed.data.paid);
+      trackPaidOrder(orderId, data.amountTotal, data.paid);
       return true;
-    } catch {
-      toast.error("Не удалось загрузить заказ");
+    } catch (error) {
+      toast.error(formErrorMessage(error, "Не удалось загрузить заказ"));
       return false;
     }
   }

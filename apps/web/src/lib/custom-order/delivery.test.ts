@@ -5,6 +5,7 @@ import {
   deliverNotification,
   missingEmailSettings,
 } from "./delivery";
+
 const notification = {
   id: "test-request",
   message: "Тест & <эскиз>",
@@ -175,22 +176,7 @@ test("a failed channel is logged even when the other one delivered", async () =>
   assert.equal(errors.length, 1);
   assert.match(String(errors[0]?.[1]), /email_failed/);
 });
-test("Telegram requests go through the reverse proxy when configured", async () => {
-  const urls: string[] = [];
-  await deliverNotification(
-    notification,
-    { ...config, telegramApiUrl: "https://proxy.example.test/" },
-    fakeFetch((url) => {
-      urls.push(url);
-      return url.includes("resend")
-        ? Response.json({ id: "receipt" })
-        : Response.json({ ok: true });
-    }),
-  );
-  assert.ok(urls.includes("https://proxy.example.test/bottest/sendMessage"));
-  assert.ok(!urls.some((url) => url.includes("api.telegram.org")));
-});
-test("Telegram requests default to api.telegram.org without a proxy", async () => {
+test("Telegram requests go to api.telegram.org", async () => {
   const urls: string[] = [];
   await deliverNotification(
     notification,
@@ -203,4 +189,27 @@ test("Telegram requests default to api.telegram.org without a proxy", async () =
     }),
   );
   assert.ok(urls.includes("https://api.telegram.org/bottest/sendMessage"));
+});
+test("the log names the Telegram status and description", async () => {
+  const errors: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => errors.push(args);
+  try {
+    assert.equal(
+      await deliverNotification(
+        notification,
+        { telegramToken: "test", telegramChatId: "test" },
+        fakeFetch(() =>
+          Response.json(
+            { ok: false, description: "Bad Request: chat not found" },
+            { status: 400 },
+          ),
+        ),
+      ),
+      false,
+    );
+  } finally {
+    console.error = original;
+  }
+  assert.match(String(errors[0]?.[1]), /HTTP 400 Bad Request: chat not found/);
 });

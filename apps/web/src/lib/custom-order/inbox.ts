@@ -5,6 +5,7 @@ import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { baseEnv, env } from "@/env";
 import { formatTouch } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { formatVisitor } from "@/lib/visitor";
 import {
   deliverNotification,
@@ -90,9 +91,7 @@ export async function saveRequest(
 }
 async function notify(item: Notification) {
   return deliverNotification(item, {
-    telegramToken: env.TELEGRAM_BOT_TOKEN,
-    telegramChatId: env.TELEGRAM_CHAT_ID,
-    telegramApiUrl: env.TG_API_PROXY_URL,
+    ...telegramStaffConfig(),
     emailKey: baseEnv.RESEND_API_KEY,
     emailFrom: env.ORDER_EMAIL_FROM,
     emailTo: env.ORDER_EMAIL_TO,
@@ -169,6 +168,9 @@ export async function retryPendingRequests() {
 }
 /** При старте сервера: громко, если заявки и заказы не уходят на почту. */
 export function warnIfOrderEmailMissing() {
+  console.info(
+    `[notifications] Telegram: токен ${env.TELEGRAM_BOT_TOKEN ? "задан" : "НЕ задан"}, чат ${env.TELEGRAM_CHAT_ID ? "задан" : "НЕ задан"}, прокси (3proxy) ${telegramProxyHost(env.TELEGRAM_PROXY_URL)}`,
+  );
   const missing = missingEmailSettings({
     emailKey: baseEnv.RESEND_API_KEY,
     emailFrom: env.ORDER_EMAIL_FROM,
@@ -190,4 +192,14 @@ export function startOrderRetryWorker() {
   retryTimer = setInterval(tick, 60_000);
   retryTimer.unref();
   void tick();
+}
+
+/** Адрес прокси без логина и пароля — для лога. */
+function telegramProxyHost(url?: string) {
+  if (!url) return "нет";
+  try {
+    return new URL(url).host;
+  } catch {
+    return "задан, но не разбирается как URL";
+  }
 }

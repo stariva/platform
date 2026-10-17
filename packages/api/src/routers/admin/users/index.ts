@@ -1,6 +1,7 @@
 import { byId } from "./by-id";
 import { grantAccess } from "./grant-access";
 import { list } from "./list";
+import { loginHistory } from "./login-history";
 import { remove } from "./remove";
 import { revokeAccess } from "./revoke-access";
 import { revokeSessions } from "./revoke-sessions";
@@ -15,5 +16,6 @@ export const adminUsersRouter = {
   grantAccess,
   revokeAccess,
   revokeSessions,
+  loginHistory,
   remove,
 };

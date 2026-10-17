@@ -1,41 +1,32 @@
 "use client";
 
+import type { OrderView } from "@stariva/web-api/contract";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatPrice } from "@/lib/products";
+import { formErrorMessage, webApi } from "@/lib/web-api";
 
-export const madeToOrderTermsSchema = z.object({
-  amountProducts: z.number().int().nonnegative(),
-  depositAmount: z.number().int().nullable(),
-  depositPaid: z.boolean(),
-  leadTime: z.string().nullable(),
-  paymentDueAt: z.string().nullable(),
-  paymentOverdue: z.boolean(),
-  paymentStep: z
-    .object({
-      type: z.enum(["deposit", "balance"]),
-      amount: z.number().int().positive(),
-    })
-    .nullable(),
-});
-
-type Terms = z.infer<typeof madeToOrderTermsSchema> & {
-  number: number;
-  status: string;
-  paid: boolean;
-  amountTotal: number;
-  amountDelivery: number;
-};
-
-const payResponseSchema = z.object({
-  confirmationUrl: z.url({ protocol: /^https?$/ }),
-});
+/** Условия заказа под заказ: то, что нужно для сумм и оплаты. */
+export type MadeToOrderTerms = Pick<
+  OrderView,
+  | "number"
+  | "status"
+  | "paid"
+  | "amountProducts"
+  | "amountTotal"
+  | "amountDelivery"
+  | "depositAmount"
+  | "depositPaid"
+  | "leadTime"
+  | "paymentDueAt"
+  | "paymentOverdue"
+  | "paymentStep"
+>;
 
 const money = (kopecks: number) => formatPrice(kopecks / 100);
 
@@ -84,7 +75,7 @@ export function MadeToOrderPayment({
 }: {
   orderId: string;
   phone: string;
-  terms: Terms;
+  terms: MadeToOrderTerms;
   /** Куда вернуть покупателя после оплаты: на гостевую страницу или в кабинет. */
   returnTo?: "order" | "account";
 }) {
@@ -109,24 +100,20 @@ export function MadeToOrderPayment({
   async function pay() {
     setPaying(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, offerAccepted: true, returnTo }),
+      const { confirmationUrl } = await webApi.orders.pay({
+        orderId,
+        phone,
+        offerAccepted: true,
+        returnTo,
       });
-      const data: unknown = await res.json();
-      const parsed = payResponseSchema.safeParse(data);
-      if (!res.ok || !parsed.success) {
-        const error = z.object({ error: z.string() }).safeParse(data);
-        toast.error(
-          error.success ? error.data.error : "Не удалось перейти к оплате",
-        );
-        setPaying(false);
-        return;
-      }
-      window.location.href = parsed.data.confirmationUrl;
-    } catch {
-      toast.error("Не удалось перейти к оплате. Попробуйте позже.");
+      window.location.href = confirmationUrl;
+    } catch (error) {
+      toast.error(
+        formErrorMessage(
+          error,
+          "Не удалось перейти к оплате. Попробуйте позже.",
+        ),
+      );
       setPaying(false);
     }
   }

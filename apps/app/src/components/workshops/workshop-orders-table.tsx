@@ -13,6 +13,7 @@ import {
   visitorPlace,
 } from "~/components/visitors/visitor-card";
 import { WorkshopBriefButton } from "./workshop-brief-button";
+import { WorkshopOrderRemove } from "./workshop-order-remove";
 import { WorkshopReceiptsButton } from "./workshop-receipts-button";
 
 const rub = new Intl.NumberFormat("ru-RU", {
@@ -75,7 +76,7 @@ export function WorkshopOrdersTable({
   rows: WorkshopOrderRow[];
   showWorkshop: boolean;
 }) {
-  const columns = showWorkshop ? 8 : 7;
+  const columns = showWorkshop ? 9 : 8;
   return (
     <div className="rounded-lg border">
       <Table>
@@ -89,6 +90,9 @@ export function WorkshopOrdersTable({
             <TableHead className="text-right">Сумма</TableHead>
             <TableHead>Чек</TableHead>
             <TableHead>Бриф</TableHead>
+            <TableHead>
+              <span className="sr-only">Действия</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -186,6 +190,14 @@ export function WorkshopOrdersTable({
                     buyer={row.contactEmail || row.userEmail}
                   />
                 )}
+              </TableCell>
+              <TableCell className="align-top">
+                <WorkshopOrderRemove
+                  orderId={row.id}
+                  title={`${row.userName} · ${row.workshopTitle ?? row.workshopSlug}`}
+                  status={row.status}
+                  paid={row.paidAt !== null}
+                />
               </TableCell>
             </TableRow>
           ))}

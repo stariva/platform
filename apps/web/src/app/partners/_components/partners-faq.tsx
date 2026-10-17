@@ -13,7 +13,7 @@ export function PartnersFaq() {
               className="font-serif text-near-black"
               style={{ fontSize: "clamp(26px, 3.5vw, 42px)" }}
             >
-              Вопросы о сотрудничестве
+              Коротко о главном
             </h2>
           </div>
 

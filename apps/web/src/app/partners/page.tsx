@@ -3,29 +3,24 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
-import { PartnersApply } from "./_components/partners-apply";
-import { PartnersAudiences } from "./_components/partners-audiences";
 import { PartnersFaq } from "./_components/partners-faq";
-import { PartnersFormats } from "./_components/partners-formats";
 import { PartnersHero } from "./_components/partners-hero";
-import { PartnersLooks } from "./_components/partners-looks";
 import { PartnersProcess } from "./_components/partners-process";
 import { faq, PARTNER_TERMS } from "./_data";
 
 export const metadata: Metadata = {
-  title: "Фотографам и стилистам — партнёрская программа Stariva",
-  description: `Платья макраме ручной работы для съёмок ваших клиенток. Вознаграждение ${PARTNER_TERMS.referralReward} за рекомендацию, скидка ${PARTNER_TERMS.volumeDiscount} на заказ от ${PARTNER_TERMS.volumeFrom} изделий, коллаборации для editorial-съёмок.`,
+  title: `Партнёрам: скидка ${PARTNER_TERMS.clientDiscount} вашим клиенткам`,
+  description: `Рекомендуйте изделия макраме ручной работы Stariva: клиентка, которая назовёт ваше имя, получит скидку ${PARTNER_TERMS.clientDiscount} на первый заказ. Без анкет и договоров.`,
   alternates: { canonical: `${BASE_URL}/partners` },
   openGraph: {
     type: "website",
-    title: "Фотографам и стилистам — Stariva",
-    description:
-      "Платья макраме для съёмок: партнёрская ссылка, заказы для клиенток и студий, совместные съёмки.",
+    title: "Партнёрам — Stariva",
+    description: `Посоветуйте Stariva — клиентка получит скидку ${PARTNER_TERMS.clientDiscount}.`,
     url: `${BASE_URL}/partners`,
     images: [
       {
         url: "/images/photoshoots/wedding-sea.png",
-        alt: "Свадебная арка с макраме на пляже — партнёрская программа Stariva",
+        alt: "Свадебная арка с макраме на пляже — Stariva",
       },
     ],
   },
@@ -37,7 +32,7 @@ export default function PartnersPage() {
       <BreadcrumbJsonLd
         items={[
           { name: "Главная", href: "/" },
-          { name: "Фотографам и стилистам", href: "/partners" },
+          { name: "Партнёрам", href: "/partners" },
         ]}
       />
       <FAQJsonLd
@@ -48,11 +43,7 @@ export default function PartnersPage() {
 
       <main>
         <PartnersHero />
-        <PartnersAudiences />
-        <PartnersFormats />
-        <PartnersLooks />
         <PartnersProcess />
-        <PartnersApply />
         <PartnersFaq />
       </main>
 

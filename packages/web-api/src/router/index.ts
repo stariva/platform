@@ -1,8 +1,10 @@
 import { os } from "../orpc";
 import { accountRouter } from "./account";
 import { adminRouter } from "./admin";
+import { checkoutRouter } from "./checkout";
 import { formsRouter } from "./forms";
 import { jobsRouter } from "./jobs";
+import { ordersRouter } from "./orders";
 
 /** `os.router` сверяет реализацию с контрактом ещё и в рантайме. */
 export const webRouter = os.router({
@@ -10,6 +12,8 @@ export const webRouter = os.router({
   admin: adminRouter,
   account: accountRouter,
   forms: formsRouter,
+  orders: ordersRouter,
+  checkout: checkoutRouter,
 });
 
 export type WebRouter = typeof webRouter;

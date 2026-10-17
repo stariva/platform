@@ -42,6 +42,11 @@ export function initAuth<
     email: string;
     url: string;
   }) => Promise<void>;
+  /** Called after a user has set a new password through the reset link. */
+  onPasswordReset?: (
+    data: { userId: string },
+    request?: Request,
+  ) => Promise<void>;
   /** Enables the change-email flow and wires up its verification email. */
   changeEmail?: {
     sendChangeEmailVerification: (data: {
@@ -87,6 +92,9 @@ export function initAuth<
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: options.requireEmailVerification ?? false,
+      onPasswordReset: async ({ user }, request) => {
+        await options.onPasswordReset?.({ userId: user.id }, request);
+      },
       sendResetPassword: async ({ user, url }) => {
         if (options.sendEmail) {
           await options.sendEmail({
