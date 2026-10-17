@@ -1,13 +1,12 @@
 import { measurementEntrySchema } from "@stariva/web-api/contract";
 import { z } from "zod";
 
-/** Изделий под заказ в одной позиции: каждое плетётся отдельно. */
-export const MAX_MADE_TO_ORDER_QUANTITY = 10;
-/** Позиций под заказ в одном заказе. */
-export const MAX_MADE_TO_ORDER_LINES = 20;
-
-// Мерка живёт в контракте API: по ней проверяют и форму, и сервер
-export { measurementEntrySchema };
+// Мерка и лимиты заявки живут в контракте API: по ним проверяют и форму, и сервер
+export {
+  MAX_MADE_TO_ORDER_LINES,
+  MAX_MADE_TO_ORDER_QUANTITY,
+  measurementEntrySchema,
+} from "@stariva/web-api/contract";
 
 /** Параметры изделия под заказ: что выбрал покупатель и что уточнил после оплаты. */
 export const madeToOrderOptionsSchema = z.object({

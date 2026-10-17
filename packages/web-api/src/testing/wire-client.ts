@@ -51,6 +51,12 @@ const idleServices: WebServices = {
     updateDetails: async () => "not_found",
     startPayment: async () => ({ status: "not_found" }),
   },
+  checkout: {
+    checkPhone: async () => ({ status: "unconfigured" }),
+    quote: async () => ({ status: "unconfigured" }),
+    create: async () => ({ status: "unconfigured" }),
+    requestMadeToOrder: async () => ({ status: "check_failed" }),
+  },
   revalidatePaths: () => {},
 };
 

@@ -27,7 +27,7 @@ const STAGE_DESCRIPTIONS = {
 } as const;
 
 /** Адрес сайта для ссылки возврата с оплаты: из окружения, иначе из запроса. */
-function siteUrl(headers: Headers): string {
+export function siteUrl(headers: Headers): string {
   const configured = env.NEXT_PUBLIC_SITE_URL ?? baseEnv.APP_URL;
   if (configured) return configured.replace(/\/$/, "");
   const origin = headers.get("origin");

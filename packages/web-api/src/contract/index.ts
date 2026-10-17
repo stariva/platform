@@ -1,6 +1,7 @@
 import type { ClientContext, RouterContractClient } from "@orpc/contract";
 import { accountContract } from "./account";
 import { adminContract } from "./admin";
+import { checkoutContract } from "./checkout";
 import { formsContract } from "./forms";
 import { jobsContract } from "./jobs";
 import { ordersContract } from "./orders";
@@ -22,6 +23,22 @@ export {
   OzonRequestFailedError,
   type OzonStockPushResult,
 } from "./admin";
+export {
+  CheckoutCheckFailedError,
+  type CheckoutQuote,
+  type CreatedOrder,
+  type CreateOrderInput,
+  DeliveryNotAvailableError,
+  DeliveryUnavailableError,
+  ItemsUnavailableError,
+  MAX_MADE_TO_ORDER_LINES,
+  MAX_MADE_TO_ORDER_QUANTITY,
+  type MadeToOrderRequest,
+  type MadeToOrderRequested,
+  OptionsUnavailableError,
+  type PhoneCheck,
+  type QuoteInput,
+} from "./checkout";
 export {
   CustomOrderConflictError,
   type CustomOrderRequest,
@@ -64,6 +81,7 @@ export const webContract = {
   account: accountContract,
   forms: formsContract,
   orders: ordersContract,
+  checkout: checkoutContract,
 };
 
 export type WebContract = typeof webContract;

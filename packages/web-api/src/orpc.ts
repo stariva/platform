@@ -2,11 +2,18 @@ import { implement } from "@orpc/server";
 import type { Session } from "@stariva/auth";
 import { logger } from "@stariva/config";
 import {
+  type CheckoutQuote,
+  type CreatedOrder,
+  type CreateOrderInput,
   type CustomOrderRequest,
   type LessonVideoResult,
+  type MadeToOrderRequest,
+  type MadeToOrderRequested,
   type MaterialUrlResult,
   type OrderDetails,
   type OrderView,
+  type PhoneCheck,
+  type QuoteInput,
   type ReminderSweepResult,
   webContract,
 } from "./contract";
@@ -25,6 +32,7 @@ export interface WebServices {
   customOrders: CustomOrderServices;
   workshopFiles: WorkshopFileServices;
   orders: OrderServices;
+  checkout: CheckoutServices;
   /** Сброс кэша страниц Next: revalidatePath живёт в витрине. */
   revalidatePaths: (paths: string[]) => void;
 }
@@ -83,6 +91,57 @@ export interface OrderServices {
     returnTo?: "order" | "account";
     headers: Headers;
   }) => Promise<OrderPaymentResult>;
+}
+
+/**
+ * Общие отказы оформления. Корзина живёт в браузере, поэтому товар могут
+ * раскупить или снять с продажи, пока он в ней лежит.
+ */
+export type CheckoutRejection =
+  | { status: "items_unavailable"; unavailableProductSlugs: string[] }
+  | { status: "check_failed" };
+
+/**
+ * Оформление заказа: каталог, Ozon Доставка, ЮKassa, атрибуция и уведомления
+ * живут в витрине (apps/web/src/lib/commerce/checkout-services.ts). Сервисы
+ * сами пишут сбои в лог и возвращают отказ, процедуры превращают его в
+ * типизированную ошибку.
+ */
+export interface CheckoutServices {
+  checkPhone: (
+    phone: string,
+  ) => Promise<
+    | { status: "ok"; check: PhoneCheck }
+    | { status: "unconfigured" }
+    | { status: "check_failed" }
+  >;
+  quote: (
+    input: QuoteInput,
+  ) => Promise<
+    | { status: "ok"; quote: CheckoutQuote }
+    | { status: "unconfigured" }
+    | CheckoutRejection
+  >;
+  /**
+   * Заголовки нужны для атрибуции из cookie, данных о посетителе и адреса
+   * возврата с оплаты; `userId` — вошедший покупатель.
+   */
+  create: (
+    input: CreateOrderInput & { userId: string | null; headers: Headers },
+  ) => Promise<
+    | { status: "ok"; order: CreatedOrder }
+    | { status: "unconfigured" }
+    | { status: "delivery_unavailable" }
+    | { status: "payment_failed" }
+    | CheckoutRejection
+  >;
+  requestMadeToOrder: (
+    input: MadeToOrderRequest & { userId: string | null; headers: Headers },
+  ) => Promise<
+    | { status: "ok"; request: MadeToOrderRequested }
+    | { status: "options_unavailable" }
+    | CheckoutRejection
+  >;
 }
 
 /** Заявки на изделия: apps/web/src/lib/custom-order */
