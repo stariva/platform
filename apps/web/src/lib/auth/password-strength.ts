@@ -36,10 +36,10 @@ function characterClassCount(password: string): number {
 function isTrivialPattern(password: string): boolean {
   if (/^(.)\1+$/u.test(password)) return true;
   const codes = Array.from(password, (ch) => ch.codePointAt(0) ?? 0);
-  const step = codes[1] - codes[0];
+  const step = (codes[1] ?? 0) - (codes[0] ?? 0);
   return (
     Math.abs(step) === 1 &&
-    codes.every((c, i) => i === 0 || c - codes[i - 1] === step)
+    codes.every((c, i) => i === 0 || c - (codes[i - 1] ?? 0) === step)
   );
 }
 
