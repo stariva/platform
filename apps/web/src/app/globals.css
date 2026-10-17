@@ -212,67 +212,74 @@
   }
 }
 
-/* ── Фон страниц авторизации ─────────────────────────────────────── */
-.auth-blob {
+/* ── Фон страниц авторизации ───────────────────────────────────────
+   Сетка из тонких линий, тающая сверху вниз, и мягкое пастельное
+   свечение за логотипом (по мотивам app.dub.co/login). */
+.auth-aurora {
   position: absolute;
-  border-radius: 9999px;
-  filter: blur(70px);
+  top: -140px;
+  left: 50%;
+  width: min(1100px, 130vw);
+  height: 460px;
+  translate: -50% 0;
+  filter: blur(70px) saturate(1.1);
+  opacity: 0.85;
   will-change: transform;
-  animation: auth-drift 26s ease-in-out infinite alternate;
+  animation: auth-aurora-sway 18s ease-in-out infinite alternate;
+  background:
+    radial-gradient(40% 55% at 18% 55%, #f6c9a8 0%, transparent 70%),
+    radial-gradient(38% 60% at 40% 40%, #f3b9c9 0%, transparent 70%),
+    radial-gradient(40% 55% at 62% 50%, #c9bdf0 0%, transparent 70%),
+    radial-gradient(38% 60% at 84% 45%, #b5d9ef 0%, transparent 70%),
+    radial-gradient(30% 45% at 50% 75%, #cfe6c8 0%, transparent 70%);
 }
-.auth-blob-a {
-  top: -18%;
-  left: -12%;
-  width: 56vmax;
-  height: 56vmax;
-  background: radial-gradient(circle, #cbbfae 0%, transparent 70%);
-  opacity: 0.9;
+.auth-aurora-glow {
+  position: absolute;
+  bottom: -30%;
+  left: 50%;
+  width: min(900px, 120vw);
+  height: 520px;
+  translate: -50% 0;
+  filter: blur(90px);
+  opacity: 0.5;
+  background: radial-gradient(closest-side, #e6dccd 0%, transparent 100%);
+  animation: auth-aurora-sway 24s ease-in-out infinite alternate-reverse;
 }
-.auth-blob-b {
-  right: -16%;
-  bottom: -22%;
-  width: 62vmax;
-  height: 62vmax;
-  background: radial-gradient(circle, #b9ab97 0%, transparent 70%);
-  opacity: 0.75;
-  animation-duration: 32s;
-  animation-delay: -9s;
-}
-.auth-blob-c {
-  top: 28%;
-  left: 38%;
-  width: 34vmax;
-  height: 34vmax;
-  background: radial-gradient(circle, #ffffff 0%, transparent 70%);
-  opacity: 0.95;
-  animation-duration: 22s;
-  animation-delay: -4s;
-}
-@keyframes auth-drift {
+@keyframes auth-aurora-sway {
   from {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(-6%, 0, 0) scale(1);
+    filter: blur(70px) saturate(1.1) hue-rotate(0deg);
   }
   to {
-    transform: translate3d(7vmax, 5vmax, 0) scale(1.14);
+    transform: translate3d(6%, 8%, 0) scale(1.12);
+    filter: blur(70px) saturate(1.1) hue-rotate(24deg);
   }
 }
-/* Ромбовидное плетение с «узелками» на пересечениях, затухает к краям */
-.auth-weave {
+.auth-grid {
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' fill='none' stroke='%23161513' stroke-opacity='0.13' stroke-width='1'><path d='M0 28 28 0 56 28 28 56Z'/><circle cx='28' cy='0' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/><circle cx='28' cy='56' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/><circle cx='0' cy='28' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/><circle cx='56' cy='28' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/></svg>");
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
-  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+  background-image:
+    linear-gradient(to right, rgba(22, 21, 19, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(22, 21, 19, 0.1) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center top;
+  -webkit-mask-image: radial-gradient(
+    ellipse 75% 70% at 50% 0%,
+    #000 0%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 0%, #000 0%, transparent 100%);
 }
 .auth-grain {
   position: absolute;
   inset: 0;
-  opacity: 0.35;
+  opacity: 0.3;
   mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0 0.1  0 0 0 0.18 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 @media (prefers-reduced-motion: reduce) {
-  .auth-blob {
+  .auth-aurora,
+  .auth-aurora-glow {
     animation: none;
   }
 }
