@@ -26,6 +26,7 @@
     "lint:ws": "sherif",
     "postinstall": "bun lint:ws",
     "test": "turbo run test",
+    "test:integration": "bun scripts/test-integration.ts",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add"
   },

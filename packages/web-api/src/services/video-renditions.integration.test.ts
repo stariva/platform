@@ -3,8 +3,7 @@ import { expect, mock, test } from "bun:test";
 // Use a migrated disposable database with an empty workshops table (remove seeds).
 // Run this file on its own: it points POSTGRES_URL at that database at run
 // time, and in a full run other files load @stariva/db before that happens.
-//   RENDITION_TEST_DATABASE_URL=postgres://…@127.0.0.1/stariva_rendition_test \
-//     bun test src/services/video-renditions.integration.test.ts
+// `bun run test:integration` (scripts/test-integration.ts) does all of this.
 test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
   "rendition attempts fence stale workers and isolate their uploads",
   async () => {
