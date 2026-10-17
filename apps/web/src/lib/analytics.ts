@@ -261,7 +261,9 @@ let loadedPostHog: PostHog | undefined;
 function postHog(send?: (posthog: PostHog) => void) {
   const token = POSTHOG_TOKEN;
   if (!token || !analyticsAllowed() || postHogIgnored()) return;
-  postHogClient ??= import("posthog-js")
+  // full/no-external: запись сессий, ошибки и dead clicks вшиты в чанк, а не
+  // догружаются с eu-assets.i.posthog.com (с части хостов он недоступен).
+  postHogClient ??= import("posthog-js/full/no-external")
     .then(({ default: posthog }) => {
       posthog.init(token, {
         api_host: "/ingest",
