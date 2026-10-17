@@ -1,9 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AuthBackground } from "./auth-background";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-parchment text-espresso flex flex-col">
+    <div className="relative isolate min-h-screen text-espresso flex flex-col">
+      <AuthBackground />
       <header className="px-6 py-5">
         <Link
           href="/"

@@ -30,7 +30,7 @@ export const env = createEnv({
     POSTBOX_ENDPOINT: z.url().default("https://postbox.cloud.yandex.net"),
     EMAIL_SANDBOX_ENABLED: z.coerce.boolean().optional().default(false),
     EMAIL_SANDBOX_HOST: z.string().default("localhost"),
-    EMAIL_FROM: z.string().default("Acme <onboarding@resend.dev>"),
+    EMAIL_FROM: z.string().default("Stariva <onboarding@resend.dev>"),
 
     // Auth
     AUTH_SECRET: z.string().optional(),
@@ -53,8 +53,8 @@ export const env = createEnv({
     REVALIDATE_SECRET: z.string().min(32).optional(),
   },
   client: {
-    NEXT_PUBLIC_APP_NAME: z.string().default("Acme Inc."),
-    NEXT_PUBLIC_APP_SHORT_NAME: z.string().default("Acme"),
+    NEXT_PUBLIC_APP_NAME: z.string().default("Stariva"),
+    NEXT_PUBLIC_APP_SHORT_NAME: z.string().default("Stariva"),
     NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
   },
   clientPrefix: "NEXT_PUBLIC_",

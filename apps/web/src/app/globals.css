@@ -212,6 +212,71 @@
   }
 }
 
+/* ── Фон страниц авторизации ─────────────────────────────────────── */
+.auth-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  will-change: transform;
+  animation: auth-drift 26s ease-in-out infinite alternate;
+}
+.auth-blob-a {
+  top: -18%;
+  left: -12%;
+  width: 56vmax;
+  height: 56vmax;
+  background: radial-gradient(circle, #cbbfae 0%, transparent 70%);
+  opacity: 0.9;
+}
+.auth-blob-b {
+  right: -16%;
+  bottom: -22%;
+  width: 62vmax;
+  height: 62vmax;
+  background: radial-gradient(circle, #b9ab97 0%, transparent 70%);
+  opacity: 0.75;
+  animation-duration: 32s;
+  animation-delay: -9s;
+}
+.auth-blob-c {
+  top: 28%;
+  left: 38%;
+  width: 34vmax;
+  height: 34vmax;
+  background: radial-gradient(circle, #ffffff 0%, transparent 70%);
+  opacity: 0.95;
+  animation-duration: 22s;
+  animation-delay: -4s;
+}
+@keyframes auth-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(7vmax, 5vmax, 0) scale(1.14);
+  }
+}
+/* Ромбовидное плетение с «узелками» на пересечениях, затухает к краям */
+.auth-weave {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' fill='none' stroke='%23161513' stroke-opacity='0.13' stroke-width='1'><path d='M0 28 28 0 56 28 28 56Z'/><circle cx='28' cy='0' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/><circle cx='28' cy='56' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/><circle cx='0' cy='28' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/><circle cx='56' cy='28' r='2' fill='%23161513' fill-opacity='0.16' stroke='none'/></svg>");
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+}
+.auth-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0 0.1  0 0 0 0.18 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob {
+    animation: none;
+  }
+}
+
 /* Описание товара приходит HTML-ом (абзацы, списки): preflight сбрасывает
    отступы и маркеры, возвращаем их только для этого блока */
 .product-description {
