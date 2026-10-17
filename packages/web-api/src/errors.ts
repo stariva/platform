@@ -2,16 +2,21 @@ import { COMMON_ERROR_STATUS_MAP } from "@orpc/server";
 import {
   AdminNotConfiguredError,
   AttemptLostError,
+  CheckoutCheckFailedError,
   CustomOrderConflictError,
   CustomOrderSaveFailedError,
   CustomOrderUnavailableError,
+  DeliveryNotAvailableError,
+  DeliveryUnavailableError,
   FilesUnavailableError,
+  ItemsUnavailableError,
   JobsNotConfiguredError,
   LessonNotFoundError,
   LessonNotReleasedError,
   MaterialNotFoundError,
   NewsletterFailedError,
   NothingToPayError,
+  OptionsUnavailableError,
   OrderDetailsLockedError,
   OrderNotFoundError,
   OzonNotConfiguredError,
@@ -57,6 +62,11 @@ export const webErrorStatusMap = {
   [NothingToPayError.code]: 409,
   [PaymentOverdueError.code]: 409,
   [PaymentCreateFailedError.code]: 502,
+  [DeliveryUnavailableError.code]: 503,
+  [DeliveryNotAvailableError.code]: 400,
+  [ItemsUnavailableError.code]: 409,
+  [OptionsUnavailableError.code]: 400,
+  [CheckoutCheckFailedError.code]: 502,
 } satisfies Record<string, number>;
 
 /** Коды ошибок, для которых у API витрины есть свой HTTP-статус. */

@@ -1,6 +1,8 @@
 export * from "./contract";
 export { type WebErrorCode, webErrorStatus, webErrorStatusMap } from "./errors";
 export {
+  type CheckoutRejection,
+  type CheckoutServices,
   type CustomOrderServices,
   createWebORPCContext,
   type OrderPaymentResult,

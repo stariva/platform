@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ItemsUnavailableError } from "@stariva/web-api/contract";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { rememberOrderPhone } from "@/lib/commerce/order-phone";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
+import { formErrorMessage, webApi } from "@/lib/web-api";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(120),
@@ -48,15 +50,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const createResponseSchema = z.object({
-  orderId: z.string().min(1),
-  estimate: z.number().nonnegative(),
-});
-
-const unavailableItemsResponseSchema = z.object({
-  unavailableProductSlugs: z.array(z.string()).min(1),
-});
 
 export default function MadeToOrderCheckoutPage() {
   const router = useRouter();
@@ -122,10 +115,8 @@ export default function MadeToOrderCheckoutPage() {
   }
 
   /** Изделие могли снять с продажи, пока оно лежало в корзине. */
-  function dropUnavailableItems(data: unknown): boolean {
-    const parsed = unavailableItemsResponseSchema.safeParse(data);
-    if (!parsed.success) return false;
-    const slugs = new Set(parsed.data.unavailableProductSlugs);
+  function dropUnavailableItems(unavailableProductSlugs: string[]) {
+    const slugs = new Set(unavailableProductSlugs);
     const names = items
       .filter((item) => slugs.has(item.productSlug))
       .map((item) => `«${item.name}»`);
@@ -137,67 +128,54 @@ export default function MadeToOrderCheckoutPage() {
         ? `Изделия ${names.join(", ")} сняты с продажи — мы убрали их из корзины`
         : `Изделие ${names[0] ?? ""} снято с продажи — мы убрали его из корзины`,
     );
-    return true;
   }
 
   async function onSubmit(data: FormValues) {
+    // Форма уже не пропускает без согласия; здесь сужаем тип до того, что просит API
+    if (data.personalDataConsent !== true) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/checkout/made-to-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactName: data.name,
-          contactPhone: data.phone,
-          contactEmail: data.email || undefined,
-          deliveryNote: data.delivery || undefined,
-          customerNotes: data.notes || undefined,
-          items: items.flatMap((item) =>
-            item.options
-              ? [
-                  {
-                    productSlug: item.productSlug,
-                    quantity: item.quantity,
-                    options: {
-                      size: item.options.size,
-                      color: item.options.color,
-                    },
+      const requested = await webApi.checkout.requestMadeToOrder({
+        contactName: data.name,
+        contactPhone: data.phone,
+        contactEmail: data.email || undefined,
+        deliveryNote: data.delivery || undefined,
+        customerNotes: data.notes || undefined,
+        items: items.flatMap((item) =>
+          item.options
+            ? [
+                {
+                  productSlug: item.productSlug,
+                  quantity: item.quantity,
+                  options: {
+                    size: item.options.size,
+                    color: item.options.color,
                   },
-                ]
-              : [],
-          ),
-          personalDataConsent: data.personalDataConsent === true,
-        }),
+                },
+              ]
+            : [],
+        ),
+        personalDataConsent: data.personalDataConsent,
       });
-      const resData: unknown = await res.json();
-      if (res.status === 409 && dropUnavailableItems(resData)) {
-        setSubmitting(false);
-        return;
-      }
-      if (!res.ok) {
-        const error = z.object({ error: z.string() }).safeParse(resData);
-        toast.error(
-          error.success ? error.data.error : "Не удалось отправить заявку",
-        );
-        setSubmitting(false);
-        return;
-      }
-      const parsed = createResponseSchema.safeParse(resData);
-      if (!parsed.success) {
-        toast.error("Не удалось отправить заявку");
-        setSubmitting(false);
-        return;
-      }
       // Заявка — ещё не покупка: отдельная цель, без ecommerce-«purchase»
       reachGoal("made_to_order_request", {
-        order_id: parsed.data.orderId,
-        order_price: parsed.data.estimate,
+        order_id: requested.orderId,
+        order_price: requested.estimate,
       });
-      rememberOrderPhone(parsed.data.orderId, data.phone);
+      rememberOrderPhone(requested.orderId, data.phone);
       clear("made_to_order");
-      router.push(`/order/${parsed.data.orderId}`);
-    } catch {
-      toast.error("Не удалось отправить заявку. Попробуйте позже.");
+      router.push(`/order/${requested.orderId}`);
+    } catch (error) {
+      if (error instanceof ItemsUnavailableError) {
+        dropUnavailableItems(error.data.unavailableProductSlugs);
+      } else {
+        toast.error(
+          formErrorMessage(
+            error,
+            "Не удалось отправить заявку. Попробуйте позже.",
+          ),
+        );
+      }
       setSubmitting(false);
     }
   }
