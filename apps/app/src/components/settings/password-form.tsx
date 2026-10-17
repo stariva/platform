@@ -19,16 +19,16 @@ import { authClient } from "~/auth/client";
 
 const passwordFormSchema = z
   .object({
-    currentPassword: z.string().min(1, "Enter your current password"),
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    currentPassword: z.string().min(1, "Введите текущий пароль"),
+    newPassword: z.string().min(8, "Пароль должен содержать не менее 8 символов"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Пароли не совпадают",
     path: ["confirmPassword"],
   })
   .refine((data) => data.newPassword !== data.currentPassword, {
-    message: "New password must differ from the current one",
+    message: "Новый пароль должен отличаться от текущего",
     path: ["newPassword"],
   });
 
@@ -56,13 +56,13 @@ export function PasswordForm() {
         revokeOtherSessions: true,
       });
       if (error) {
-        toast.error(error.message || "Failed to change password");
+        toast.error(error.message || "Не удалось сменить пароль");
         return;
       }
-      toast.success("Password changed. Other devices have been signed out.");
+      toast.success("Пароль изменён. На других устройствах выполнен выход.");
       form.reset();
     } catch {
-      toast.error("Failed to change password");
+      toast.error("Не удалось сменить пароль");
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export function PasswordForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-foreground font-medium">
-                Current password
+                Текущий пароль
               </FormLabel>
               <FormControl>
                 <PasswordInput
@@ -96,7 +96,7 @@ export function PasswordForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-foreground font-medium">
-                New password
+                Новый пароль
               </FormLabel>
               <FormControl>
                 <PasswordInput
@@ -106,7 +106,7 @@ export function PasswordForm() {
                 />
               </FormControl>
               <p className="text-sm text-amber-700/70">
-                At least 8 characters. All other sessions will be signed out.
+                Не менее 8 символов. Все остальные сеансы будут завершены.
               </p>
               <FormMessage />
             </FormItem>
@@ -118,7 +118,7 @@ export function PasswordForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-foreground font-medium">
-                Confirm new password
+                Подтвердите новый пароль
               </FormLabel>
               <FormControl>
                 <PasswordInput
@@ -136,7 +136,7 @@ export function PasswordForm() {
           className="bg-foreground text-background hover:bg-foreground/90"
           disabled={loading}
         >
-          {loading ? "Changing..." : "Change password"}
+          {loading ? "Сохранение…" : "Сменить пароль"}
         </Button>
       </form>
     </Form>

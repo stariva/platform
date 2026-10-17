@@ -32,13 +32,13 @@ export function ProfileForm({
   const updateProfile = useMutation({
     ...orpc.user.updateProfile.mutationOptions(),
     onSuccess: async () => {
-      toast.success("Profile updated successfully");
+      toast.success("Профиль обновлён");
       await queryClient.invalidateQueries({
         queryKey: orpc.user.key(),
       });
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to update profile");
+      toast.error(err.message || "Не удалось обновить профиль");
     },
   });
 
@@ -54,7 +54,7 @@ export function ProfileForm({
           {avatarUrl ? (
             <Image
               src={avatarUrl || "/placeholder.svg"}
-              alt="Avatar"
+              alt="Аватар"
               width={64}
               height={64}
               className="h-16 w-16 rounded-full object-cover"
@@ -68,7 +68,7 @@ export function ProfileForm({
           className="bg-foreground text-background hover:bg-foreground/90"
           onClick={() => document.getElementById("avatar-upload")?.click()}
         >
-          Upload image
+          Загрузить изображение
         </Button>
         <input
           id="avatar-upload"
@@ -87,15 +87,14 @@ export function ProfileForm({
 
       {/* Username */}
       <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="username">Имя пользователя</Label>
         <Input
           id="username"
-          placeholder="shadcn"
+          placeholder="username"
           {...form.register("username")}
         />
         <p className="text-sm text-amber-700/70">
-          This is your public display name. It can be your real name or a
-          pseudonym. You can only change this once every 30 days.
+          Публичное отображаемое имя: настоящее имя или псевдоним. Менять можно не чаще раза в 30 дней.
         </p>
       </div>
 
@@ -109,21 +108,21 @@ export function ProfileForm({
           {...form.register("email")}
         />
         <p className="text-sm text-muted-foreground">
-          You can manage verified email addresses in your email settings.
+          Подтверждённые адреса можно изменить в настройках почты.
         </p>
       </div>
 
       {/* Bio */}
       <div className="space-y-2">
-        <Label htmlFor="bio">Bio</Label>
+        <Label htmlFor="bio">О себе</Label>
         <Textarea
           id="bio"
-          placeholder="Tell us a little bit about yourself"
+          placeholder="Расскажите немного о себе"
           className="resize-none"
           {...form.register("bio")}
         />
         <p className="text-sm text-muted-foreground">
-          You can @mention other users and organizations to link to them.
+          Через @ можно упомянуть других пользователей и организации.
         </p>
       </div>
 
@@ -132,7 +131,7 @@ export function ProfileForm({
         className="bg-foreground text-background hover:bg-foreground/90"
         disabled={updateProfile.isPending}
       >
-        {updateProfile.isPending ? "Updating..." : "Update profile"}
+        {updateProfile.isPending ? "Сохранение…" : "Сохранить профиль"}
       </Button>
     </form>
   );

@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { UnifiedAuthForm } from "~/components/auth";
 
 export const metadata: Metadata = {
-  title: "Sign Up",
-  description: "Create a new account",
+  title: "Регистрация",
+  description: "Создайте новый аккаунт",
 };
 
 export default function SignUpPage() {
@@ -17,7 +17,7 @@ export default function SignUpPage() {
           className="flex items-center gap-2 self-center font-medium"
         >
           <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-4" aria-label="Company logo" />
+            <GalleryVerticalEnd className="size-4" aria-label="Логотип" />
           </div>
           {APP_CONFIG.name}
         </a>

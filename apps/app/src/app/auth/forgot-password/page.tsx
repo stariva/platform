@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { ForgotPasswordForm } from "~/components/auth";
 
 export const metadata: Metadata = {
-  title: "Forgot Password",
-  description: "Reset your password",
+  title: "Восстановление пароля",
+  description: "Сброс пароля",
 };
 
 export default function ForgotPasswordPage() {
@@ -17,7 +17,7 @@ export default function ForgotPasswordPage() {
           className="flex items-center gap-2 self-center font-medium"
         >
           <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-4" aria-label="Company logo" />
+            <GalleryVerticalEnd className="size-4" aria-label="Логотип" />
           </div>
           {APP_CONFIG.name}
         </a>

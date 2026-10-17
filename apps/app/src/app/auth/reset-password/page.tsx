@@ -5,8 +5,8 @@ import { Suspense } from "react";
 import { ResetPasswordForm } from "~/components/auth";
 
 export const metadata: Metadata = {
-  title: "Reset Password",
-  description: "Set a new password for your account",
+  title: "Сброс пароля",
+  description: "Задайте новый пароль",
 };
 
 export default function ResetPasswordPage() {
@@ -18,11 +18,11 @@ export default function ResetPasswordPage() {
           className="flex items-center gap-2 self-center font-medium"
         >
           <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-4" aria-label="Company logo" />
+            <GalleryVerticalEnd className="size-4" aria-label="Логотип" />
           </div>
           {APP_CONFIG.name}
         </a>
-        <Suspense fallback={<div>Loading…</div>}>
+        <Suspense fallback={<div>Загрузка…</div>}>
           <ResetPasswordForm />
         </Suspense>
       </div>

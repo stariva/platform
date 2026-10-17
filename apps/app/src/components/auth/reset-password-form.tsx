@@ -27,11 +27,11 @@ import { authClient } from "~/auth/client";
 
 const resetPasswordSchema = z
   .object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z.string().min(8, "Пароль должен содержать не менее 8 символов"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Пароли не совпадают",
     path: ["confirmPassword"],
   });
 
@@ -55,7 +55,7 @@ export function ResetPasswordForm({
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!token) {
-      toast.error("Invalid reset link");
+      toast.error("Недействительная ссылка");
       return;
     }
 
@@ -65,10 +65,10 @@ export function ResetPasswordForm({
         newPassword: data.password,
         token,
       });
-      toast.success("Password reset successfully!");
+      toast.success("Пароль успешно изменён");
       router.push(paths.auth.login);
     } catch (_error) {
-      toast.error("Failed to reset password. The link may have expired.");
+      toast.error("Не удалось сменить пароль. Возможно, ссылка устарела.");
     } finally {
       setLoading(false);
     }
@@ -78,9 +78,9 @@ export function ResetPasswordForm({
     return (
       <Card {...props}>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Invalid reset link</CardTitle>
+          <CardTitle className="text-xl">Недействительная ссылка</CardTitle>
           <CardDescription>
-            This password reset link is invalid or has expired.
+            Ссылка для сброса пароля недействительна или устарела.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,7 +88,7 @@ export function ResetPasswordForm({
             render={<Link href={paths.auth.forgotPassword} />}
             className="w-full"
           >
-            Request new link
+            Запросить новую ссылку
           </Button>
         </CardContent>
       </Card>
@@ -98,8 +98,8 @@ export function ResetPasswordForm({
   return (
     <Card {...props}>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Reset your password</CardTitle>
-        <CardDescription>Enter your new password below.</CardDescription>
+        <CardTitle className="text-xl">Сброс пароля</CardTitle>
+        <CardDescription>Введите новый пароль.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -109,7 +109,7 @@ export function ResetPasswordForm({
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New password</FormLabel>
+                  <FormLabel>Новый пароль</FormLabel>
                   <FormControl>
                     <PasswordInput
                       placeholder="••••••••"
@@ -126,7 +126,7 @@ export function ResetPasswordForm({
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm password</FormLabel>
+                  <FormLabel>Подтвердите пароль</FormLabel>
                   <FormControl>
                     <PasswordInput
                       placeholder="••••••••"
@@ -139,7 +139,7 @@ export function ResetPasswordForm({
               )}
             />
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Resetting password…" : "Reset password"}
+              {loading ? "Сохранение…" : "Сменить пароль"}
             </Button>
           </form>
         </Form>
