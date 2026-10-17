@@ -8,7 +8,11 @@ const storage = await import("@stariva/storage");
 let free = true;
 let owned = true;
 let rateLimited = false;
-const materialFiles = [{ key: "brief.pdf", label: "Бриф" }];
+const materialFiles = [
+  { key: "brief.pdf", label: "Бриф" },
+  { key: "workshops/test/materials/first/guide.pdf", label: "Первый файл" },
+  { key: "workshops/test/materials/second/guide.pdf", label: "Второй файл" },
+];
 
 mock.module("@stariva/config", () => ({
   ...config,
@@ -116,15 +120,24 @@ test("materials link to the site only for the course's own files", async () => {
     status: "forbidden",
   });
   owned = true;
-  assert.deepEqual(await material("brief.pdf", "user"), {
-    status: "ok",
-    url: "/api/workshops/test/materials/brief.pdf",
-  });
+  const result = await material("brief.pdf", "user");
+  assert.ok(result.status === "ok");
+  assert.match(
+    result.url,
+    /^\/api\/workshops\/test\/materials\/[a-f0-9]{64}\.pdf$/,
+  );
 });
 
-test("material files are found by their name in the site link", async () => {
+test("material files are found by their identifier in the site link", async () => {
   const { findMaterialFile } = await import("./signed-media");
-  assert.deepEqual(await findMaterialFile("test", "brief.pdf", "user"), {
+  const result = await workshopFileServices.signMaterial({
+    slug: "test",
+    key: "brief.pdf",
+    userId: "user",
+  });
+  assert.ok(result.status === "ok");
+  const fileId = result.url.split("/").at(-1) ?? "";
+  assert.deepEqual(await findMaterialFile("test", fileId, "user"), {
     status: "ok",
     key: "brief.pdf",
     label: "Бриф",
@@ -132,7 +145,38 @@ test("material files are found by their name in the site link", async () => {
   assert.deepEqual(await findMaterialFile("test", "other.pdf", "user"), {
     status: "not_found",
   });
-  assert.deepEqual(await findMaterialFile("test", "brief.pdf", null), {
+  assert.deepEqual(await findMaterialFile("test", "brief.pdf", "user"), {
+    status: "not_found",
+  });
+  assert.deepEqual(await findMaterialFile("test", fileId, null), {
     status: "unauthorized",
   });
+  owned = false;
+  try {
+    assert.deepEqual(await findMaterialFile("test", fileId, "user"), {
+      status: "forbidden",
+    });
+  } finally {
+    owned = true;
+  }
+});
+
+test("materials with the same filename resolve to their own storage keys", async () => {
+  const { findMaterialFile } = await import("./signed-media");
+  const urls = new Set<string>();
+  for (const material of materialFiles.slice(1)) {
+    const result = await workshopFileServices.signMaterial({
+      slug: "test",
+      key: material.key,
+      userId: "user",
+    });
+    assert.ok(result.status === "ok");
+    urls.add(result.url);
+    const file = decodeURIComponent(result.url.split("/").at(-1) ?? "");
+    assert.deepEqual(await findMaterialFile("test", file, "user"), {
+      status: "ok",
+      ...material,
+    });
+  }
+  assert.equal(urls.size, 2);
 });

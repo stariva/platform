@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { env } from "@stariva/config";
 import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import {
@@ -108,9 +109,9 @@ async function signLessonVideo({
   };
 }
 
-/** Имя файла материала в адресе: последняя часть ключа в бакете. */
-function materialFileName(key: string): string {
-  return key.slice(key.lastIndexOf("/") + 1);
+/** Стабильный идентификатор материала: учитывает весь ключ, включая каталог. */
+function materialFileId(key: string): string {
+  return `${createHash("sha256").update(key).digest("hex")}.pdf`;
 }
 
 /**
@@ -150,19 +151,19 @@ async function signMaterial({
   if (result.status !== "ok") return result;
   return {
     status: "ok",
-    url: `/api/workshops/${encodeURIComponent(slug)}/materials/${encodeURIComponent(materialFileName(key))}`,
+    url: `/api/workshops/${encodeURIComponent(slug)}/materials/${materialFileId(key)}`,
   };
 }
 
-/** Материал курса по имени файла из адреса — для маршрута, который его отдаёт. */
+/** Материал курса по идентификатору из адреса — для маршрута, который его отдаёт. */
 export function findMaterialFile(
   slug: string,
-  fileName: string,
+  fileId: string,
   userId: string | null,
 ) {
   return authorizeMaterial(
     slug,
-    (key) => materialFileName(key) === fileName,
+    (key) => materialFileId(key) === fileId,
     userId,
   );
 }
