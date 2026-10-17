@@ -6,10 +6,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative isolate min-h-screen text-espresso flex flex-col">
       <AuthBackground />
-      <header className="px-6 py-5">
+      <header className="px-6 pt-8 sm:pt-10 flex justify-center">
         <Link
           href="/"
-          className="font-serif tracking-[0.14em] uppercase text-espresso text-lg"
+          className="font-serif tracking-[0.18em] uppercase text-espresso text-2xl"
           aria-label="Stariva — на главную"
         >
           Stariva
