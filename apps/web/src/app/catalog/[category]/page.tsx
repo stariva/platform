@@ -107,16 +107,20 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         {/* ── Category Hero ── */}
         <section className="relative overflow-hidden bg-espresso">
           <div className="absolute inset-0">
-            <Image
-              src={category.hero.image}
-              alt={category.hero.alt}
-              fill
-              className="object-cover"
-              style={{ objectPosition: category.hero.objectPosition }}
-              priority
-              sizes="100vw"
-              unoptimized
-            />
+            {/* On wide screens the photo keeps to the right so it isn't zoomed past the faces */}
+            <div className="absolute inset-0 lg:left-[38%]">
+              <Image
+                src={category.hero.image}
+                alt={category.hero.alt}
+                fill
+                className="object-cover"
+                style={{ objectPosition: category.hero.objectPosition }}
+                priority
+                sizes="(min-width: 1024px) 62vw, 100vw"
+                unoptimized
+              />
+              <div className="absolute inset-y-0 left-0 hidden w-1/2 bg-gradient-to-r from-espresso via-espresso/60 to-transparent lg:block" />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-r from-espresso/80 via-espresso/45 to-espresso/10" />
             <div className="absolute inset-0 bg-gradient-to-t from-espresso/55 via-transparent to-transparent" />
           </div>
