@@ -1,9 +1,14 @@
 import {
   BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
-  WORKSHOP_RELEASE_LABEL,
   WORKSHOP_TREE_SIZE,
 } from "@/lib/elka/data";
+import {
+  formatPrice,
+  formatReleaseDate,
+  isPreorder,
+  type Workshop,
+} from "@/lib/workshops-data";
 
 /** Своё у страницы мастер-класса; общее с готовыми ёлками — в lib/elka. */
 
@@ -18,6 +23,8 @@ export const READY_TREES_ID = "ready-trees";
 export const LEGACY_MODELS_HASH = "#models";
 /** Якорь карточки с формой оплаты — на неё ведут кнопки на телефоне. */
 export const WORKSHOP_BUY_ID = "workshop-buy";
+/** Предзаказ большой ёлки под формой оплаты — после старта маленькой. */
+export const BIG_TREE_ID = "big-tree";
 /** Цена и кнопка под заголовком блока — только на телефоне. */
 export const WORKSHOP_QUICK_BUY_ID = "workshop-quick-buy";
 
@@ -36,15 +43,59 @@ export const WORKSHOP_INCLUDES = [
   "Обратная связь от мастера",
 ];
 
-export const FAQ = [
-  {
-    question: "Как проходит мастер-класс и когда он откроется?",
-    answer: `Это онлайн-курс в видеоформате: вы сплетёте ёлку размером ${WORKSHOP_TREE_SIZE}. Оплатив предзаказ, вы фиксируете цену со скидкой, а уроки откроются в личном кабинете ${WORKSHOP_RELEASE_LABEL} — с запасом, чтобы успеть к празднику.`,
-  },
-  {
-    question: "Что за второй мастер-класс в подарок?",
-    answer: `Всего будет два мастер-класса по ёлке разных размеров: ${WORKSHOP_TREE_SIZE} и большая ${BONUS_TREE_SIZE}. Первый откроется ${WORKSHOP_RELEASE_LABEL}, второй — ${BONUS_RELEASE_LABEL}. Всем, кто оформит предзаказ первого, второй откроется в личном кабинете бесплатно — доплачивать ничего не нужно.`,
-  },
+/**
+ * Вопросы о мастер-классе. Первые два зависят от даты: до старта — про
+ * предзаказ и подарок, после — про открытые уроки и большую ёлку.
+ */
+export function workshopFaq({
+  preorder,
+  releaseLabel,
+  bigTree,
+}: {
+  preorder: boolean;
+  releaseLabel: string;
+  bigTree?: Workshop;
+}) {
+  const dated = preorder
+    ? [
+        {
+          question: "Как проходит мастер-класс и когда он откроется?",
+          answer: `Это мастер-класс в видеоуроках: вы сплетёте ёлку размером ${WORKSHOP_TREE_SIZE}. Оплатив предзаказ, вы фиксируете цену со скидкой, а уроки откроются в личном кабинете ${releaseLabel} — с запасом, чтобы успеть к празднику.`,
+        },
+        {
+          question: "Что за второй мастер-класс в подарок?",
+          answer: `Всего будет два мастер-класса по ёлке разных размеров: ${WORKSHOP_TREE_SIZE} и большая ${BONUS_TREE_SIZE}. Первый откроется ${releaseLabel}, второй — ${BONUS_RELEASE_LABEL}. Всем, кто оформит предзаказ первого, второй откроется в личном кабинете бесплатно — доплачивать ничего не нужно.`,
+        },
+      ]
+    : [
+        {
+          question: "Как проходит мастер-класс?",
+          answer: `Это мастер-класс в видеоуроках: вы сплетёте ёлку размером ${WORKSHOP_TREE_SIZE}. Уроки уже открыты — сразу после оплаты они появятся в личном кабинете. Смотрите в своём темпе и пересматривайте сколько угодно.`,
+        },
+        ...(bigTree ? [bigTreeQuestion(bigTree)] : []),
+      ];
+  return [...dated, ...FAQ];
+}
+
+function bigTreeQuestion(bigTree: Workshop) {
+  const question = "Есть ли мастер-класс по большой ёлке?";
+  if (isPreorder(bigTree) && bigTree.releaseAt) {
+    const regular = bigTree.regularPrice
+      ? ` вместо ${formatPrice(bigTree.regularPrice)}`
+      : "";
+    return {
+      question,
+      answer: `Да, по ёлке ${BONUS_TREE_SIZE} — это отдельный мастер-класс. Уроки откроются ${formatReleaseDate(bigTree.releaseAt)}, а до этого его можно оформить по предзаказу за ${formatPrice(bigTree.price)}${regular}.`,
+    };
+  }
+  return {
+    question,
+    answer: `Да, по ёлке ${BONUS_TREE_SIZE} — это отдельный мастер-класс за ${formatPrice(bigTree.price)}, уроки уже открыты.`,
+  };
+}
+
+/** Вопросы, ответ на которые не меняется со стартом уроков. */
+const FAQ = [
   {
     question: "Нужно ли регистрироваться, чтобы записаться на мастер-класс?",
     answer:

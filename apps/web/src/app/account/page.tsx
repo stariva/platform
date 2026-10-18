@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import {
   getCourseProgressSummary,
   listAccessibleSlugs,
+  listGiftedSlugs,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { isPreorderBonusSlug } from "@/lib/workshops/preorder-bonus";
 import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
@@ -22,7 +22,10 @@ export default async function AccountCoursesPage() {
   // layout уже гарантирует сессию, но проверяем для типобезопасности
   if (!session) return null;
 
-  const slugs = await listAccessibleSlugs(session.user.id);
+  const [slugs, gifted] = await Promise.all([
+    listAccessibleSlugs(session.user.id),
+    listGiftedSlugs(session.user.id),
+  ]);
   const bySlug = await getWorkshopsBySlugs(slugs);
   const workshops = slugs
     .map((slug) => bySlug.get(slug))
@@ -106,7 +109,7 @@ export default async function AccountCoursesPage() {
               {isPreorder(workshop) && workshop.releaseAt ? (
                 <div className="mt-auto">
                   <p className="text-sm text-dark-grey mb-4">
-                    {isPreorderBonusSlug(workshop.slug)
+                    {gifted.has(workshop.slug)
                       ? "Подарок за предзаказ"
                       : "Предзаказ оформлен"}{" "}
                     · уроки откроются {formatReleaseDate(workshop.releaseAt)}

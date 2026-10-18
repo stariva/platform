@@ -21,6 +21,24 @@ export function isPreorderBonusSlug(slug: string): boolean {
   return Object.values(BONUSES).some((bonus) => bonus.slug === slug);
 }
 
+/** Основной курс, к предзаказу которого дарят этот. */
+export function preorderBonusParent(slug: string): string | undefined {
+  return Object.entries(BONUSES).find(([, bonus]) => bonus.slug === slug)?.[0];
+}
+
+/**
+ * Курс-подарок не продаём, пока его дарят: основной курс ещё на предзаказе.
+ * Иначе один и тот же курс на сайте одновременно и подарок, и товар.
+ */
+export function isGiftOnly(
+  slug: string,
+  parentReleaseAt: Date | null | undefined,
+  now = new Date(),
+): boolean {
+  if (!preorderBonusParent(slug) || !parentReleaseAt) return false;
+  return now.getTime() < parentReleaseAt.getTime();
+}
+
 /** Подарок к курсу, если он есть. */
 export function preorderBonusFor(slug: string): PreorderBonus | undefined {
   return BONUSES[slug];

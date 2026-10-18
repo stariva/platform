@@ -7,17 +7,35 @@ import {
 } from "@stariva/db/schema";
 import { cache } from "react";
 import {
+  isGiftOnly,
+  preorderBonusParent,
+} from "@/lib/workshops/preorder-bonus";
+import {
+  currentWorkshopPrice,
+  priceAfterRelease,
+} from "@/lib/workshops/release-price";
+import {
   formatDurationLabel,
   type Workshop,
   type WorkshopStatus,
 } from "@/lib/workshops-data";
 
 /** Строка таблицы workshops → мастер-класс в виде, который ждут страницы. */
-export function workshopRowToWorkshop(row: WorkshopRow): Workshop {
+export function workshopRowToWorkshop(
+  row: WorkshopRow,
+  now = new Date(),
+): Workshop {
   const totalSeconds = row.lessons.reduce(
     (total, lesson) => total + lesson.durationSeconds,
     0,
   );
+  const price = currentWorkshopPrice({
+    slug: row.slug,
+    price: row.price / 100,
+    releaseAt: row.releaseAt,
+    now,
+  });
+  const regularPrice = priceAfterRelease(row.slug);
   return {
     slug: row.slug,
     status: row.status,
@@ -25,7 +43,11 @@ export function workshopRowToWorkshop(row: WorkshopRow): Workshop {
     subtitle: row.subtitle,
     category: row.category,
     level: row.level,
-    price: row.price / 100,
+    price,
+    regularPrice:
+      regularPrice !== undefined && regularPrice > price
+        ? regularPrice
+        : undefined,
     duration: totalSeconds > 0 ? formatDurationLabel(totalSeconds) : "",
     lessonsCount: row.lessons.length,
     cover: row.cover,
@@ -57,7 +79,18 @@ export const fetchPublishedWorkshops = cache(async (): Promise<Workshop[]> => {
       .from(workshops)
       .where(eq(workshops.status, "published"))
       .orderBy(asc(workshops.sortOrder), asc(workshops.createdAt));
-    return rows.map(workshopRowToWorkshop);
+    const now = new Date();
+    const releaseBySlug = new Map(rows.map((r) => [r.slug, r.releaseAt]));
+    return rows
+      .filter(
+        (row) =>
+          !isGiftOnly(
+            row.slug,
+            releaseBySlug.get(preorderBonusParent(row.slug) ?? ""),
+            now,
+          ),
+      )
+      .map((row) => workshopRowToWorkshop(row, now));
   } catch (error) {
     logger.warn("workshops.list.unavailable", { error: String(error) });
     return [];
@@ -88,7 +121,18 @@ export const getWorkshopBySlug = cache(
         ),
       )
       .limit(1);
-    return row ? workshopRowToWorkshop(row) : undefined;
+    if (!row) return undefined;
+    // Курс-подарок продаётся, только когда его перестали дарить; купившим
+    // и получившим в подарок он виден всегда (scope "owned").
+    const parent = preorderBonusParent(slug);
+    if (scope === "published" && parent) {
+      const parentWorkshop = await getWorkshopBySlug(parent);
+      const parentRelease = parentWorkshop?.releaseAt
+        ? new Date(parentWorkshop.releaseAt)
+        : null;
+      if (isGiftOnly(slug, parentRelease)) return undefined;
+    }
+    return workshopRowToWorkshop(row);
   },
 );
 
