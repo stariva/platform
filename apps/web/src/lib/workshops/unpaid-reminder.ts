@@ -101,24 +101,27 @@ async function loadCandidates(now: Date): Promise<Candidate[]> {
 /**
  * Кто уже владеет курсом: оплатил любым заказом (по аккаунту или по email —
  * мог заплатить с другой почты в аккаунте) или получил доступ иначе.
+ * Сверяем и старые pending-заказы; при сбое тоже откладываем письмо.
  */
 async function loadOwners(candidates: Candidate[]) {
   const slugs = [...new Set(candidates.map((c) => c.workshopSlug))];
   const userIds = [...new Set(candidates.map((c) => c.userId))];
   const emails = [...new Set(candidates.map((c) => c.email))];
   const paidEmail = sql<string>`lower(coalesce(${orders.contactEmail}, ${user.email}))`;
-  const [paid, access] = await Promise.all([
+  const [related, access] = await Promise.all([
     db
       .select({
-        userId: orders.userId,
-        slug: orders.workshopSlug,
+        order: orders,
         email: paidEmail,
       })
       .from(orders)
       .innerJoin(user, eq(user.id, orders.userId))
       .where(
         and(
-          eq(orders.status, "paid"),
+          or(
+            eq(orders.status, "paid"),
+            and(eq(orders.status, "pending"), isNotNull(orders.paymentId)),
+          ),
           inArray(orders.workshopSlug, slugs),
           or(inArray(orders.userId, userIds), inArray(paidEmail, emails)),
         ),
@@ -134,9 +137,15 @@ async function loadOwners(candidates: Candidate[]) {
       ),
   ]);
   const owned = new Set<string>();
-  for (const row of paid) {
-    owned.add(`user:${row.userId}:${row.slug}`);
-    owned.add(`email:${row.email}:${row.slug}`);
+  for (const row of related) {
+    if (row.order.status === "pending") {
+      if (await syncPendingWorkshopOrder(row.order)) {
+        const fresh = await getOrderById(row.order.id);
+        if (fresh && fresh.status !== "paid") continue;
+      }
+    }
+    owned.add(`user:${row.order.userId}:${row.order.workshopSlug}`);
+    owned.add(`email:${row.email}:${row.order.workshopSlug}`);
   }
   for (const row of access) owned.add(`user:${row.userId}:${row.slug}`);
   return (c: UnpaidCandidate) =>
@@ -145,22 +154,47 @@ async function loadOwners(candidates: Candidate[]) {
 }
 
 async function loadReminded(candidates: Candidate[]) {
+  const email = sql<string>`lower(coalesce(${orders.contactEmail}, ${user.email}))`;
   const rows = await db
-    .select({ orderId: workshopOrderNotifications.orderId })
+    .select({ userId: orders.userId, slug: orders.workshopSlug, email })
     .from(workshopOrderNotifications)
+    .innerJoin(orders, eq(orders.id, workshopOrderNotifications.orderId))
+    .innerJoin(user, eq(user.id, orders.userId))
     .where(
       and(
         inArray(
-          workshopOrderNotifications.orderId,
-          candidates.map((c) => c.id),
+          orders.workshopSlug,
+          candidates.map((c) => c.workshopSlug),
+        ),
+        or(
+          inArray(
+            orders.userId,
+            candidates.map((c) => c.userId),
+          ),
+          inArray(
+            email,
+            candidates.map((c) => c.email),
+          ),
         ),
         eq(workshopOrderNotifications.kind, UNPAID_KIND),
         eq(workshopOrderNotifications.channel, "email"),
         isNotNull(workshopOrderNotifications.sentAt),
       ),
     );
-  const reminded = new Set(rows.map((row) => row.orderId));
-  return (orderId: string) => reminded.has(orderId);
+  const reminded = new Set<string>();
+  for (const row of rows) {
+    reminded.add(`user:${row.userId}:${row.slug}`);
+    reminded.add(`email:${row.email}:${row.slug}`);
+  }
+  const byId = new Map(candidates.map((c) => [c.id, c]));
+  return (orderId: string) => {
+    const candidate = byId.get(orderId);
+    return (
+      !!candidate &&
+      (reminded.has(`user:${candidate.userId}:${candidate.workshopSlug}`) ||
+        reminded.has(`email:${candidate.email}:${candidate.workshopSlug}`))
+    );
+  };
 }
 
 /**
@@ -172,7 +206,7 @@ async function stillUnpaid(candidate: Candidate): Promise<boolean> {
   if (candidate.status !== "pending" || !candidate.paymentId) return true;
   const order = await getOrderById(candidate.id);
   if (!order) return false;
-  await syncPendingWorkshopOrder(order);
+  if (!(await syncPendingWorkshopOrder(order))) return false;
   const fresh = await getOrderById(candidate.id);
   return fresh?.status === "pending" || fresh?.status === "canceled";
 }
