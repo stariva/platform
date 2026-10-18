@@ -112,8 +112,10 @@ async function recreateDatabase(server: URL, suite: Suite): Promise<URL> {
 /** Пропущенный тест — тоже провал: значит, переменная до файла не дошла. */
 function verdict(output: string, exitCode: number): string | null {
   if (exitCode !== 0) return `exit code ${exitCode}`;
-  const pass = Number(output.match(/^\s*(\d+) pass/m)?.[1] ?? 0);
-  const skip = Number(output.match(/^\s*(\d+) skip/m)?.[1] ?? 0);
+  // В CI FORCE_COLOR красит итоговые строки: без очистки счётчики не найти
+  const plain = output.replace(/\x1b\[[0-9;]*m/g, "");
+  const pass = Number(plain.match(/^\s*(\d+) pass/m)?.[1] ?? 0);
+  const skip = Number(plain.match(/^\s*(\d+) skip/m)?.[1] ?? 0);
   if (skip > 0) return `${skip} test(s) skipped`;
   if (pass === 0) return "no tests ran";
   return null;
