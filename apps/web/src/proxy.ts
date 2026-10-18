@@ -8,7 +8,11 @@ import {
   serializeAttribution,
   touchFromUrl,
 } from "@/lib/campaign-attribution";
-import { createNonce, pageContentSecurityPolicy } from "@/lib/csp";
+import {
+  createNonce,
+  pageContentSecurityPolicy,
+  REPORTING_ENDPOINTS,
+} from "@/lib/csp";
 
 /**
  * Выдаёт странице CSP с nonce, применяет защиту маршрутов и добавляет cookie
@@ -26,6 +30,7 @@ export function proxy(request: NextRequest) {
     guard(request) ??
     NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", policy);
+  response.headers.set("Reporting-Endpoints", REPORTING_ENDPOINTS);
   return rememberCampaign(request, response);
 }
 

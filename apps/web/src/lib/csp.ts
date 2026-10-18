@@ -59,6 +59,18 @@ const storage = [
 ];
 const ozon = ["https://*.ozon.ru", "https://*.ozone.ru"];
 
+/** Сюда браузеры шлют отчёты о нарушениях политики страниц. */
+export const CSP_REPORT_PATH = "/api/csp-report";
+/** Имя эндпоинта Reporting API из заголовка Reporting-Endpoints. */
+const CSP_REPORT_GROUP = "csp";
+
+/**
+ * Заголовок Reporting-Endpoints для директивы report-to. Браузеры с Reporting
+ * API (Chrome, Edge) шлют отчёты сюда и игнорируют report-uri, остальные —
+ * по report-uri. Так одно нарушение даёт один отчёт.
+ */
+export const REPORTING_ENDPOINTS = `${CSP_REPORT_GROUP}="${CSP_REPORT_PATH}"`;
+
 /** Директивы, общие для страниц и прочих ответов. */
 function baseDirectives(isDev: boolean): string[] {
   return [
@@ -104,6 +116,12 @@ export function pageContentSecurityPolicy({
     `connect-src 'self' ${[...metrika, ...metrikaSockets, "https://gateway.umami.is", ...mailRu, ...yandexMaps, ...storage].join(" ")}`,
     // Вебвизор Метрики открывает свои фреймы
     `frame-src ${metrika.join(" ")}`,
+    // Что политика блокирует у реальных посетителей, видно только по их
+    // отчётам (api/csp-report). Chrome принимает Reporting-Endpoints только
+    // по https, а при report-to игнорирует report-uri — на http://localhost
+    // в dev он бы молчал.
+    `report-uri ${CSP_REPORT_PATH}`,
+    ...(isDev ? [] : [`report-to ${CSP_REPORT_GROUP}`]),
   ].join("; ");
 }
 
