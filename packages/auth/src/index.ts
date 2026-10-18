@@ -2,7 +2,7 @@ import { db } from "@stariva/db";
 import type { BetterAuthOptions, BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { emailOTP, oAuthProxy } from "better-auth/plugins";
+import { emailOTP } from "better-auth/plugins";
 
 /** Возвращает origin'ы вместе с их www/без-www парами, без дублей. */
 function withWwwVariants(urls: string[]): string[] {
@@ -66,6 +66,12 @@ export function initAuth<
    */
   disableSignUp?: boolean;
   /**
+   * Вход по одноразовому коду из письма. По умолчанию включён (им входят в
+   * админку). Витрине он не нужен: код там никуда не отправляется, а живые
+   * эндпоинты позволили бы подбирать коды к любому аккаунту.
+   */
+  emailOTP?: boolean;
+  /**
    * Called to deliver the email-verification link (sent on sign-up when
    * `requireEmailVerification` is enabled).
    */
@@ -112,6 +118,11 @@ export function initAuth<
      * reset) from brute-force and abuse. Tune per environment as needed.
      * @see https://www.better-auth.com/docs/concepts/rate-limit
      */
+    // IP для лимитов: x-real-ip перезаписывает ingress (Traefik), а начало
+    // x-forwarded-for может прислать сам клиент — только запасной вариант
+    advanced: {
+      ipAddress: { ipAddressHeaders: ["x-real-ip", "x-forwarded-for"] },
+    },
     rateLimit: {
       enabled: true,
       window: 60,
@@ -179,26 +190,28 @@ export function initAuth<
         }
       : {}),
     ...(options.session ? { session: options.session } : {}),
-    plugins: [
-      oAuthProxy({
-        productionURL: options.productionUrl,
-      }),
-      emailOTP({
-        disableSignUp: options.disableSignUp ?? false,
-        async sendVerificationOTP(data) {
-          if (options.sendEmail) {
-            await options.sendEmail({
-              email: data.email,
-              otp: data.otp,
-              type: data.type,
-            });
-          }
-        },
-      }),
-      ...(options.extraPlugins ?? []),
-    ],
     // Вход через иностранные сервисы (Google и т. п.) не используется:
     // 149-ФЗ ограничивает способы авторизации пользователей российских сайтов.
+    // Поэтому и oAuthProxy, нужный только для них, не подключаем.
+    plugins: [
+      ...(options.emailOTP === false
+        ? []
+        : [
+            emailOTP({
+              disableSignUp: options.disableSignUp ?? false,
+              async sendVerificationOTP(data) {
+                if (options.sendEmail) {
+                  await options.sendEmail({
+                    email: data.email,
+                    otp: data.otp,
+                    type: data.type,
+                  });
+                }
+              },
+            }),
+          ]),
+      ...(options.extraPlugins ?? []),
+    ],
     onAPIError: {
       onError(error, ctx) {
         console.error("BETTER AUTH API ERROR", error, ctx);

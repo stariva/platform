@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { signIn } from "@/lib/auth/client";
+import { safeCallbackPath } from "@/lib/auth/verification-link";
 
 const signInSchema = z.object({
   email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
@@ -30,7 +31,8 @@ type SignInFormValues = z.infer<typeof signInSchema>;
 export function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackURL = searchParams.get("callbackURL") || "/account";
+  // Только путь на нашем сайте: после входа браузер уходит по этому адресу
+  const callbackURL = safeCallbackPath(searchParams.get("callbackURL"));
 
   const [loading, setLoading] = useState(false);
 

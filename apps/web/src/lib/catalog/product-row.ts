@@ -1,6 +1,7 @@
 import type { ProductRow } from "@stariva/db/schema";
 import type { Product } from "@/lib/catalog/types";
 import { toShortDescription } from "@/lib/ozon/transformers";
+import { sanitizeDescriptionHtml } from "./sanitize-html";
 
 const PLACEHOLDER_IMAGE =
   "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg";
@@ -13,7 +14,10 @@ export function productRowToProduct(row: ProductRow): Product {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    description: row.description || `<p>${row.name}</p>`,
+    // Карточка вставляет описание как HTML — пропускаем только разметку текста
+    description: sanitizeDescriptionHtml(
+      row.description || `<p>${row.name}</p>`,
+    ),
     shortDescription: toShortDescription(row.description, row.name),
     price: row.price / 100,
     oldPrice: row.oldPrice === null ? undefined : row.oldPrice / 100,

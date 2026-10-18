@@ -6,6 +6,15 @@ import { absoluteImageUrl } from "@/lib/workshops-data";
  * Renders schema.org markup as <script type="application/ld+json"> tags.
  */
 
+/**
+ * JSON для тега script. JSON.stringify не экранирует «<», и отзыв покупателя
+ * с «</script>» закрыл бы тег и выполнил свой код — заменяем на <.
+ * @see node_modules/next/dist/docs/01-app/02-guides/json-ld.md
+ */
+export function toJsonLd(schema: unknown): string {
+  return JSON.stringify(schema).replace(/</g, "\\u003c");
+}
+
 // ─── Organization / LocalBusiness ────────────────────────────────────────────
 
 export function OrganizationJsonLd() {
@@ -102,8 +111,8 @@ export function OrganizationJsonLd() {
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static schema.org data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -136,8 +145,8 @@ export function WebSiteJsonLd() {
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static schema.org data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -164,8 +173,8 @@ export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static schema.org data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -284,8 +293,8 @@ export function ProductJsonLd({
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted product data from Ozon API
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -337,8 +346,8 @@ export function ArticleJsonLd({
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static blog data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -406,8 +415,8 @@ export function CourseJsonLd({
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static workshop data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -439,8 +448,8 @@ export function ItemListJsonLd({ name, url, items }: ItemListJsonLdProps) {
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static list data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -469,8 +478,8 @@ export function FAQJsonLd({ items }: { items: FAQItem[] }) {
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static FAQ data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
@@ -498,8 +507,8 @@ export function PersonJsonLd() {
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted static person data
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: toJsonLd экранирует «<», из JSON не закрыть тег script
+      dangerouslySetInnerHTML={{ __html: toJsonLd(schema) }}
     />
   );
 }
