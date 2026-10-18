@@ -99,6 +99,8 @@ export const metadata: Metadata = {
     canonical: BASE_URL,
   },
   manifest: "/site.webmanifest",
+  // iOS Safari сам превращает номера в ссылки до гидрации, и React видит чужой DOM.
+  formatDetection: { telephone: false, email: false, address: false },
   icons: {
     icon: [
       {
