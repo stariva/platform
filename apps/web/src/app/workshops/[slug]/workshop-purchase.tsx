@@ -119,7 +119,8 @@ export function WorkshopPurchase({
     if (!validate()) return;
 
     onBuyClick?.();
-    if (buyGoal) reachGoal(buyGoal, { slug, price });
+    if (buyGoal)
+      reachGoal(buyGoal, { slug, order_price: price, currency: "RUB" });
     setBuying(true);
     const guestEmail = email.trim().toLowerCase();
     if (!session) saveEmailDraft(guestEmail);

@@ -47,7 +47,7 @@ export function PaidGoal({
     } catch {
       // Без хранилища цель может отправиться дважды — не страшно
     }
-    reachGoal("workshop_paid", { slug, price });
+    reachGoal("workshop_paid", { slug, order_price: price, currency: "RUB" });
   }, [orderId, slug, price]);
   return null;
 }
