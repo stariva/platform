@@ -100,7 +100,7 @@ export const videosContract = {
 };
 
 const reminderSweepResult = z.object({
-  /** Оплаченные заказы, которые попали в окно прогона. */
+  /** Заказы, которые попали в окно прогона: оплаченные и брошенные. */
   checked: z.number().int().nonnegative(),
   delivered: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
@@ -119,8 +119,9 @@ export const RemindersFailedError = error("REMINDERS_FAILED", {
 
 export const remindersContract = {
   /**
-   * Дошлёт письма о покупке мастер-класса, не ушедшие из вебхука, и
-   * разошлёт напоминания о старте (письма и Telegram).
+   * Дошлёт письма о покупке мастер-класса, не ушедшие из вебхука, разошлёт
+   * напоминания о старте (письма и Telegram) и одно письмо «оплата не
+   * завершилась» тем, кто оформил заказ, но не оплатил.
    */
   sweep: jobProcedure
     .errors({ [RemindersFailedError.code]: RemindersFailedError })

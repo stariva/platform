@@ -135,6 +135,20 @@ const config: NextConfig = {
         destination: "/catalog/interior/:slug*",
         permanent: true,
       },
+      // Адреса старого сайта и снятых страниц, которые Google ещё обходит
+      { source: "/privacy", destination: "/privacy-policy", permanent: true },
+      { source: "/terms", destination: "/offer", permanent: true },
+      {
+        source: "/blog/boho-stil-v-dome",
+        destination: "/blog",
+        permanent: true,
+      },
+      {
+        source:
+          "/workshops/:slug(tipi-kids|dome-lampshade-beginner|placemat-set)",
+        destination: "/workshops",
+        permanent: true,
+      },
       // Blogger collaboration links. Not permanent: campaigns end and slugs get reused.
       {
         source: "/chrisfleur",

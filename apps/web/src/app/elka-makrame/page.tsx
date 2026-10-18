@@ -9,13 +9,14 @@ import {
   FAQJsonLd,
 } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
-import { WORKSHOP_PATH } from "@/lib/elka/data";
-import { loadElkaData } from "@/lib/elka/load";
+import { WORKSHOP_PATH, WORKSHOP_SLUG } from "@/lib/elka/data";
+import { loadBigTreeWorkshop, loadElkaData } from "@/lib/elka/load";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { ElkaReadyTrees } from "./_components/elka-ready-trees";
-import { ElkaWorkshop } from "./_components/elka-workshop";
+import { ElkaWorkshop, workshopOffer } from "./_components/elka-workshop";
 import { LegacyModelsRedirect } from "./_components/legacy-models-redirect";
-import { FAQ, WORKSHOP_BUY_ID } from "./_data";
+import { WORKSHOP_BUY_ID, workshopFaq } from "./_data";
 
 // Рендер на каждый запрос: при сборке образа базы нет, и статическая
 // страница запекалась без мастер-класса (кнопка «связаться» вместо оплаты)
@@ -24,14 +25,34 @@ export const dynamic = "force-dynamic";
 
 const TITLE =
   "Ёлка макраме своими руками — мастер-класс в видеоуроках | Stariva";
-const DESCRIPTION =
-  "Сплетите настенную ёлку макраме 50 × 110 см по пошаговым видеоурокам: схема и расчёт шнура, доступ навсегда, обратная связь от мастера. Предзаказ со скидкой и второй мастер-класс — в подарок.";
 const COVER =
   "https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame.webp";
 
-export const metadata: Metadata = {
+/** Последняя фраза описания: до старта — про подарок, после — про уроки. */
+function offerSentence(preorder: boolean): string {
+  return preorder
+    ? "Предзаказ со скидкой и второй мастер-класс — в подарок."
+    : "Уроки уже открыты — начните сразу после оплаты.";
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  // Сбой базы не должен ронять страницу: описание возьмёт запасную дату.
+  const workshop = await getWorkshopBySlug(WORKSHOP_SLUG).catch(
+    () => undefined,
+  );
+  const offer = offerSentence(workshopOffer(workshop).preorder);
+  return {
+    ...METADATA,
+    description: `Сплетите настенную ёлку макраме 50 × 110 см по пошаговым видеоурокам: схема и расчёт шнура, доступ навсегда, обратная связь от мастера. ${offer}`,
+    openGraph: {
+      ...METADATA.openGraph,
+      description: `Сплетите настенную ёлку макраме по пошаговым видеоурокам. ${offer}`,
+    },
+  };
+}
+
+const METADATA: Metadata = {
   title: { absolute: TITLE },
-  description: DESCRIPTION,
   keywords: [
     "мастер-класс ёлка макраме",
     "ёлка макраме своими руками",
@@ -46,8 +67,6 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ru_RU",
     title: "Ёлка макраме своими руками — мастер-класс Stariva",
-    description:
-      "Сплетите настенную ёлку макраме по пошаговым видеоурокам. Предзаказ со скидкой и второй мастер-класс — в подарок.",
     url: `${BASE_URL}${WORKSHOP_PATH}`,
     images: [
       {
@@ -59,9 +78,14 @@ export const metadata: Metadata = {
 };
 
 export default async function ElkaMakramePage() {
-  const { trees: treesResult, workshop } = await loadElkaData("elka_workshop");
+  const [{ trees: treesResult, workshop }, bigTree] = await Promise.all([
+    loadElkaData("elka_workshop"),
+    loadBigTreeWorkshop(),
+  ]);
   const trees = treesResult.products;
   const reviewProductId = trees[0]?.id;
+  const { preorder, releaseLabel } = workshopOffer(workshop);
+  const faq = workshopFaq({ preorder, releaseLabel, bigTree });
 
   return (
     <>
@@ -72,7 +96,7 @@ export default async function ElkaMakramePage() {
           { name: "Ёлка макраме", href: WORKSHOP_PATH },
         ]}
       />
-      <FAQJsonLd items={FAQ} />
+      <FAQJsonLd items={faq} />
       {workshop ? (
         <CourseJsonLd
           name={workshop.title}
@@ -88,7 +112,7 @@ export default async function ElkaMakramePage() {
 
       <Header variant="solid" />
       <main>
-        <ElkaWorkshop workshop={workshop} />
+        <ElkaWorkshop workshop={workshop} bigTree={bigTree} />
         <ElkaCustomerLooks
           source="elka_workshop"
           eyebrow="Идеи для украшения"
@@ -106,7 +130,7 @@ export default async function ElkaMakramePage() {
           heading="Отзывы покупателей Stariva"
         />
         <ElkaFaq
-          items={FAQ}
+          items={faq}
           title="Частые вопросы о мастер-классе"
           message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по ёлке макраме."
           source="elka_faq"

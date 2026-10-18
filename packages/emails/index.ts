@@ -8,6 +8,7 @@ import StarivaResetPasswordEmail from "./emails/stariva-reset-password";
 import StarivaVerifyEmail from "./emails/stariva-verify-email";
 import StarivaWorkshopEmail from "./emails/stariva-workshop";
 import StarivaWorkshopBriefEmail from "./emails/stariva-workshop-brief";
+import StarivaWorkshopUnpaidEmail from "./emails/stariva-workshop-unpaid";
 import WelcomeEmail from "./emails/welcome";
 
 export { sendWorkshopBriefEmail, type WorkshopBriefFile } from "./brief";
@@ -22,6 +23,10 @@ export type {
   StarivaWorkshopEmailProps,
   WorkshopEmailKind,
 } from "./emails/stariva-workshop";
+export {
+  type StarivaWorkshopUnpaidEmailProps,
+  workshopUnpaidEmailSubject,
+} from "./emails/stariva-workshop-unpaid";
 export { sendOrderStatusEmail } from "./order";
 export type { OrderEmailOrder } from "./order-email";
 export { sendReceiptEmail } from "./receipt";
@@ -37,5 +42,6 @@ export {
   StarivaVerifyEmail,
   StarivaWorkshopBriefEmail,
   StarivaWorkshopEmail,
+  StarivaWorkshopUnpaidEmail,
   WelcomeEmail,
 };

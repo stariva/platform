@@ -1,5 +1,6 @@
 import { logger } from "@stariva/config";
 import { getProductsResult, type ProductsResult } from "@/lib/catalog/service";
+import { preorderBonusFor } from "@/lib/workshops/preorder-bonus";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { TREES_SUBCATEGORY, WORKSHOP_SLUG } from "./data";
 
@@ -30,4 +31,17 @@ export async function loadElkaData(page: "elka_workshop" | "elka_trees") {
     }),
   ]);
   return { trees, workshop };
+}
+
+/**
+ * Мастер-класс по большой ёлке, когда он продаётся. Пока его дарят за
+ * предзаказ маленькой, база его не отдаёт — и страница показывает подарок.
+ */
+export async function loadBigTreeWorkshop() {
+  const slug = preorderBonusFor(WORKSHOP_SLUG)?.slug;
+  if (!slug) return undefined;
+  return getWorkshopBySlug(slug).catch((error) => {
+    logger.warn("elka_workshop.big_tree.unavailable", { error: String(error) });
+    return undefined;
+  });
 }

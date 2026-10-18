@@ -1,7 +1,7 @@
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import {
+  fallbackWorkshopPrice,
   WORKSHOP_PATH,
-  WORKSHOP_PREORDER_FALLBACK_PRICE,
   WORKSHOP_TREE_SIZE,
 } from "@/lib/elka/data";
 import { formatPrice, type Workshop } from "@/lib/workshops-data";
@@ -11,7 +11,7 @@ import { formatPrice, type Workshop } from "@/lib/workshops-data";
  * Страница про готовые ёлки, поэтому только короткая ссылка на мастер-класс.
  */
 export function ElkaDiy({ workshop }: { workshop?: Workshop }) {
-  const price = workshop?.price ?? WORKSHOP_PREORDER_FALLBACK_PRICE;
+  const price = workshop?.price ?? fallbackWorkshopPrice();
 
   return (
     <section aria-labelledby="diy-title" className="bg-white">

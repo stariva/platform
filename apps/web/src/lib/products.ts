@@ -14,7 +14,7 @@ export const categories: Category[] = [
       alt: "Две модели на фоне моря в топе, юбке и платье в технике макраме из хлопкового шнура",
       width: 1671,
       height: 557,
-      objectPosition: "72% center",
+      objectPosition: "72% 20%",
     },
     subcategories: [
       { slug: "dresses", name: "Туники и накидки", categorySlug: "clothes" },

@@ -3,6 +3,7 @@
 import { paths } from "@stariva/config";
 import { Button } from "@stariva/ui";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { authClient } from "~/auth/client";
 
@@ -14,7 +15,11 @@ export function SignOutButton() {
     <Button
       variant="outline"
       onClick={async () => {
-        await authClient.signOut();
+        const { error } = await authClient.signOut();
+        if (error) {
+          toast.error(error.message || "Не удалось выйти. Попробуйте ещё раз.");
+          return;
+        }
         router.push(paths.auth.login);
       }}
     >

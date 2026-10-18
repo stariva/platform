@@ -58,6 +58,7 @@ const {
   getInStockProducts,
   getInStockProductsResult,
   getReviews,
+  getProductByStaleSlug,
   getRatingSummary,
   summarizeRatings,
 } = await import("./service");
@@ -117,6 +118,47 @@ test("in-stock results filter purchasable products and retain catalog availabili
     products: [],
     status: "available",
   });
+});
+
+test("a renamed product is found by its old slug's Ozon ID tail, if the tail is unique", async () => {
+  const renamed = { ...product, slug: "servirovochnye-salfetki-6892" };
+  const other = { ...product, id: "other", slug: "abazhur-4756" };
+  fetchProducts.mockResolvedValue([renamed, other]);
+  assert.equal(await getProductByStaleSlug("pleysmaty-6892"), renamed);
+  assert.equal(await getProductByStaleSlug(`${"a".repeat(195)}-6892`), renamed);
+  assert.equal(await getProductByStaleSlug("pleysmaty-0001"), undefined);
+  assert.equal(await getProductByStaleSlug("no-tail"), undefined);
+
+  fetchProducts.mockResolvedValue([renamed, { ...other, slug: "poyas-6892" }]);
+  assert.equal(await getProductByStaleSlug("pleysmaty-6892"), undefined);
+});
+
+test("invalid stale slugs do not look up products even when the Ozon ID tail matches", async () => {
+  fetchProducts.mockResolvedValue([
+    { ...product, slug: "servirovochnye-salfetki-6892" },
+  ]);
+  fetchProducts.mockClear();
+
+  for (const slug of [
+    "",
+    "-6892",
+    "../pleysmaty-6892",
+    "foo/pleysmaty-6892",
+    "pleysmaty%2F-6892",
+    "pleysmaty?-6892",
+    "pleysmaty#-6892",
+    "Плейсматы-6892",
+    "Pleysmaty-6892",
+    " pleysmaty-6892",
+    "pleysmaty -6892",
+    "pleysmaty-6892\n",
+    "pleysmaty_-6892",
+    "pleysmaty--6892",
+    `${"a".repeat(196)}-6892`,
+  ]) {
+    assert.equal(await getProductByStaleSlug(slug), undefined, slug);
+  }
+  assert.equal(fetchProducts.mock.calls.length, 0);
 });
 
 test("product reviews contain only that product, newest first", async () => {

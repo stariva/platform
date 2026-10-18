@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
-import { courseAccess, lessonProgress } from "@stariva/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { courseAccess, lessonProgress, orders } from "@stariva/db/schema";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { getWorkshopLessons, type Workshop } from "@/lib/workshops-data";
 
 /**
@@ -33,6 +33,24 @@ export async function listAccessibleSlugs(userId: string): Promise<string[]> {
     .from(courseAccess)
     .where(eq(courseAccess.userId, userId));
   return rows.map((r) => r.slug);
+}
+
+/**
+ * Курсы, доступ к которым пришёл подарком: заказ, по которому он выдан,
+ * оформлен на другой курс. Купленные отдельно в этот список не попадают.
+ */
+export async function listGiftedSlugs(userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ slug: courseAccess.workshopSlug })
+    .from(courseAccess)
+    .innerJoin(orders, eq(orders.id, courseAccess.orderId))
+    .where(
+      and(
+        eq(courseAccess.userId, userId),
+        ne(orders.workshopSlug, courseAccess.workshopSlug),
+      ),
+    );
+  return new Set(rows.map((r) => r.slug));
 }
 
 export interface LessonProgressRow {

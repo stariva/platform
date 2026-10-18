@@ -63,8 +63,10 @@ export interface Workshop {
   subtitle: string;
   category: WorkshopCategory;
   level: WorkshopLevel;
-  /** В рублях; 0 — бесплатный курс. */
+  /** В рублях на сейчас; 0 — бесплатный курс. */
   price: number;
+  /** Цена после старта уроков, пока действует скидка предзаказа. */
+  regularPrice?: number;
   /** Общая длительность, например «3 ч 20 мин». */
   duration: string;
   lessonsCount: number;
