@@ -37,6 +37,12 @@ const suites: Suite[] = [
     database: "stariva_notification_test",
   },
   {
+    file: "apps/web/src/lib/workshops/unpaid-reminder.integration.test.ts",
+    // Тест ждёт базу уведомлений; раннер пересоздаёт её перед набором
+    env: "NOTIFICATION_TEST_DATABASE_URL",
+    database: "stariva_notification_test",
+  },
+  {
     file: "packages/web-api/src/services/video-renditions.integration.test.ts",
     env: "RENDITION_TEST_DATABASE_URL",
     database: "stariva_rendition_test",
