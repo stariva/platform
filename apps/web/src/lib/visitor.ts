@@ -82,13 +82,13 @@ const number = (value: string | null | undefined) => {
 };
 
 /**
- * IP клиента. Cloudflare и ingress (Traefik/nginx) кладут настоящий адрес в
- * cf-connecting-ip и x-real-ip; в x-forwarded-for берём первый адрес, это
- * запасной вариант.
+ * IP клиента. Ingress (Traefik) перезаписывает x-real-ip настоящим адресом;
+ * в x-forwarded-for берём первый адрес, это запасной вариант. cf-connecting-ip
+ * не читаем: Cloudflare перед сайтом нет, и этот заголовок подставит кто
+ * угодно — и подделал бы IP в журнале входов и в заказах.
  */
 export function clientIp(headers: Headers): string | null {
   const candidates = [
-    headers.get("cf-connecting-ip"),
     headers.get("x-real-ip"),
     headers.get("x-forwarded-for")?.split(",")[0],
   ];

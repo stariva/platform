@@ -81,9 +81,14 @@ export async function createPayment(
  * Используется в вебхуке для подтверждения подлинности уведомления.
  */
 export async function getPayment(paymentId: string): Promise<YooKassaPayment> {
-  const res = await fetch(`${API_BASE}/payments/${paymentId}`, {
-    headers: { Authorization: authHeader() },
-  });
+  // id приходит из тела вебхука: «../» не должен уводить запрос с ключами
+  // магазина на другой путь API
+  const res = await fetch(
+    `${API_BASE}/payments/${encodeURIComponent(paymentId)}`,
+    {
+      headers: { Authorization: authHeader() },
+    },
+  );
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     throw new Error(`yookassa_get_failed_${res.status}: ${detail}`);

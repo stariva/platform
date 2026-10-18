@@ -520,7 +520,7 @@ export function ProductDetails({
             )}
             <div
               className="product-description text-dark-grey"
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: product description comes from Ozon API (trusted source) and is sanitized server-side
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: описание очищено на сервере (lib/catalog/sanitize-html.ts)
               dangerouslySetInnerHTML={{
                 // Первый абзац уже стоит под ценой — не повторяем его
                 __html: descriptionWithoutLead(product.description),

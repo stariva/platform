@@ -26,6 +26,7 @@ import {
 import { saveAssistantMessage, saveUserMessage } from "@/lib/chat/history";
 import { buildSystemPrompt } from "@/lib/chat/knowledge";
 import { chatTools } from "@/lib/chat/tools";
+import { readJsonBody } from "@/lib/read-json";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 export const runtime = "nodejs";
@@ -34,6 +35,8 @@ export const maxDuration = 30;
 // Ограничение нагрузки: не пропускаем гигантские истории в модель
 const MAX_MESSAGES = 24;
 const MAX_CHARS_PER_MESSAGE = 4000;
+// История приходит целиком, с результатами инструментов (списки товаров)
+const MAX_BODY_BYTES = 1024 * 1024;
 
 // ─── Провайдеры ──────────────────────────────────────────────────────────────
 
@@ -105,10 +108,14 @@ async function handler(request: NextRequest) {
     );
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonBody(request, MAX_BODY_BYTES);
+  if (body === "too_large") {
+    return NextResponse.json(
+      { error: "Слишком длинная переписка" },
+      { status: 413 },
+    );
+  }
+  if (body === null) {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
 

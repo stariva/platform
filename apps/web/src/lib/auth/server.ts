@@ -46,6 +46,8 @@ export const auth = initAuth({
   productionUrl,
   secret: env.AUTH_SECRET,
   requireEmailVerification: true,
+  // Вход на витрине — паролем или ссылкой из письма, кодов здесь нет
+  emailOTP: false,
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 дней
     updateAge: 60 * 60 * 24, // обновлять сессию раз в сутки
@@ -116,7 +118,7 @@ export const auth = initAuth({
     }),
     nextCookies(),
   ],
-  // sendEmail is used by the internal emailOTP plugin and password reset
+  // sendEmail здесь нужен только для письма о сбросе пароля
   sendEmail: async ({ email, url, type }) => {
     if (type === "forget-password") {
       if (!url) {

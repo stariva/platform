@@ -26,6 +26,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { signUp } from "@/lib/auth/client";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-strength";
 import { useFormToken } from "@/lib/auth/use-form-token";
+import { safeCallbackPath } from "@/lib/auth/verification-link";
 
 const signUpSchema = z.object({
   name: z.string().trim().min(1, "Введите имя"),
@@ -40,7 +41,8 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export function SignUpForm() {
   const searchParams = useSearchParams();
-  const callbackURL = searchParams.get("callbackURL") || "/account";
+  // Только путь на нашем сайте: после входа браузер уходит по этому адресу
+  const callbackURL = safeCallbackPath(searchParams.get("callbackURL"));
 
   const [loading, setLoading] = useState(false);
   const [sentEmail, setSentEmail] = useState<string | null>(null);

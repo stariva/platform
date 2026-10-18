@@ -38,6 +38,16 @@ test("client IP prefers proxy headers and rejects garbage", () => {
     clientIp(new Headers({ "x-forwarded-for": "::ffff:198.51.100.9" })),
     "198.51.100.9",
   );
+  // Cloudflare перед сайтом нет: этот заголовок подделывает сам клиент
+  assert.equal(
+    clientIp(
+      new Headers({
+        "cf-connecting-ip": "1.2.3.4",
+        "x-real-ip": "203.0.113.7",
+      }),
+    ),
+    "203.0.113.7",
+  );
   assert.equal(clientIp(new Headers({ "x-forwarded-for": "not-an-ip" })), null);
   assert.equal(clientIp(new Headers()), null);
 });

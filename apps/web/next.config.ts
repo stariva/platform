@@ -51,8 +51,11 @@ const contentSecurityPolicy = [
   `connect-src 'self' https: ${metrikaSockets}`,
   `frame-src ${metrikaFrames}`,
   "frame-ancestors 'none'",
+  "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
+  // Случайная http-ссылка на картинку или скрипт не уйдёт открытым текстом
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ]
   .join("; ")
   .concat(";");
@@ -68,12 +71,19 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    // Геолокация — только самому сайту: кнопка «Моё местоположение» при
+    // выборе пункта выдачи. Чужим фреймам (Метрика) — ничего.
+    value:
+      "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), browsing-topics=()",
   },
+  // Открытые нами вкладки (оплата, Telegram) не получают доступ к window сайта
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
 const config: NextConfig = {
   output: "standalone",
+  // Не сообщаем сканерам, на чём собран сайт
+  poweredByHeader: false,
   transpilePackages: [
     "@stariva/auth",
     "@stariva/config",
