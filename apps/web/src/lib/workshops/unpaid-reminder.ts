@@ -265,10 +265,7 @@ export async function runUnpaidOrderSweep(now = new Date()) {
       if (await deliver(candidate, now)) delivered++;
     } catch (error) {
       failed++;
-      logger.error("workshop.unpaid_reminder.failed", {
-        orderId: id,
-        error: String(error),
-      });
+      logger.error("workshop.unpaid_reminder.failed", error, { orderId: id });
     }
   }
   return { checked: candidates.length, delivered, failed };

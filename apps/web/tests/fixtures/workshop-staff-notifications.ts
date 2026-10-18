@@ -45,8 +45,9 @@ mock.module("../../src/lib/custom-order/inbox", () => ({
 const loggedChannels: unknown[] = [];
 mock.module("@stariva/config", () => ({
   logger: {
-    error: (_event: string, details: { channel?: string }) =>
-      loggedChannels.push(details.channel),
+    // Та же сигнатура, что у настоящего logger.error: событие, ошибка, детали
+    error: (_event: string, _error?: unknown, details?: { channel?: string }) =>
+      loggedChannels.push(details?.channel),
   },
 }));
 let buyerEmails = 0;

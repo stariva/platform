@@ -122,4 +122,7 @@ jobs:
         run: bun run test:integration
         env:
           TEST_POSTGRES_URL: postgres://postgres:password@127.0.0.1:5432/postgres
+          # С CI=true env.ts пропускает валидацию, и дефолт APP_URL из схемы
+          # не подставляется — ссылки в письмах строить не из чего
+          APP_URL: http://localhost:3000
 

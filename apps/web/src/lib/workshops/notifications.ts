@@ -343,24 +343,24 @@ export async function notifyWorkshopBooked(orderId: string): Promise<void> {
     [target] = await loadTargets(eq(orders.id, orderId));
     if (target) await deliverEmail(target, "booked");
   } catch (error) {
-    logger.error("workshop.booked_email.failed", {
-      orderId,
-      error: String(error),
-    });
+    // Ошибка — вторым аргументом: объект на её месте логгер печатал как
+    // «[object Object]», и причина сбоя терялась
+    logger.error("workshop.booked_email.failed", error, { orderId });
   }
   if (!target) return;
   if (!notificationConfigured()) {
-    logger.error("workshop.staff_notification.not_configured", { orderId });
+    logger.error("workshop.staff_notification.not_configured", undefined, {
+      orderId,
+    });
     return;
   }
   for (const staffChannel of configuredStaffChannels()) {
     try {
       await deliverStaff(target, staffChannel);
     } catch (error) {
-      logger.error("workshop.staff_notification.failed", {
+      logger.error("workshop.staff_notification.failed", error, {
         orderId,
         channel: staffChannel.channel,
-        error: String(error),
       });
     }
   }
@@ -455,7 +455,7 @@ export async function runWorkshopReminderSweep(now = new Date()) {
       if (await job()) delivered++;
     } catch (error) {
       failed++;
-      logger.error("workshop.reminder.failed", { error: String(error) });
+      logger.error("workshop.reminder.failed", error);
     }
   }
   return { checked: targets.length, delivered, failed };
