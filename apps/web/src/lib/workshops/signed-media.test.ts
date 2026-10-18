@@ -102,7 +102,7 @@ test("a buyer past the link limit is refused", async () => {
   rateLimited = false;
 });
 
-test("materials are signed only for the course's own files", async () => {
+test("materials link to the site only for the course's own files", async () => {
   const material = (key: string, userId: string | null) =>
     workshopFileServices.signMaterial({ slug: "test", key, userId });
   assert.deepEqual(await material("other.pdf", "user"), {
@@ -118,6 +118,21 @@ test("materials are signed only for the course's own files", async () => {
   owned = true;
   assert.deepEqual(await material("brief.pdf", "user"), {
     status: "ok",
-    url: "https://storage.example.test/brief.pdf",
+    url: "/api/workshops/test/materials/brief.pdf",
+  });
+});
+
+test("material files are found by their name in the site link", async () => {
+  const { findMaterialFile } = await import("./signed-media");
+  assert.deepEqual(await findMaterialFile("test", "brief.pdf", "user"), {
+    status: "ok",
+    key: "brief.pdf",
+    label: "Бриф",
+  });
+  assert.deepEqual(await findMaterialFile("test", "other.pdf", "user"), {
+    status: "not_found",
+  });
+  assert.deepEqual(await findMaterialFile("test", "brief.pdf", null), {
+    status: "unauthorized",
   });
 });

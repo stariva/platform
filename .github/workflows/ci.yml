@@ -92,3 +92,34 @@ jobs:
       - name: Test
         run: bun test
 
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Та же версия, что в docker-compose.yml
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      # Эти пакеты отдают код из dist — без сборки тесты их не находят
+      - name: Build packages used by tests
+        run: bun run build --filter=@stariva/config --filter=@stariva/storage --filter=@stariva/emails
+
+      # Каждый набор получает свою базу с миграциями; пропуск теста — провал
+      - name: Integration tests
+        run: bun run test:integration
+        env:
+          TEST_POSTGRES_URL: postgres://postgres:password@127.0.0.1:5432/postgres
+
