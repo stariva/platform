@@ -4,6 +4,8 @@
  * нарисовал клиент: строки, пропавшие и появившиеся, уходят в PostHog.
  */
 
+import { analyticsPath } from "./analytics";
+
 const HYDRATION_ERROR = /Minified React error #(418|423|425)|Hydration failed/;
 const SKIP_PARENTS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"]);
 const MAX_LINES = 8;
@@ -23,18 +25,27 @@ export function textLines(root: Node): string[] {
   return lines;
 }
 
+/** Лишние вхождения строк с учётом их количества в другом снимке. */
+function extraLines(lines: string[], other: string[]) {
+  const remaining = new Map<string, number>();
+  for (const line of other) remaining.set(line, (remaining.get(line) ?? 0) + 1);
+  return lines.filter((line) => {
+    const count = remaining.get(line) ?? 0;
+    if (!count) return true;
+    remaining.set(line, count - 1);
+    return false;
+  });
+}
+
 /** Строки, которые есть только на сервере или только у клиента. */
 export function textDiff(server: string[], client: string[]) {
-  const serverSet = new Set(server);
-  const clientSet = new Set(client);
-  const only = (lines: string[], other: Set<string>) =>
-    [...new Set(lines)]
-      .filter((line) => !other.has(line))
+  const only = (lines: string[], other: string[]) =>
+    extraLines(lines, other)
       .slice(0, MAX_LINES)
       .map((line) => line.slice(0, MAX_LENGTH));
   return {
-    server_only: only(server, clientSet),
-    client_only: only(client, serverSet),
+    server_only: only(server, client),
+    client_only: only(client, server),
   };
 }
 
@@ -44,9 +55,11 @@ export function watchHydrationMismatch(
   if (typeof document === "undefined") return;
   // Скрипты бывают раньше конца потока: дочитываем серверный текст к DOMContentLoaded.
   // Строки, которые гидрация уже не тронула, совпадут и в разницу не попадут.
-  const server = new Set(textLines(document.body));
+  const server = textLines(document.body);
   const snapshot = () => {
-    for (const line of textLines(document.body)) server.add(line);
+    // Общие вхождения уже учтены: сохраняем максимум из двух снимков.
+    for (const line of extraLines(textLines(document.body), server))
+      server.push(line);
   };
   if (document.readyState === "loading")
     document.addEventListener("DOMContentLoaded", snapshot, { once: true });
@@ -63,10 +76,10 @@ export function watchHydrationMismatch(
         const html = document.documentElement;
         report({
           error_code: code[1] ?? "hydration",
-          ...textDiff([...server], textLines(document.body)),
+          ...textDiff(server, textLines(document.body)),
           html_lang: html.lang,
           html_class: html.className.slice(0, MAX_LENGTH),
-          path: window.location.pathname,
+          path: analyticsPath(window.location.pathname),
         });
       } catch {
         /* optional */
