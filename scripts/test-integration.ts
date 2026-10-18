@@ -112,10 +112,9 @@ async function recreateDatabase(server: URL, suite: Suite): Promise<URL> {
 /** Пропущенный тест — тоже провал: значит, переменная до файла не дошла. */
 function verdict(output: string, exitCode: number): string | null {
   if (exitCode !== 0) return `exit code ${exitCode}`;
-  // В GitHub Actions bun красит итоги («\x1b[32m 1 pass»): без снятия цвета
-  // строка не начинается с числа, и любой набор выглядел бы пустым
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: снимаем именно ANSI-коды
-  const plain = output.replace(/\u001b\[[0-9;]*m/g, "");
+  // В CI FORCE_COLOR красит итоговые строки: без очистки счётчики не найти
+  const ansiEscape = String.fromCharCode(27);
+  const plain = output.replace(new RegExp(`${ansiEscape}[[0-9;]*m`, "g"), "");
   const pass = Number(plain.match(/^\s*(\d+) pass/m)?.[1] ?? 0);
   const skip = Number(plain.match(/^\s*(\d+) skip/m)?.[1] ?? 0);
   if (skip > 0) return `${skip} test(s) skipped`;
