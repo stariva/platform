@@ -304,6 +304,19 @@ export function initPostHog() {
   postHog();
 }
 
+/** Только PostHog: тексты страницы, на которых разошлась гидрация. */
+export function trackHydrationMismatch(properties: Record<string, unknown>) {
+  const mask = (lines: unknown) =>
+    Array.isArray(lines) ? lines.map((line) => maskContacts(String(line))) : [];
+  postHog((posthog) =>
+    posthog.capture("hydration_mismatch", {
+      ...properties,
+      server_only: mask(properties.server_only),
+      client_only: mask(properties.client_only),
+    }),
+  );
+}
+
 /**
  * После «Отказаться»: больше ничего не отправлять (даже $pageleave при
  * перезагрузке) и не дописывать ph_* в хранилище после того, как баннер его очистит.
