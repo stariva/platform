@@ -31,7 +31,9 @@ export function WorkshopPreorderButton({
       returnPath={`${WORKSHOP_PATH}#${WORKSHOP_SECTION_ID}`}
       preorder={preorder}
       buyLabel={`${preorder ? "Оформить предзаказ" : "Купить"} за ${formatPrice(price)}`}
-      onBuyClick={() => reachGoal(goal, { price })}
+      onBuyClick={() =>
+        reachGoal(goal, { order_price: price, currency: "RUB" })
+      }
     />
   );
 }
