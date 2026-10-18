@@ -6,7 +6,7 @@ import { TrackedLink } from "@/components/stariva/tracked-link";
 import {
   BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
-  WORKSHOP_PREORDER_FALLBACK_PRICE,
+  fallbackWorkshopPrice,
   WORKSHOP_REGULAR_PRICE,
   WORKSHOP_RELEASE_LABEL,
   WORKSHOP_TREE_SIZE,
@@ -14,9 +14,11 @@ import {
 import {
   formatPrice,
   formatReleaseDate,
+  isPreorder,
   type Workshop,
 } from "@/lib/workshops-data";
 import {
+  BIG_TREE_ID,
   WORKSHOP_BUY_ID,
   WORKSHOP_INCLUDES,
   WORKSHOP_PROGRAM,
@@ -26,17 +28,45 @@ import {
 import { WorkshopPreorderButton } from "./workshop-preorder-button";
 import { WorkshopStickyCta } from "./workshop-sticky-cta";
 
+/** Предзаказ и старт мастер-класса; без базы — по запасной дате лендинга. */
+export function workshopOffer(workshop?: Workshop, now = new Date()) {
+  if (!workshop) {
+    const price = fallbackWorkshopPrice(now);
+    const preorder = price < WORKSHOP_REGULAR_PRICE;
+    return {
+      price,
+      preorder,
+      regularPrice: preorder ? WORKSHOP_REGULAR_PRICE : undefined,
+      releaseLabel: WORKSHOP_RELEASE_LABEL,
+    };
+  }
+  return {
+    price: workshop.price,
+    preorder: isPreorder(workshop, now),
+    regularPrice: workshop.regularPrice,
+    releaseLabel: workshop.releaseAt
+      ? formatReleaseDate(workshop.releaseAt)
+      : WORKSHOP_RELEASE_LABEL,
+  };
+}
+
 /**
- * Показывает программу и цену мастер-класса, а для предзаказа — подарок.
- * Если данные курса не переданы, использует цену и дату старта из лендинга.
+ * Программа и цена мастер-класса. До старта — предзаказ со скидкой и
+ * подарком, после — обычная покупка и предзаказ большой ёлки, если он есть.
  */
-export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
-  const price = workshop?.price ?? WORKSHOP_PREORDER_FALLBACK_PRICE;
-  const isPreorder = price < WORKSHOP_REGULAR_PRICE;
-  const discount = Math.round((1 - price / WORKSHOP_REGULAR_PRICE) * 100);
-  const releaseLabel = workshop?.releaseAt
-    ? formatReleaseDate(workshop.releaseAt)
-    : WORKSHOP_RELEASE_LABEL;
+export function ElkaWorkshop({
+  workshop,
+  bigTree,
+}: {
+  workshop?: Workshop;
+  /** Мастер-класс по большой ёлке; есть, только когда его продают. */
+  bigTree?: Workshop;
+}) {
+  const { price, preorder, regularPrice, releaseLabel } =
+    workshopOffer(workshop);
+  const discount = regularPrice
+    ? Math.round((1 - price / regularPrice) * 100)
+    : 0;
 
   return (
     <section
@@ -46,7 +76,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
     >
       {workshop ? (
         <WorkshopStickyCta
-          label={`${isPreorder ? "Предзаказ" : "Записаться"} за ${formatPrice(price)}`}
+          label={`${preorder ? "Предзаказ" : "Купить"} за ${formatPrice(price)}`}
         />
       ) : null}
       {/* Первый экран страницы. На телефоне сначала оффер и цена, потом фото:
@@ -54,11 +84,13 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
           на всю высоту, текст справа. Сверху — отступ под фиксированную шапку. */}
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12 pt-28 pb-16 lg:pt-36 lg:pb-24 grid lg:grid-cols-2 gap-10 lg:gap-x-16 lg:gap-y-0 items-start">
         <div className="lg:col-start-2">
-          {isPreorder && (
+          {preorder ? (
             <p className="inline-flex items-center gap-3 rounded-2xl bg-terracotta text-parchment py-2 pl-2 pr-5 mb-6 shadow-lg shadow-terracotta/25">
-              <span className="rounded-xl bg-parchment px-3 py-2 text-xl font-semibold leading-none tabular-nums text-terracotta">
-                −{discount}%
-              </span>
+              {discount > 0 && (
+                <span className="rounded-xl bg-parchment px-3 py-2 text-xl font-semibold leading-none tabular-nums text-terracotta">
+                  −{discount}%
+                </span>
+              )}
               <Gift className="hidden size-5 shrink-0 sm:block" aria-hidden />
               {/* Переносим по «·», а не посреди «мастер-класс». На узких
                   экранах (320px) допускаем перенос и после «Предзаказ». */}
@@ -70,6 +102,11 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 <span>второй мастер&#8209;класс в подарок</span>
               </span>
             </p>
+          ) : (
+            <p className="inline-flex items-center gap-2 rounded-2xl bg-white/80 py-2 px-4 mb-6 text-base font-medium text-espresso lg:text-lg">
+              <Check className="size-5 shrink-0 text-sage" aria-hidden />
+              Уроки уже открыты — начните сегодня
+            </p>
           )}
           <h1
             id="workshop-title"
@@ -80,9 +117,10 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
           </h1>
           <p className="text-dark-grey leading-relaxed lg:mb-8">
             Ольга покажет в видеоуроках, как шаг за шагом сплести ёлку{" "}
-            {WORKSHOP_TREE_SIZE} — от выбора шнура до готового панно на стене.
-            Оплатите предзаказ сейчас — зафиксируете цену со скидкой и получите
-            уроки первыми, с запасом времени до праздника.
+            {WORKSHOP_TREE_SIZE} — от выбора шнура до готового панно на стене.{" "}
+            {preorder
+              ? "Оплатите предзаказ сейчас — зафиксируете цену со скидкой и получите уроки первыми, с запасом времени до праздника."
+              : "Уроки появятся в личном кабинете сразу после оплаты — плетите в своём темпе и успейте к празднику."}
           </p>
 
           {workshop ? (
@@ -94,9 +132,9 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 <span className="block font-serif text-3xl leading-none text-espresso">
                   {formatPrice(price)}
                 </span>
-                {isPreorder && (
+                {regularPrice && (
                   <s className="text-sm text-text-grey">
-                    {formatPrice(WORKSHOP_REGULAR_PRICE)}
+                    {formatPrice(regularPrice)}
                   </s>
                 )}
               </div>
@@ -105,7 +143,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 goal="elka_quick_buy_cta"
                 className="flex flex-1 items-center justify-center rounded-2xl bg-terracotta py-4 text-center text-parchment transition-colors hover:bg-terracotta-dark"
               >
-                {isPreorder ? "Оформить предзаказ" : "Записаться"}
+                {preorder ? "Оформить предзаказ" : "Купить мастер-класс"}
               </TrackedLink>
             </div>
           ) : null}
@@ -139,7 +177,7 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
         </div>
 
         <div className="lg:col-start-2">
-          {isPreorder && (
+          {preorder && (
             <div className="mb-10 flex gap-4 rounded-[24px] border border-terracotta/30 bg-white p-6">
               <Gift
                 className="mt-0.5 size-6 shrink-0 text-terracotta"
@@ -189,24 +227,22 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               <span className="font-serif text-4xl text-espresso">
                 {formatPrice(price)}
               </span>
-              {isPreorder && (
-                <s className="text-text-grey">
-                  {formatPrice(WORKSHOP_REGULAR_PRICE)}
-                </s>
+              {regularPrice && (
+                <s className="text-text-grey">{formatPrice(regularPrice)}</s>
               )}
             </div>
-            {isPreorder && (
-              <p className="text-sm text-text-grey mb-6">
-                Сейчас — два мастер-класса по цене предзаказа. С {releaseLabel}{" "}
-                — один, за {formatPrice(WORKSHOP_REGULAR_PRICE)}.
-              </p>
-            )}
+            <p className="text-sm text-text-grey mb-6">
+              {preorder
+                ? `Сейчас — два мастер-класса по цене предзаказа. С ${releaseLabel} — один, за ${formatPrice(regularPrice ?? price)}.`
+                : "Видеоуроки, схема и список материалов — доступ навсегда."}
+            </p>
 
             {workshop ? (
               <WorkshopPreorderButton
                 slug={workshop.slug}
                 price={workshop.price}
                 title={workshop.title}
+                preorder={preorder}
               />
             ) : (
               <ContactMasterButton
@@ -226,7 +262,9 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
                 {[
                   "Оплата картой или СБП через ЮKassa — без регистрации",
                   "Сразу после оплаты — письмо со ссылкой на личный кабинет",
-                  `Напомним о старте ${releaseLabel}: на email и, по желанию, в Telegram`,
+                  preorder
+                    ? `Напомним о старте ${releaseLabel}: на email и, по желанию, в Telegram`
+                    : "Уроки открываются сразу — смотрите с телефона или компьютера",
                 ].map((step, index) => (
                   <li key={step} className="flex gap-2.5">
                     <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-sage-pale font-serif text-xs text-espresso">
@@ -238,8 +276,53 @@ export function ElkaWorkshop({ workshop }: { workshop?: Workshop }) {
               </ol>
             ) : null}
           </div>
+
+          {!preorder && bigTree ? <BigTreeOffer bigTree={bigTree} /> : null}
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Следующий мастер-класс — большая ёлка. Появляется, когда маленькая уже
+ * вышла и большую перестали дарить за предзаказ.
+ */
+function BigTreeOffer({ bigTree }: { bigTree: Workshop }) {
+  const preorder = isPreorder(bigTree) && bigTree.releaseAt;
+  return (
+    <div
+      id={BIG_TREE_ID}
+      className="mt-6 rounded-[24px] border border-terracotta/30 bg-white p-6 lg:p-8 scroll-mt-24"
+    >
+      <p className="label-caps mb-2 text-[11px] text-terracotta">
+        {preorder
+          ? `Предзаказ до ${formatReleaseDate(preorder)}`
+          : "Второй мастер-класс"}
+      </p>
+      <h3 className="mb-2 font-serif text-2xl text-espresso">
+        Большая ёлка {BONUS_TREE_SIZE}
+      </h3>
+      <p className="mb-5 text-sm leading-relaxed text-dark-grey">
+        {preorder
+          ? `Отдельный мастер-класс по ёлке в полтора метра — для просторной стены. Уроки откроются ${formatReleaseDate(preorder)}; оформите предзаказ сейчас — по цене со скидкой.`
+          : "Отдельный мастер-класс по ёлке в полтора метра — для просторной стены."}
+      </p>
+      <div className="mb-5 flex items-baseline gap-3">
+        <span className="font-serif text-3xl text-espresso">
+          {formatPrice(bigTree.price)}
+        </span>
+        {bigTree.regularPrice && (
+          <s className="text-text-grey">{formatPrice(bigTree.regularPrice)}</s>
+        )}
+      </div>
+      <WorkshopPreorderButton
+        slug={bigTree.slug}
+        price={bigTree.price}
+        title={bigTree.title}
+        preorder={Boolean(preorder)}
+        goal="elka_big_tree_buy"
+      />
+    </div>
   );
 }

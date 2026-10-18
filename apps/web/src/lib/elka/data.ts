@@ -12,10 +12,20 @@ export const WORKSHOP_PATH = "/elka-makrame";
 export const TREES_PATH = "/elka-makrame-na-stenu";
 
 export const WORKSHOP_SLUG = "elka-makrame";
-/** Цена мастер-класса после выхода. Предзаказная цена берётся из базы. */
+/**
+ * Цены и старт, пока база недоступна. Живые цены берутся из базы, а после
+ * старта сами переключаются на цену без скидки (lib/workshops/release-price).
+ */
 export const WORKSHOP_REGULAR_PRICE = 990;
-/** Показываем, пока мастер-класс не опубликован в базе. */
 export const WORKSHOP_PREORDER_FALLBACK_PRICE = 690;
+export const WORKSHOP_FALLBACK_RELEASE_AT = "2026-10-20T07:00:00.000Z";
+
+/** Цена мастер-класса без базы: до запасной даты старта — предзаказная. */
+export function fallbackWorkshopPrice(now = new Date()): number {
+  return now.getTime() < Date.parse(WORKSHOP_FALLBACK_RELEASE_AT)
+    ? WORKSHOP_PREORDER_FALLBACK_PRICE
+    : WORKSHOP_REGULAR_PRICE;
+}
 /** Ёлка из этого мастер-класса. Неразрывные пробелы — размер не рвётся переносом. */
 export const WORKSHOP_TREE_SIZE = "50 × 110 см";
 /**
