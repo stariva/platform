@@ -33,7 +33,10 @@ export async function POST(request: Request) {
     if (droppedBefore > 0) {
       logger.warn("csp.violation.dropped", { count: droppedBefore });
     }
-    if (allowed) logger.warn("csp.violation", { ...violation, userAgent });
+    if (allowed) {
+      const { sample: _sample, ...fields } = violation;
+      logger.warn("csp.violation", { ...fields, userAgent });
+    }
   }
   return new Response(null, { status: 204 });
 }

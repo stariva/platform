@@ -52,7 +52,6 @@ test("a report-uri report is logged without query strings and secret paths", asy
         sourceFile: "https://stariva.ru/order/status",
         line: 12,
         column: 3,
-        sample: "alert('***')",
         userAgent: "Firefox/140",
       },
     ],
@@ -84,6 +83,7 @@ test("a Reporting API batch logs each CSP violation and skips other report types
           blockedURL: "data:image/png;base64,AAAA",
           effectiveDirective: "img-src",
           disposition: "report",
+          sample: "alert('private content')",
         },
       },
       { type: "deprecation", body: { id: "x", message: "y" } },
@@ -92,6 +92,9 @@ test("a Reporting API batch logs each CSP violation and skips other report types
   );
 
   expect(response.status).toBe(204);
+  for (const [, meta] of violations()) {
+    expect(meta).not.toHaveProperty("sample");
+  }
   expect(violations().map(([, meta]) => meta)).toEqual([
     expect.objectContaining({
       documentUrl: "https://stariva.ru/catalog",
