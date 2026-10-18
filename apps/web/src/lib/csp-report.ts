@@ -25,11 +25,13 @@ const MAX_FIELD_LENGTH = 200;
 
 type Fields = Record<string, unknown>;
 
+/** Возвращает непустую строку, обрезанную до max символов, или undefined. */
 function text(value: unknown, max = MAX_FIELD_LENGTH): string | undefined {
   if (typeof value !== "string" || !value) return undefined;
   return value.slice(0, max);
 }
 
+/** Принимает только целую неотрицательную позицию строки или столбца. */
 function position(value: unknown): number | undefined {
   return typeof value === "number" && Number.isInteger(value) && value >= 0
     ? value
@@ -59,6 +61,7 @@ export function reportUrl(value: unknown): string | undefined {
   );
 }
 
+/** Нормализует поля по карте имён; без URL документа или директивы пропускает отчёт. */
 function violation(
   fields: Fields,
   names: {
@@ -108,6 +111,7 @@ const REPORTING_API = {
   sample: "sample",
 };
 
+/** Проверяет, что значение — ненулевой объект, не массив. */
 function isFields(value: unknown): value is Fields {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

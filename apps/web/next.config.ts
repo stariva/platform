@@ -131,6 +131,7 @@ const config: NextConfig = {
   // ответил бы 308 на /ingest/e/ и сломал отправку. Редирект для остальных
   // страниц — в redirects() выше.
   skipTrailingSlashRedirect: true,
+  /** Задаёт общие защитные заголовки и статическую CSP для API, кроме /api/kp/. */
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

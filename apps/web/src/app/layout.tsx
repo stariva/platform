@@ -126,6 +126,7 @@ export const metadata: Metadata = {
   },
 };
 
+/** Рендерит общий каркас страницы по запросу, чтобы скрипты получили nonce CSP. */
 export default async function RootLayout({
   children,
 }: Readonly<{

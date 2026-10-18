@@ -77,6 +77,7 @@ const formatDate = (date: Date) =>
     timeZone: "Europe/Moscow",
   });
 
+/** Отдаёт HTML коммерческого предложения с CSP; параметр download включает скачивание. */
 export function GET(request: NextRequest) {
   const download = request.nextUrl.searchParams.has("download");
   const preparedAt = new Date();
