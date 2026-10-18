@@ -58,14 +58,17 @@ export async function applyWorkshopPayment(
 /**
  * Покупатель вернулся с оплаты раньше вебхука: спрашиваем статус у YooKassa
  * сами, чтобы сразу показать «Вы записаны». Сбой — не страшно, придёт вебхук.
+ * false означает сбой сверки: отправку напоминания нужно отложить.
  */
 export async function syncPendingWorkshopOrder(
   order: WorkshopOrder,
-): Promise<void> {
-  if (order.status !== "pending" || !order.paymentId) return;
+): Promise<boolean> {
+  if (order.status !== "pending" || !order.paymentId) return true;
   try {
     await applyWorkshopPayment(order, await getPayment(order.paymentId));
+    return true;
   } catch (error) {
     console.error(`[payments] Не удалось сверить заказ ${order.id}:`, error);
+    return false;
   }
 }

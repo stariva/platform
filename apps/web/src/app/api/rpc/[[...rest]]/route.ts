@@ -25,6 +25,7 @@ import { createCustomOrderServices } from "@/lib/custom-order/services";
 import { subscribeToNewsletter } from "@/lib/newsletter";
 import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
 import { workshopFileServices } from "@/lib/workshops/signed-media";
+import { runUnpaidOrderSweep } from "@/lib/workshops/unpaid-reminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,20 @@ const MAX_BODY_BYTES = 9 * 1024 * 1024;
 // Логика, которая пока живёт в витрине: письма, Telegram, заказы и
 // better-auth тянут за собой половину apps/web
 const services: WebServices = {
-  runWorkshopReminderSweep: () => runWorkshopReminderSweep(),
+  // Один крон воркера на все письма по мастер-классам: покупка, старт и
+  // «оплата не завершилась»
+  async runWorkshopReminderSweep() {
+    const now = new Date();
+    const results = [
+      await runWorkshopReminderSweep(now),
+      await runUnpaidOrderSweep(now),
+    ];
+    return {
+      checked: results.reduce((sum, r) => sum + r.checked, 0),
+      delivered: results.reduce((sum, r) => sum + r.delivered, 0),
+      failed: results.reduce((sum, r) => sum + r.failed, 0),
+    };
+  },
   issueFormToken: async () => issueFormToken((await auth.$context).secret),
   subscribeToNewsletter,
   customOrders: createCustomOrderServices({
