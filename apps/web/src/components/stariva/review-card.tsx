@@ -12,12 +12,38 @@ import {
 } from "@/components/ui/dialog";
 import type { Review } from "@/lib/catalog/types";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+const MONTHS = [
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
+];
+
+const moscowParts = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Europe/Moscow",
+  day: "numeric",
+  month: "numeric",
+  year: "numeric",
+});
+
+/**
+ * Дата рисуется и на сервере, и в браузере, поэтому строку собираем сами:
+ * toLocaleDateString зависит от часового пояса и от ICU (в Safari пробел
+ * перед «г.» другой), и гидрация падала с #418.
+ */
+export function formatDate(iso: string) {
+  const parts = moscowParts.formatToParts(new Date(iso));
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return `${part("day")} ${MONTHS[part("month") - 1]} ${part("year")} г.`;
 }
 
 /** Renders an accessible five-star representation of a numeric rating. */
