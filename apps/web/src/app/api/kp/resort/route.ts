@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { SELLER_INN } from "@stariva/config/seller";
 import { type NextRequest, NextResponse } from "next/server";
 import { ORDER_ITEM_TYPES, startingPrice } from "@/lib/b2b/order";
@@ -7,6 +8,20 @@ import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 const SITE_HOST = BASE_URL.replace(/^https?:\/\//, "");
 const VALID_DAYS = 30;
+
+// Кнопка печати без inline-обработчика: CSP пропускает только этот скрипт по хэшу.
+const PRINT_SCRIPT =
+  'document.querySelector("[data-print]").addEventListener("click", () => window.print());';
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'none'",
+  `script-src 'sha256-${createHash("sha256").update(PRINT_SCRIPT).digest("base64")}'`,
+  "style-src 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src https://cdn.stariva.ru",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join("; ");
 
 const contacts = {
   telegram: "Olga_Stariva",
@@ -368,7 +383,7 @@ export function GET(request: NextRequest) {
 </head>
 <body>
 <nav class="toolbar" aria-label="Действия с документом">
-  <button class="btn" type="button" onclick="window.print()">Сохранить в PDF</button>
+  <button class="btn" type="button" data-print>Сохранить в PDF</button>
   <a class="btn btn-secondary" href="https://t.me/${contacts.telegram}" target="_blank" rel="noopener noreferrer">Обсудить в Telegram</a>
   <a class="btn btn-ghost" href="${BASE_URL}/resort">На сайт</a>
 </nav>
@@ -493,6 +508,7 @@ export function GET(request: NextRequest) {
 
   </div>
 </main>
+<script>${PRINT_SCRIPT}</script>
 </body>
 </html>`;
 
@@ -502,6 +518,7 @@ export function GET(request: NextRequest) {
       "Content-Disposition": `${download ? "attachment" : "inline"}; filename="stariva-kp-bazy-otdykha.html"`,
       "Cache-Control": "public, max-age=3600",
       "X-Robots-Tag": "noindex",
+      "Content-Security-Policy": CONTENT_SECURITY_POLICY,
     },
   });
 }

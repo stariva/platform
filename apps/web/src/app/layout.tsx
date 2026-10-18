@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { ChatWidget } from "@/components/stariva/chat-widget";
 import { CookieBanner } from "@/components/stariva/cookie-banner";
@@ -125,11 +126,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Nonce из CSP (proxy.ts) новый на каждый запрос, поэтому все страницы
+  // рендерятся по запросу: в заранее собранном HTML скрипты были бы без nonce
+  // и браузер бы их заблокировал.
+  await connection();
   return (
     <html
       lang="ru"

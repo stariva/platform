@@ -104,19 +104,8 @@ const categoryFaqJsonLd = (
   ],
 });
 
-export const revalidate = 3600;
-
 interface ProductPageProps {
   params: Promise<{ category: string; slug: string }>;
-}
-
-export async function generateStaticParams() {
-  const { getProducts } = await import("@/lib/catalog/service");
-  const products = await getProducts();
-  return products.map((p) => ({
-    category: p.category,
-    slug: p.slug,
-  }));
 }
 
 export async function generateMetadata({

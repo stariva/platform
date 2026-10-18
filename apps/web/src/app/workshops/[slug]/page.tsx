@@ -36,15 +36,6 @@ import {
 } from "@/lib/workshops-data";
 import { WorkshopPurchase } from "./workshop-purchase";
 
-// Страницы курсов собираются по запросу и кэшируются; админка сбрасывает кэш
-// при сохранении. Старт уроков меняет цену и кнопку без сохранения в админке,
-// поэтому кэш короткий: дольше пяти минут старая цена на странице не висит.
-export const revalidate = 300;
-
-export function generateStaticParams() {
-  return [];
-}
-
 export async function generateMetadata({
   params,
 }: {

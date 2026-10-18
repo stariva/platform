@@ -1,67 +1,17 @@
 import type { NextConfig } from "next";
 
 import "./src/env";
+import { staticContentSecurityPolicy } from "./src/lib/csp";
 
 /**
- * Security headers applied to every response.
- *
- * The Content-Security-Policy is a pragmatic baseline that works with the
- * Next.js App Router and Vercel Analytics out of the box. For the strictest
- * setup, switch to a nonce-based CSP in `proxy.ts` and drop `'unsafe-inline'`.
+ * Security headers applied to every response. Pages get their nonce-based
+ * Content-Security-Policy from `src/proxy.ts`; responses the proxy skips
+ * (API, files) get the static policy below.
  * @see https://nextjs.org/docs/app/guides/content-security-policy
  */
 const isDev = process.env.NODE_ENV === "development";
 
-// Метрика ходит на региональный домен по геолокации посетителя
-// (mc.yandex.md из Молдовы, mc.yandex.kz из Казахстана и т.д.).
-const metrikaHosts = [
-  "mc.yandex.ru",
-  "mc.yandex.az",
-  "mc.yandex.by",
-  "mc.yandex.co.il",
-  "mc.yandex.com",
-  "mc.yandex.com.am",
-  "mc.yandex.com.ge",
-  "mc.yandex.com.tr",
-  "mc.yandex.ee",
-  "mc.yandex.fr",
-  "mc.yandex.kg",
-  "mc.yandex.kz",
-  "mc.yandex.lt",
-  "mc.yandex.lv",
-  "mc.yandex.md",
-  "mc.yandex.tj",
-  "mc.yandex.tm",
-  "mc.yandex.uz",
-  "mc.webvisor.com",
-  "mc.webvisor.org",
-];
-const metrikaFrames = metrikaHosts.map((host) => `https://${host}`).join(" ");
-const metrikaSockets = metrikaHosts.map((host) => `wss://${host}`).join(" ");
-
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com https://mc.yandex.ru https://top-fwz1.mail.ru https://privacy-cs.mail.ru https://cloud.umami.is https://api-maps.yandex.ru https://yastatic.net https://core-renderer-tiles.maps.yandex.net`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "media-src 'self' blob: https://storage.yandexcloud.net",
-  // hls.js разбирает видео в воркере из blob:
-  "worker-src 'self' blob:",
-  `connect-src 'self' https: ${metrikaSockets}`,
-  `frame-src ${metrikaFrames}`,
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  // Случайная http-ссылка на картинку или скрипт не уйдёт открытым текстом
-  ...(isDev ? [] : ["upgrade-insecure-requests"]),
-]
-  .join("; ")
-  .concat(";");
-
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
@@ -182,7 +132,20 @@ const config: NextConfig = {
   // страниц — в redirects() выше.
   skipTrailingSlashRedirect: true,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Страницы получают CSP с nonce в proxy.ts. КП для баз отдыха — HTML со
+      // своей политикой, её не перекрываем.
+      {
+        source: "/api/:path((?!kp/).*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: staticContentSecurityPolicy({ isDev }),
+          },
+        ],
+      },
+    ];
   },
 };
 

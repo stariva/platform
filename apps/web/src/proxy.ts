@@ -8,10 +8,25 @@ import {
   serializeAttribution,
   touchFromUrl,
 } from "@/lib/campaign-attribution";
+import { createNonce, pageContentSecurityPolicy } from "@/lib/csp";
 
-/** Применяет защиту маршрутов и добавляет cookie UTM-атрибуции к ответу. */
+/**
+ * Выдаёт странице CSP с nonce, применяет защиту маршрутов и добавляет cookie
+ * UTM-атрибуции к ответу.
+ */
 export function proxy(request: NextRequest) {
-  return rememberCampaign(request, guard(request));
+  const policy = pageContentSecurityPolicy({
+    nonce: createNonce(),
+    isDev: process.env.NODE_ENV === "development",
+  });
+  // Next берёт nonce из CSP запроса и ставит его на свои скрипты
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("Content-Security-Policy", policy);
+  const response =
+    guard(request) ??
+    NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", policy);
+  return rememberCampaign(request, response);
 }
 
 /**
@@ -21,7 +36,7 @@ export function proxy(request: NextRequest) {
  * Полноценная проверка сессии выполняется в layout раздела /account через
  * requireSession(). Это рекомендованный подход better-auth для Next.js.
  */
-function guard(request: NextRequest) {
+function guard(request: NextRequest): NextResponse | undefined {
   if (
     ["INVALID_TOKEN", "EXPIRED_TOKEN"].includes(
       request.nextUrl.searchParams.get("error") ?? "",
@@ -32,8 +47,7 @@ function guard(request: NextRequest) {
     recovery.searchParams.set("error", "INVALID_TOKEN");
     return NextResponse.redirect(recovery);
   }
-  if (!request.nextUrl.pathname.startsWith("/account"))
-    return NextResponse.next();
+  if (!request.nextUrl.pathname.startsWith("/account")) return;
   const sessionCookie = getSessionCookie(request);
 
   if (!sessionCookie) {
@@ -44,8 +58,6 @@ function guard(request: NextRequest) {
     );
     return NextResponse.redirect(signInUrl);
   }
-
-  return NextResponse.next();
 }
 
 /** Заход по UTM-ссылке → first-party cookie для атрибуции заказа. */
@@ -71,31 +83,10 @@ function rememberCampaign(request: NextRequest, response: NextResponse) {
 
 export const config = {
   matcher: [
-    "/account/:path*",
-    "/",
-    "/a",
-    "/sign-in",
-    // Любая страница, если в ссылке есть UTM-метка. Только литералы:
-    // Next разбирает matcher статически, вычисленные значения игнорирует.
-    {
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
-      has: [{ type: "query", key: "utm_source" }],
-    },
-    {
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
-      has: [{ type: "query", key: "utm_medium" }],
-    },
-    {
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
-      has: [{ type: "query", key: "utm_campaign" }],
-    },
-    {
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
-      has: [{ type: "query", key: "utm_content" }],
-    },
-    {
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
-      has: [{ type: "query", key: "utm_term" }],
-    },
+    // Все страницы: без nonce в CSP их скрипты не выполнятся. Мимо прокси —
+    // API, PostHog (/ingest), статика и файлы с расширением (robots.txt,
+    // sitemap.xml, картинки из public). Только литерал: Next разбирает matcher
+    // статически.
+    "/((?!api|ingest|_next/static|_next/image|.*\\..*).*)",
   ],
 };
