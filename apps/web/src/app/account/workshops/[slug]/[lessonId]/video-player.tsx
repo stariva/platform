@@ -69,6 +69,17 @@ const AUTOPLAY_KEY = "stariva-player-autoplay";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
+// Буфер hls.js. Вперёд держим минуту: урок одного качества (~6 Мбит/с), и
+// запас переживает провалы мобильной сети. Позади — полминуты: по умолчанию
+// hls.js копит всё просмотренное, на телефоне память MSE кончается, и он
+// выбрасывает уже скачанные куски и урезает буфер — видео то и дело встаёт.
+// maxMaxBufferLength не даёт hls.js растянуть буфер сверх этого по maxBufferSize
+const HLS_BUFFER = {
+  maxBufferLength: 60,
+  maxMaxBufferLength: 60,
+  backBufferLength: 30,
+};
+
 interface PlayerPrefs {
   volume: number;
   muted: boolean;
@@ -187,13 +198,30 @@ export function VideoPlayer({
     };
     // Новая ссылка — новый элемент: адаптер hls.js помнит ошибку прошлой
     // загрузки, и диалог ошибки плеера не закрылся бы
-    return source.type === "hls" ? (
-      <HlsJsVideo
-        key={source.url}
-        {...common}
-        source={{ src: source.url, type: "application/vnd.apple.mpegurl" }}
-      />
-    ) : (
+    if (source.type === "hls") {
+      const { position } = resumeRef.current;
+      return (
+        <HlsJsVideo
+          key={source.url}
+          {...common}
+          // Куски грузятся сразу, ещё до «Play», — старт без ожидания.
+          // С metadata hls.js до запуска держал буфер в одну секунду
+          preload="auto"
+          source={{
+            src: source.url,
+            type: "application/vnd.apple.mpegurl",
+            engine: {
+              hlsJs: {
+                ...HLS_BUFFER,
+                // Грузим сразу с места, где остановились, а не с начала урока
+                startPosition: position > 0 ? position : -1,
+              },
+            },
+          }}
+        />
+      );
+    }
+    return (
       <Video key={source.url} {...common} src={source.url} />
     );
   }, [source]);
@@ -389,6 +417,10 @@ function LessonController({
       lastSavedRef.current = position;
       if (initial && position > 15) setResumeNotice(position);
       store.seek(position).then(start, start);
+    } else if (position > 0) {
+      // Урок досмотрен до конца — заново с начала. hls.js уже встал на
+      // сохранённое место (startPosition), сам он к нулю не вернётся
+      store.seek(0).then(start, start);
     } else {
       start();
     }
