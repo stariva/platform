@@ -15,7 +15,11 @@ import {
   WORKSHOP_MATERIAL_TYPES,
   type WorkshopMaterialFileValues,
 } from "@stariva/validators";
-import { IconFileUpload, IconTrash } from "@tabler/icons-react";
+import {
+  IconExternalLink,
+  IconFileUpload,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { client } from "~/orpc/react";
 import { formatBytes, putFile } from "./upload";
@@ -72,6 +76,21 @@ export function WorkshopFiles({
     }
   };
 
+  const open = async (file: WorkshopMaterialFileValues) => {
+    // Вкладку открываем сразу, по клику: после await браузер её заблокирует
+    const tab = window.open("", "_blank");
+    try {
+      const { url } = await client.admin.workshops.materialUrl({
+        key: file.key,
+      });
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+    } catch (err) {
+      tab?.close();
+      toast.error(`${file.label}: ${(err as Error).message}`);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -101,6 +120,15 @@ export function WorkshopFiles({
                   )
                 }
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Открыть файл"
+                onClick={() => void open(file)}
+              >
+                <IconExternalLink />
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
