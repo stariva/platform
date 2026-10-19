@@ -12,12 +12,12 @@ import {
   or,
   sql,
 } from "@stariva/db";
+import { videoRenditions, workshops } from "@stariva/db/schema";
 import {
-  type VideoRenditionRow,
-  videoRenditions,
-  workshops,
-} from "@stariva/db/schema";
-import { objectExists, workshopHlsPrefix } from "@stariva/storage";
+  hlsPlaylistFile,
+  objectExists,
+  workshopHlsPrefix,
+} from "@stariva/storage";
 
 /** Сколько раз воркер пробует нарезать видео, прежде чем сдаться. */
 export const MAX_RENDITION_ATTEMPTS = 3;
@@ -28,25 +28,41 @@ export const PROCESSING_LEASE_MS = 20 * 60_000;
 // Пауза перед новой попыткой после ошибки
 const RETRY_BACKOFF_MS = 30 * 60_000;
 
+/** Нарезка, которую видят зрители: папка в бакете и плейлист в ней. */
+export interface ReadyRendition {
+  hlsPrefix: string;
+  /** index.m3u8 (одно качество) или master.m3u8 (несколько). */
+  playlist: string;
+}
+
 /**
- * Готовая HLS-версия видео или null. Пока таблицы нет (миграция не
- * применена) или база недоступна — null: плеер покажет исходный MP4.
+ * Готовая HLS-версия видео или null. Пока видео перерезают в новую версию,
+ * это прежняя нарезка. Пока колонок нет (миграция не применена) или база
+ * недоступна — null: плеер покажет исходный MP4.
  */
 export async function getReadyRendition(
   videoKey: string,
-): Promise<VideoRenditionRow | null> {
+): Promise<ReadyRendition | null> {
   try {
     const [row] = await db
       .select()
       .from(videoRenditions)
-      .where(
-        and(
-          eq(videoRenditions.videoKey, videoKey),
-          eq(videoRenditions.status, "ready"),
-        ),
-      )
+      .where(eq(videoRenditions.videoKey, videoKey))
       .limit(1);
-    return row ?? null;
+    if (row?.readyHlsPrefix) {
+      return {
+        hlsPrefix: row.readyHlsPrefix,
+        playlist: hlsPlaylistFile(row.readyVersion ?? 1),
+      };
+    }
+    // Готово, но без ready_*: дорезал воркер, ещё не знающий о версиях
+    if (row?.status === "ready") {
+      return {
+        hlsPrefix: row.hlsPrefix,
+        playlist: hlsPlaylistFile(row.version),
+      };
+    }
+    return null;
   } catch (error) {
     logger.warn("video.rendition.unavailable", { error: String(error) });
     return null;
@@ -87,10 +103,16 @@ async function failExhaustedAbandonedAttempts(now: Date): Promise<void> {
 }
 
 /**
- * Берёт в работу следующее видео без HLS-версии. Занятое видео другой
- * воркер не получит, пока не истечёт аренда. null — нарезать нечего.
+ * Берёт в работу следующее видео без HLS-версии, а когда таких нет — готовое,
+ * но нарезанное в версию младше той, что умеет воркер (`version`). Занятое
+ * видео другой воркер не получит, пока не истечёт аренда. null — нарезать
+ * нечего.
+ *
+ * Перерезка начинает счёт попыток заново, а зрители до её конца смотрят
+ * прежнюю нарезку (ready_hls_prefix). Если перерезать не вышло, прежняя так
+ * и остаётся.
  */
-export async function claimNextVideo(): Promise<{
+export async function claimNextVideo(version = 1): Promise<{
   videoKey: string;
   hlsPrefix: string;
   attemptId: number;
@@ -106,11 +128,21 @@ export async function claimNextVideo(): Promise<{
     .where(inArray(videoRenditions.videoKey, keys));
   const byKey = new Map(existing.map((row) => [row.videoKey, row]));
   const now = new Date();
+  const isUpgrade = (videoKey: string) => {
+    const row = byKey.get(videoKey);
+    return row?.status === "ready" && row.version < version;
+  };
+  // Сначала видео без нарезки: перерезка готовых подождёт
+  const queue = [
+    ...keys.filter((key) => !isUpgrade(key)),
+    ...keys.filter(isUpgrade),
+  ];
 
-  for (const videoKey of keys) {
+  for (const videoKey of queue) {
     const row = byKey.get(videoKey);
     if (
       row &&
+      !isUpgrade(videoKey) &&
       (row.status === "ready" ||
         row.attempts >= MAX_RENDITION_ATTEMPTS ||
         (row.leaseUntil && row.leaseUntil > now))
@@ -121,12 +153,14 @@ export async function claimNextVideo(): Promise<{
     const hlsPrefix = `${workshopHlsPrefix(videoKey)}/${randomUUID()}`;
     const leaseUntil = new Date(now.getTime() + PROCESSING_LEASE_MS);
     // Условный upsert: если видео успел забрать другой воркер, строки не будет
+    const wasReady = sql`${videoRenditions.status} = 'ready'`;
     const [claimed] = await db
       .insert(videoRenditions)
       .values({
         videoKey,
         status: "processing",
         hlsPrefix,
+        version,
         attempts: 1,
         leaseUntil,
       })
@@ -135,17 +169,29 @@ export async function claimNextVideo(): Promise<{
         set: {
           status: "processing",
           hlsPrefix,
-          attempts: sql`${videoRenditions.attempts} + 1`,
+          version,
+          // Перерезка готового видео — новый счёт попыток
+          attempts: sql`case when ${wasReady} then 1 else ${videoRenditions.attempts} + 1 end`,
+          // Готовая нарезка без ready_* (её закончил воркер до версий):
+          // запоминаем, чтобы зрители смотрели её, пока идёт перерезка
+          readyHlsPrefix: sql`coalesce(${videoRenditions.readyHlsPrefix}, case when ${wasReady} then ${videoRenditions.hlsPrefix} end)`,
+          readyVersion: sql`coalesce(${videoRenditions.readyVersion}, case when ${wasReady} then ${videoRenditions.version} end)`,
           leaseUntil,
           error: null,
           updatedAt: now,
         },
-        setWhere: and(
-          ne(videoRenditions.status, "ready"),
-          lt(videoRenditions.attempts, MAX_RENDITION_ATTEMPTS),
-          or(
-            isNull(videoRenditions.leaseUntil),
-            lt(videoRenditions.leaseUntil, now),
+        setWhere: or(
+          and(
+            ne(videoRenditions.status, "ready"),
+            lt(videoRenditions.attempts, MAX_RENDITION_ATTEMPTS),
+            or(
+              isNull(videoRenditions.leaseUntil),
+              lt(videoRenditions.leaseUntil, now),
+            ),
+          ),
+          and(
+            eq(videoRenditions.status, "ready"),
+            lt(videoRenditions.version, version),
           ),
         ),
       })
@@ -190,12 +236,20 @@ function isCurrentAttempt({ videoKey, attemptId }: RenditionAttempt) {
 export async function getAttemptHlsPrefix(
   attempt: RenditionAttempt,
 ): Promise<string | null> {
+  return (await getAttempt(attempt))?.hlsPrefix ?? null;
+}
+
+/** Папка и версия нарезки текущей попытки; null — попытка уже не текущая. */
+async function getAttempt(attempt: RenditionAttempt) {
   const [rendition] = await db
-    .select({ hlsPrefix: videoRenditions.hlsPrefix })
+    .select({
+      hlsPrefix: videoRenditions.hlsPrefix,
+      version: videoRenditions.version,
+    })
     .from(videoRenditions)
     .where(isCurrentAttempt(attempt))
     .limit(1);
-  return rendition?.hlsPrefix ?? null;
+  return rendition ?? null;
 }
 
 /**
@@ -220,15 +274,17 @@ export async function extendRenditionLease(
 
 /**
  * Воркер залил все куски. Отмечаем готовым, только если плейлист правда
- * лежит в бакете: он заливается последним.
+ * лежит в бакете: он заливается последним (у версии 2 — master.m3u8). С
+ * этого момента зрители смотрят новую нарезку.
  */
 export async function completeRendition(
   attempt: RenditionAttempt,
   durationSeconds: number,
 ): Promise<"ready" | "not_found" | "missing_playlist"> {
-  const hlsPrefix = await getAttemptHlsPrefix(attempt);
-  if (!hlsPrefix) return "not_found";
-  if (!(await objectExists(`${hlsPrefix}/index.m3u8`))) {
+  const current = await getAttempt(attempt);
+  if (!current) return "not_found";
+  const { hlsPrefix, version } = current;
+  if (!(await objectExists(`${hlsPrefix}/${hlsPlaylistFile(version)}`))) {
     return "missing_playlist";
   }
   const [row] = await db
@@ -236,6 +292,8 @@ export async function completeRendition(
     .set({
       status: "ready",
       hlsPrefix,
+      readyHlsPrefix: hlsPrefix,
+      readyVersion: version,
       durationSeconds: Math.round(durationSeconds),
       leaseUntil: null,
       error: null,

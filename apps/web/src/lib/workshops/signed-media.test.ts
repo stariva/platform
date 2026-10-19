@@ -36,6 +36,7 @@ mock.module("@stariva/web-api", () => ({
   isAdminUserId: async () => admin,
   getReadyRendition: async () => ({
     hlsPrefix: "workshops/test/hls/lesson/attempt",
+    playlist: "master.m3u8",
   }),
 }));
 mock.module("@/lib/workshops/workshops-db", () => ({
@@ -78,6 +79,8 @@ test("signed-in HLS grants are bound to the incoming cookie", async () => {
   free = false;
   const result = await sign("user", "better-auth.session_token=token.sig");
   assert.ok(result.status === "ok" && result.type === "hls");
+  // Плейлист — тот, что у нарезки: у нескольких качеств master.m3u8
+  assert.equal(result.url.split("/").at(-1), "master.m3u8");
   const token = result.url.split("/").at(-2);
   assert.equal(
     verifyHlsGrant(token ?? "", secret)?.session,

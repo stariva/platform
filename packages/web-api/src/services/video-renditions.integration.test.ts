@@ -34,6 +34,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       completeRendition,
       extendRenditionLease,
       failRendition,
+      getReadyRendition,
       PROCESSING_LEASE_MS,
       WORKER_LOST_ERROR,
     } = await import("./video-renditions");
@@ -223,6 +224,46 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       expect(abandoned?.status).toBe("failed");
       expect(abandoned?.error).toBe(WORKER_LOST_ERROR);
       expect(abandoned?.attempts).toBe(3);
+
+      // A single-quality cut finished by a worker that predates versions:
+      // viewers keep it while a version-2 worker re-cuts the video.
+      const oldPrefix = `${videoKey}-old`;
+      await db
+        .update(videoRenditions)
+        .set({
+          status: "ready",
+          hlsPrefix: oldPrefix,
+          version: 1,
+          readyHlsPrefix: null,
+          readyVersion: null,
+          leaseUntil: null,
+        })
+        .where(eq(videoRenditions.videoKey, videoKey));
+      const oldCut = { hlsPrefix: oldPrefix, playlist: "index.m3u8" };
+      expect(await getReadyRendition(videoKey)).toEqual(oldCut);
+      expect(await claimNextVideo()).toBeNull();
+      const upgrade = await claimNextVideo(2);
+      if (!upgrade) throw new Error("Expected upgrade claim");
+      expect(upgrade.attemptId).toBe(1);
+      expect(upgrade.hlsPrefix).not.toBe(oldPrefix);
+      const [upgrading] = await read();
+      expect(upgrading?.status).toBe("processing");
+      expect(upgrading?.version).toBe(2);
+      expect(upgrading?.readyHlsPrefix).toBe(oldPrefix);
+      expect(upgrading?.readyVersion).toBe(1);
+      expect(await getReadyRendition(videoKey)).toEqual(oldCut);
+      expect(await claimNextVideo(2)).toBeNull();
+
+      playlistExists = async (key) =>
+        key === `${upgrade.hlsPrefix}/master.m3u8`;
+      expect(
+        await completeRendition({ videoKey, attemptId: upgrade.attemptId }, 60),
+      ).toBe("ready");
+      expect(await getReadyRendition(videoKey)).toEqual({
+        hlsPrefix: upgrade.hlsPrefix,
+        playlist: "master.m3u8",
+      });
+      expect(await claimNextVideo(2)).toBeNull();
     } finally {
       await db
         .delete(videoRenditions)
