@@ -13,6 +13,9 @@ export interface YooKassaPayment {
   status: "pending" | "waiting_for_capture" | "succeeded" | "canceled";
   paid: boolean;
   amount: YooKassaAmount;
+  /** ISO 8601: когда платёж создан и когда деньги списаны. */
+  created_at?: string;
+  captured_at?: string;
   confirmation?: {
     type: string;
     confirmation_url?: string;

@@ -1,4 +1,5 @@
 import { grantAccess } from "@/lib/account/access";
+import { issueNpdReceipt } from "@/lib/npd/issue";
 import {
   markOrderCanceled,
   markOrderPaid,
@@ -53,6 +54,18 @@ export async function applyWorkshopPayment(
     );
     await notifyWorkshopBooked(order.id);
   }
+
+  // Вне wasUpdated: если прошлый вызов упал до чека, повтор вебхука его догонит
+  const title = workshop?.title ?? order.workshopSlug;
+  await issueNpdReceipt({
+    payment,
+    target: { kind: "workshop", orderId: order.id },
+    services: [
+      { name: `Мастер-класс «${title}»`, amount: order.amount, quantity: 1 },
+    ],
+    email: { to: order.contactEmail, subject: `мастер-классу «${title}»` },
+    expected: 1,
+  });
 }
 
 /**

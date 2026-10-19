@@ -10,13 +10,16 @@ import {
   claimProductOrderShipment,
   getOrderPayment,
   getProductOrderById,
+  getProductOrderCustomerEmail,
   getProductOrderItems,
+  listOrderPayments,
   markOrderPaymentCanceled,
   markOrderPaymentSucceeded,
   markProductOrderCanceled,
   markProductOrderOzonFailed,
   markProductOrderPaid,
 } from "@/lib/commerce/orders";
+import { issueNpdReceipt } from "@/lib/npd/issue";
 import { createOzonDeliveryOrder } from "@/lib/ozon-delivery/client";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import {
@@ -47,7 +50,7 @@ export async function applyProductOrderPayment(
 
   // Изделие под заказ оплачивается по этапам: ни Ozon, ни склада
   if (order.kind === "made_to_order") {
-    await handleMadeToOrderPayment(orderId, payment, canceled, succeeded);
+    await handleMadeToOrderPayment(order, payment, canceled, succeeded);
     return;
   }
 
@@ -71,11 +74,32 @@ export async function applyProductOrderPayment(
     await notifyCustomer(orderId, "paid");
   }
 
+  // До Ozon: сбой отправления бросает ошибку, а чек нужен в любом случае
+  const items = await getProductOrderItems(orderId);
+  await issueNpdReceipt({
+    payment,
+    target: { kind: "product", orderId },
+    services: [
+      ...items.map((i) => ({
+        name: i.name,
+        amount: i.price,
+        quantity: i.quantity,
+      })),
+      ...(order.amountDelivery > 0
+        ? [{ name: "Доставка", amount: order.amountDelivery, quantity: 1 }]
+        : []),
+    ],
+    email: {
+      to: await getProductOrderCustomerEmail(order),
+      subject: `заказу №${order.number}`,
+    },
+    expected: 1,
+  });
+
   const attemptId = await claimProductOrderShipment(orderId);
   if (!attemptId) return;
 
   try {
-    const items = await getProductOrderItems(orderId);
     const delivery =
       order.deliveryMethod === "pickup"
         ? { method: "pickup" as const, pointId: order.deliveryPointId ?? "" }
@@ -141,11 +165,12 @@ export async function applyProductOrderPayment(
  * пришли, и мастер должен об этом узнать.
  */
 async function handleMadeToOrderPayment(
-  orderId: string,
+  order: ProductOrder,
   payment: YooKassaPayment,
   canceled: boolean,
   succeeded: boolean,
 ) {
+  const orderId = order.id;
   const rowId = payment.metadata?.orderPaymentId;
   const row = rowId ? await getOrderPayment(rowId) : null;
   if (!row || row.orderId !== orderId) {
@@ -185,6 +210,29 @@ async function handleMadeToOrderPayment(
       );
     }
   }
+
+  // Чек на каждый этап — до уведомления мастеру, которое может бросить ошибку
+  const [items, payments] = await Promise.all([
+    getProductOrderItems(orderId),
+    listOrderPayments(orderId),
+  ]);
+  const stage = row.type === "deposit" ? "предоплата" : "доплата";
+  await issueNpdReceipt({
+    payment,
+    target: { kind: "product", orderId },
+    services: [
+      {
+        name: `${items[0]?.name ?? "Изделие на заказ"}, ${stage}`,
+        amount: row.amount,
+        quantity: 1,
+      },
+    ],
+    email: {
+      to: await getProductOrderCustomerEmail(order),
+      subject: `заказу №${order.number}`,
+    },
+    expected: payments.filter((p) => p.status === "succeeded").length,
+  });
 
   // При сбое бросает ошибку — YooKassa повторит webhook, и мы отправим снова
   await notifyMadeToOrderPayment(row.id);

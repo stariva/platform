@@ -60,6 +60,10 @@ export const env = createEnv({
     // shopId и секретный ключ из личного кабинета ЮKassa
     YOOKASSA_SHOP_ID: z.string().min(1).optional(),
     YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
+    // Пароль от личного кабинета налогоплательщика (вход по ИНН из
+    // SELLER_INN): с ним сайт сам выписывает чеки НПД в «Мой налог» на
+    // каждую оплату. Без него чеки привязывают вручную в админке.
+    LKNPD_PASSWORD: z.string().min(1).optional(),
 
     // DaData Suggestions API — автоподсказка города в чекауте (поиск
     // пунктов выдачи Ozon рядом с городом покупателя).
@@ -111,6 +115,7 @@ export const env = createEnv({
     ORDER_EMAIL_FROM: process.env.ORDER_EMAIL_FROM,
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,
     YOOKASSA_SECRET_KEY: process.env.YOOKASSA_SECRET_KEY,
+    LKNPD_PASSWORD: process.env.LKNPD_PASSWORD,
     DADATA_API_KEY: process.env.DADATA_API_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     NEXT_PUBLIC_YANDEX_MAPS_API_KEY:

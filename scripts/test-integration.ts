@@ -43,6 +43,11 @@ const suites: Suite[] = [
     database: "stariva_notification_test",
   },
   {
+    file: "apps/web/src/lib/npd/issue.integration.test.ts",
+    env: "NPD_TEST_DATABASE_URL",
+    database: "stariva_npd_test",
+  },
+  {
     file: "packages/web-api/src/services/video-renditions.integration.test.ts",
     env: "RENDITION_TEST_DATABASE_URL",
     database: "stariva_rendition_test",

@@ -155,6 +155,22 @@ export async function notifyMadeToOrderPayment(
   }
 }
 
+/**
+ * Разовый алерт мастеру, который нужно разобрать руками. Сбой отправки
+ * только пишет в лог: алерт сопровождает уже сделанное дело.
+ */
+export async function notifyStaffAlert(
+  id: string,
+  message: OrderMessage,
+  scope: string,
+): Promise<void> {
+  try {
+    await send(id, message, scope);
+  } catch (error) {
+    console.error("[order-notifications] Не удалось отправить алерт:", error);
+  }
+}
+
 /** Оплата прошла, а отправление в Ozon не создалось — нужна ручная обработка. */
 export async function notifyOzonOrderFailed(orderId: string): Promise<void> {
   try {

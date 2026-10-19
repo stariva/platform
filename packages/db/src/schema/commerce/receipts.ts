@@ -53,3 +53,35 @@ export const orderReceipts = pgTable(
     ),
   ],
 );
+
+/**
+ * Автоматические чеки: сайт сам регистрирует доход в «Мой налог», когда
+ * приходит оплата. Строка заводится до запроса в ФНС и не даёт выписать
+ * второй чек на тот же платёж, когда вебхук и страница заказа пересекутся.
+ *
+ * - `issuing` — запрос в ФНС идёт;
+ * - `issued` — чек есть, он в `receiptId`;
+ * - `failed` — ФНС отказала, чека нет;
+ * - `unknown` — ответа не дождались, чек мог появиться.
+ *
+ * После сбоя сайт не повторяет: мастер получает алерт, проверяет «Мой налог»
+ * и привязывает чек ссылкой. Повтор мог бы задвоить её чек.
+ */
+export const npdIncomeRequests = pgTable("npd_income_requests", {
+  // Платёж ЮKassa: один платёж — один чек
+  paymentId: text("payment_id").primaryKey(),
+  status: text("status")
+    .$type<"issuing" | "issued" | "failed" | "unknown">()
+    .notNull(),
+  receiptId: text("receipt_id").references(() => orderReceipts.id, {
+    onDelete: "set null",
+  }),
+  // Что ответила ФНС, по-русски — для мастера и лога
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
