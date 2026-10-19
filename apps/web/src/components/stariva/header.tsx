@@ -631,27 +631,22 @@ export function Header({
             {mobileHeading("Личный кабинет")}
             {session ? (
               <>
-                <div className="px-1 pb-2 text-taupe text-[12px] truncate">
+                {/* shrink-0: truncate даёт overflow:hidden, и без него строка
+                    сжимается в ноль внутри прокручиваемой колонки */}
+                <div className="shrink-0 px-1 -mt-1 mb-1 text-taupe text-[12px] truncate">
                   {session.user?.name || session.user?.email}
                 </div>
                 {[
                   { label: "Мои мастер-классы", href: "/account" },
                   { label: "Заказы", href: "/account/orders" },
                   { label: "Профиль", href: "/account/profile" },
-                ].map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="py-3 px-1 border-b border-espresso/6 flex items-center justify-between text-espresso/80"
-                  >
-                    <span className="font-serif text-[17px]">{item.label}</span>
-                  </Link>
-                ))}
+                ].map((item) =>
+                  mobileLink({ ...item, active: pathname === item.href }),
+                )}
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="py-3 px-1 text-left text-terracotta font-serif text-[17px]"
+                  className="py-3 px-1 text-left text-terracotta font-serif text-[17px] leading-snug"
                 >
                   Выйти
                 </button>
