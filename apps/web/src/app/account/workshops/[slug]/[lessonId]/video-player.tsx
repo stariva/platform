@@ -151,13 +151,14 @@ export function VideoPlayer({
   const [source, setSource] = useState<LessonSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const initialResumePosition = initialCompleted ? 0 : initialPosition;
   const resumeRef = useRef<ResumeState>({
-    position: initialPosition,
+    position: initialResumePosition,
     play: false,
     initial: true,
   });
   // Текущая позиция: её пишет LessonController, читает «Попробовать снова»
-  const positionRef = useRef(initialPosition);
+  const positionRef = useRef(initialResumePosition);
 
   // ── Ссылка на видео ─────────────────────────────────────────────
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadToken намеренно перезапрашивает ссылку
