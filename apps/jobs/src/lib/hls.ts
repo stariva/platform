@@ -124,16 +124,12 @@ export function codecArgs(source: ProbeResult): string[] {
   ];
 }
 
-/** Аргументы ffmpeg: HLS (fMP4) в текущую папку — index.m3u8, init.mp4, seg-NNNNN.m4s. */
-function segmentArgs(sourceUrl: string, source: ProbeResult): string[] {
+/**
+ * Исходник по HTTPS. Обрыв или пауза (см. segmentAndUpload) не должны ронять
+ * нарезку.
+ */
+function httpInput(sourceUrl: string): string[] {
   return [
-    "-hide_banner",
-    "-nostdin",
-    "-loglevel",
-    "error",
-    "-y",
-    // Исходник читается из бакета по HTTPS: обрыв или пауза (см. ниже) не
-    // должны ронять нарезку
     "-reconnect",
     "1",
     "-reconnect_on_network_error",
@@ -142,10 +138,31 @@ function segmentArgs(sourceUrl: string, source: ProbeResult): string[] {
     "30",
     "-i",
     sourceUrl,
+  ];
+}
+
+/**
+ * Аргументы ffmpeg: HLS (fMP4) в текущую папку — index.m3u8, init.mp4, seg-NNNNN.m4s.
+ *
+ * Видео и звук читаем двумя входами из одного файла. В MP4 из монтажки
+ * (CapCut) звук и видео одного момента бывают в десятках мегабайт друг от
+ * друга: с одним входом ffmpeg прыгал между ними, и каждый прыжок был новым
+ * HTTP-запросом — 50-минутный урок резался часами. Отдельный вход читает
+ * свою дорожку подряд, одним потоком.
+ */
+export function segmentArgs(sourceUrl: string, source: ProbeResult): string[] {
+  const audio = source.audioCodec !== null;
+  return [
+    "-hide_banner",
+    "-nostdin",
+    "-loglevel",
+    "error",
+    "-y",
+    ...httpInput(sourceUrl),
+    ...(audio ? httpInput(sourceUrl) : []),
     "-map",
     "0:v:0",
-    "-map",
-    "0:a:0?",
+    ...(audio ? ["-map", "1:a:0"] : []),
     ...codecArgs(source),
     "-f",
     "hls",

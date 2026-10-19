@@ -21,7 +21,7 @@ const env = {
   FFPROBE_PATH: "ffprobe",
 };
 mock.module("../env", () => ({ env }));
-const { segmentAndUpload } = await import("./hls");
+const { segmentAndUpload, segmentArgs } = await import("./hls");
 
 const source = {
   videoCodec: "h264",
@@ -194,4 +194,25 @@ describe.skipIf(process.platform === "win32")("segmentAndUpload", () => {
       upload.stop();
     }
   }, 30_000);
+});
+
+describe("segmentArgs", () => {
+  const url = "https://bucket.example.test/lesson.mp4";
+  const inputs = (args: string[]) =>
+    args.flatMap((arg, i) => (arg === "-i" ? [args[i + 1]] : []));
+  const maps = (args: string[]) =>
+    args.flatMap((arg, i) => (arg === "-map" ? [args[i + 1]] : []));
+
+  test("video and audio are read through separate inputs", () => {
+    const args = segmentArgs(url, source);
+    expect(inputs(args)).toEqual([url, url]);
+    expect(maps(args)).toEqual(["0:v:0", "1:a:0"]);
+    expect(args.filter((arg) => arg === "-reconnect")).toHaveLength(2);
+  });
+
+  test("a silent video gets a single input", () => {
+    const args = segmentArgs(url, { ...source, audioCodec: null });
+    expect(inputs(args)).toEqual([url]);
+    expect(maps(args)).toEqual(["0:v:0"]);
+  });
 });
