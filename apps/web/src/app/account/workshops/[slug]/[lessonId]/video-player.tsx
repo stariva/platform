@@ -62,8 +62,9 @@ const AUTONEXT_SECONDS = 8;
 const MAX_SOURCE_RETRIES = 2;
 // Ошибка незадолго до конца срока ссылки — тоже считаем истёкшей
 const LINK_EXPIRY_MARGIN_MS = 30_000;
-// Как часто водяной знак переезжает в другое место кадра
-const WATERMARK_MOVE_MS = 20_000;
+// Как часто водяной знак переезжает в другое место кадра. Редко и с плавным
+// угасанием: знак еле заметен и не должен отвлекать от урока
+const WATERMARK_MOVE_MS = 60_000;
 
 const PREFS_KEY = "stariva-player-prefs";
 // Флаг «запустить сразу» при автопереходе к следующему уроку
@@ -591,7 +592,7 @@ function LessonController({
 }
 
 /**
- * Полупрозрачный email покупателя поверх видео. Время от времени переезжает в
+ * Еле заметный email покупателя поверх видео. Время от времени переезжает в
  * другое место кадра, чтобы его нельзя было закрыть или вырезать на записи экрана.
  * Лежит над картинкой, но под панелью управления плеера.
  */
@@ -611,7 +612,7 @@ function Watermark({ text }: { text: string }) {
           left: 4 + Math.random() * 56,
         });
         setVisible(true);
-      }, 700);
+      }, 1500);
     };
     move();
     const interval = window.setInterval(move, WATERMARK_MOVE_MS);
@@ -624,8 +625,8 @@ function Watermark({ text }: { text: string }) {
   return (
     <div
       aria-hidden
-      className={`pointer-events-none absolute z-[15] select-none whitespace-nowrap text-[11px] font-medium text-white transition-opacity duration-700 [text-shadow:0_1px_2px_rgb(0_0_0/0.5)] sm:text-sm ${
-        visible ? "opacity-35" : "opacity-0"
+      className={`pointer-events-none absolute z-[15] select-none whitespace-nowrap text-[10px] text-white transition-opacity duration-[1500ms] [text-shadow:0_1px_1px_rgb(0_0_0/0.3)] sm:text-xs ${
+        visible ? "opacity-[0.12]" : "opacity-0"
       }`}
       style={{ top: `${position.top}%`, left: `${position.left}%` }}
     >
