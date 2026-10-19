@@ -163,6 +163,14 @@ const config: NextConfig = {
   // ассеты нужны только для запасных путей: тулбара и старых закэшированных чанков.
   async rewrites() {
     return [
+      // Фото главной переехали на CDN, а закэшированные страницы и боты ещё
+      // просят старые локальные адреса, в том числе через /_next/image.
+      // Не редирект: оптимизатор по 308 не идёт и отвечает ошибкой, а на
+      // /_next/image редиректы не действуют.
+      {
+        source: "/images/home/:file",
+        destination: "https://cdn.stariva.ru/site/images/home/:file",
+      },
       {
         source: "/ingest/static/:path*",
         destination: "https://eu-assets.i.posthog.com/static/:path*",
