@@ -37,6 +37,11 @@ export function isNpdConfigured(): boolean {
   return Boolean(env.LKNPD_PASSWORD);
 }
 
+/** Слать ли чек покупателю сразу; иначе мастер отправляет его из админки. */
+export function isNpdAutoEmail(): boolean {
+  return env.LKNPD_AUTO_EMAIL;
+}
+
 // Один и тот же «браузер» при каждом входе, чтобы в кабинете не копились
 // новые устройства после каждого перезапуска сайта
 const deviceInfo = () => ({

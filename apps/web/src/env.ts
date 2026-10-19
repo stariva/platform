@@ -64,6 +64,9 @@ export const env = createEnv({
     // SELLER_INN): с ним сайт сам выписывает чеки НПД в «Мой налог» на
     // каждую оплату. Без него чеки привязывают вручную в админке.
     LKNPD_PASSWORD: z.string().min(1).optional(),
+    // "true" — чек сразу уходит покупателю. По умолчанию нет: мастер
+    // проверяет выписанный чек и отправляет его кнопкой в карточке заказа.
+    LKNPD_AUTO_EMAIL: z.boolean().default(false),
 
     // DaData Suggestions API — автоподсказка города в чекауте (поиск
     // пунктов выдачи Ozon рядом с городом покупателя).
@@ -116,6 +119,7 @@ export const env = createEnv({
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,
     YOOKASSA_SECRET_KEY: process.env.YOOKASSA_SECRET_KEY,
     LKNPD_PASSWORD: process.env.LKNPD_PASSWORD,
+    LKNPD_AUTO_EMAIL: process.env.LKNPD_AUTO_EMAIL === "true",
     DADATA_API_KEY: process.env.DADATA_API_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     NEXT_PUBLIC_YANDEX_MAPS_API_KEY:

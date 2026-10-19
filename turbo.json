@@ -105,7 +105,8 @@
     "ORDER_EMAIL_FROM",
     "YOOKASSA_SHOP_ID",
     "YOOKASSA_SECRET_KEY",
-    "LKNPD_PASSWORD"
+    "LKNPD_PASSWORD",
+    "LKNPD_AUTO_EMAIL"
   ],
   "globalPassThroughEnv": [
     "NODE_ENV",

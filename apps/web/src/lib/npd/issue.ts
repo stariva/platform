@@ -13,6 +13,7 @@ import { notifyStaffAlert } from "@/lib/commerce/order-notifications";
 import type { YooKassaPayment } from "@/lib/payments/yookassa";
 import {
   createIncome,
+  isNpdAutoEmail,
   isNpdConfigured,
   NpdError,
   type NpdService,
@@ -135,6 +136,19 @@ async function record(input: NpdReceiptInput, number: string) {
       `[npd] Чек ${number} выписан по платежу ${payment.id} (${target.kind} ${target.orderId})`,
     );
 
+    // Пока автоотправка выключена, чек ждёт в карточке заказа: мастер
+    // проверяет его и сама жмёт «Отправить»
+    if (!isNpdAutoEmail()) {
+      await notifyStaffAlert(
+        `${payment.id}/review`,
+        {
+          title: "Чек выписан — проверьте и отправьте",
+          message: `Чек по ${input.email.subject} на ${payment.amount.value} ₽: ${imageUrl ?? url}. Покупателю он не ушёл — проверьте и нажмите «Отправить» в карточке заказа.`,
+        },
+        "npd-receipt-review",
+      );
+      return;
+    }
     if (!input.email.to) return;
     await sendReceiptEmail({
       to: input.email.to,

@@ -19,10 +19,12 @@ test.skipIf(!process.env.NPD_TEST_DATABASE_URL)(
         super(message);
       }
     }
+    let autoEmail = false;
     const createIncome = mock(async (): Promise<string> => "203e2ralw5");
     mock.module("./client", () => ({
       createIncome,
       isNpdConfigured: () => true,
+      isNpdAutoEmail: () => autoEmail,
       NpdError,
       receiptPrintUrl: (n: string) =>
         `https://lknpd.nalog.ru/api/v1/receipt/502480197143/${n}/print`,
@@ -100,20 +102,33 @@ test.skipIf(!process.env.NPD_TEST_DATABASE_URL)(
         .from(orderReceipts)
         .where(eq(orderReceipts.workshopOrderId, orderId));
 
-    // Успех: чек сохранён, письмо ушло; повтор вебхука ничего не делает
+    // Успех: чек сохранён и ждёт мастера — письма нет, есть алерт «проверьте».
+    // Повтор вебхука ничего не делает
     const paid = await addOrder();
     const ok = payment("ok");
     await issue(paid, ok);
     await issue(paid, ok);
     expect(createIncome).toHaveBeenCalledTimes(1);
     const [receipt] = await receiptsOf(paid);
-    expect(receipt).toMatchObject({ number: "203e2ralw5" });
-    expect(receipt?.emailedAt).not.toBeNull();
-    expect(sendReceiptEmail).toHaveBeenCalledTimes(1);
+    expect(receipt).toMatchObject({ number: "203e2ralw5", emailedAt: null });
+    expect(sendReceiptEmail).not.toHaveBeenCalled();
+    expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
     expect(await requestOf(ok)).toMatchObject({
       status: "issued",
       receiptId: receipt?.id,
     });
+
+    // С автоотправкой чек сразу уходит покупателю, без алерта
+    autoEmail = true;
+    createIncome.mockImplementationOnce(async () => "auto1");
+    notifyStaffAlert.mockClear();
+    const sent = await addOrder();
+    await issue(sent, payment("auto"));
+    const [sentReceipt] = await receiptsOf(sent);
+    expect(sentReceipt?.emailedAt).not.toBeNull();
+    expect(sendReceiptEmail).toHaveBeenCalledTimes(1);
+    expect(notifyStaffAlert).not.toHaveBeenCalled();
+    autoEmail = false;
 
     // ФНС не ответила: чек мог появиться — алерт мастеру и без повторов
     createIncome.mockClear();
