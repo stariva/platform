@@ -74,32 +74,33 @@ export async function applyProductOrderPayment(
     await notifyCustomer(orderId, "paid");
   }
 
-  // До Ozon: сбой отправления бросает ошибку, а чек нужен в любом случае
-  const items = await getProductOrderItems(orderId);
-  await issueNpdReceipt({
-    payment,
-    target: { kind: "product", orderId },
-    services: [
-      ...items.map((i) => ({
-        name: i.name,
-        amount: i.price,
-        quantity: i.quantity,
-      })),
-      ...(order.amountDelivery > 0
-        ? [{ name: "Доставка", amount: order.amountDelivery, quantity: 1 }]
-        : []),
-    ],
-    email: {
-      to: await getProductOrderCustomerEmail(order),
-      subject: `заказу №${order.number}`,
-    },
-    expected: 1,
-  });
-
-  const attemptId = await claimProductOrderShipment(orderId);
-  if (!attemptId) return;
-
+  let attemptId: string | null = null;
   try {
+    // До Ozon: сбой отправления бросает ошибку, а чек нужен в любом случае
+    const items = await getProductOrderItems(orderId);
+    await issueNpdReceipt({
+      payment,
+      target: { kind: "product", orderId },
+      services: [
+        ...items.map((i) => ({
+          name: i.name,
+          amount: i.price,
+          quantity: i.quantity,
+        })),
+        ...(order.amountDelivery > 0
+          ? [{ name: "Доставка", amount: order.amountDelivery, quantity: 1 }]
+          : []),
+      ],
+      email: {
+        to: await getProductOrderCustomerEmail(order),
+        subject: `заказу №${order.number}`,
+      },
+      expected: 1,
+    });
+
+    attemptId = await claimProductOrderShipment(orderId);
+    if (!attemptId) return;
+
     const delivery =
       order.deliveryMethod === "pickup"
         ? { method: "pickup" as const, pointId: order.deliveryPointId ?? "" }
@@ -141,8 +142,12 @@ export async function applyProductOrderPayment(
       `[payments/webhook] КРИТИЧНО: заказ ${orderId} оплачен, но создание заказа в Ozon Доставка не удалось:`,
       error,
     );
-    await markProductOrderOzonFailed(orderId, attemptId);
-    await notifyOzonOrderFailed(orderId);
+    // Подготовка чека могла упасть до захвата отправления.
+    attemptId ??= await claimProductOrderShipment(orderId);
+    if (attemptId) {
+      await markProductOrderOzonFailed(orderId, attemptId);
+      await notifyOzonOrderFailed(orderId);
+    }
     throw error;
   }
 

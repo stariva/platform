@@ -114,7 +114,6 @@ async function record(input: NpdReceiptInput, number: string) {
   const url = receiptPrintUrl(number);
   let receiptId: string;
   try {
-    const imageUrl = await storeCopy(number, url);
     const [receipt] = await db
       .insert(orderReceipts)
       .values({
@@ -123,7 +122,7 @@ async function record(input: NpdReceiptInput, number: string) {
         inn: SELLER_INN,
         number,
         url,
-        imageUrl,
+        imageUrl: null,
       })
       .returning();
     if (!receipt) throw new Error("order_receipt_insert_failed");
@@ -135,6 +134,14 @@ async function record(input: NpdReceiptInput, number: string) {
     console.info(
       `[npd] Чек ${number} выписан по платежу ${payment.id} (${target.kind} ${target.orderId})`,
     );
+
+    const imageUrl = await storeCopy(number, url);
+    if (imageUrl) {
+      await db
+        .update(orderReceipts)
+        .set({ imageUrl })
+        .where(eq(orderReceipts.id, receiptId));
+    }
 
     // Пока автоотправка выключена, чек ждёт в карточке заказа: мастер
     // проверяет его и сама жмёт «Отправить»
@@ -149,7 +156,17 @@ async function record(input: NpdReceiptInput, number: string) {
       );
       return;
     }
-    if (!input.email.to) return;
+    if (!input.email.to) {
+      await notifyStaffAlert(
+        `${payment.id}/no-email`,
+        {
+          title: "Чек выписан — передайте покупателю вручную",
+          message: `Чек №${number} по ${input.email.subject} на ${payment.amount.value} ₽: ${imageUrl ?? url}. Email покупателя не указан — передайте ему чек вручную.`,
+        },
+        "npd-receipt-no-email",
+      );
+      return;
+    }
     await sendReceiptEmail({
       to: input.email.to,
       subject: input.email.subject,

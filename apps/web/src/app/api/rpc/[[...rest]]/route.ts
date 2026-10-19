@@ -23,6 +23,7 @@ import {
 } from "@/lib/custom-order/inbox";
 import { createCustomOrderServices } from "@/lib/custom-order/services";
 import { subscribeToNewsletter } from "@/lib/newsletter";
+import { runNpdIssuingSweep } from "@/lib/npd/issuing-sweep";
 import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
 import { workshopFileServices } from "@/lib/workshops/signed-media";
 import { runUnpaidOrderSweep } from "@/lib/workshops/unpaid-reminder";
@@ -50,6 +51,7 @@ const services: WebServices = {
       failed: results.reduce((sum, r) => sum + r.failed, 0),
     };
   },
+  runNpdIssuingSweep,
   issueFormToken: async () => issueFormToken((await auth.$context).secret),
   subscribeToNewsletter,
   customOrders: createCustomOrderServices({

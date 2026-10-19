@@ -25,6 +25,8 @@ import {
 export interface WebServices {
   /** Рассылка о мастер-классах: apps/web/src/lib/workshops/notifications.ts */
   runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
+  /** Проверка зависших заявок НПД без повторного запроса в ФНС. */
+  runNpdIssuingSweep: () => Promise<{ checked: number }>;
   /** Токен антиспама для форм входа: секрет better-auth живёт в витрине. */
   issueFormToken: () => Promise<string>;
   /** Уведомление мастеру о подписке: apps/web/src/lib/newsletter.ts */

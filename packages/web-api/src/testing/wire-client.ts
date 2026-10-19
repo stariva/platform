@@ -27,6 +27,7 @@ const idleServices: WebServices = {
     delivered: 0,
     failed: 0,
   }),
+  runNpdIssuingSweep: async () => ({ checked: 0 }),
   issueFormToken: async () => "form-token",
   subscribeToNewsletter: async () => {},
   customOrders: {
