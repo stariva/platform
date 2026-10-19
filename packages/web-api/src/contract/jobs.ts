@@ -131,4 +131,10 @@ export const remindersContract = {
 export const jobsContract = {
   videos: videosContract,
   reminders: remindersContract,
+  npd: {
+    /** Только алерт о зависших чеках; повторная регистрация дохода запрещена. */
+    sweep: jobProcedure.output(
+      z.object({ checked: z.number().int().nonnegative() }),
+    ),
+  },
 };

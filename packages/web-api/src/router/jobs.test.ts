@@ -24,7 +24,12 @@ const { lastStatus, wireClient } = await import("../testing/wire-client");
 
 let sweep: ReminderSweepResult = { checked: 0, delivered: 0, failed: 0 };
 let sweeps = 0;
+let npdSweeps = 0;
 const services = {
+  runNpdIssuingSweep: async () => {
+    npdSweeps++;
+    return { checked: 2 };
+  },
   runWorkshopReminderSweep: async () => {
     sweeps++;
     return sweep;
@@ -101,4 +106,18 @@ test("reminder sweep fails so Hatchet retries undelivered messages", async () =>
   expect(definedError?.code).toBe("REMINDERS_FAILED");
   expect(definedError?.data).toEqual(sweep);
   expect(lastStatus()).toBe(500);
+});
+
+test("NPD sweep requires the jobs secret and calls only its own service", async () => {
+  npdSweeps = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.npd.sweep());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(npdSweeps).toBe(0);
+  const before = sweeps;
+  expect(await client(`Bearer ${secret}`).jobs.npd.sweep()).toEqual({
+    checked: 2,
+  });
+  expect(npdSweeps).toBe(1);
+  expect(sweeps).toBe(before);
+  expect(lastStatus()).toBe(200);
 });

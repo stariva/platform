@@ -85,4 +85,9 @@ const sweep = jobs.reminders.sweep.handler(async ({ context, errors }) => {
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
   reminders: { sweep },
+  npd: {
+    sweep: jobs.npd.sweep.handler(({ context }) =>
+      context.services.runNpdIssuingSweep(),
+    ),
+  },
 };
