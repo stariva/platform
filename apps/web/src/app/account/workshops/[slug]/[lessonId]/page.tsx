@@ -1,3 +1,4 @@
+import { isAdminUser } from "@stariva/auth";
 import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -21,11 +22,13 @@ export default async function LessonPlayerPage({
   const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
 
-  if (!(await hasAccess(session.user.id, slug))) {
+  // Админ смотрит любой курс без покупки и до старта — проверить уроки
+  const admin = isAdminUser(session.user);
+  if (!admin && !(await hasAccess(session.user.id, slug))) {
     redirect(`/workshops/${slug}`);
   }
   // Предзаказ: до старта уроки закрыты, в кабинете — дата и подготовка
-  if (isPreorder(workshop)) redirect(`/account/workshops/${slug}`);
+  if (!admin && isPreorder(workshop)) redirect(`/account/workshops/${slug}`);
 
   const lessons = getWorkshopLessons(workshop);
   const index = lessons.findIndex((l) => l.id === lessonId);

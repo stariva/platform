@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { isAdminUser } from "@stariva/auth";
 import { and, db, eq, ne } from "@stariva/db";
-import { courseAccess, lessonProgress, workshops } from "@stariva/db/schema";
+import {
+  courseAccess,
+  lessonProgress,
+  user,
+  workshops,
+} from "@stariva/db/schema";
 
 /** Проверяет, есть ли у пользователя доступ к мастер-классу. */
 export async function hasAccess(
@@ -18,6 +24,29 @@ export async function hasAccess(
     )
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * Администратор (ADMIN_EMAILS, подтверждённая почта): смотрит любой курс без
+ * покупки и до старта, чтобы проверить уроки до учеников.
+ */
+export async function isAdminUserId(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ email: user.email, emailVerified: user.emailVerified })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row ? isAdminUser(row) : false;
+}
+
+/** Может смотреть уроки курса: купил его или администратор. */
+export async function canWatchCourse(
+  userId: string,
+  workshopSlug: string,
+): Promise<boolean> {
+  return (
+    (await hasAccess(userId, workshopSlug)) || (await isAdminUserId(userId))
+  );
 }
 
 /**

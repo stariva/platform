@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { env } from "@stariva/config";
 import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
 import {
+  canWatchCourse,
   getReadyRendition,
-  hasAccess,
+  isAdminUserId,
   type LessonVideoResult,
   type MaterialUrlResult,
   type WorkshopFileServices,
@@ -53,9 +54,14 @@ async function signLessonVideo({
   // Проверка доступа: превью открыто всем, пока курс опубликован
   if (!(lesson.free && workshop.status === "published")) {
     if (!userId) return { status: "unauthorized" };
-    if (!(await hasAccess(userId, slug))) return { status: "forbidden" };
-    // Предзаказ: уроки открываются в дату старта, у всех одновременно
-    if (isPreorder(workshop) && workshop.releaseAt) {
+    if (!(await canWatchCourse(userId, slug))) return { status: "forbidden" };
+    // Предзаказ: уроки открываются в дату старта, у всех одновременно. Админ
+    // смотрит раньше, чтобы проверить видео
+    if (
+      isPreorder(workshop) &&
+      workshop.releaseAt &&
+      !(await isAdminUserId(userId))
+    ) {
       return {
         status: "not_released",
         message: `Урок откроется ${formatReleaseDateTime(workshop.releaseAt)}`,
@@ -131,7 +137,7 @@ async function authorizeMaterial(
   const material = workshop?.materialFiles?.find((file) => matches(file.key));
   if (!material) return { status: "not_found" };
   if (!userId) return { status: "unauthorized" };
-  if (!(await hasAccess(userId, slug))) return { status: "forbidden" };
+  if (!(await canWatchCourse(userId, slug))) return { status: "forbidden" };
   if (!isStorageConfigured()) return { status: "files_unavailable" };
   return { status: "ok", key: material.key, label: material.label };
 }

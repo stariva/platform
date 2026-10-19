@@ -1,3 +1,4 @@
+import { isAdminUser } from "@stariva/auth";
 import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -44,12 +45,15 @@ export default async function AccountCoursePage({
       />
     ) : null;
 
+  // Админ смотрит любой курс без покупки и до старта — проверить уроки
+  const admin = isAdminUser(session.user);
+
   // Нет доступа — отправляем на публичную страницу с покупкой
-  if (!(await hasAccess(session.user.id, slug))) {
+  if (!admin && !(await hasAccess(session.user.id, slug))) {
     redirect(`/workshops/${slug}`);
   }
 
-  if (isPreorder(workshop) && workshop.releaseAt) {
+  if (!admin && isPreorder(workshop) && workshop.releaseAt) {
     return (
       <div>
         <Link
