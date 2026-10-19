@@ -2,14 +2,11 @@
 
 import "@videojs/react/video/skin.css";
 import "@videojs/react/i18n/locales/ru/register";
+import { orientationLockFeature, videoFeatures } from "@videojs/core/dom";
+import { createPlayer } from "@videojs/react";
 import { I18nProvider } from "@videojs/react/i18n";
 import { HlsJsVideo } from "@videojs/react/media/hlsjs-video";
-import {
-  VideoPlayer as Player,
-  usePlayer,
-  Video,
-  VideoSkin,
-} from "@videojs/react/video";
+import { Video, VideoSkin } from "@videojs/react/video";
 import { Check, RefreshCw, RotateCcw, SkipForward } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
@@ -112,6 +109,14 @@ function formatTime(total: number): string {
   const ss = String(s).padStart(2, "0");
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
+
+// Стандартный набор плеера не поворачивает экран: на Android полноэкранное
+// видео так и оставалось вертикальным. orientationLock держит альбомную
+// ориентацию, пока плеер на весь экран
+const { Player, usePlayer } = createPlayer({
+  features: [...videoFeatures, orientationLockFeature],
+  displayName: "LessonPlayer",
+});
 
 // Скин Video.js в цветах сайта
 const skinStyle = {
