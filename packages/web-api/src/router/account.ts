@@ -1,6 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import { account } from "../procedures";
 import {
+  canWatchCourse,
   hasAccess,
   lessonExists,
   upsertLessonProgress,
@@ -23,8 +24,8 @@ const saveLessonProgress = account.saveLessonProgress.handler(
     if (!(await lessonExists(input.slug, input.lessonId))) {
       throw errors.LESSON_NOT_FOUND();
     }
-    // Прогресс сохраняем только владельцам курса
-    if (!(await hasAccess(user.id, input.slug))) {
+    // Прогресс сохраняем владельцам курса и админу, который проверяет уроки
+    if (!(await canWatchCourse(user.id, input.slug))) {
       throw new ORPCError("FORBIDDEN");
     }
     await upsertLessonProgress({

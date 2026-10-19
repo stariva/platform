@@ -7,6 +7,7 @@ let lessons = ["lesson-1"];
 let saved: UpsertProgressInput[] = [];
 mock.module("../services/course-access", () => ({
   hasAccess: async () => owned,
+  canWatchCourse: async () => owned,
   lessonExists: async (_slug: string, lessonId: string) =>
     lessons.includes(lessonId),
   upsertLessonProgress: async (input: UpsertProgressInput) => {
@@ -59,7 +60,7 @@ test("progress of an unknown lesson is refused", async () => {
   expect(lastStatus()).toBe(404);
 });
 
-test("progress is saved only for buyers of the course", async () => {
+test("progress is saved only for buyers of the course and admins", async () => {
   saved = [];
   owned = false;
   const [error] = await safe(

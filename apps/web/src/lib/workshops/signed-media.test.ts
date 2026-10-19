@@ -7,6 +7,8 @@ const config = await import("@stariva/config");
 const storage = await import("@stariva/storage");
 let free = true;
 let owned = true;
+let admin = false;
+let releaseAt: string | undefined;
 let rateLimited = false;
 const materialFiles = [
   { key: "brief.pdf", label: "Бриф" },
@@ -30,7 +32,8 @@ mock.module("@/lib/workshops/video-access", () => ({
 const webApi = await import("@stariva/web-api");
 mock.module("@stariva/web-api", () => ({
   ...webApi,
-  hasAccess: async () => owned,
+  canWatchCourse: async () => owned || admin,
+  isAdminUserId: async () => admin,
   getReadyRendition: async () => ({
     hlsPrefix: "workshops/test/hls/lesson/attempt",
   }),
@@ -39,6 +42,7 @@ mock.module("@/lib/workshops/workshops-db", () => ({
   getWorkshopBySlug: async () => ({
     slug: "test",
     status: "published",
+    releaseAt,
     materialFiles,
     lessons: [
       {
@@ -97,6 +101,19 @@ test("paid lessons need a session and a purchase", async () => {
   owned = false;
   assert.deepEqual(await sign("user"), { status: "forbidden" });
   owned = true;
+});
+
+test("before the start buyers wait, an admin watches without buying", async () => {
+  free = false;
+  releaseAt = new Date(Date.now() + 24 * 60 * 60_000).toISOString();
+  const waiting = await sign("user");
+  assert.equal(waiting.status, "not_released");
+  owned = false;
+  admin = true;
+  assert.equal((await sign("admin")).status, "ok");
+  owned = true;
+  admin = false;
+  releaseAt = undefined;
 });
 
 test("a buyer past the link limit is refused", async () => {

@@ -13,7 +13,9 @@ export {
 } from "./orpc";
 export { type WebRouter, webRouter } from "./router";
 export {
+  canWatchCourse,
   hasAccess,
+  isAdminUserId,
   type UpsertProgressInput,
   upsertLessonProgress,
 } from "./services/course-access";
