@@ -217,25 +217,29 @@ export function VideoPlayer({
   return (
     <I18nProvider locale="ru">
       <Player title={lessonTitle}>
-        <VideoSkin
-          className="w-full aspect-video overflow-hidden rounded-2xl bg-black"
-          style={skinStyle}
-        >
-          {media}
-          {source && <Watermark text={watermark} />}
-          <LessonController
-            slug={slug}
-            lessonId={lessonId}
-            initialCompleted={initialCompleted}
-            nextLesson={nextLesson}
-            courseHref={courseHref}
-            source={source}
-            resumeRef={resumeRef}
-            positionRef={positionRef}
-            onRefresh={refreshSource}
-            onFatalError={setError}
-          />
-        </VideoSkin>
+        {/* Пропорции держит обёртка: скин заполняет её целиком и не может
+            стать выше кадра и наехать на заголовок урока */}
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
+          <VideoSkin
+            className="absolute inset-0 size-full overflow-hidden rounded-2xl bg-black"
+            style={skinStyle}
+          >
+            {media}
+            {source && <Watermark text={watermark} />}
+            <LessonController
+              slug={slug}
+              lessonId={lessonId}
+              initialCompleted={initialCompleted}
+              nextLesson={nextLesson}
+              courseHref={courseHref}
+              source={source}
+              resumeRef={resumeRef}
+              positionRef={positionRef}
+              onRefresh={refreshSource}
+              onFatalError={setError}
+            />
+          </VideoSkin>
+        </div>
       </Player>
     </I18nProvider>
   );
