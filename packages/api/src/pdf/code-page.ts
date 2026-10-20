@@ -1,7 +1,15 @@
 import { readFile } from "node:fs/promises";
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
+import {
+  PDFDocument,
+  type PDFFont,
+  type PDFPage,
+  type RGB,
+  rgb,
+} from "pdf-lib";
 import QRCode from "qrcode";
+
+import { CODE_PAGE_TEXT, CODE_PAGE_URL } from "./code-page-text";
 
 /*
  * Последняя страница PDF-брифа для Ярмарки Мастеров: как открыть видеоуроки
@@ -9,36 +17,24 @@ import QRCode from "qrcode";
  * Ярмарки слать нельзя, поэтому адрес и QR покупатель находит в самом файле.
  */
 
-export const CODE_PAGE_URL = "https://stariva.ru/code";
-
 const A4: [number, number] = [595.28, 841.89];
 
 const INK = rgb(0x2c / 255, 0x24 / 255, 0x1b / 255);
 const MUTED = rgb(0x6b / 255, 0x5d / 255, 0x4f / 255);
 const PAPER = rgb(0xf7 / 255, 0xf2 / 255, 0xea / 255);
 
-// Неразрывный пробел: тире не начинает строку, предлог не висит в конце
-const NBSP = " ";
-
-export const CODE_PAGE_TEXT = {
-  brand: "STARIVA",
-  title: "Видеоуроки к мастер-классу",
-  lead: `В этом файле${NBSP}— схема и материалы. Видео, где Ольга показывает каждый шаг, откроется по коду.`,
-  address: "stariva.ru/code",
-  steps: [
-    "1. Наведите камеру телефона на QR-код.",
-    "2. Введите код из сообщения Ольги в чате заказа на Ярмарке Мастеров.",
-    `3. Укажите email${NBSP}— пришлём на него ссылку на уроки.`,
-  ],
-  footer: `Код ещё не пришёл? Напишите Ольге в чат заказа${NBSP}— она пришлёт его в${NBSP}течение дня.`,
-};
-
 // Cormorant Garamond — тот же шрифт, что на сайте; Medium читается в печати
 let fontBytes: Promise<Buffer> | undefined;
-const loadFont = () =>
-  (fontBytes ??= readFile(
+const loadFont = () => {
+  fontBytes ??= readFile(
     new URL("./fonts/CormorantGaramond-Medium.ttf", import.meta.url),
-  ));
+  ).catch((err) => {
+    // Неудачное чтение не запоминаем: следующий вызов попробует снова
+    fontBytes = undefined;
+    throw err;
+  });
+  return fontBytes;
+};
 
 /**
  * Дописывает в конец PDF страницу с QR-кодом и адресом stariva.ru/code.
@@ -56,7 +52,8 @@ export async function appendCodePage(
   const last = pages.at(-1);
   let size = A4;
   if (last) {
-    const { width, height } = last.getSize();
+    // CropBox — видимая часть страницы, без полей под обрез
+    const { width, height } = last.getCropBox();
     const turned = last.getRotation().angle % 180 !== 0;
     size = turned ? [height, width] : [width, height];
   }
@@ -64,8 +61,6 @@ export async function appendCodePage(
   // pdf-lib пишет в обычный ArrayBuffer — файл можно сразу отдать как File
   return (await doc.save()) as Uint8Array<ArrayBuffer>;
 }
-
-type Line = { text: string; size: number; color: typeof INK; gap: number };
 
 function drawCodePage(page: PDFPage, font: PDFFont) {
   const { width, height } = page.getSize();
@@ -120,7 +115,7 @@ function drawCodePage(page: PDFPage, font: PDFFont) {
 
   let top = (height + total) / 2;
 
-  const centered = (lines: string[], line: Omit<Line, "text" | "gap">) => {
+  const centered = (lines: string[], line: { size: number; color: RGB }) => {
     for (const text of lines) {
       const lineHeight = leading(line.size);
       const textWidth = font.widthOfTextAtSize(text, line.size);
@@ -139,7 +134,7 @@ function drawCodePage(page: PDFPage, font: PDFFont) {
   // «STARIVA» разрядкой 0.3em: pdf-lib не умеет межбуквенный интервал
   const brandSize = 13 * scale;
   const tracking = brandSize * 0.3;
-  const letters = [...CODE_PAGE_TEXT.brand];
+  const letters = [...CODE_PAGE_TEXT.brand.toUpperCase()];
   const brandWidth =
     letters.reduce(
       (sum, ch) => sum + font.widthOfTextAtSize(ch, brandSize),

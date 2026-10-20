@@ -31,6 +31,12 @@ export const livemasterPdf = adminProcedure
     try {
       pdf = await appendCodePage(await getObjectBytes(input.key));
     } catch (err) {
+      // Файл удалили из бакета или ключ устарел
+      if ((err as Error).name === "NoSuchKey") {
+        throw new ORPCError("NOT_FOUND", {
+          message: "Файл не найден в хранилище — загрузите PDF заново",
+        });
+      }
       if (err instanceof EncryptedPDFError) {
         throw new ORPCError("BAD_REQUEST", {
           message: "PDF защищён паролем — сохраните бриф без защиты",

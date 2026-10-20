@@ -6,6 +6,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
+    },
+    "./code-page-text": {
+      "types": "./dist/pdf/code-page-text.d.ts",
+      "default": "./src/pdf/code-page-text.ts"
     }
   },
   "license": "MIT",
