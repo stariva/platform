@@ -47,9 +47,7 @@ export function WorkshopViewRemove({
     const confirmed = await confirm({
       title: `Удалить просмотр: ${who}?`,
       description: (
-        <p>
-          {lesson.label}. Прогресс в плеере останется. Это нельзя отменить.
-        </p>
+        <p>{lesson.label}. Прогресс в плеере останется. Это нельзя отменить.</p>
       ),
       confirmLabel: "Удалить",
       destructive: true,
