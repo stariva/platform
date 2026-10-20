@@ -117,7 +117,9 @@ export function OrganizationJsonLd() {
   );
 }
 
-// ─── WebSite (enables Sitelinks Searchbox) ───────────────────────────────────
+// ─── WebSite ─────────────────────────────────────────────────────────────────
+// Без SearchAction: поиска по каталогу (?q=) на сайте нет, а поле поиска
+// в выдаче Google убрал в 2024 году.
 
 export function WebSiteJsonLd() {
   const schema = {
@@ -131,14 +133,6 @@ export function WebSiteJsonLd() {
     inLanguage: "ru-RU",
     publisher: {
       "@id": `${BASE_URL}/#organization`,
-    },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${BASE_URL}/catalog?q={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
     },
   };
 
@@ -181,17 +175,76 @@ export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
 
 // ─── Product ─────────────────────────────────────────────────────────────────
 
+/**
+ * Категория из таксономии товаров Google — свои названия разделов
+ * («Одежда») Google считает недопустимым значением.
+ * @see https://support.google.com/merchants/answer/6324436
+ */
+const GOOGLE_CATEGORY_BY_SUBCATEGORY: Record<string, string> = {
+  belts: "Apparel & Accessories > Clothing Accessories > Belts",
+  totes: "Apparel & Accessories > Handbags, Wallets & Cases > Handbags",
+  crossbody: "Apparel & Accessories > Handbags, Wallets & Cases > Handbags",
+  lampshades: "Home & Garden > Lighting Accessories > Lamp Shades",
+  placemats: "Home & Garden > Linens & Bedding > Table Linens > Placemats",
+  trees: "Home & Garden > Decor > Seasonal & Holiday Decorations",
+};
+
+const GOOGLE_CATEGORY_BY_CATEGORY: Record<string, string> = {
+  clothes: "Apparel & Accessories > Clothing",
+  bags: "Apparel & Accessories > Handbags, Wallets & Cases",
+  interior: "Home & Garden > Decor",
+};
+
+export function googleProductCategory(
+  category: string,
+  subcategory: string,
+): string {
+  return (
+    GOOGLE_CATEGORY_BY_SUBCATEGORY[subcategory] ??
+    GOOGLE_CATEGORY_BY_CATEGORY[category] ??
+    "Home & Garden > Decor"
+  );
+}
+
+/** Длиннее Google не принимает поле material. */
+const MAX_MATERIAL_LENGTH = 200;
+
+/** Доставка Ozon до пункта выдачи по России. */
+const TRANSIT_DAYS = { min: 2, max: 7 };
+
+/** Возврат товара надлежащего качества — раздел 6 оферты. */
+const RETURN_POLICY = {
+  "@type": "MerchantReturnPolicy",
+  applicableCountry: "RU",
+  returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+  merchantReturnDays: 7,
+  returnMethod: "https://schema.org/ReturnByMail",
+  returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+  merchantReturnLink: `${BASE_URL}/offer`,
+};
+
+function dayRange({ min, max }: { min: number; max: number }) {
+  return {
+    "@type": "QuantitativeValue",
+    minValue: min,
+    maxValue: max,
+    unitCode: "DAY",
+  };
+}
+
 interface ProductJsonLdProps {
   name: string;
   description: string;
   image: string[];
   price: number;
-  oldPrice?: number;
   currency?: string;
   inStock: boolean;
   madeToOrder: boolean;
+  /** Сколько дней до отправки: со склада или на изготовление. */
+  handlingDays: { min: number; max: number };
   url: string;
   category: string;
+  subcategory: string;
   material?: string;
   color?: string;
   brand?: string;
@@ -210,12 +263,13 @@ export function ProductJsonLd({
   description,
   image,
   price,
-  oldPrice,
   currency = "RUB",
   inStock,
   madeToOrder,
+  handlingDays,
   url,
   category,
+  subcategory,
   material,
   color,
   brand = "Stariva",
@@ -232,25 +286,41 @@ export function ProductJsonLd({
       "@type": "Brand",
       name: brand,
     },
-    category,
+    category: googleProductCategory(category, subcategory),
     url: `${BASE_URL}${url}`,
     offers: {
       "@type": "Offer",
       price: price.toString(),
       priceCurrency: currency,
+      // MadeToOrder Google не принимает: изделие под заказ отправим после
+      // изготовления, это BackOrder со сроком в handlingTime
       availability: inStock
         ? "https://schema.org/InStock"
         : madeToOrder
-          ? "https://schema.org/MadeToOrder"
+          ? "https://schema.org/BackOrder"
           : "https://schema.org/OutOfStock",
       seller: {
         "@id": `${BASE_URL}/#organization`,
       },
       url: `${BASE_URL}${url}`,
+      // Цену доставки считает Ozon при оформлении — указываем только регион и сроки
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "RU",
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: dayRange(handlingDays),
+          transitTime: dayRange(TRANSIT_DAYS),
+        },
+      },
+      hasMerchantReturnPolicy: RETURN_POLICY,
     },
   };
 
-  if (material) {
+  if (material && material.length <= MAX_MATERIAL_LENGTH) {
     schema.material = material;
   }
 
@@ -280,14 +350,6 @@ export function ProductJsonLd({
         bestRating: 5,
       },
     }));
-  }
-
-  if (oldPrice) {
-    (schema.offers as Record<string, unknown>).priceValidUntil = new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1000,
-    )
-      .toISOString()
-      .split("T")[0];
   }
 
   return (

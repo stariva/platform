@@ -4,6 +4,7 @@ export const categories: Category[] = [
   {
     slug: "clothes",
     name: "Одежда",
+    seoTitle: "Одежда макраме ручной работы: платья, туники, топы",
     description:
       "Туники, накидки, пояса и комплекты из натурального хлопка, созданные вручную в технике макраме",
     image:
@@ -25,6 +26,7 @@ export const categories: Category[] = [
   {
     slug: "bags",
     name: "Сумки",
+    seoTitle: "Сумки и авоськи макраме ручной работы",
     description:
       "Авоськи, сумки и корзины ручной работы из хлопкового шнура в технике макраме",
     image: "https://cdn.stariva.ru/site/images/catalog/category-decor.jpg",
@@ -45,6 +47,7 @@ export const categories: Category[] = [
   {
     slug: "interior",
     name: "Декор интерьера",
+    seoTitle: "Декор макраме для интерьера: панно, ёлки, плейсматы",
     description:
       "Панно, плейсматы и вигвамы — изделия, которые создают уют в вашем доме",
     image:

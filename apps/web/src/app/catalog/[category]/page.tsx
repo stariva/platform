@@ -34,7 +34,7 @@ export async function generateMetadata({
   const category = getCategoryBySlug(categorySlug);
   if (!category) return {};
 
-  const title = `${category.name} в технике макраме — купить ручной работы`;
+  const title = category.seoTitle;
   const description = `${category.description}. Фотографии, размеры и цены. Оформите заказ на сайте Stariva.`;
   const url = `/catalog/${categorySlug}`;
 

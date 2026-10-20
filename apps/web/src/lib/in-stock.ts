@@ -8,6 +8,8 @@ export const IN_STOCK_HREF = "/catalog/v-nalichii";
 
 /** Срок отправки готовых изделий со склада. */
 export const IN_STOCK_SHIP_DAYS = "1–2 дня";
+/** То же в днях — для разметки товара. */
+export const IN_STOCK_SHIP_DAYS_RANGE = { min: 1, max: 2 };
 
 /** Можно купить на сайте сразу: есть свободный остаток на Ozon и SKU для Ozon Доставки. */
 export function isPurchasable(product: Product): boolean {

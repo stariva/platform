@@ -1,5 +1,17 @@
 import { expect, test } from "bun:test";
-import { toJsonLd } from "./json-ld";
+import { googleProductCategory, toJsonLd } from "./json-ld";
+
+test("product category comes from Google's taxonomy, not our section names", () => {
+  expect(googleProductCategory("clothes", "dresses")).toBe(
+    "Apparel & Accessories > Clothing",
+  );
+  expect(googleProductCategory("interior", "lampshades")).toBe(
+    "Home & Garden > Lighting Accessories > Lamp Shades",
+  );
+  expect(googleProductCategory("unknown", "unknown")).toBe(
+    "Home & Garden > Decor",
+  );
+});
 
 test("a review cannot close the JSON-LD script tag", () => {
   const json = toJsonLd({

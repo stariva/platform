@@ -21,7 +21,7 @@ import { absoluteImageUrl } from "@/lib/workshops-data";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Каталог изделий в технике макраме — купить ручной работы",
+  title: "Изделия макраме ручной работы: одежда, абажуры, сумки, декор",
   description:
     "Каталог изделий ручного макраме: платья, абажуры, сумки и декор интерьера из натурального хлопка. Купить на сайте с доставкой по России.",
   alternates: { canonical: `${BASE_URL}/catalog` },
