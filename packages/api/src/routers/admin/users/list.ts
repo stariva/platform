@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { adminProcedure, isAdminUser } from "../../../orpc";
 
+const USER_SORTS = ["created", "lastSignIn"] as const;
+
 /** Экранирует % и _ в поисковой строке, чтобы они искались как обычные символы. */
 function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
@@ -37,7 +39,10 @@ const lastSignInAt = sql<Date | null>`greatest(
  * Для каждого — сколько у него заказов и курсов, когда он последний раз
  * входил и входит ли он в админы.
  *
- * @example client.admin.users.list({ query: "анна", limit: 25, offset: 0 })
+ * Сортировка — по дате регистрации или последнего входа, от новых к старым;
+ * кто ни разу не входил, идёт в конце.
+ *
+ * @example client.admin.users.list({ query: "анна", sort: "lastSignIn", limit: 25, offset: 0 })
  */
 export const list = adminProcedure
   .input(
@@ -45,6 +50,7 @@ export const list = adminProcedure
       query: z.string().trim().max(100).optional(),
       limit: z.number().int().min(1).max(100).default(25),
       offset: z.number().int().min(0).default(0),
+      sort: z.enum(USER_SORTS).default("created"),
     }),
   )
   .handler(async ({ context, input }) => {
@@ -74,7 +80,12 @@ export const list = adminProcedure
         })
         .from(user)
         .where(where)
-        .orderBy(desc(user.createdAt), desc(user.id))
+        .orderBy(
+          ...(input.sort === "lastSignIn"
+            ? [sql`${lastSignInAt} desc nulls last`, desc(user.createdAt)]
+            : [desc(user.createdAt)]),
+          desc(user.id),
+        )
         .limit(input.limit)
         .offset(input.offset),
       context.db.select({ total: count() }).from(user).where(where),
