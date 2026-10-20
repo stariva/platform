@@ -5,9 +5,9 @@ import { getSession } from "@/lib/auth/session";
 import { clientIp, collectVisitor } from "@/lib/visitor";
 import {
   findAccessCode,
-  isAccessCodeRateLimited,
-  recordAccessCodeFailure,
   redeemAccessCode,
+  releaseAccessCodeAttempt,
+  reserveAccessCodeAttempt,
 } from "@/lib/workshops/access-codes";
 import { findOrCreateBuyer, sendLoginEmail } from "@/lib/workshops/buyer";
 import { notifyWorkshopBooked } from "@/lib/workshops/notifications";
@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
   }
 
   const ip = clientIp(request.headers) ?? "unknown";
-  if (await isAccessCodeRateLimited(ip)) {
+  const attemptId = await reserveAccessCodeAttempt(ip);
+  if (!attemptId) {
     return error(
       "Слишком много неверных кодов. Попробуйте через час или напишите Ольге в чат заказа на Ярмарке.",
       429,
@@ -57,7 +58,6 @@ export async function POST(request: NextRequest) {
 
   const found = await findAccessCode(code);
   if (!found) {
-    await recordAccessCodeFailure(ip);
     return error(
       "Такого кода нет. Сверьте цифры с сообщением Ольги на Ярмарке Мастеров.",
       404,
@@ -87,8 +87,7 @@ export async function POST(request: NextRequest) {
     : await findOrCreateBuyer(input.email as string, "");
   const coursePath = `/account/workshops/${workshop.slug}`;
 
-  // Курс уже открыт — код не тратим: пригодится, если ошиблись почтой
-  if (await hasAccess(buyer.id, workshop.slug)) {
+  const alreadyOwned = async () => {
     if (!session) {
       await sendLoginEmail(buyer.email, coursePath, request.headers).catch(
         (cause) =>
@@ -105,21 +104,33 @@ export async function POST(request: NextRequest) {
       },
       { status: 409 },
     );
-  }
+  };
 
-  const order = await redeemAccessCode({
-    code: found,
-    userId: buyer.id,
-    email: buyer.email,
-    releaseAt: workshop.releaseAt ? new Date(workshop.releaseAt) : null,
-    visitor: await collectVisitor(request),
-  });
+  // Курс уже открыт — код не тратим: пригодится, если ошиблись почтой
+  if (await hasAccess(buyer.id, workshop.slug)) return alreadyOwned();
+
+  let order: Awaited<ReturnType<typeof redeemAccessCode>>;
+  try {
+    order = await redeemAccessCode({
+      code: found,
+      userId: buyer.id,
+      email: buyer.email,
+      releaseAt: workshop.releaseAt ? new Date(workshop.releaseAt) : null,
+      visitor: await collectVisitor(request),
+    });
+  } catch (cause) {
+    if (cause instanceof Error && cause.message === "course_already_owned") {
+      return alreadyOwned();
+    }
+    throw cause;
+  }
   if (!order) {
     return NextResponse.json(
       { error: "Этот код уже активирован.", used: true },
       { status: 409 },
     );
   }
+  await releaseAccessCodeAttempt(attemptId);
 
   console.info(
     `[workshops/redeem] Код ${found.id} активирован, заказ ${order.id}, курс «${workshop.slug}»`,

@@ -16,15 +16,21 @@ const code = {
 let found: typeof code | null = code;
 let owned = false;
 let limited = false;
-const recordAccessCodeFailure = mock(async () => {});
-const redeemAccessCode = mock(async () => ({ id: "order" }));
+const reserveAccessCodeAttempt = mock(async () => (limited ? null : "attempt"));
+const releaseAccessCodeAttempt = mock(async () => {});
+const findAccessCode = mock(async () => found);
+const redeemAccessCode = mock(
+  async (): Promise<{ id: string } | null> => ({
+    id: "order",
+  }),
+);
 const notifyWorkshopBooked = mock(async () => {});
 const sendLoginEmail = mock(async () => {});
 
 mock.module("@/lib/workshops/access-codes", () => ({
-  findAccessCode: async () => found,
-  isAccessCodeRateLimited: async () => limited,
-  recordAccessCodeFailure,
+  findAccessCode,
+  reserveAccessCodeAttempt,
+  releaseAccessCodeAttempt,
   redeemAccessCode,
 }));
 const webApi = await import("@stariva/web-api");
@@ -60,7 +66,9 @@ beforeEach(() => {
   owned = false;
   limited = false;
   for (const fn of [
-    recordAccessCodeFailure,
+    findAccessCode,
+    reserveAccessCodeAttempt,
+    releaseAccessCodeAttempt,
     redeemAccessCode,
     notifyWorkshopBooked,
     sendLoginEmail,
@@ -91,6 +99,8 @@ test("a valid code opens the course and sends the access email", async () => {
     title: "Ёлка макраме",
   });
   expect(redeemAccessCode).toHaveBeenCalledTimes(1);
+  expect(reserveAccessCodeAttempt).toHaveBeenCalledWith("203.0.113.7");
+  expect(releaseAccessCodeAttempt).toHaveBeenCalledWith("attempt");
   expect(notifyWorkshopBooked).toHaveBeenCalledWith("order");
 });
 
@@ -98,20 +108,24 @@ test("an unknown code is counted against the IP", async () => {
   found = null;
   const response = await redeem({ code: "111 222" });
   expect(response.status).toBe(404);
-  expect(recordAccessCodeFailure).toHaveBeenCalledWith("203.0.113.7");
+  expect(reserveAccessCodeAttempt).toHaveBeenCalledWith("203.0.113.7");
+  expect(releaseAccessCodeAttempt).not.toHaveBeenCalled();
   expect(redeemAccessCode).not.toHaveBeenCalled();
 });
 
 test("a code with missing digits is rejected before any lookup", async () => {
   const response = await redeem({ code: "482 71" });
   expect(response.status).toBe(400);
-  expect(recordAccessCodeFailure).not.toHaveBeenCalled();
+  expect(reserveAccessCodeAttempt).not.toHaveBeenCalled();
+  expect(findAccessCode).not.toHaveBeenCalled();
 });
 
 test("too many wrong codes from one IP are refused", async () => {
   limited = true;
   const response = await redeem({ code: "482 719" });
   expect(response.status).toBe(429);
+  expect(findAccessCode).not.toHaveBeenCalled();
+  expect(releaseAccessCodeAttempt).not.toHaveBeenCalled();
   expect(redeemAccessCode).not.toHaveBeenCalled();
 });
 
@@ -119,6 +133,7 @@ test("an already redeemed code is not reused", async () => {
   found = { ...code, redeemedAt: new Date() };
   const response = await redeem({ code: "482 719" });
   expect(response.status).toBe(409);
+  expect(releaseAccessCodeAttempt).not.toHaveBeenCalled();
   expect(redeemAccessCode).not.toHaveBeenCalled();
 });
 
@@ -128,6 +143,26 @@ test("an owner of the course keeps the code and gets a login email", async () =>
   expect(response.status).toBe(409);
   expect(redeemAccessCode).not.toHaveBeenCalled();
   expect(sendLoginEmail).toHaveBeenCalledTimes(1);
+  expect(releaseAccessCodeAttempt).not.toHaveBeenCalled();
+});
+
+test("a concurrent ownership conflict keeps the attempt and returns already owned", async () => {
+  redeemAccessCode.mockRejectedValueOnce(new Error("course_already_owned"));
+  const response = await redeem({ code: "482 719" });
+  expect(response.status).toBe(409);
+  expect((await response.json()).alreadyOwned).toBe(true);
+  expect(sendLoginEmail).toHaveBeenCalledTimes(1);
+  expect(releaseAccessCodeAttempt).not.toHaveBeenCalled();
+  expect(notifyWorkshopBooked).not.toHaveBeenCalled();
+});
+
+test("a concurrent redemption does not release the failed attempt", async () => {
+  redeemAccessCode.mockResolvedValueOnce(null);
+  const response = await redeem({ code: "482 719" });
+  expect(response.status).toBe(409);
+  expect((await response.json()).used).toBe(true);
+  expect(releaseAccessCodeAttempt).not.toHaveBeenCalled();
+  expect(notifyWorkshopBooked).not.toHaveBeenCalled();
 });
 
 test("a guest must agree to personal data processing", async () => {

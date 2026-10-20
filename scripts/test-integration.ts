@@ -27,6 +27,11 @@ interface Suite {
 
 const suites: Suite[] = [
   {
+    file: "apps/web/src/lib/workshops/access-codes.integration.test.ts",
+    env: "ACCESS_CODE_TEST_DATABASE_URL",
+    database: "stariva_access_code_test",
+  },
+  {
     file: "apps/web/src/lib/custom-order/inbox.integration.test.ts",
     env: "CUSTOM_ORDER_TEST_DATABASE_URL",
     database: "stariva_custom_order_test",

@@ -15,7 +15,11 @@ const printStyles = `
 @media print {
   body * { visibility: hidden; }
   #code-sheet, #code-sheet * { visibility: visible; }
-  #code-sheet { position: fixed; inset: 0; margin: 0; border: 0; box-shadow: none; }
+  #code-sheet {
+    position: fixed; inset: 0; margin: 0; border: 0; box-shadow: none;
+    max-width: none; aspect-ratio: auto; width: 100%; height: 100%;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
 }
 `;
 
