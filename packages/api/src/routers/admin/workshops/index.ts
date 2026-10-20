@@ -8,11 +8,13 @@ import { remove } from "./remove";
 import { removeOrder } from "./remove-order";
 import { save } from "./save";
 import { uploadImage } from "./upload-image";
+import { viewsList } from "./views";
 
 export const adminWorkshopsRouter = {
   list,
   byId,
   orders: ordersList,
+  views: viewsList,
   save,
   remove,
   removeOrder,

@@ -23,6 +23,7 @@ import {
   IconMessageChatbot,
   IconMessageStar,
   IconPackage,
+  IconPlayerPlay,
   IconPlus,
   IconSchool,
   IconSettings,
@@ -68,6 +69,7 @@ const sales: NavItem[] = [
 const learning: NavItem[] = [
   { title: "Мастер-классы", url: "/workshops", icon: IconSchool },
   { title: "Записи", url: "/workshop-orders", icon: IconTicket },
+  { title: "Просмотры", url: "/workshop-views", icon: IconPlayerPlay },
   { title: "Добавить мастер-класс", url: "/workshops/new", icon: IconPlus },
 ];
 
