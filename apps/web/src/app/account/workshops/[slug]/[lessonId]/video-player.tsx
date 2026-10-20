@@ -222,9 +222,7 @@ export function VideoPlayer({
         />
       );
     }
-    return (
-      <Video key={source.url} {...common} src={source.url} />
-    );
+    return <Video key={source.url} {...common} src={source.url} />;
   }, [source]);
 
   if (error) {
