@@ -35,9 +35,15 @@ export function receiptsExpected(order: {
     : paidOnce;
 }
 
-/** Мастер-класс оплачивают один раз. */
-export function workshopReceiptsExpected(status: string): number {
-  return status === "paid" ? 1 : 0;
+/**
+ * Мастер-класс оплачивают один раз. Заказ без платежа ЮKassa открыт кодом
+ * с маркетплейса: деньги получила площадка, чек на сайте не выписываем.
+ */
+export function workshopReceiptsExpected(order: {
+  status: string;
+  paymentId: string | null;
+}): number {
+  return order.status === "paid" && order.paymentId ? 1 : 0;
 }
 
 export interface ReceiptStats {
@@ -103,10 +109,10 @@ export async function loadReceiptsExpected(
 ): Promise<number> {
   if (target.kind === "workshop") {
     const [order] = await db
-      .select({ status: orders.status })
+      .select({ status: orders.status, paymentId: orders.paymentId })
       .from(orders)
       .where(eq(orders.id, target.orderId));
-    return order ? workshopReceiptsExpected(order.status) : 0;
+    return order ? workshopReceiptsExpected(order) : 0;
   }
   const [[order], stats] = await Promise.all([
     db

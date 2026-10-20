@@ -79,6 +79,7 @@ export const ordersList = adminProcedure
           contactEmail: orders.contactEmail,
           amount: orders.amount,
           status: orders.status,
+          paymentId: orders.paymentId,
           createdAt: orders.createdAt,
           paidAt: orders.paidAt,
           telegramLinked: sql<boolean>`${orders.telegramChatId} is not null`,
@@ -126,19 +127,24 @@ export const ordersList = adminProcedure
     for (const row of byStatus) statusCounts[row.status] = row.total;
 
     return {
-      items: rows.map(({ amount, releaseAt, attribution, ...row }) => ({
-        ...row,
-        // Чеков должно быть по числу оплат — по записи на курс одна
-        receiptsExpected: workshopReceiptsExpected(row.status),
-        // Копейки → рубли, как в остальной админке
-        amount: amount / 100,
-        // Предзаказ — оформлен до старта уроков (как подарок в applyWorkshopPayment)
-        preorder:
-          releaseAt !== null && row.createdAt.getTime() < releaseAt.getTime(),
-        // Последний заход по метке перед заказом
-        utmSource: attribution?.last.utm_source ?? null,
-        utmCampaign: attribution?.last.utm_campaign ?? null,
-      })),
+      items: rows.map(
+        ({ amount, releaseAt, attribution, paymentId, ...row }) => ({
+          ...row,
+          // Чеков должно быть по числу оплат — по записи на курс одна
+          receiptsExpected: workshopReceiptsExpected({
+            status: row.status,
+            paymentId,
+          }),
+          // Копейки → рубли, как в остальной админке
+          amount: amount / 100,
+          // Предзаказ — оформлен до старта уроков (как подарок в applyWorkshopPayment)
+          preorder:
+            releaseAt !== null && row.createdAt.getTime() < releaseAt.getTime(),
+          // Последний заход по метке перед заказом
+          utmSource: attribution?.last.utm_source ?? null,
+          utmCampaign: attribution?.last.utm_campaign ?? null,
+        }),
+      ),
       total: totals?.total ?? 0,
       statusCounts,
       workshops: byWorkshop.map((row) => ({

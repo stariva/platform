@@ -1,3 +1,4 @@
+export * from "./access-codes";
 export * from "./catalog";
 export * from "./certificates";
 export * from "./course-access";

@@ -13,6 +13,12 @@ export {
 } from "./orpc";
 export { type WebRouter, webRouter } from "./router";
 export {
+  ACCESS_CODE_LENGTH,
+  formatAccessCode,
+  generateAccessCode,
+  normalizeAccessCode,
+} from "./services/access-codes";
+export {
   canWatchCourse,
   hasAccess,
   isAdminUserId,
