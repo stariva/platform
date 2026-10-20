@@ -78,6 +78,8 @@ export interface Product {
 export interface Category {
   slug: ProductCategory;
   name: string;
+  /** Заголовок страницы раздела под поисковые запросы, без «— Stariva». */
+  seoTitle: string;
   description: string;
   image: string;
   hero: {

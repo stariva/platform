@@ -12,6 +12,8 @@ export const metadata = {
   title: "Согласие на обработку персональных данных",
   description:
     "Согласие на обработку персональных данных пользователей сайта Stariva в соответствии с 152-ФЗ.",
+  // Служебный документ — в поиске не нужен, ссылки с него пусть работают
+  robots: { index: false, follow: true },
 };
 
 export default function PersonalDataConsentPage() {

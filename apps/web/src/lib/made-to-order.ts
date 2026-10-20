@@ -178,11 +178,18 @@ function formatLeadTime({ min, max }: { min: number; max: number }): string {
   return `${range} ${pluralDays(max)}`;
 }
 
+/** Срок изготовления изделия в днях: свой из каталога или общий. */
+export function madeToOrderLeadTimeDays(
+  product: Pick<Product, "leadTimeDays">,
+): { min: number; max: number } {
+  return product.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS;
+}
+
 /** Срок изготовления изделия: свой из каталога или общий MADE_TO_ORDER_DAYS. */
 export function madeToOrderLeadTime(
   product: Pick<Product, "leadTimeDays">,
 ): string {
-  return formatLeadTime(product.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS);
+  return formatLeadTime(madeToOrderLeadTimeDays(product));
 }
 
 /** Общий срок для нескольких изделий: от самого короткого до самого долгого. */

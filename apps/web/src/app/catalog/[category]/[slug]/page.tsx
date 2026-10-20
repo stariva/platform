@@ -22,7 +22,11 @@ import {
   getReviews,
   summarizeRatings,
 } from "@/lib/catalog/service";
-import { madeToOrderLeadTime } from "@/lib/made-to-order";
+import { IN_STOCK_SHIP_DAYS_RANGE } from "@/lib/in-stock";
+import {
+  madeToOrderLeadTime,
+  madeToOrderLeadTimeDays,
+} from "@/lib/made-to-order";
 import {
   getCategoryBySlug,
   getProductSection,
@@ -224,12 +228,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
           img.startsWith("http") ? img : `${BASE_URL}${img}`,
         )}
         price={product.price}
-        oldPrice={product.oldPrice}
         currency={product.currency}
         inStock={product.inStock}
         madeToOrder={product.madeToOrder}
+        handlingDays={
+          product.inStock
+            ? IN_STOCK_SHIP_DAYS_RANGE
+            : madeToOrderLeadTimeDays(product)
+        }
         url={url}
-        category={section.name}
+        category={product.category}
+        subcategory={product.subcategory}
         material={product.material}
         color={product.color}
         rating={summarizeRatings(markupReviews)}
