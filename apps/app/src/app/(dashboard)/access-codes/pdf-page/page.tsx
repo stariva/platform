@@ -1,4 +1,4 @@
-import { CODE_PAGE_TEXT } from "@stariva/api/code-page-text";
+import { CODE_PAGE_TEXT, CODE_PAGE_URL } from "@stariva/api/code-page-text";
 import { buttonVariants } from "@stariva/ui";
 import Link from "next/link";
 import { SiteHeader } from "~/components/layout";
@@ -40,8 +40,9 @@ export default function AccessCodePdfPage() {
           <p className="text-muted-foreground text-sm">
             Вручную: нажмите «Сохранить в PDF», в окне печати выберите
             «Сохранить как PDF» и объедините файл с брифом в любой программе для
-            PDF. Если бриф собираете в Canva — скачайте QR-код картинкой и
-            повторите текст.
+            PDF. Если бриф собираете в Canva — скачайте QR-код картинкой,
+            повторите текст и сделайте адрес и QR-код ссылкой на{" "}
+            {CODE_PAGE_TEXT.address}: с телефона их нажимают, а не сканируют.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href="/workshops" className={buttonVariants()}>
@@ -79,15 +80,28 @@ export default function AccessCodePdfPage() {
             {CODE_PAGE_TEXT.lead}
           </p>
 
-          {/* biome-ignore lint/performance/noImgElement: печатный лист, без оптимизации next/image */}
-          <img
-            src="/code-qr.svg"
-            alt={`QR-код: ${CODE_PAGE_TEXT.address}`}
-            className="mt-[7%] aspect-square w-[42%]"
-          />
-          <p className="mt-[3%] text-[clamp(18px,4.4vw,28px)] tracking-wide">
+          {/* Ссылки сохраняются в PDF: бриф часто читают с телефона, где QR не навести */}
+          <a
+            href={CODE_PAGE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-[7%] block aspect-square w-[42%]"
+          >
+            {/* biome-ignore lint/performance/noImgElement: печатный лист, без оптимизации next/image */}
+            <img
+              src="/code-qr.svg"
+              alt={`QR-код: ${CODE_PAGE_TEXT.address}`}
+              className="size-full"
+            />
+          </a>
+          <a
+            href={CODE_PAGE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-[3%] text-[clamp(18px,4.4vw,28px)] tracking-wide underline decoration-1 underline-offset-4"
+          >
             {CODE_PAGE_TEXT.address}
-          </p>
+          </a>
 
           <ol className="mt-[6%] space-y-[2%] text-left text-[clamp(12px,2.6vw,16px)] leading-snug">
             {CODE_PAGE_TEXT.steps.map((step) => (

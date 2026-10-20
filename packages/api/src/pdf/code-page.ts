@@ -4,6 +4,7 @@ import {
   PDFDocument,
   type PDFFont,
   type PDFPage,
+  PDFString,
   type RGB,
   rgb,
 } from "@cantoo/pdf-lib";
@@ -176,15 +177,39 @@ function drawCodePage(page: PDFPage, font: PDFFont) {
       path += `M${start} ${row}h${col - start}v1h${start - col}z`;
     }
   });
+  const qrLeft = (width - qrSide) / 2;
   page.drawSvgPath(path, {
-    x: (width - qrSide) / 2,
+    x: qrLeft,
     y: top,
     scale: qrSide / qrModules.length,
     color: INK,
   });
+  // Бриф часто читают с телефона — навести на экран камеру того же
+  // телефона нельзя, поэтому QR и адрес нажимаются
+  addLink(page, [qrLeft, top - qrSide, qrLeft + qrSide, top], CODE_PAGE_URL);
   top -= qrSide + gaps.address * scale;
 
-  centered([CODE_PAGE_TEXT.address], { size: 28 * scale, color: INK });
+  const addressSize = 28 * scale;
+  const addressWidth = font.widthOfTextAtSize(
+    CODE_PAGE_TEXT.address,
+    addressSize,
+  );
+  const addressLeft = (width - addressWidth) / 2;
+  const addressTop = top;
+  centered([CODE_PAGE_TEXT.address], { size: addressSize, color: INK });
+  // Тонкое подчёркивание: видно, что адрес — ссылка
+  const underline = addressTop - leading(addressSize) * 0.9;
+  page.drawLine({
+    start: { x: addressLeft, y: underline },
+    end: { x: addressLeft + addressWidth, y: underline },
+    thickness: 0.6 * scale,
+    color: INK,
+  });
+  addLink(
+    page,
+    [addressLeft, top, addressLeft + addressWidth, addressTop],
+    CODE_PAGE_URL,
+  );
   top -= gaps.steps * scale;
 
   // Шаги — блок с выравниванием по левому краю, сам блок по центру
@@ -210,6 +235,24 @@ function drawCodePage(page: PDFPage, font: PDFFont) {
   top -= gaps.footer * scale;
 
   centered(footer, { size: 13 * scale, color: MUTED });
+}
+
+/** Ссылка на странице: прямоугольник [x1, y1, x2, y2] открывает url. */
+function addLink(
+  page: PDFPage,
+  rect: [number, number, number, number],
+  url: string,
+) {
+  const { context } = page.doc;
+  const annot = context.obj({
+    Type: "Annot",
+    Subtype: "Link",
+    Rect: rect,
+    // Без рамки: иначе часть просмотрщиков обводит ссылку
+    Border: [0, 0, 0],
+    A: { Type: "Action", S: "URI", URI: PDFString.of(url) },
+  });
+  page.node.addAnnot(context.register(annot));
 }
 
 /** Разбивает текст на строки не шире maxWidth — по словам. */

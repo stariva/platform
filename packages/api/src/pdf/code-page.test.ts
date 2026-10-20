@@ -3,7 +3,7 @@ import { degrees, PDFDocument } from "@cantoo/pdf-lib";
 import { extractText, getDocumentProxy } from "unpdf";
 
 import { appendCodePage } from "./code-page";
-import { CODE_PAGE_TEXT } from "./code-page-text";
+import { CODE_PAGE_TEXT, CODE_PAGE_URL } from "./code-page-text";
 
 async function brief(sizes: [number, number][]) {
   const doc = await PDFDocument.create();
@@ -34,9 +34,25 @@ test("дописывает страницу с кодом в конец бриф
   // Кириллица извлекается текстом, а не глифами без кодов
   expect(last).toContain(CODE_PAGE_TEXT.title);
   expect(last).toContain(CODE_PAGE_TEXT.address);
-  expect(last).toContain("Наведите камеру телефона на QR-код.");
+  expect(last).toContain("нажмите на адрес или QR-код");
+  expect(last).toContain("наведите телефон на QR-код");
   expect(last).toContain("Код ещё не пришёл?");
   expect(texts[0]).toBe("");
+});
+
+test("QR и адрес — ссылки на stariva.ru/code: бриф читают и с телефона", async () => {
+  const result = await appendCodePage(await brief([[595.28, 841.89]]));
+  const proxy = await getDocumentProxy(new Uint8Array(result));
+  const links = await (await proxy.getPage(2)).getAnnotations();
+  expect(
+    links.map((link: { subtype: string; url?: string }) => [
+      link.subtype,
+      link.url,
+    ]),
+  ).toEqual([
+    ["Link", CODE_PAGE_URL],
+    ["Link", CODE_PAGE_URL],
+  ]);
 });
 
 test("берёт размер последней страницы брифа", async () => {
