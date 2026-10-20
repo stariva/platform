@@ -117,10 +117,9 @@ function sitePriceNote({
   price,
   priceAfterRelease,
   releaseAt,
-}: Pick<
-  WorkshopFormValues,
-  "price" | "priceAfterRelease" | "releaseAt"
->): string | null {
+}: Pick<WorkshopFormValues, "price" | "priceAfterRelease" | "releaseAt">):
+  | string
+  | null {
   if (!Number.isFinite(price)) return null;
   const after =
     priceAfterRelease !== null && Number.isFinite(priceAfterRelease)
