@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { degrees, PDFDocument } from "pdf-lib";
+import { degrees, PDFDocument } from "@cantoo/pdf-lib";
 import { extractText, getDocumentProxy } from "unpdf";
 
 import { appendCodePage } from "./code-page";

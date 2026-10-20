@@ -1,6 +1,6 @@
+import { EncryptedPDFError } from "@cantoo/pdf-lib";
 import { ORPCError } from "@orpc/server";
 import { getObjectBytes, isStorageConfigured } from "@stariva/storage";
-import { EncryptedPDFError } from "pdf-lib";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";

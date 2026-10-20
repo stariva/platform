@@ -1,13 +1,13 @@
 import { readFile } from "node:fs/promises";
-import fontkit from "@pdf-lib/fontkit";
+import fontkit from "@cantoo/fontkit";
 import {
   PDFDocument,
   type PDFFont,
   type PDFPage,
   type RGB,
   rgb,
-} from "pdf-lib";
-import QRCode from "qrcode";
+} from "@cantoo/pdf-lib";
+import encodeQR from "qr";
 
 import { CODE_PAGE_TEXT, CODE_PAGE_URL } from "./code-page-text";
 
@@ -71,9 +71,11 @@ function drawCodePage(page: PDFPage, font: PDFFont) {
 
   page.drawRectangle({ x: 0, y: 0, width, height, color: PAPER });
 
-  const qrModules = QRCode.create(CODE_PAGE_URL, {
-    errorCorrectionLevel: "M",
-  }).modules;
+  // Тихую зону вокруг кода даёт сам лист. Без рамки qr матрицу не отдаёт,
+  // поэтому просим рамку в один модуль и срезаем её
+  const qrModules = encodeQR(CODE_PAGE_URL, "raw", { ecc: "medium", border: 1 })
+    .slice(1, -1)
+    .map((row) => row.slice(1, -1));
   const qrSide = content * 0.42;
 
   const lead = wrap(CODE_PAGE_TEXT.lead, font, 16 * scale, narrow);
@@ -162,22 +164,22 @@ function drawCodePage(page: PDFPage, font: PDFFont) {
   // QR вектором, одним контуром: у отдельных квадратов между рядами
   // просвечивают щели. Каждый ряд — отрезки из подряд идущих тёмных модулей
   let path = "";
-  for (let row = 0; row < qrModules.size; row++) {
+  qrModules.forEach((modules, row) => {
     let col = 0;
-    while (col < qrModules.size) {
-      if (!qrModules.get(row, col)) {
+    while (col < modules.length) {
+      if (!modules[col]) {
         col++;
         continue;
       }
       const start = col;
-      while (col < qrModules.size && qrModules.get(row, col)) col++;
+      while (col < modules.length && modules[col]) col++;
       path += `M${start} ${row}h${col - start}v1h${start - col}z`;
     }
-  }
+  });
   page.drawSvgPath(path, {
     x: (width - qrSide) / 2,
     y: top,
-    scale: qrSide / qrModules.size,
+    scale: qrSide / qrModules.length,
     color: INK,
   });
   top -= qrSide + gaps.address * scale;
