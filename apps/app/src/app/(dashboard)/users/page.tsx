@@ -28,6 +28,11 @@ const pageSchema = z.coerce
   .refine((value) => Number.isSafeInteger((value - 1) * PAGE_SIZE));
 
 const dateFormat = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" });
+const dateTimeFormat = new Intl.DateTimeFormat("ru-RU", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Europe/Moscow",
+});
 
 function pageHref(query: string, page: number) {
   const params = new URLSearchParams();
@@ -101,13 +106,14 @@ export default async function UsersPage({
                 <TableHead className="text-right">Заказы</TableHead>
                 <TableHead className="text-right">Курсы</TableHead>
                 <TableHead>Регистрация</TableHead>
+                <TableHead>Последний вход</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="text-muted-foreground py-8 text-center"
                   >
                     Никого не найдено
@@ -155,6 +161,11 @@ export default async function UsersPage({
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {dateFormat.format(item.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {item.lastSignInAt
+                      ? dateTimeFormat.format(item.lastSignInAt)
+                      : "—"}
                   </TableCell>
                 </TableRow>
               ))}
