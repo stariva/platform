@@ -59,6 +59,7 @@
     "@stariva/storage": "workspace:*",
     "@stariva/web-api": "workspace:*",
     "@t3-oss/env-nextjs": "0.13.11",
+    "@videojs/core": "10.1.0",
     "@videojs/hlsjs-video": "10.1.0",
     "@videojs/react": "10.1.0",
     "ai": "^7.0.142",
