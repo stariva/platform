@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@stariva/ui";
 import Link from "next/link";
+import { WorkshopViewRemove } from "./workshop-view-remove";
 
 const dayFormat = new Intl.DateTimeFormat("ru-RU", {
   dateStyle: "medium",
@@ -30,6 +31,8 @@ export interface WorkshopViewRow {
   lessonTitle: string | null;
   lessonPosition: number | null;
   lessonsCount: number | null;
+  /** День просмотра по Москве, YYYY-MM-DD. */
+  day: string;
   firstAt: Date;
   lastAt: Date;
   ips: string[];
@@ -117,13 +120,16 @@ export function WorkshopViewsTable({
             <TableHead>Когда</TableHead>
             <TableHead>Прогресс</TableHead>
             <TableHead>Откуда</TableHead>
+            <TableHead>
+              <span className="sr-only">Действия</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="text-muted-foreground py-8 text-center"
               >
                 Просмотров нет
@@ -207,6 +213,22 @@ export function WorkshopViewsTable({
                       несколько IP
                     </Badge>
                   )}
+                </TableCell>
+                <TableCell className="align-top">
+                  <WorkshopViewRemove
+                    viewer={row.viewer}
+                    who={
+                      row.userId
+                        ? (row.userName ?? row.userEmail ?? "без имени")
+                        : `гость${row.ips[0] ? ` с ${row.ips[0]}` : ""}`
+                    }
+                    lesson={{
+                      workshopSlug: row.workshopSlug,
+                      lessonId: row.lessonId,
+                      day: row.day,
+                      label: `${row.lessonTitle ?? row.lessonId}, ${dayFormat.format(row.firstAt)}`,
+                    }}
+                  />
                 </TableCell>
               </TableRow>
             );

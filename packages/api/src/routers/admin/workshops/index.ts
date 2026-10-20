@@ -6,6 +6,7 @@ import { ordersList } from "./orders";
 import { presignUpload } from "./presign-upload";
 import { remove } from "./remove";
 import { removeOrder } from "./remove-order";
+import { removeViews } from "./remove-views";
 import { save } from "./save";
 import { uploadImage } from "./upload-image";
 import { viewsList } from "./views";
@@ -18,6 +19,7 @@ export const adminWorkshopsRouter = {
   save,
   remove,
   removeOrder,
+  removeViews,
   presignUpload,
   materialUrl,
   uploadImage,

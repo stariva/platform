@@ -19,6 +19,7 @@ import {
 } from "@/lib/workshops-data";
 import {
   BIG_TREE_ID,
+  READY_TREES_ID,
   WORKSHOP_BUY_ID,
   WORKSHOP_INCLUDES,
   WORKSHOP_PROGRAM,
@@ -57,10 +58,13 @@ export function workshopOffer(workshop?: Workshop, now = new Date()) {
 export function ElkaWorkshop({
   workshop,
   bigTree,
+  readyTreePrice,
 }: {
   workshop?: Workshop;
   /** Мастер-класс по большой ёлке; есть, только когда его продают. */
   bigTree?: Workshop;
+  /** Самая дешёвая готовая ёлка из каталога — для сравнения с ценой уроков. */
+  readyTreePrice?: number;
 }) {
   const { price, preorder, regularPrice, releaseLabel } =
     workshopOffer(workshop);
@@ -236,6 +240,21 @@ export function ElkaWorkshop({
                 ? `Сейчас — два мастер-класса по цене предзаказа. С ${releaseLabel} — один, за ${formatPrice(regularPrice ?? price)}.`
                 : "Видеоуроки, схема и список материалов — доступ навсегда."}
             </p>
+            {/* Честный ориентир вместо зачёркнутой цены: после старта курс
+                продаётся по обычной цене, а сравниваем с готовой ёлкой. */}
+            {!preorder && readyTreePrice ? (
+              <p className="-mt-3 mb-6 rounded-2xl bg-sage-pale px-4 py-3 text-sm leading-relaxed text-espresso">
+                Готовая ёлка ручной работы стоит{" "}
+                <TrackedLink
+                  href={`#${READY_TREES_ID}`}
+                  goal="elka_price_compare_ready"
+                  className="whitespace-nowrap underline underline-offset-4 hover:text-terracotta"
+                >
+                  от {formatPrice(readyTreePrice)}
+                </TrackedLink>
+                , а по урокам вы сплетёте такую сами.
+              </p>
+            ) : null}
 
             {workshop ? (
               <WorkshopPreorderButton

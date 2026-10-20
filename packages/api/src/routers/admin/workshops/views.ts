@@ -22,9 +22,9 @@ function escapeLike(value: string) {
 
 // День просмотра по Москве: ссылка на видео обновляется раз в 15 минут,
 // так что записи журнала за день по одному уроку — один заход
-const day = sql<string>`((${videoAccessLog.createdAt} at time zone 'Europe/Moscow')::date)::text`;
+export const viewDay = sql<string>`((${videoAccessLog.createdAt} at time zone 'Europe/Moscow')::date)::text`;
 // Гость без входа (бесплатный урок) различается только по IP
-const viewer = sql<string>`coalesce(${videoAccessLog.userId}, 'ip:' || coalesce(${videoAccessLog.ip}, ''))`;
+export const viewerKey = sql<string>`coalesce(${videoAccessLog.userId}, 'ip:' || coalesce(${videoAccessLog.ip}, ''))`;
 
 /**
  * Просмотры уроков мастер-классов, свежие сверху. Строка — один зритель,
@@ -62,13 +62,13 @@ export const viewsList = adminProcedure
 
     const sessions = context.db
       .select({
-        viewer: sql<string>`${viewer}`.as("view_viewer"),
+        viewer: sql<string>`${viewerKey}`.as("view_viewer"),
         userId: sql<string | null>`max(${videoAccessLog.userId})`.as(
           "view_user_id",
         ),
         workshopSlug: videoAccessLog.workshopSlug,
         lessonId: videoAccessLog.lessonId,
-        day: sql<string>`${day}`.as("view_day"),
+        day: sql<string>`${viewDay}`.as("view_day"),
         firstAt: sql<Date>`min(${videoAccessLog.createdAt})`
           .mapWith(videoAccessLog.createdAt)
           .as("view_first_at"),
@@ -91,10 +91,10 @@ export const viewsList = adminProcedure
       .leftJoin(user, eq(user.id, videoAccessLog.userId))
       .where(where)
       .groupBy(
-        viewer,
+        viewerKey,
         videoAccessLog.workshopSlug,
         videoAccessLog.lessonId,
-        day,
+        viewDay,
       )
       .as("s");
 
@@ -145,7 +145,7 @@ export const viewsList = adminProcedure
         .select({
           slug: videoAccessLog.workshopSlug,
           title: workshops.title,
-          viewers: sql<number>`count(distinct ${viewer})::int`,
+          viewers: sql<number>`count(distinct ${viewerKey})::int`,
           accounts: sql<number>`count(distinct ${videoAccessLog.userId})::int`,
         })
         .from(videoAccessLog)
