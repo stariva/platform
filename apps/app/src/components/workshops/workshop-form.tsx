@@ -15,8 +15,10 @@ import {
   toast,
 } from "@stariva/ui";
 import {
+  currentWorkshopPrice,
   EMPTY_WORKSHOP_BRIEF_VALUES,
   formatDurationLabel,
+  parseMoscowDateTime,
   productSlugFromName,
   WORKSHOP_CATEGORIES,
   WORKSHOP_LEVELS,
@@ -48,6 +50,7 @@ export const EMPTY_WORKSHOP: WorkshopFormValues = {
   level: "beginner",
   status: "draft",
   price: 0,
+  priceAfterRelease: null,
   cover: "",
   previewImage: "",
   whatYouLearn: [],
@@ -89,6 +92,55 @@ function FieldRow({
   );
 }
 
+const rub = new Intl.NumberFormat("ru-RU", {
+  style: "currency",
+  currency: "RUB",
+  maximumFractionDigits: 2,
+});
+
+const releaseLabel = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "long",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Moscow",
+});
+
+const formatSitePrice = (price: number) =>
+  price === 0 ? "бесплатно" : rub.format(price);
+
+/**
+ * Какая цена на сайте при этих значениях формы: цена предзаказа до старта,
+ * цена после старта — с даты старта. null — цена ещё не введена.
+ */
+function sitePriceNote({
+  price,
+  priceAfterRelease,
+  releaseAt,
+}: Pick<
+  WorkshopFormValues,
+  "price" | "priceAfterRelease" | "releaseAt"
+>): string | null {
+  if (!Number.isFinite(price)) return null;
+  const after =
+    priceAfterRelease !== null && Number.isFinite(priceAfterRelease)
+      ? priceAfterRelease
+      : null;
+  const releaseDate = parseMoscowDateTime(releaseAt);
+  const now = new Date();
+  const current = currentWorkshopPrice({
+    price,
+    priceAfterRelease: after,
+    releaseAt: releaseDate,
+    now,
+  });
+  if (after === null || after === price) return formatSitePrice(current);
+  if (releaseDate && releaseDate > now) {
+    return `${formatSitePrice(current)} — цена предзаказа, с ${releaseLabel.format(releaseDate)} — ${formatSitePrice(after)}`;
+  }
+  return `${formatSitePrice(current)} — уроки стартовали, действует цена после старта`;
+}
+
 const toLines = (text: string) =>
   text
     .split("\n")
@@ -121,6 +173,11 @@ export function WorkshopForm({
   const slug = watch("slug");
   const lessons = watch("lessons");
   const materialFiles = watch("materialFiles");
+  const sitePrice = sitePriceNote({
+    price: watch("price"),
+    priceAfterRelease: watch("priceAfterRelease"),
+    releaseAt: watch("releaseAt"),
+  });
 
   // Файлы лежат в папке по адресу курса — после первой загрузки адрес фиксируем
   const slugLocked =
@@ -454,6 +511,31 @@ export function WorkshopForm({
                 {...register("releaseAt")}
               />
             </FieldRow>
+            <FieldRow
+              label="Цена после старта, ₽"
+              htmlFor="priceAfterRelease"
+              hint="С даты старта сайт продаёт по этой цене, а «Цена» остаётся ценой предзаказа. Пусто — после старта цена не меняется"
+              error={errors.priceAfterRelease?.message}
+            >
+              <Input
+                id="priceAfterRelease"
+                type="number"
+                step="0.01"
+                min="0"
+                {...register("priceAfterRelease", {
+                  setValueAs: (value) =>
+                    value === "" || value === null || value === undefined
+                      ? null
+                      : Number(value),
+                })}
+              />
+            </FieldRow>
+            {sitePrice && (
+              <p className="bg-muted rounded-md px-3 py-2 text-sm">
+                {status === "published" ? "Сейчас на сайте" : "Цена на сайте"}:{" "}
+                {sitePrice}
+              </p>
+            )}
             <Controller
               control={control}
               name="featured"

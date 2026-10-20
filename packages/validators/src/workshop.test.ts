@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  currentWorkshopPrice,
   formatClock,
   formatDurationLabel,
   formatMoscowDateTime,
@@ -26,6 +27,7 @@ const valid: WorkshopFormValues = {
   level: "beginner",
   status: "published",
   price: 2990,
+  priceAfterRelease: null,
   cover: "https://cdn.stariva.ru/workshops/abazhur-kupol/a.jpg",
   previewImage: "",
   whatYouLearn: [],
@@ -196,6 +198,26 @@ describe("workshopFormSchema", () => {
     ).toEqual(["brief.image"]);
   });
 
+  test("a price after release needs a release date", () => {
+    expect(errorPaths({ ...valid, priceAfterRelease: 3990 })).toEqual([
+      "priceAfterRelease",
+    ]);
+    expect(
+      errorPaths({
+        ...valid,
+        releaseAt: "2026-11-01T10:00",
+        priceAfterRelease: 3990,
+      }),
+    ).toEqual([]);
+    expect(
+      errorPaths({
+        ...valid,
+        releaseAt: "2026-11-01T10:00",
+        priceAfterRelease: -1,
+      }),
+    ).toEqual(["priceAfterRelease"]);
+  });
+
   test("release date must be a real date", () => {
     expect(errorPaths({ ...valid, releaseAt: "2026-02-31T10:00" })).toEqual([
       "releaseAt",
@@ -203,6 +225,32 @@ describe("workshopFormSchema", () => {
     expect(errorPaths({ ...valid, releaseAt: "1 ноября" })).toEqual([
       "releaseAt",
     ]);
+  });
+});
+
+describe("currentWorkshopPrice", () => {
+  const releaseAt = new Date("2026-10-20T07:00:00Z");
+  const elka = { price: 690, priceAfterRelease: 990, releaseAt };
+
+  test("keeps the preorder price until the lessons open", () => {
+    expect(
+      currentWorkshopPrice({ ...elka, now: new Date("2026-10-20T06:59:59Z") }),
+    ).toBe(690);
+  });
+
+  test("switches to the price after release at the release", () => {
+    expect(currentWorkshopPrice({ ...elka, now: releaseAt })).toBe(990);
+    expect(currentWorkshopPrice({ ...elka, releaseAt: null })).toBe(990);
+  });
+
+  test("without a price after release the price stays", () => {
+    expect(
+      currentWorkshopPrice({
+        ...elka,
+        priceAfterRelease: null,
+        now: new Date("2026-12-01T00:00:00Z"),
+      }),
+    ).toBe(690);
   });
 });
 

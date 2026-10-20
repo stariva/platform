@@ -106,6 +106,9 @@ export const workshops = pgTable(
 
     // Копейки, как в заказах. 0 — бесплатный курс.
     price: integer("price").notNull().default(0),
+    // Копейки. С даты старта уроков сайт продаёт по этой цене, а price
+    // остаётся ценой предзаказа. null — цена после старта та же, что price.
+    priceAfterRelease: integer("price_after_release"),
 
     // Картинка из публичного бакета (https://…) или файл из public/ сайта (/images/…)
     cover: text("cover").notNull().default(""),
@@ -156,6 +159,10 @@ export const workshops = pgTable(
       table.sortOrder,
     ),
     check("workshops_price_non_negative", sql`${table.price} >= 0`),
+    check(
+      "workshops_price_after_release_non_negative",
+      sql`${table.priceAfterRelease} >= 0`,
+    ),
   ],
 );
 

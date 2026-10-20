@@ -19,6 +19,10 @@ export function formToRow(values: WorkshopFormValues) {
     level: values.level,
     status: values.status,
     price: Math.round(values.price * 100),
+    priceAfterRelease:
+      values.priceAfterRelease === null
+        ? null
+        : Math.round(values.priceAfterRelease * 100),
     cover: values.cover,
     previewImage: values.previewImage,
     whatYouLearn: values.whatYouLearn,
@@ -46,6 +50,8 @@ export function rowToForm(row: WorkshopRow): WorkshopFormValues {
     level: row.level,
     status: row.status,
     price: row.price / 100,
+    priceAfterRelease:
+      row.priceAfterRelease === null ? null : row.priceAfterRelease / 100,
     cover: row.cover,
     previewImage: row.previewImage,
     whatYouLearn: row.whatYouLearn,

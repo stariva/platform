@@ -25,6 +25,17 @@ export type WorkshopLevelId = keyof typeof WORKSHOP_LEVELS;
 /** Максимум для integer в PostgreSQL, цена хранится в копейках. */
 const MAX_RUBLES = 21_474_836;
 
+/** Цена в рублях: до копеек и не больше integer в копейках. */
+const rubles = (required: string) =>
+  z
+    .number({ error: required })
+    .min(0, "Цена не может быть отрицательной")
+    .max(MAX_RUBLES)
+    .refine(
+      (price) => Math.abs(price * 100 - Math.round(price * 100)) < 1e-6,
+      "Цена должна содержать не больше двух знаков после запятой",
+    );
+
 /** Адрес картинки: из публичного бакета (https) или файл из public/ сайта. */
 const imageSrc = z
   .string()
@@ -102,14 +113,10 @@ export const workshopFormSchema = z
     category: z.enum(["lampshades", "clothing", "interior"]),
     level: z.enum(["beginner", "intermediate", "advanced"]),
     status: z.enum(["draft", "published", "archived"]),
-    price: z
-      .number({ error: "Укажите цену (0 — бесплатно)" })
-      .min(0, "Цена не может быть отрицательной")
-      .max(MAX_RUBLES)
-      .refine(
-        (price) => Math.abs(price * 100 - Math.round(price * 100)) < 1e-6,
-        "Цена должна содержать не больше двух знаков после запятой",
-      ),
+    price: rubles("Укажите цену (0 — бесплатно)"),
+    // С даты старта сайт продаёт по ней, price остаётся ценой предзаказа.
+    // null — после старта цена не меняется.
+    priceAfterRelease: rubles("Укажите цену после старта").nullable(),
     cover: imageSrc,
     previewImage: imageSrc,
     whatYouLearn: textList(300),
@@ -181,6 +188,15 @@ export const workshopFormSchema = z
       }
     }
 
+    // Без даты старта курс уже открыт — цена после старта сразу заменила бы цену
+    if (value.priceAfterRelease !== null && value.releaseAt === "") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["priceAfterRelease"],
+        message: "Укажите старт уроков — или оставьте поле пустым",
+      });
+    }
+
     if ((value.testimonialText === "") !== (value.testimonialAuthor === "")) {
       ctx.addIssue({
         code: "custom",
@@ -231,6 +247,27 @@ export function parseMoscowDateTime(value: string): Date | null {
 export function formatMoscowDateTime(date: Date): string {
   const moscow = new Date(date.getTime() + 3 * 3600 * 1000);
   return moscow.toISOString().slice(0, 16);
+}
+
+/**
+ * Цена курса на сайте в момент now: до старта уроков — цена предзаказа, с
+ * даты старта — цена после старта, если она задана. Единицы любые, лишь бы
+ * одинаковые: рубли на витрине, копейки в заказах.
+ */
+export function currentWorkshopPrice({
+  price,
+  priceAfterRelease,
+  releaseAt,
+  now = new Date(),
+}: {
+  price: number;
+  priceAfterRelease: number | null;
+  releaseAt: Date | null;
+  now?: Date;
+}): number {
+  if (priceAfterRelease === null) return price;
+  const released = !releaseAt || releaseAt.getTime() <= now.getTime();
+  return released ? priceAfterRelease : price;
 }
 
 /** «83» → «1:23», «3725» → «1:02:05». */

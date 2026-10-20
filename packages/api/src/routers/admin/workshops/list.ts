@@ -1,4 +1,5 @@
 import { asc, orders, sql, workshops } from "@stariva/db";
+import { currentWorkshopPrice } from "@stariva/validators";
 
 import { adminProcedure } from "../../../orpc";
 
@@ -13,6 +14,8 @@ export const list = adminProcedure.handler(async ({ context }) => {
       level: workshops.level,
       status: workshops.status,
       price: workshops.price,
+      priceAfterRelease: workshops.priceAfterRelease,
+      releaseAt: workshops.releaseAt,
       cover: workshops.cover,
       lessons: workshops.lessons,
       featured: workshops.featured,
@@ -23,9 +26,15 @@ export const list = adminProcedure.handler(async ({ context }) => {
     .from(workshops)
     .orderBy(asc(workshops.sortOrder), asc(workshops.createdAt));
 
-  return rows.map(({ lessons, price, ...row }) => ({
+  return rows.map(({ lessons, price, priceAfterRelease, ...row }) => ({
     ...row,
-    price: price / 100,
+    // Цена, по которой курс продаётся на сайте сейчас
+    price:
+      currentWorkshopPrice({
+        price,
+        priceAfterRelease,
+        releaseAt: row.releaseAt,
+      }) / 100,
     lessonsCount: lessons.length,
     withoutVideo: lessons.filter((lesson) => !lesson.videoKey).length,
     durationSeconds: lessons.reduce(

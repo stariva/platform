@@ -57,6 +57,7 @@
     "@stariva/db": "workspace:*",
     "@stariva/emails": "workspace:*",
     "@stariva/storage": "workspace:*",
+    "@stariva/validators": "workspace:*",
     "@stariva/web-api": "workspace:*",
     "@t3-oss/env-nextjs": "0.13.11",
     "@videojs/core": "10.1.0",

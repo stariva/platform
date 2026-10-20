@@ -10,10 +10,7 @@ import {
   isGiftOnly,
   preorderBonusParent,
 } from "@/lib/workshops/preorder-bonus";
-import {
-  currentWorkshopPrice,
-  priceAfterRelease,
-} from "@/lib/workshops/release-price";
+import { currentWorkshopPrice } from "@stariva/validators";
 import {
   formatDurationLabel,
   type Workshop,
@@ -29,13 +26,14 @@ export function workshopRowToWorkshop(
     (total, lesson) => total + lesson.durationSeconds,
     0,
   );
+  const regularPrice =
+    row.priceAfterRelease === null ? undefined : row.priceAfterRelease / 100;
   const price = currentWorkshopPrice({
-    slug: row.slug,
     price: row.price / 100,
+    priceAfterRelease: regularPrice ?? null,
     releaseAt: row.releaseAt,
     now,
   });
-  const regularPrice = priceAfterRelease(row.slug);
   return {
     slug: row.slug,
     status: row.status,

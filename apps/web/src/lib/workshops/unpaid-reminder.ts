@@ -14,11 +14,7 @@ import {
   workshopUnpaidEmailSubject,
 } from "@stariva/emails";
 import { and, eq, gte, inArray, isNotNull, or, sql } from "drizzle-orm";
-import {
-  WORKSHOP_PATH,
-  WORKSHOP_REGULAR_PRICE,
-  WORKSHOP_SLUG,
-} from "@/lib/elka/data";
+import { WORKSHOP_PATH, WORKSHOP_SLUG } from "@/lib/elka/data";
 import {
   claimOrderNotification,
   completeOrderNotification,
@@ -48,10 +44,9 @@ function payUrl(slug: string): string {
 function preorderInfo(workshop: WorkshopRow, now: Date) {
   if (!workshop.releaseAt || workshop.releaseAt <= now) return undefined;
   const price = workshop.price / 100;
-  const regular =
-    workshop.slug === WORKSHOP_SLUG && WORKSHOP_REGULAR_PRICE > price
-      ? formatPrice(WORKSHOP_REGULAR_PRICE)
-      : undefined;
+  const regularPrice =
+    workshop.priceAfterRelease === null ? 0 : workshop.priceAfterRelease / 100;
+  const regular = regularPrice > price ? formatPrice(regularPrice) : undefined;
   // Подарок положен по моменту оформления — значит, оплатившему сейчас тоже
   const bonus = earnsPreorderBonus({
     workshopSlug: workshop.slug,

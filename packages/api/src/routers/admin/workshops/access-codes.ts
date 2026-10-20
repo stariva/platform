@@ -9,6 +9,7 @@ import {
   workshopAccessCodes,
   workshops,
 } from "@stariva/db";
+import { currentWorkshopPrice } from "@stariva/validators";
 import { formatAccessCode, generateAccessCode } from "@stariva/web-api";
 import { z } from "zod";
 
@@ -36,12 +37,19 @@ export const issueAccessCode = adminProcedure
   )
   .handler(async ({ context, input }) => {
     const [workshop] = await context.db
-      .select({ slug: workshops.slug, price: workshops.price })
+      .select({
+        slug: workshops.slug,
+        price: workshops.price,
+        priceAfterRelease: workshops.priceAfterRelease,
+        releaseAt: workshops.releaseAt,
+      })
       .from(workshops)
       .where(eq(workshops.slug, input.workshopSlug));
     if (!workshop) {
       throw new ORPCError("NOT_FOUND", { message: "Мастер-класс не найден" });
     }
+    // Та же цена, что сейчас на сайте: после старта — уже без скидки предзаказа
+    const amount = currentWorkshopPrice(workshop);
 
     for (let attempt = 0; attempt < ISSUE_ATTEMPTS; attempt++) {
       const code = generateAccessCode();
@@ -52,7 +60,7 @@ export const issueAccessCode = adminProcedure
           code,
           workshopSlug: workshop.slug,
           channel: input.channel,
-          amount: workshop.price,
+          amount,
           note: input.note || null,
         })
         .onConflictDoNothing({ target: workshopAccessCodes.code })
