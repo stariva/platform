@@ -252,8 +252,7 @@ export function ElkaWorkshop({
                 >
                   от {formatPrice(readyTreePrice)}
                 </TrackedLink>
-                . Здесь вы платите за уроки и шнур, а по схеме потом сплетёте
-                сколько угодно ёлок.
+                , а по урокам вы сплетёте такую сами.
               </p>
             ) : null}
 
