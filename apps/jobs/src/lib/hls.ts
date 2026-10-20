@@ -536,10 +536,14 @@ export async function cutVariant(
   const seconds = () => `${Math.round((Date.now() - startedAt) / 1000)} с`;
   const remoteDir = `${variant.name}/`;
   const sizes = new Map<string, number>();
-  const child = spawn(env.FFMPEG_PATH, segmentArgs(sourceUrl, source, variant), {
-    cwd: dir,
-    stdio: ["ignore", "ignore", "pipe"],
-  });
+  const child = spawn(
+    env.FFMPEG_PATH,
+    segmentArgs(sourceUrl, source, variant),
+    {
+      cwd: dir,
+      stdio: ["ignore", "ignore", "pipe"],
+    },
+  );
   const size = variant.height ? `${variant.width}x${variant.height}` : "?";
   console.log(
     `[hls] ${variant.name}: ffmpeg ${child.pid ?? "?"} запущен: ` +
