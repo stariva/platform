@@ -1,3 +1,4 @@
+import { CODE_PAGE_TEXT } from "@stariva/api/code-page-text";
 import { buttonVariants } from "@stariva/ui";
 import Link from "next/link";
 import { SiteHeader } from "~/components/layout";
@@ -6,7 +7,8 @@ import { PrintButton } from "./print-button";
 /*
  * Последняя страница PDF-брифа для Ярмарки Мастеров: как открыть
  * видеоуроки по коду. Ссылок в чате Ярмарки слать нельзя, поэтому адрес и
- * QR покупатель находит здесь. QR ведёт на https://stariva.ru/code.
+ * QR покупатель находит здесь. QR ведёт на https://stariva.ru/code. Текст
+ * общий с PDF, который собирает сервер (@stariva/api/code-page-text).
  */
 
 // При печати остаётся только лист: меню админки и подсказки скрываем
@@ -35,12 +37,20 @@ export default function AccessCodePdfPage() {
           </h1>
           <p className="text-muted-foreground text-sm">
             Добавьте её последней страницей в PDF, который продаёте на Ярмарке
-            Мастеров. Нажмите «Сохранить в PDF», в окне печати выберите
+            Мастеров. Проще всего — кнопкой «Скачать PDF для Ярмарки» на
+            странице мастер-класса, в блоке «Материалы»: она сама допишет эту
+            страницу в конец загруженного брифа.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Вручную: нажмите «Сохранить в PDF», в окне печати выберите
             «Сохранить как PDF» и объедините файл с брифом в любой программе для
             PDF. Если бриф собираете в Canva — скачайте QR-код картинкой и
             повторите текст.
           </p>
           <div className="flex flex-wrap gap-2">
+            <Link href="/workshops" className={buttonVariants()}>
+              Выбрать мастер-класс
+            </Link>
             <PrintButton />
             <a
               href="/code-qr.svg"
@@ -64,38 +74,33 @@ export default function AccessCodePdfPage() {
           style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
         >
           <p className="text-[clamp(10px,2vw,13px)] tracking-[0.3em] uppercase">
-            Stariva
+            {CODE_PAGE_TEXT.brand}
           </p>
           <h2 className="mt-[6%] text-[clamp(22px,5.4vw,34px)] leading-tight">
-            Видеоуроки к мастер-классу
+            {CODE_PAGE_TEXT.title}
           </h2>
           <p className="mt-[3%] max-w-[85%] text-[clamp(12px,2.6vw,16px)] leading-snug text-[#6b5d4f]">
-            В этом файле — схема и материалы. Видео, где Ольга показывает каждый
-            шаг, откроется по коду.
+            {CODE_PAGE_TEXT.lead}
           </p>
 
           {/* biome-ignore lint/performance/noImgElement: печатный лист, без оптимизации next/image */}
           <img
             src="/code-qr.svg"
-            alt="QR-код: stariva.ru/code"
+            alt={`QR-код: ${CODE_PAGE_TEXT.address}`}
             className="mt-[7%] aspect-square w-[42%]"
           />
           <p className="mt-[3%] text-[clamp(18px,4.4vw,28px)] tracking-wide">
-            stariva.ru/code
+            {CODE_PAGE_TEXT.address}
           </p>
 
           <ol className="mt-[6%] space-y-[2%] text-left text-[clamp(12px,2.6vw,16px)] leading-snug">
-            <li>1. Наведите камеру телефона на QR-код.</li>
-            <li>
-              2. Введите код из сообщения Ольги в чате заказа на Ярмарке
-              Мастеров.
-            </li>
-            <li>3. Укажите email — пришлём на него ссылку на уроки.</li>
+            {CODE_PAGE_TEXT.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
           </ol>
 
           <p className="mt-[7%] max-w-[85%] text-[clamp(10px,2.2vw,13px)] leading-snug text-[#6b5d4f]">
-            Код ещё не пришёл? Напишите Ольге в чат заказа — она пришлёт его в
-            течение дня.
+            {CODE_PAGE_TEXT.footer}
           </p>
         </div>
       </div>

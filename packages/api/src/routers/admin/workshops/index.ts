@@ -6,6 +6,7 @@ import {
 import { sendBrief, sendMissingBriefs } from "./brief";
 import { byId } from "./by-id";
 import { list } from "./list";
+import { livemasterPdf } from "./livemaster-pdf";
 import { materialUrl } from "./material-url";
 import { ordersList } from "./orders";
 import { presignUpload } from "./presign-upload";
@@ -27,6 +28,7 @@ export const adminWorkshopsRouter = {
   removeViews,
   presignUpload,
   materialUrl,
+  livemasterPdf,
   uploadImage,
   sendBrief,
   sendMissingBriefs,

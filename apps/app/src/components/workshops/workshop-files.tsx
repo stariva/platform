@@ -17,6 +17,7 @@ import {
 } from "@stariva/validators";
 import {
   IconExternalLink,
+  IconFileDownload,
   IconFileUpload,
   IconTrash,
 } from "@tabler/icons-react";
@@ -39,6 +40,7 @@ export function WorkshopFiles({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [building, setBuilding] = useState<string | null>(null);
 
   const upload = async (file: File) => {
     if (!slug) {
@@ -88,6 +90,27 @@ export function WorkshopFiles({
     } catch (err) {
       tab?.close();
       toast.error(`${file.label}: ${(err as Error).message}`);
+    }
+  };
+
+  // Бриф с дописанной страницей «как открыть видео по коду» — для Ярмарки
+  const downloadForLivemaster = async (file: WorkshopMaterialFileValues) => {
+    setBuilding(file.key);
+    try {
+      const pdf = await client.admin.workshops.livemasterPdf({ key: file.key });
+      // Тип File в ответе — из node; в браузере это обычный Blob
+      const url = URL.createObjectURL(
+        new Blob([await pdf.arrayBuffer()], { type: "application/pdf" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = pdf.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      toast.error(`${file.label}: ${(err as Error).message}`);
+    } finally {
+      setBuilding(null);
     }
   };
 
@@ -164,6 +187,30 @@ export function WorkshopFiles({
           <IconFileUpload />
           {uploading ? `Загружаем ${uploading}…` : "Добавить PDF"}
         </Button>
+        <div id="livemaster-pdf" className="space-y-2 border-t pt-3">
+          {(files.length > 0 ? files : [null]).map((file) => (
+            <Button
+              key={file?.key ?? "empty"}
+              type="button"
+              variant="secondary"
+              className="w-full"
+              disabled={!file || building !== null}
+              onClick={() => file && void downloadForLivemaster(file)}
+            >
+              <IconFileDownload />
+              {file && building === file.key
+                ? "Собираем PDF…"
+                : files.length > 1 && file
+                  ? `Скачать PDF для Ярмарки: ${file.label}`
+                  : "Скачать PDF для Ярмарки"}
+            </Button>
+          ))}
+          <p className="text-muted-foreground text-xs">
+            {files.length === 0
+              ? "Сначала добавьте PDF-бриф: к нему допишем страницу с QR-кодом и адресом stariva.ru/code."
+              : "В конец брифа допишем страницу с QR-кодом и адресом stariva.ru/code — по ней покупатель с Ярмарки Мастеров введёт код."}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
