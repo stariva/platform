@@ -31,12 +31,20 @@ export default function AccessCodePdfPage() {
           </h1>
           <p className="text-muted-foreground text-sm">
             Добавьте её последней страницей в PDF, который продаёте на Ярмарке
-            Мастеров. Нажмите «Сохранить в PDF», в окне печати выберите
+            Мастеров. Проще всего — кнопкой «Скачать PDF для Ярмарки» на
+            странице мастер-класса, в блоке «Материалы»: она сама допишет эту
+            страницу в конец загруженного брифа.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Вручную: нажмите «Сохранить в PDF», в окне печати выберите
             «Сохранить как PDF» и объедините файл с брифом в любой программе для
             PDF. Если бриф собираете в Canva — скачайте QR-код картинкой и
             повторите текст.
           </p>
           <div className="flex flex-wrap gap-2">
+            <Link href="/workshops" className={buttonVariants()}>
+              Выбрать мастер-класс
+            </Link>
             <PrintButton />
             <a
               href="/code-qr.svg"
