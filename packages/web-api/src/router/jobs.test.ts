@@ -9,9 +9,13 @@ mock.module("@stariva/storage", () => ({
 }));
 
 let extended = true;
+const claimedVersions: number[] = [];
 mock.module("../services/video-renditions", () => ({
   getReadyRendition: async () => null,
-  claimNextVideo: async () => null,
+  claimNextVideo: async (version: number) => {
+    claimedVersions.push(version);
+    return null;
+  },
   getAttemptHlsPrefix: async () => "workshops/test/hls/lesson/attempt",
   extendRenditionLease: async () => extended,
   completeRendition: async () => "ready",
@@ -80,6 +84,16 @@ test("claim returns null when nothing is queued", async () => {
   expect(await client(`Bearer ${secret}`).jobs.videos.claim()).toEqual({
     job: null,
   });
+});
+
+test("claim passes the worker's cut version; old workers get version 1", async () => {
+  claimedVersions.length = 0;
+  const api = client(`Bearer ${secret}`).jobs.videos;
+  await api.claim();
+  await api.claim({ version: 2 });
+  expect(claimedVersions).toEqual([1, 2]);
+  const [error] = await safe(api.claim({ version: 3 }));
+  expect(error).toMatchObject({ code: "BAD_REQUEST" });
 });
 
 test("reminder sweep requires the jobs secret", async () => {

@@ -232,6 +232,20 @@
       "when": 1792428308880,
       "tag": "0032_npd_income_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792438777112,
+      "tag": "0033_video_rendition_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792512194217,
+      "tag": "0034_sessions_user_created_idx",
+      "breakpoints": true
     }
   ]
 }

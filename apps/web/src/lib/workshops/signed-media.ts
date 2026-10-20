@@ -97,7 +97,7 @@ async function signLessonVideo({
     );
     return {
       status: "ok",
-      url: `/api/video/hls/${token}/index.m3u8`,
+      url: `/api/video/hls/${token}/${rendition.playlist}`,
       type: "hls",
       expiresIn: HLS_GRANT_TTL_SECONDS,
     };

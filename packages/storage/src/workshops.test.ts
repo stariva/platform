@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   HLS_FILE_PATTERN,
   hlsContentType,
+  hlsPlaylistFile,
   isWorkshopKey,
   workshopHlsPrefix,
   workshopImageKey,
@@ -39,7 +40,15 @@ test("HLS folder sits next to the source video and is unique per upload", () => 
 });
 
 test("only playlist, init segment and numbered chunks are HLS files", () => {
-  for (const ok of ["index.m3u8", "init.mp4", "seg-00042.m4s"]) {
+  for (const ok of [
+    "index.m3u8",
+    "init.mp4",
+    "seg-00042.m4s",
+    "master.m3u8",
+    "v0/index.m3u8",
+    "v1/init.mp4",
+    "v2/seg-00042.m4s",
+  ]) {
     assert.match(ok, HLS_FILE_PATTERN);
   }
   for (const bad of [
@@ -47,11 +56,19 @@ test("only playlist, init segment and numbered chunks are HLS files", () => {
     "seg-1.m4s",
     "other.mp4",
     "index.m3u8x",
+    "v0/master.m3u8",
+    "v0/../index.m3u8",
+    "v10/index.m3u8",
+    "/v0/index.m3u8",
+    "v0/v1/index.m3u8",
   ]) {
     assert.doesNotMatch(bad, HLS_FILE_PATTERN);
   }
   assert.equal(hlsContentType("seg-00001.m4s"), "video/iso.segment");
   assert.equal(hlsContentType("index.m3u8"), "application/vnd.apple.mpegurl");
+  assert.equal(hlsContentType("v1/init.mp4"), "video/mp4");
+  assert.equal(hlsPlaylistFile(1), "index.m3u8");
+  assert.equal(hlsPlaylistFile(2), "master.m3u8");
 });
 
 test("unsupported video types are refused", () => {

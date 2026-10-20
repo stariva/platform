@@ -76,18 +76,26 @@ export const viewsList = adminProcedure
           .mapWith(videoAccessLog.createdAt)
           .as("view_last_at"),
         hits: sql<number>`count(*)::int`.as("view_hits"),
-        ips: sql<string[]>`array_remove(array_agg(distinct ${videoAccessLog.ip}), null)`.as(
+        ips: sql<
+          string[]
+        >`array_remove(array_agg(distinct ${videoAccessLog.ip}), null)`.as(
           "view_ips",
         ),
-        userAgent:
-          sql<string | null>`(array_agg(${videoAccessLog.userAgent} order by ${videoAccessLog.createdAt} desc))[1]`.as(
-            "view_user_agent",
-          ),
+        userAgent: sql<
+          string | null
+        >`(array_agg(${videoAccessLog.userAgent} order by ${videoAccessLog.createdAt} desc))[1]`.as(
+          "view_user_agent",
+        ),
       })
       .from(videoAccessLog)
       .leftJoin(user, eq(user.id, videoAccessLog.userId))
       .where(where)
-      .groupBy(viewerKey, videoAccessLog.workshopSlug, videoAccessLog.lessonId, viewDay)
+      .groupBy(
+        viewerKey,
+        videoAccessLog.workshopSlug,
+        videoAccessLog.lessonId,
+        viewDay,
+      )
       .as("s");
 
     // Номер и название урока — из массива уроков курса

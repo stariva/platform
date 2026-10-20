@@ -1,4 +1,4 @@
-import { count, desc, ilike, or, sql, user } from "@stariva/db";
+import { count, desc, ilike, loginEvent, or, sql, user } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure, isAdminUser } from "../../../orpc";
@@ -19,8 +19,23 @@ function countByUser(table: "product_orders" | "orders" | "course_access") {
 }
 
 /**
+ * Последний вход: самый поздний sign_in из журнала или начало сессии.
+ * Журнал входов ведётся с октября 2026, а сессии помнят и более ранние входы;
+ * greatest пропускает null, так что хватает любого из двух источников.
+ * Результат — timestamptz (sessions без пояса приводится к нему в UTC),
+ * поэтому разбираем его как колонку с поясом, а не как users.created_at.
+ */
+const lastSignInAt = sql<Date | null>`greatest(
+  (select max("login_events"."created_at") from "login_events"
+    where "login_events"."user_id" = "users".id and "login_events"."type" = 'sign_in'),
+  (select max("sessions"."created_at") from "sessions"
+    where "sessions"."user_id" = "users".id)
+)`.mapWith(loginEvent.createdAt);
+
+/**
  * Пользователи с постраничной выдачей и поиском по имени, почте и логину.
- * Для каждого — сколько у него заказов и курсов, и входит ли он в админы.
+ * Для каждого — сколько у него заказов и курсов, когда он последний раз
+ * входил и входит ли он в админы.
  *
  * @example client.admin.users.list({ query: "анна", limit: 25, offset: 0 })
  */
@@ -52,6 +67,7 @@ export const list = adminProcedure
           image: user.image,
           emailVerified: user.emailVerified,
           createdAt: user.createdAt,
+          lastSignInAt,
           productOrdersCount: countByUser("product_orders"),
           workshopOrdersCount: countByUser("orders"),
           coursesCount: countByUser("course_access"),
