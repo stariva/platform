@@ -44,3 +44,21 @@ test("preorder adds the release date, account email fills a missing contact", ()
     "Email: account@example.test\nПредзаказ: уроки откроются ",
   );
 });
+
+test("a Livemaster code is announced as an activation, not a site purchase", () => {
+  const touch = {
+    utm_source: "livemaster",
+    utm_medium: "marketplace",
+    landing: "/code",
+    at: "2026-10-01T10:00:00Z",
+  };
+  const { title } = formatWorkshopPurchaseMessage(
+    { ...order, attribution: { first: touch, last: touch } },
+    { title: "Ёлка макраме", releaseAt: null },
+    "account@example.test",
+    now,
+  );
+  expect(title).toBe(
+    "Активирован код с Ярмарки Мастеров: «Ёлка макраме» · 2 490 ₽",
+  );
+});

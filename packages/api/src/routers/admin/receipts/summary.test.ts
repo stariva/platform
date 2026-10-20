@@ -13,7 +13,9 @@ const order = {
 
 test("an unpaid order needs no receipt", () => {
   expect(receiptsExpected(order)).toBe(0);
-  expect(workshopReceiptsExpected("pending")).toBe(0);
+  expect(workshopReceiptsExpected({ status: "pending", paymentId: "p1" })).toBe(
+    0,
+  );
 });
 
 test("made-to-order needs a receipt for the deposit and another for the balance", () => {
@@ -55,6 +57,12 @@ test("canceled and refunded orders need no receipt", () => {
       }),
     ).toBe(0);
   }
-  expect(workshopReceiptsExpected("refunded")).toBe(0);
-  expect(workshopReceiptsExpected("paid")).toBe(1);
+  expect(
+    workshopReceiptsExpected({ status: "refunded", paymentId: "p1" }),
+  ).toBe(0);
+  expect(workshopReceiptsExpected({ status: "paid", paymentId: "p1" })).toBe(1);
+});
+
+test("a course opened with a marketplace code needs no receipt on the site", () => {
+  expect(workshopReceiptsExpected({ status: "paid", paymentId: null })).toBe(0);
 });

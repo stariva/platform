@@ -1,3 +1,8 @@
+import {
+  accessCodesList,
+  issueAccessCode,
+  removeAccessCode,
+} from "./access-codes";
 import { sendBrief, sendMissingBriefs } from "./brief";
 import { byId } from "./by-id";
 import { list } from "./list";
@@ -25,4 +30,7 @@ export const adminWorkshopsRouter = {
   uploadImage,
   sendBrief,
   sendMissingBriefs,
+  accessCodes: accessCodesList,
+  issueAccessCode,
+  removeAccessCode,
 };

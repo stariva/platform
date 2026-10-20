@@ -19,8 +19,11 @@ mock.module("@/lib/workshops/buyer", () => ({
 mock.module("@/lib/workshops/workshops-db", () => ({
   getWorkshopBySlug: async () => ({ slug: "free", price: 0 }),
 }));
+// Модульные моки bun общие для всех файлов: перечисляем и то, что ждёт
+// маршрут активации кода (redeem/route.test.ts)
 mock.module("@/lib/workshops/notifications", () => ({
   siteUrl: () => "https://example.test",
+  notifyWorkshopBooked: async () => {},
 }));
 const { POST } = await import("./route");
 afterEach(() => mock.restore());

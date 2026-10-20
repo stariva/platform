@@ -15,8 +15,13 @@ export function formatWorkshopPurchaseMessage(
 ): OrderMessage {
   const release =
     workshop.releaseAt && workshop.releaseAt > now ? workshop.releaseAt : null;
+  // Код с Ярмарки: курс оплачен там, на сайте его только активировали
+  const fromLivemaster = order.attribution?.last.utm_source === "livemaster";
+  const price = formatPrice(order.amount / 100);
   return {
-    title: `Куплен мастер-класс «${workshop.title}» · ${formatPrice(order.amount / 100)}`,
+    title: fromLivemaster
+      ? `Активирован код с Ярмарки Мастеров: «${workshop.title}» · ${price}`
+      : `Куплен мастер-класс «${workshop.title}» · ${price}`,
     message: [
       `Email: ${order.contactEmail ?? email}`,
       release &&
