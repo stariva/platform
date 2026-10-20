@@ -239,6 +239,13 @@
       "when": 1792438777112,
       "tag": "0033_video_rendition_versions",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792512194217,
+      "tag": "0034_sessions_user_created_idx",
+      "breakpoints": true
     }
   ]
 }
