@@ -253,6 +253,13 @@
       "when": 1792516721154,
       "tag": "0035_workshop_access_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792531350777,
+      "tag": "0036_workshop_price_after_release",
+      "breakpoints": true
     }
   ]
 }

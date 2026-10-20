@@ -13,8 +13,8 @@ export const TREES_PATH = "/elka-makrame-na-stenu";
 
 export const WORKSHOP_SLUG = "elka-makrame";
 /**
- * Цены и старт, пока база недоступна. Живые цены берутся из базы, а после
- * старта сами переключаются на цену без скидки (lib/workshops/release-price).
+ * Цены и старт, пока база недоступна. Живые цены берутся из базы: цена
+ * предзаказа и «Цена после старта» из админки.
  */
 export const WORKSHOP_REGULAR_PRICE = 990;
 export const WORKSHOP_PREORDER_FALLBACK_PRICE = 690;
