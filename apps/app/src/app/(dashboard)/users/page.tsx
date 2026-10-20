@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   buttonVariants,
+  cn,
   Input,
   Table,
   TableBody,
@@ -10,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { IconArrowDown } from "@tabler/icons-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -34,34 +36,76 @@ const dateTimeFormat = new Intl.DateTimeFormat("ru-RU", {
   timeZone: "Europe/Moscow",
 });
 
-function pageHref(query: string, page: number) {
+/** Порядок в таблице; по умолчанию — свежие регистрации сверху. */
+const sortSchema = z.enum(["created", "lastSignIn"]).catch("created");
+type Sort = z.infer<typeof sortSchema>;
+
+function pageHref(query: string, page: number, sort: Sort) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
+  if (sort !== "created") params.set("sort", sort);
   if (page > 1) params.set("page", String(page));
   const search = params.toString();
   return search ? `/users?${search}` : "/users";
 }
 
+/** Заголовок колонки-ссылки: включает сортировку по ней, с первой страницы. */
+function SortableHead({
+  label,
+  value,
+  sort,
+  query,
+}: {
+  label: string;
+  value: Sort;
+  sort: Sort;
+  query: string;
+}) {
+  const active = sort === value;
+  return (
+    <TableHead aria-sort={active ? "descending" : undefined}>
+      <Link
+        href={pageHref(query, 1, value)}
+        className={cn(
+          "inline-flex items-center gap-1 hover:underline",
+          active && "text-foreground font-semibold",
+        )}
+      >
+        {label}
+        {active && <IconArrowDown className="size-3.5" aria-hidden />}
+      </Link>
+    </TableHead>
+  );
+}
+
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string | string[]; page?: string | string[] }>;
+  searchParams: Promise<{
+    q?: string | string[];
+    page?: string | string[];
+    sort?: string | string[];
+  }>;
 }) {
-  const { q, page: pageParam } = await searchParams;
+  const { q, page: pageParam, sort: sortParam } = await searchParams;
   const parsedQuery = querySchema.safeParse(Array.isArray(q) ? q[0] : q);
   const parsedPage = pageSchema.safeParse(
     Array.isArray(pageParam) ? pageParam[0] : pageParam,
   );
   const query = parsedQuery.success ? parsedQuery.data : "";
   const page = parsedPage.success ? parsedPage.data : 1;
+  const sort = sortSchema.parse(
+    Array.isArray(sortParam) ? sortParam[0] : sortParam,
+  );
 
   const { items, total } = await api.admin.users.list({
     query: query || undefined,
+    sort,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  if (page > pages) redirect(pageHref(query, pages));
+  if (page > pages) redirect(pageHref(query, pages, sort));
 
   return (
     <>
@@ -84,12 +128,15 @@ export default async function UsersPage({
             placeholder="Поиск по имени, почте или логину"
             aria-label="Поиск по пользователям"
           />
+          {sort !== "created" && (
+            <input type="hidden" name="sort" value={sort} />
+          )}
           <Button type="submit" variant="outline">
             Найти
           </Button>
           {query && (
             <Link
-              href="/users"
+              href={pageHref("", 1, sort)}
               className={buttonVariants({ variant: "ghost" })}
             >
               Сбросить
@@ -105,8 +152,18 @@ export default async function UsersPage({
                 <TableHead>Почта</TableHead>
                 <TableHead className="text-right">Заказы</TableHead>
                 <TableHead className="text-right">Курсы</TableHead>
-                <TableHead>Регистрация</TableHead>
-                <TableHead>Последний вход</TableHead>
+                <SortableHead
+                  label="Регистрация"
+                  value="created"
+                  sort={sort}
+                  query={query}
+                />
+                <SortableHead
+                  label="Последний вход"
+                  value="lastSignIn"
+                  sort={sort}
+                  query={query}
+                />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -181,7 +238,7 @@ export default async function UsersPage({
             <div className="flex gap-2">
               {page > 1 && (
                 <Link
-                  href={pageHref(query, page - 1)}
+                  href={pageHref(query, page - 1, sort)}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
                   Назад
@@ -189,7 +246,7 @@ export default async function UsersPage({
               )}
               {page < pages && (
                 <Link
-                  href={pageHref(query, page + 1)}
+                  href={pageHref(query, page + 1, sort)}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
                   Вперёд
