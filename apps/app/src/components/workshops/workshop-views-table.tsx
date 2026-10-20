@@ -194,7 +194,9 @@ export function WorkshopViewsTable({
                 >
                   {deviceLabel(row.userAgent) ?? "—"}
                   <div className="text-muted-foreground text-xs break-all">
-                    {row.ips.length > 0 ? row.ips.join(", ") : "IP не определён"}
+                    {row.ips.length > 0
+                      ? row.ips.join(", ")
+                      : "IP не определён"}
                   </div>
                   {row.ips.length > 1 && (
                     <Badge
