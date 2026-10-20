@@ -47,10 +47,17 @@ const attemptProcedure = jobProcedure.errors({
 export const videosContract = {
   /**
    * Следующее видео без HLS-версии: ссылка на исходник и папка, куда класть
-   * куски. `job: null` — нарезать нечего.
+   * куски. `job: null` — нарезать нечего. `version` — какую нарезку умеет
+   * воркер: 1 — одно качество (index.m3u8), 2 — несколько (master.m3u8).
+   * Воркер версии 2 получает и готовые видео версии 1, чтобы их перерезать.
    */
   claim: jobProcedure
     .errors({ [StorageNotConfiguredError.code]: StorageNotConfiguredError })
+    .input(
+      z
+        .object({ version: z.number().int().min(1).max(2).default(1) })
+        .optional(),
+    )
     .output(
       z.object({
         job: z

@@ -19,10 +19,10 @@ import {
 const SOURCE_URL_TTL_SECONDS = 6 * 60 * 60;
 const UPLOAD_URL_TTL_SECONDS = 2 * 60 * 60;
 
-const claim = jobs.videos.claim.handler(async ({ errors }) => {
+const claim = jobs.videos.claim.handler(async ({ input, errors }) => {
   if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
 
-  const job = await claimNextVideo();
+  const job = await claimNextVideo(input?.version ?? 1);
   if (!job) return { job: null };
   return {
     job: {

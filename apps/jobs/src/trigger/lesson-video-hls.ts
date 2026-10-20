@@ -1,7 +1,7 @@
 import { safe } from "@orpc/client";
 import { AttemptLostError } from "@stariva/web-api/contract";
 import { schedules } from "@trigger.dev/sdk";
-import { probe, segmentAndUpload, withTempDir } from "../lib/hls";
+import { HLS_VERSION, probe, segmentAndUpload, withTempDir } from "../lib/hls";
 import { webApi } from "../lib/web-api";
 
 // Больше за один прогон не берём: следующий прогон через 10 минут доберёт
@@ -50,6 +50,11 @@ async function getUploadUrls(
  * процессор, а прогоны по расписанию, пока старый режет длинное видео,
  * встают в очередь и, когда доходят, сразу видят пустую очередь сайта.
  *
+ * Каждое видео режется в несколько качеств (1080p как есть, 720p, 480p) —
+ * по очереди, отдельным ffmpeg на каждое; сайт отдаёт и готовые видео в одно
+ * качество, чтобы перерезать их (HLS_VERSION). Два ядра (medium-2x): на
+ * одном перекодирование 50-минутного урока в 720p и 480p шло бы около часа.
+ *
  * Куски заливаются по ходу нарезки (segmentAndUpload), поэтому машине не
  * нужны ни память, ни диск под всё видео. Пока идёт работа, задача раз в
  * 5 минут продлевает аренду; если машину убьют, видео вернётся в очередь
@@ -58,7 +63,7 @@ async function getUploadUrls(
 export const lessonVideoHls = schedules.task({
   id: "lesson-video-hls",
   cron: "*/10 * * * *",
-  machine: "medium-1x",
+  machine: "medium-2x",
   maxDuration: 6 * 60 * 60,
   queue: { concurrencyLimit: 1 },
   retry: { maxAttempts: 1 },
@@ -68,7 +73,7 @@ export const lessonVideoHls = schedules.task({
 
     for (let i = 0; i < MAX_VIDEOS_PER_RUN; i++) {
       if (signal.aborted) break;
-      const { job } = await webApi.jobs.videos.claim();
+      const { job } = await webApi.jobs.videos.claim({ version: HLS_VERSION });
       if (!job) break;
 
       const attempt = { videoKey: job.videoKey, attemptId: job.attemptId };

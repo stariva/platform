@@ -17,16 +17,22 @@ const SEGMENT_URL_TTL_SECONDS = 60;
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
 /**
- * Плейлист и куски HLS-версии урока. Пропуск в пути выдаёт account.lessonVideo
- * после проверки покупки; здесь проверяем подпись, срок и что запрос пришёл
- * из того же браузера. Плейлист отдаём сами (его относительные адреса кусков
- * ведут обратно сюда), за куском — короткая ссылка в бакет.
+ * Плейлисты и куски HLS-версии урока. Пропуск в пути выдаёт
+ * account.lessonVideo после проверки покупки; здесь проверяем подпись, срок и
+ * что запрос пришёл из того же браузера. Плейлисты отдаём сами (их
+ * относительные адреса ведут обратно сюда), за куском — короткая ссылка в
+ * бакет.
+ *
+ * Нарезка в одно качество лежит прямо в папке (index.m3u8, init.mp4,
+ * seg-NNNNN.m4s), в несколько — master.m3u8 и те же файлы в v0/, v1/…:
+ * `<пропуск>/master.m3u8` → `<пропуск>/v1/index.m3u8` → `<пропуск>/v1/seg-…`.
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ token: string; file: string }> },
+  { params }: { params: Promise<{ token: string; path: string[] }> },
 ) {
-  const { token, file } = await params;
+  const { token, path } = await params;
+  const file = path.join("/");
   if (!HLS_FILE_PATTERN.test(file)) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
@@ -49,7 +55,7 @@ export async function GET(
 
   const key = `${grant.prefix}/${file}`;
   try {
-    if (file === "index.m3u8") {
+    if (file.endsWith(".m3u8")) {
       return new Response(await getObjectText(key), {
         headers: {
           "Content-Type": "application/vnd.apple.mpegurl",

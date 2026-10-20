@@ -40,8 +40,22 @@ export function workshopHlsPrefix(videoKey: string): string {
   return `${folder}/hls/${name}`;
 }
 
-/** Файлы HLS-версии: плейлист, инициализирующий сегмент и куски по порядку. */
-export const HLS_FILE_PATTERN = /^(index\.m3u8|init\.mp4|seg-\d{5}\.m4s)$/;
+/**
+ * Файлы HLS-версии. Первая версия нарезки — одно качество: плейлист,
+ * инициализирующий сегмент и куски по порядку прямо в папке. Вторая —
+ * несколько качеств: master.m3u8 со списком и те же файлы в подпапках
+ * v0/, v1/, v2/.
+ */
+export const HLS_FILE_PATTERN =
+  /^(master\.m3u8|(v\d\/)?(index\.m3u8|init\.mp4|seg-\d{5}\.m4s))$/;
+
+/**
+ * Плейлист, с которого плеер начинает нарезку: у версии 1 (одно качество) —
+ * index.m3u8, у версии 2 (несколько качеств) — master.m3u8.
+ */
+export function hlsPlaylistFile(version: number): string {
+  return version >= 2 ? "master.m3u8" : "index.m3u8";
+}
 
 /** Content-Type файла HLS-версии. Подписывается в ссылке на загрузку. */
 export function hlsContentType(file: string): string {
