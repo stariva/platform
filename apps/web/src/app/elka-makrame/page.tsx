@@ -84,6 +84,9 @@ export default async function ElkaMakramePage() {
   ]);
   const trees = treesResult.products;
   const reviewProductId = trees[0]?.id;
+  const treePrices = trees.map((tree) => tree.price).filter((p) => p > 0);
+  const readyTreePrice =
+    treePrices.length > 0 ? Math.min(...treePrices) : undefined;
   const { preorder, releaseLabel } = workshopOffer(workshop);
   const faq = workshopFaq({ preorder, releaseLabel, bigTree });
 
@@ -112,7 +115,11 @@ export default async function ElkaMakramePage() {
 
       <Header variant="solid" />
       <main>
-        <ElkaWorkshop workshop={workshop} bigTree={bigTree} />
+        <ElkaWorkshop
+          workshop={workshop}
+          bigTree={bigTree}
+          readyTreePrice={readyTreePrice}
+        />
         <ElkaCustomerLooks
           source="elka_workshop"
           eyebrow="Идеи для украшения"
