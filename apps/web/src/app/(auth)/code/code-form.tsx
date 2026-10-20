@@ -1,5 +1,6 @@
 "use client";
 
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { type FormEvent, useId, useState } from "react";
 import {
   ConsentCheckbox,
@@ -8,6 +9,12 @@ import {
 } from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth/client";
 import { suggestEmailFix } from "@/lib/email-typo";
@@ -16,12 +23,25 @@ import { SentNotice } from "../sent-notice";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CODE_DIGITS = 6;
 
-/** «482719» → «482 719» прямо при вводе; всё, кроме цифр, отбрасываем. */
-function formatCodeInput(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, CODE_DIGITS);
-  return digits.length > CODE_DIGITS / 2
-    ? `${digits.slice(0, CODE_DIGITS / 2)} ${digits.slice(CODE_DIGITS / 2)}`
-    : digits;
+/** Код копируют из сообщения как «482 719» или «482-719» — оставляем только цифры. */
+function digitsOnly(text: string): string {
+  return text.replace(/\D/g, "").slice(0, CODE_DIGITS);
+}
+
+/** Три клетки подряд: код читается как «482 719», так же, как в сообщении. */
+function codeGroup(slots: number[], error: string | undefined) {
+  return (
+    <InputOTPGroup className="flex-1">
+      {slots.map((index) => (
+        <InputOTPSlot
+          key={index}
+          index={index}
+          aria-invalid={error ? true : undefined}
+          className="h-13 min-w-0 flex-1 bg-parchment font-mono text-2xl text-espresso first:rounded-l-xl last:rounded-r-xl"
+        />
+      ))}
+    </InputOTPGroup>
+  );
 }
 
 type Notice = { tone: "error" | "info"; text: string } | null;
@@ -46,7 +66,7 @@ export function CodeForm() {
   const suggestion = !session && email ? suggestEmailFix(email) : null;
 
   function validate(): boolean {
-    const codeOk = code.replace(/\D/g, "").length === CODE_DIGITS;
+    const codeOk = code.length === CODE_DIGITS;
     setCodeError(codeOk ? undefined : "В коде 6 цифр, например 482 719");
     if (session) {
       if (!codeOk) document.getElementById(codeId)?.focus();
@@ -133,23 +153,28 @@ export function CodeForm() {
         <label htmlFor={codeId} className="block text-sm text-espresso mb-1.5">
           Код из сообщения
         </label>
-        <Input
+        <InputOTP
           id={codeId}
-          inputMode="numeric"
+          maxLength={CODE_DIGITS}
+          pattern={REGEXP_ONLY_DIGITS}
+          pasteTransformer={digitsOnly}
           autoComplete="off"
           autoFocus
-          placeholder="482 719"
           value={code}
-          onChange={(event) => {
-            setCode(formatCodeInput(event.target.value));
+          onChange={(value) => {
+            setCode(value);
             if (codeError) setCodeError(undefined);
           }}
           disabled={sending}
           required
           aria-invalid={codeError ? true : undefined}
           aria-describedby={codeError ? `${codeId}-error` : undefined}
-          className="h-13 rounded-xl bg-parchment text-center font-mono text-2xl tracking-[0.3em]"
-        />
+          containerClassName="w-full gap-1 sm:gap-2"
+        >
+          {codeGroup([0, 1, 2], codeError)}
+          <InputOTPSeparator className="text-taupe" />
+          {codeGroup([3, 4, 5], codeError)}
+        </InputOTP>
         {codeError ? (
           <p
             id={`${codeId}-error`}
