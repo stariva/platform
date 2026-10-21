@@ -58,10 +58,7 @@ export async function POST(request: NextRequest) {
 
   const found = await findAccessCode(code);
   if (!found) {
-    return error(
-      "Такого кода нет. Сверьте цифры с сообщением Ольги.",
-      404,
-    );
+    return error("Такого кода нет. Сверьте цифры с сообщением Ольги.", 404);
   }
   if (found.redeemedAt) {
     return NextResponse.json(
