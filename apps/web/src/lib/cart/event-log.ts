@@ -10,6 +10,39 @@ import { z } from "zod";
 // Как MAX_CART_QUANTITY в cart-context: тот модуль клиентский, на сервер его не тянем
 const quantity = z.number().int().min(0).max(99);
 
+// HTTPS-хосты из images.remotePatterns в apps/web/next.config.ts.
+const CART_IMAGE_HOSTS = new Set([
+  "cdn1.ozon.ru",
+  "cdn2.ozon.ru",
+  "cdn3.ozon.ru",
+  "cdn1.ozone.ru",
+  "cdn2.ozone.ru",
+  "cdn3.ozone.ru",
+  "ir.ozone.ru",
+  "s3.ozone.ru",
+  "storage.yandexcloud.net",
+  "cdn.stariva.ru",
+]);
+
+function isAllowedCartImage(source: string): boolean {
+  // URL нормализует обратные слеши и управляющие символы в разделители.
+  if (/[\p{Cc}\s\\]/u.test(source)) return false;
+  if (source.startsWith("/")) return !source.startsWith("//");
+  try {
+    const url = new URL(source);
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      (CART_IMAGE_HOSTS.has(url.hostname) ||
+        url.hostname.endsWith(".storage.yandexcloud.net"))
+    );
+  } catch {
+    return false;
+  }
+}
+
 const lineSchema = z.object({
   productSlug: z.string().min(1).max(256),
   fulfillmentType: z.enum(["stock", "made_to_order"]),
@@ -30,7 +63,12 @@ export const cartEventSchema = z.object({
   items: z
     .array(
       lineSchema.extend({
-        image: z.string().max(1000).optional(),
+        image: z
+          .string()
+          .max(1000)
+          .refine(isAllowedCartImage)
+          .optional()
+          .catch(undefined),
         quantity: quantity.min(1),
       }),
     )
