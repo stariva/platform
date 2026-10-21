@@ -1,15 +1,18 @@
 "use client";
 
+import type { CartEventAction } from "@stariva/db/schema";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { z } from "zod";
 import { madeToOrderOptionsSchema } from "@/lib/commerce/made-to-order-options";
+import { logCartEvent } from "./events";
 
 /** Больше одного изделия в заказе сервер не примет. */
 export const MAX_CART_QUANTITY = 99;
@@ -66,8 +69,11 @@ interface CartContextValue {
   add: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   remove: (lineKey: string) => void;
   setQty: (lineKey: string, quantity: number) => void;
-  /** Без аргумента очищает всю корзину, с аргументом — только готовые или только изделия под заказ. */
-  clear: (fulfillmentType?: FulfillmentType) => void;
+  /**
+   * Без аргумента очищает всю корзину, с аргументом — только готовые или только
+   * изделия под заказ. orderId — корзину очищает оформленный заказ или заявка.
+   */
+  clear: (fulfillmentType?: FulfillmentType, orderId?: string) => void;
   /** Подставляет актуальные цены и ограничивает количество остатком. */
   syncWithCatalog: (updates: CatalogUpdate[]) => void;
   subtotal: number;
@@ -126,17 +132,26 @@ function clampQuantity(quantity: number): number {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  // Корзина на этот момент, без ожидания рендера: два изменения подряд
+  // (например, убрать несколько раскупленных товаров) видят друг друга, и
+  // журнал получает изменение сразу, до ухода на оплату.
+  const itemsRef = useRef<CartItem[]>([]);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
-    setItems(readStoredCart());
+    itemsRef.current = readStoredCart();
+    hydratedRef.current = true;
+    setItems(itemsRef.current);
     setHydrated(true);
   }, []);
 
   // Корзина, изменённая в соседней вкладке, не должна затираться этой.
+  // В журнал её уже записала та вкладка.
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY || event.key === null) {
-        setItems(readStoredCart());
+        itemsRef.current = readStoredCart();
+        setItems(itemsRef.current);
       }
     };
     window.addEventListener("storage", onStorage);
@@ -152,81 +167,120 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, hydrated]);
 
-  const add = useCallback<CartContextValue["add"]>((item, quantity = 1) => {
-    const key = cartLineKey(item);
-    setItems((prev) => {
-      const existing = prev.find((i) => cartLineKey(i) === key);
-      if (existing) {
+  /** Применяет изменение и отправляет его в журнал корзин. */
+  const commit = useCallback(
+    (
+      action: CartEventAction,
+      update: (prev: CartItem[]) => CartItem[],
+      orderId?: string,
+    ) => {
+      const prev = itemsRef.current;
+      const next = update(prev);
+      if (next === prev && !orderId) return;
+      itemsRef.current = next;
+      setItems(next);
+      if (hydratedRef.current) {
+        logCartEvent({ action, before: prev, after: next, orderId });
+      }
+    },
+    [],
+  );
+
+  const add = useCallback<CartContextValue["add"]>(
+    (item, quantity = 1) => {
+      const key = cartLineKey(item);
+      commit("add", (prev) => {
+        const existing = prev.find((i) => cartLineKey(i) === key);
+        if (existing) {
+          return prev.map((i) =>
+            cartLineKey(i) === key
+              ? { ...i, quantity: clampQuantity(i.quantity + quantity) }
+              : i,
+          );
+        }
+        return [...prev, { ...item, quantity: clampQuantity(quantity) }];
+      });
+    },
+    [commit],
+  );
+
+  const remove = useCallback(
+    (lineKey: string) => {
+      commit("remove", (prev) =>
+        prev.filter((i) => cartLineKey(i) !== lineKey),
+      );
+    },
+    [commit],
+  );
+
+  const setQty = useCallback(
+    (lineKey: string, quantity: number) => {
+      commit(quantity <= 0 ? "remove" : "quantity", (prev) => {
+        if (quantity <= 0) {
+          return prev.filter((i) => cartLineKey(i) !== lineKey);
+        }
         return prev.map((i) =>
-          cartLineKey(i) === key
-            ? { ...i, quantity: clampQuantity(i.quantity + quantity) }
+          cartLineKey(i) === lineKey
+            ? { ...i, quantity: clampQuantity(quantity) }
             : i,
         );
-      }
-      return [...prev, { ...item, quantity: clampQuantity(quantity) }];
-    });
-  }, []);
-
-  const remove = useCallback((lineKey: string) => {
-    setItems((prev) => prev.filter((i) => cartLineKey(i) !== lineKey));
-  }, []);
-
-  const setQty = useCallback((lineKey: string, quantity: number) => {
-    setItems((prev) => {
-      if (quantity <= 0) {
-        return prev.filter((i) => cartLineKey(i) !== lineKey);
-      }
-      return prev.map((i) =>
-        cartLineKey(i) === lineKey
-          ? { ...i, quantity: clampQuantity(quantity) }
-          : i,
-      );
-    });
-  }, []);
-
-  const clear = useCallback<CartContextValue["clear"]>((fulfillmentType) => {
-    setItems((prev) =>
-      fulfillmentType
-        ? prev.filter((i) => i.fulfillmentType !== fulfillmentType)
-        : [],
-    );
-  }, []);
-
-  const syncWithCatalog = useCallback((updates: CatalogUpdate[]) => {
-    const byProduct = new Map(
-      updates.map((u) => [`${u.fulfillmentType}:${u.productSlug}`, u]),
-    );
-    setItems((prev) => {
-      let changed = false;
-      const next = prev.map((item) => {
-        const fresh = byProduct.get(
-          `${item.fulfillmentType}:${item.productSlug}`,
-        );
-        if (!fresh) return item;
-        const merged: CartItem = {
-          ...item,
-          ozonSku: fresh.ozonSku ?? item.ozonSku,
-          name: fresh.name,
-          // Пустую картинку из каталога не подставляем поверх рабочей
-          image: fresh.image || item.image,
-          price: fresh.price,
-          quantity: Math.min(item.quantity, Math.max(fresh.maxQuantity, 1)),
-        };
-        if (
-          merged.ozonSku !== item.ozonSku ||
-          merged.name !== item.name ||
-          merged.image !== item.image ||
-          merged.price !== item.price ||
-          merged.quantity !== item.quantity
-        ) {
-          changed = true;
-          return merged;
-        }
-        return item;
       });
-      return changed ? next : prev;
-    });
-  }, []);
+    },
+    [commit],
+  );
+
+  const clear = useCallback<CartContextValue["clear"]>(
+    (fulfillmentType, orderId) => {
+      commit(
+        orderId ? "order" : "clear",
+        (prev) =>
+          fulfillmentType
+            ? prev.filter((i) => i.fulfillmentType !== fulfillmentType)
+            : [],
+        orderId,
+      );
+    },
+    [commit],
+  );
+
+  const syncWithCatalog = useCallback(
+    (updates: CatalogUpdate[]) => {
+      const byProduct = new Map(
+        updates.map((u) => [`${u.fulfillmentType}:${u.productSlug}`, u]),
+      );
+      commit("sync", (prev) => {
+        let changed = false;
+        const next = prev.map((item) => {
+          const fresh = byProduct.get(
+            `${item.fulfillmentType}:${item.productSlug}`,
+          );
+          if (!fresh) return item;
+          const merged: CartItem = {
+            ...item,
+            ozonSku: fresh.ozonSku ?? item.ozonSku,
+            name: fresh.name,
+            // Пустую картинку из каталога не подставляем поверх рабочей
+            image: fresh.image || item.image,
+            price: fresh.price,
+            quantity: Math.min(item.quantity, Math.max(fresh.maxQuantity, 1)),
+          };
+          if (
+            merged.ozonSku !== item.ozonSku ||
+            merged.name !== item.name ||
+            merged.image !== item.image ||
+            merged.price !== item.price ||
+            merged.quantity !== item.quantity
+          ) {
+            changed = true;
+            return merged;
+          }
+          return item;
+        });
+        return changed ? next : prev;
+      });
+    },
+    [commit],
+  );
 
   const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
