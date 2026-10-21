@@ -29,6 +29,7 @@ import {
   IconSchool,
   IconSettings,
   IconShoppingBag,
+  IconShoppingCart,
   IconSpeakerphone,
   IconTicket,
   IconUsers,
@@ -63,6 +64,7 @@ const sales: NavItem[] = [
   { title: "Новый заказ", url: "/crm/orders/new", icon: IconPlus },
   { title: "Аналитика", url: "/crm/analytics", icon: IconChartPie },
   { title: "Заказы с сайта", url: "/orders", icon: IconShoppingBag },
+  { title: "Корзины", url: "/carts", icon: IconShoppingCart },
   { title: "Заявки", url: "/requests", icon: IconInbox },
   { title: "Клиенты", url: "/crm/clients", icon: IconAddressBook },
 ];

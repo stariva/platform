@@ -163,7 +163,7 @@ export default function MadeToOrderCheckoutPage() {
         order_price: requested.estimate,
       });
       rememberOrderPhone(requested.orderId, data.phone);
-      clear("made_to_order");
+      clear("made_to_order", requested.orderId);
       router.push(`/order/${requested.orderId}`);
     } catch (error) {
       if (error instanceof ItemsUnavailableError) {

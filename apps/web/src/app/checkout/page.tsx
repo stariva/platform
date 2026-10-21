@@ -218,7 +218,7 @@ export default function CheckoutPage() {
       });
       await trackCreatedOrder(created.analytics);
       setRedirecting(true);
-      clear("stock");
+      clear("stock", created.orderId);
       window.location.href = created.confirmationUrl;
     } catch (error) {
       if (error instanceof ItemsUnavailableError) {
