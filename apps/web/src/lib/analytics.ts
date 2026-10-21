@@ -373,12 +373,26 @@ export function trackPageView() {
   previousPage = url;
 }
 
-/** Goals go to both counters; a price or order sum becomes the VK goal value. */
-export function reachGoal(goal: string, params?: Record<string, unknown>) {
+/**
+ * Отправляет цель во все счётчики. onSent Метрика вызовет, когда запрос
+ * уйдёт; false — Метрики нет (нет согласия, не прод) и ждать нечего.
+ */
+function sendGoal(
+  goal: string,
+  params?: Record<string, unknown>,
+  onSent?: () => void,
+): boolean {
   try {
-    metrika()?.(COUNTER_ID, "reachGoal", goal, params);
+    const ym = metrika();
+    ym?.(COUNTER_ID, "reachGoal", goal, params, onSent);
     umami((u) => u.track(goal, params));
-    postHog((posthog) => posthog.capture(goal, params));
+    postHog((posthog) =>
+      posthog.capture(
+        goal,
+        params,
+        onSent ? { send_instantly: true } : undefined,
+      ),
+    );
     const value = params?.order_price ?? params?.price;
     vkPixel()?.push({
       id: VK_PIXEL_ID,
@@ -386,9 +400,34 @@ export function reachGoal(goal: string, params?: Record<string, unknown>) {
       goal,
       ...(typeof value === "number" ? { value } : {}),
     });
+    return Boolean(ym);
   } catch {
-    /* optional */
+    return false;
   }
+}
+
+/** Goals go to both counters; a price or order sum becomes the VK goal value. */
+export function reachGoal(goal: string, params?: Record<string, unknown>) {
+  sendGoal(goal, params);
+}
+
+/**
+ * Цель перед уходом со страницы (например, на оплату в ЮKassa). Метрика
+ * шлёт цели не сразу, и переход обрывает запрос, поэтому перед переходом
+ * ждём подтверждения — но не дольше 800 мс, чтобы не держать покупателя.
+ */
+export function reachGoalBeforeLeave(
+  goal: string,
+  params?: Record<string, unknown>,
+): Promise<void> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(resolve, 800);
+    const done = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    if (!sendGoal(goal, params, done)) done();
+  });
 }
 
 /** У Метрики это ecommerce-действия, в PostHog — отдельные события для воронок. */

@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { reachGoal } from "@/lib/analytics";
+import { reachGoalBeforeLeave } from "@/lib/analytics";
 import { useSession } from "@/lib/auth/client";
 import { suggestEmailFix } from "@/lib/email-typo";
 import { webApi } from "@/lib/web-api";
@@ -25,8 +25,7 @@ interface WorkshopPurchaseProps {
   returnPath?: string;
   /** Подпись кнопки оплаты вместо «Купить за …». */
   buyLabel?: string;
-  onBuyClick?: () => void;
-  /** Цель аналитики для серверных страниц, где функцию в onBuyClick не передать. */
+  /** Цель аналитики на нажатие «Купить»; до её отправки на оплату не уходим. */
   buyGoal?: string;
   /** Предзаказ: уроки откроются позже, поэтому обещаем напоминание о старте. */
   preorder?: boolean;
@@ -63,7 +62,6 @@ export function WorkshopPurchase({
   title,
   returnPath = `/workshops/${slug}`,
   buyLabel,
-  onBuyClick,
   buyGoal,
   preorder = false,
 }: WorkshopPurchaseProps) {
@@ -118,9 +116,13 @@ export function WorkshopPurchase({
     setNotice(null);
     if (!validate()) return;
 
-    onBuyClick?.();
-    if (buyGoal)
-      reachGoal(buyGoal, { slug, order_price: price, currency: "RUB" });
+    const goalSent = buyGoal
+      ? reachGoalBeforeLeave(buyGoal, {
+          slug,
+          order_price: price,
+          currency: "RUB",
+        })
+      : undefined;
     setBuying(true);
     const guestEmail = email.trim().toLowerCase();
     if (!session) saveEmailDraft(guestEmail);
@@ -172,7 +174,8 @@ export function WorkshopPurchase({
         setBuying(false);
         return;
       }
-      // Редирект на страницу оплаты YooKassa
+      // Редирект на страницу оплаты YooKassa: иначе переход оборвёт цель
+      await goalSent;
       window.location.href = data.confirmationUrl;
     } catch {
       setNotice({
