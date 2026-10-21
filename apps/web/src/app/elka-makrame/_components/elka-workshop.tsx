@@ -324,7 +324,7 @@ function BigTreeOffer({ bigTree }: { bigTree: Workshop }) {
       </h3>
       <p className="mb-5 text-sm leading-relaxed text-dark-grey">
         {preorder
-          ? `Отдельный мастер-класс по ёлке в полтора метра — для просторной стены. Уроки откроются ${formatReleaseDate(preorder)}; оформите предзаказ сейчас — по цене со скидкой.`
+          ? `Отдельный мастер-класс по ёлке в полтора метра — для просторной стены. Уроки откроются ${formatReleaseDate(preorder)}; оформите предзаказ сейчас${bigTree.regularPrice ? " — по цене со скидкой" : ""}.`
           : "Отдельный мастер-класс по ёлке в полтора метра — для просторной стены."}
       </p>
       <div className="mb-5 flex items-baseline gap-3">
