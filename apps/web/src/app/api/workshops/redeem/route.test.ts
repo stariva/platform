@@ -55,10 +55,8 @@ mock.module("@/lib/workshops/notifications", () => ({
   notifyWorkshopBooked,
   siteUrl: () => "https://example.test",
 }));
-mock.module("@/lib/visitor", () => ({
-  clientIp: () => "203.0.113.7",
-  collectVisitor: async () => null,
-}));
+// @/lib/visitor не подменяем: мок попал бы в другие файлы. Частный IP
+// не уходит в геопоиск.
 const { POST } = await import("./route");
 
 beforeEach(() => {
@@ -81,6 +79,7 @@ function redeem(body: Record<string, unknown>) {
   return POST(
     new NextRequest("https://example.test/api/workshops/redeem", {
       method: "POST",
+      headers: { "x-real-ip": "10.0.0.7" },
       body: JSON.stringify({
         email: "buyer@example.test",
         personalDataConsent: true,
@@ -99,7 +98,7 @@ test("a valid code opens the course and sends the access email", async () => {
     title: "Ёлка макраме",
   });
   expect(redeemAccessCode).toHaveBeenCalledTimes(1);
-  expect(reserveAccessCodeAttempt).toHaveBeenCalledWith("203.0.113.7");
+  expect(reserveAccessCodeAttempt).toHaveBeenCalledWith("10.0.0.7");
   expect(releaseAccessCodeAttempt).toHaveBeenCalledWith("attempt");
   expect(notifyWorkshopBooked).toHaveBeenCalledWith("order");
 });
@@ -108,7 +107,7 @@ test("an unknown code is counted against the IP", async () => {
   found = null;
   const response = await redeem({ code: "111 222" });
   expect(response.status).toBe(404);
-  expect(reserveAccessCodeAttempt).toHaveBeenCalledWith("203.0.113.7");
+  expect(reserveAccessCodeAttempt).toHaveBeenCalledWith("10.0.0.7");
   expect(releaseAccessCodeAttempt).not.toHaveBeenCalled();
   expect(redeemAccessCode).not.toHaveBeenCalled();
 });
