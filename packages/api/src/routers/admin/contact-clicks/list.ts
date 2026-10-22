@@ -94,6 +94,7 @@ export const list = adminProcedure
     const orderId = sql<string | null>`(
       select ce.order_id from cart_events ce
       where ce.cart_id = ${contactClicks.browserId} and ce.order_id is not null
+        and ce.created_at > ${contactClicks.createdAt}
       order by ce.created_at desc limit 1
     )`;
 
