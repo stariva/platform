@@ -10,6 +10,8 @@ import type { Product } from "@/lib/catalog/types";
 export const WORKSHOP_PATH = "/elka-makrame";
 /** Страница готовых ёлок. */
 export const TREES_PATH = "/elka-makrame-na-stenu";
+/** Лендинг мастер-класса по большой ёлке — на него ведёт его реклама. */
+export const BIG_TREE_PATH = "/elka-makrame-bolshaya";
 
 export const WORKSHOP_SLUG = "elka-makrame";
 /**

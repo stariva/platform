@@ -18,7 +18,20 @@ const COOKIE_BANNER = '[role="dialog"][aria-label="Настройки cookie"]';
  * клавиатура; над cookie-баннером поднимается,
  * а не исчезает — большинство посетителей баннер не закрывают.
  */
-export function WorkshopStickyCta({ label }: { label: string }) {
+export function WorkshopStickyCta({
+  label,
+  sectionId = WORKSHOP_SECTION_ID,
+  buyId = WORKSHOP_BUY_ID,
+  quickBuyId = WORKSHOP_QUICK_BUY_ID,
+  goal = "elka_sticky_cta",
+}: {
+  label: string;
+  /** Блок, внутри которого кнопка видна, форма оплаты и кнопка под заголовком. */
+  sectionId?: string;
+  buyId?: string;
+  quickBuyId?: string;
+  goal?: string;
+}) {
   const [inSection, setInSection] = useState(false);
   // Кнопка в тексте блока или форма оплаты уже на экране — дублировать незачем.
   const [ctaVisible, setCtaVisible] = useState<Record<string, boolean>>({});
@@ -26,8 +39,8 @@ export function WorkshopStickyCta({ label }: { label: string }) {
   const [bannerOffset, setBannerOffset] = useState(0);
 
   useEffect(() => {
-    const section = document.getElementById(WORKSHOP_SECTION_ID);
-    const targets = [WORKSHOP_QUICK_BUY_ID, WORKSHOP_BUY_ID]
+    const section = document.getElementById(sectionId);
+    const targets = [quickBuyId, buyId]
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
     if (!section) return;
@@ -44,7 +57,7 @@ export function WorkshopStickyCta({ label }: { label: string }) {
     observer.observe(section);
     for (const target of targets) observer.observe(target);
     return () => observer.disconnect();
-  }, []);
+  }, [sectionId, buyId, quickBuyId]);
 
   useEffect(() => {
     const updateEditing = () =>
@@ -82,8 +95,8 @@ export function WorkshopStickyCta({ label }: { label: string }) {
       }}
     >
       <a
-        href={`#${WORKSHOP_BUY_ID}`}
-        onClick={() => reachGoal("elka_sticky_cta")}
+        href={`#${buyId}`}
+        onClick={() => reachGoal(goal)}
         className="flex min-h-12 items-center justify-center rounded-full bg-terracotta px-5 text-sm font-medium text-parchment shadow-lg shadow-terracotta/30"
       >
         {label}

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { blogPosts } from "@/lib/blog-data";
 import { categories, getProducts } from "@/lib/catalog/service";
-import { TREES_PATH, WORKSHOP_PATH } from "@/lib/elka/data";
+import { BIG_TREE_PATH, TREES_PATH, WORKSHOP_PATH } from "@/lib/elka/data";
 import { IN_STOCK_HREF } from "@/lib/in-stock";
 import { productHref } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
@@ -24,6 +24,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${BASE_URL}${TREES_PATH}`,
       changeFrequency: "weekly",
       priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}${BIG_TREE_PATH}`,
+      changeFrequency: "weekly",
+      priority: 0.8,
     },
     {
       url: BASE_URL,
