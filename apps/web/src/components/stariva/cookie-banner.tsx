@@ -71,11 +71,12 @@ export function CookieBanner() {
       aria-label="Настройки cookie"
       className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-xl rounded-2xl border border-espresso/10 bg-parchment p-3 sm:p-4 text-espresso shadow-lg"
     >
-      {/* На телефоне — короче: баннер не должен закрывать четверть экрана. */}
+      {/* На телефоне — короче: баннер не должен закрывать четверть экрана.
+          Запятая — внутри скрытой части, иначе на телефоне выходит «cookie,.». */}
       <p className="text-[12px] sm:text-[13px] leading-snug sm:leading-relaxed text-espresso/80">
-        Мы используем cookie,
+        Мы используем cookie
         <span className="hidden sm:inline">
-          чтобы сайт работал и становился удобнее. Продолжая пользоваться
+          , чтобы сайт работал и становился удобнее. Продолжая пользоваться
           сайтом, вы соглашаетесь с этим
         </span>
         .{" "}
