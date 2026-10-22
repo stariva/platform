@@ -9,6 +9,8 @@ import {
   geoFromHeaders,
   isPublicIp,
   lookupGeo,
+  METRIKA_UID_COOKIE,
+  metrikaClientId,
   parseUserAgent,
   resetGeoState,
   VISITOR_ENV_COOKIE,
@@ -271,6 +273,39 @@ test("visitor uses the saved arrival referrer while keeping the submission page"
     assert.equal(visitor.referrer, expected);
     assert.equal(visitor.page, "/order/status");
   }
+});
+
+test("Metrika ClientID comes from _ym_uid and only as digits", () => {
+  assert.equal(
+    metrikaClientId(`a=1; ${METRIKA_UID_COOKIE}=1729500000123456789; b=2`),
+    "1729500000123456789",
+  );
+  assert.equal(metrikaClientId("_ym_uid_x=1729500000123456789"), undefined);
+  assert.equal(metrikaClientId(`${METRIKA_UID_COOKIE}=abc`), undefined);
+  assert.equal(metrikaClientId(`${METRIKA_UID_COOKIE}=123`), undefined);
+  assert.equal(metrikaClientId(null), undefined);
+});
+
+test("visitor keeps the Metrika ClientID but never shows it to the master", async () => {
+  const visitor = await collectVisitor(
+    new Request("https://stariva.ru/api/contact/clicks", {
+      headers: {
+        "x-real-ip": "10.0.0.1",
+        cookie: `${METRIKA_UID_COOKIE}=1729500000123456789`,
+      },
+    }),
+  );
+  assert.equal(visitor.ymClientId, "1729500000123456789");
+  assert.ok(
+    !formatVisitor(visitor).some((line) => line.includes("1729500000")),
+  );
+
+  const withoutConsent = await collectVisitor(
+    new Request("https://stariva.ru/api/contact/clicks", {
+      headers: { "x-real-ip": "10.0.0.1" },
+    }),
+  );
+  assert.ok(!("ymClientId" in withoutConsent));
 });
 
 test("a failing lookup never breaks the order", async () => {

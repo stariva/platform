@@ -32,5 +32,8 @@ export interface VisitorInfo {
   pixelRatio?: number;
   referrer?: string;
   page?: string;
+  // ClientID Метрики из её cookie _ym_uid: по нему заказ можно потом
+  // сопоставить с визитами. Есть, только если посетитель согласился на аналитику.
+  ymClientId?: string;
   at: string; // ISO 8601
 }
