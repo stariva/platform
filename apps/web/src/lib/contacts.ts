@@ -16,6 +16,33 @@ export const CONTACTS = {
 
 export type ContactChannel = "telegram" | "whatsapp" | "max" | "phone";
 
+/** Та же ссылка с точностью до регистра, слэша в конце и параметров (?text= у WhatsApp). */
+function sameLink(href: string, contact: string) {
+  try {
+    const url = new URL(href);
+    const target = new URL(contact);
+    return (
+      url.host.toLowerCase() === target.host.toLowerCase() &&
+      url.pathname.replace(/\/$/, "").toLowerCase() ===
+        target.pathname.toLowerCase()
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Канал связи с мастером по адресу ссылки; null — ссылка не к мастеру
+ * (например, на бота напоминаний t.me/…Bot).
+ */
+export function contactChannelOf(href: string): ContactChannel | null {
+  if (/^tel:/i.test(href)) return "phone";
+  if (sameLink(href, CONTACTS.telegramUrl)) return "telegram";
+  if (sameLink(href, CONTACTS.whatsappUrl)) return "whatsapp";
+  if (sameLink(href, CONTACTS.maxUrl)) return "max";
+  return null;
+}
+
 /** WhatsApp — единственный из каналов, который принимает готовый текст. */
 export function whatsappUrl(message?: string) {
   return message

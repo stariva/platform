@@ -343,7 +343,10 @@ interface ContactsData {
 function ContactsCard({ data }: { data: ContactsData }) {
   return (
     <CardShell>
-      <div className="rounded-xl border border-espresso/10 bg-white p-3.5 text-[13px] text-espresso/85 space-y-2">
+      <div
+        data-location="chat"
+        className="rounded-xl border border-espresso/10 bg-white p-3.5 text-[13px] text-espresso/85 space-y-2"
+      >
         <a
           href={data.telegramUrl}
           target="_blank"
