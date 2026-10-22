@@ -248,7 +248,7 @@ export default async function WorkshopDetailPage({
         {/* На мобильном карточка покупки идёт сразу после обложки, на десктопе — липкая колонка справа */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-x-16 gap-y-10 lg:gap-y-0">
           {/* Left: title + cover */}
-          <div className="lg:col-start-1 lg:row-start-1">
+          <div className="lg:col-start-1 lg:row-start-1 lg:mb-10">
             {/* Title block */}
             <div className="mb-6 md:mb-8">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4">
@@ -278,55 +278,15 @@ export default async function WorkshopDetailPage({
               </p>
             </div>
 
-            {/* Cover with lock */}
-            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-sand lg:mb-10">
+            {/* Cover */}
+            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-sand">
               <CoverPhoto
                 src={workshop.cover}
                 alt={workshop.title}
                 sizes="(max-width: 1024px) 100vw, 700px"
                 priority
               />
-              {/* Платные курсы: замок плашкой внизу, само фото не прячем */}
-              {workshop.price > 0 ? (
-                <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-espresso/75 via-espresso/40 to-transparent px-3 pb-3 pt-8 sm:px-5 sm:pb-4 sm:pt-12">
-                  <div className="w-10 h-10 rounded-full bg-parchment/95 flex items-center justify-center flex-shrink-0">
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 28 28"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <rect
-                        x="5"
-                        y="13"
-                        width="18"
-                        height="13"
-                        rx="3"
-                        stroke="#2c241b"
-                        strokeWidth="1.8"
-                      />
-                      <path
-                        d="M9 13V10a5 5 0 0 1 10 0v3"
-                        stroke="#2c241b"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                      />
-                      <circle cx="14" cy="19.5" r="2" fill="#2c241b" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-parchment font-serif text-lg leading-tight">
-                      {releaseLabel ? "Предзаказ" : "Контент защищён"}
-                    </p>
-                    <p className="text-parchment/80 text-xs sm:text-sm">
-                      {releaseLabel
-                        ? `Уроки откроются ${releaseLabel}`
-                        : "Приобретите курс, чтобы смотреть все уроки"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
+              {workshop.price > 0 ? null : (
                 <div className="absolute top-4 left-4">
                   <span className="px-3 py-1 rounded-full bg-terracotta text-parchment text-xs label-caps">
                     Бесплатно
@@ -334,6 +294,47 @@ export default async function WorkshopDetailPage({
                 </div>
               )}
             </div>
+            {/* Платные курсы: плашка под обложкой */}
+            {workshop.price > 0 ? (
+              <div className="mt-3 rounded-2xl flex items-center gap-3 bg-gradient-to-t from-espresso/75 via-espresso/40 to-transparent px-3 pb-3 pt-8 sm:px-5 sm:pb-4 sm:pt-12">
+                <div className="w-10 h-10 rounded-full bg-parchment/95 flex items-center justify-center flex-shrink-0">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 28 28"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <rect
+                      x="5"
+                      y="13"
+                      width="18"
+                      height="13"
+                      rx="3"
+                      stroke="#2c241b"
+                      strokeWidth="1.8"
+                    />
+                    <path
+                      d="M9 13V10a5 5 0 0 1 10 0v3"
+                      stroke="#2c241b"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="14" cy="19.5" r="2" fill="#2c241b" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-parchment font-serif text-lg leading-tight">
+                    {releaseLabel ? "Предзаказ" : "Контент защищён"}
+                  </p>
+                  <p className="text-parchment/80 text-xs sm:text-sm">
+                    {releaseLabel
+                      ? `Уроки откроются ${releaseLabel}`
+                      : "Приобретите курс, чтобы смотреть все уроки"}
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Left: content */}
