@@ -125,7 +125,7 @@ function LinkGroup({
 
 export function Footer() {
   return (
-    <footer className="bg-espresso text-parchment">
+    <footer data-location="footer" className="bg-espresso text-parchment">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 pt-20 lg:pt-28 pb-10">
         <div className="grid grid-cols-2 lg:grid-cols-12 gap-x-10 gap-y-12 lg:gap-12">
           {/* Brand + contacts */}

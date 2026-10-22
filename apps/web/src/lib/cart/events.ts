@@ -10,8 +10,12 @@ const CART_ID_KEY = "stariva:cart-id";
 /** Если localStorage недоступен, корзина живёт до перезагрузки — и id тоже. */
 let memoryCartId: string | undefined;
 
-/** Случайный id корзины этого браузера: по нему админка собирает события в одну строку. */
-function cartId(): string {
+/**
+ * Случайный id корзины этого браузера: по нему админка собирает события в
+ * одну строку. Им же помечаются переходы в мессенджеры (lib/contact-clicks),
+ * чтобы связать переход с корзиной и заказом.
+ */
+export function cartId(): string {
   try {
     const stored = window.localStorage.getItem(CART_ID_KEY);
     if (stored) return stored;
