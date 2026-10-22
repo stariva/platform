@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import {
+  BIG_TREE_PATH,
   BONUS_RELEASE_LABEL,
   BONUS_TREE_SIZE,
   fallbackWorkshopPrice,
@@ -325,7 +326,14 @@ function BigTreeOffer({ bigTree }: { bigTree: Workshop }) {
       <p className="mb-5 text-sm leading-relaxed text-dark-grey">
         {preorder
           ? `Отдельный мастер-класс по ёлке в полтора метра — для просторной стены. Уроки откроются ${formatReleaseDate(preorder)}; оформите предзаказ сейчас${bigTree.regularPrice ? " — по цене со скидкой" : ""}.`
-          : "Отдельный мастер-класс по ёлке в полтора метра — для просторной стены."}
+          : "Отдельный мастер-класс по ёлке в полтора метра — для просторной стены."}{" "}
+        <TrackedLink
+          href={BIG_TREE_PATH}
+          goal="elka_big_tree_more"
+          className="underline underline-offset-4 hover:text-terracotta"
+        >
+          Подробнее
+        </TrackedLink>
       </p>
       <div className="mb-5 flex items-baseline gap-3">
         <span className="font-serif text-3xl text-espresso">
