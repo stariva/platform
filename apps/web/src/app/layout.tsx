@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import { Suspense } from "react";
 import { ChatWidget } from "@/components/stariva/chat-widget";
 import { CookieBanner } from "@/components/stariva/cookie-banner";
@@ -12,36 +11,8 @@ import { VisitorEnv } from "@/components/stariva/visitor-env";
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/lib/cart/cart-context";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { fontVariables } from "./fonts";
 import "./globals.css";
-
-// Self-hosted variable fonts (Google Fonts "latin" + "cyrillic" subsets),
-// so builds don't depend on reaching fonts.googleapis.com.
-const cormorant = localFont({
-  src: [
-    {
-      path: "./fonts/cormorant-garamond-var.woff2",
-      weight: "400 700",
-      style: "normal",
-    },
-    {
-      path: "./fonts/cormorant-garamond-italic-var.woff2",
-      weight: "400 700",
-      style: "italic",
-    },
-  ],
-  variable: "--font-serif",
-  display: "swap",
-  adjustFontFallback: "Times New Roman",
-});
-
-const inter = localFont({
-  src: "./fonts/inter-var.woff2",
-  weight: "300 600",
-  style: "normal",
-  variable: "--font-sans",
-  display: "swap",
-  adjustFontFallback: "Arial",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -127,6 +98,12 @@ export const metadata: Metadata = {
   },
 };
 
+// stariva.ru//test: перед приложением слэши склеиваются, сервер рендерит
+// /test, а в адресной строке остаётся //test. Роутер Next читает это как
+// ссылку на хост «test», падает при гидрации и вместо страницы показывает
+// global-error. Чиним адрес до гидрации, без перезагрузки.
+const COLLAPSE_SLASHES = `if(location.pathname.indexOf("//")>-1)history.replaceState(history.state,"",location.pathname.replace(/\\/{2,}/g,"/")+location.search+location.hash)`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -136,8 +113,14 @@ export default function RootLayout({
     <html
       lang="ru"
       data-scroll-behavior="smooth"
-      className={`${cormorant.variable} ${inter.variable} bg-white`}
+      className={`${fontVariables} bg-white`}
     >
+      <head>
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: свой статический код, без данных извне
+          dangerouslySetInnerHTML={{ __html: COLLAPSE_SLASHES }}
+        />
+      </head>
       <body className="font-sans antialiased bg-white text-near-black">
         <OrganizationJsonLd />
         <WebSiteJsonLd />
