@@ -5,7 +5,8 @@ import { attributionFromRequest } from "./campaign-attribution";
 
 /**
  * Данные о посетителе для заказа, записи на мастер-класс и заявки:
- * IP, город, провайдер, устройство, язык, экран и часовой пояс.
+ * IP, город, провайдер, устройство, язык, экран, часовой пояс и ClientID
+ * Метрики.
  *
  * Сервер берёт всё из заголовков запроса. То, что видно только браузеру
  * (экран, часовой пояс), приходит в first-party cookie `stariva_env`,
@@ -299,6 +300,24 @@ export function envFromCookie(cookieHeader: string | null) {
   return null;
 }
 
+/** First-party cookie Метрики с ClientID посетителя. */
+export const METRIKA_UID_COOKIE = "_ym_uid";
+
+/**
+ * ClientID Метрики: секунды первого визита и случайные цифры. Только храним
+ * у себя — ни в уведомления, ни во внешние сервисы он не уходит.
+ */
+export function metrikaClientId(cookieHeader: string | null) {
+  for (const part of cookieHeader?.split(";") ?? []) {
+    const separator = part.indexOf("=");
+    if (separator < 0 || part.slice(0, separator).trim() !== METRIKA_UID_COOKIE)
+      continue;
+    const value = part.slice(separator + 1).trim();
+    return /^\d{10,30}$/.test(value) ? value : undefined;
+  }
+  return undefined;
+}
+
 /** Путь страницы, с которой отправлена форма (без query и хэша). */
 function pageOf(request: Pick<Request, "headers">): string | undefined {
   const referer = request.headers.get("referer");
@@ -359,6 +378,7 @@ export async function collectVisitor(
       pixelRatio: env?.dpr,
       referrer,
       page: pageOf(request),
+      ymClientId: metrikaClientId(headers.get("cookie")),
       at,
     };
     // Пустые поля в jsonb не нужны.
