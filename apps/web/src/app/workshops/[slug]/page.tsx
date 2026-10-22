@@ -91,6 +91,41 @@ export async function generateMetadata({
   };
 }
 
+// Обложка целиком, без обрезки: вертикальное фото встаёт по центру рамки 16:9,
+// а поля по бокам заполняет его же размытая копия. Фото 16:9 занимает рамку как есть.
+function CoverPhoto({
+  src,
+  alt,
+  sizes,
+  priority,
+}: {
+  src: string;
+  alt: string;
+  sizes: string;
+  priority?: boolean;
+}) {
+  return (
+    <>
+      <Image
+        src={src}
+        alt=""
+        aria-hidden="true"
+        fill
+        sizes="96px"
+        className="object-cover scale-110 blur-2xl opacity-80"
+      />
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        className="object-contain"
+        priority={priority}
+      />
+    </>
+  );
+}
+
 export default async function WorkshopDetailPage({
   params,
 }: {
@@ -245,21 +280,19 @@ export default async function WorkshopDetailPage({
 
             {/* Cover with lock */}
             <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-sand lg:mb-10">
-              <Image
+              <CoverPhoto
                 src={workshop.cover}
                 alt={workshop.title}
-                fill
                 sizes="(max-width: 1024px) 100vw, 700px"
-                className="object-cover"
                 priority
               />
-              {/* Locked overlay (платные курсы) */}
+              {/* Платные курсы: замок плашкой внизу, само фото не прячем */}
               {workshop.price > 0 ? (
-                <div className="absolute inset-0 bg-espresso/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-parchment/95 flex items-center justify-center shadow-lg">
+                <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-espresso/75 via-espresso/40 to-transparent px-3 pb-3 pt-8 sm:px-5 sm:pb-4 sm:pt-12">
+                  <div className="w-10 h-10 rounded-full bg-parchment/95 flex items-center justify-center flex-shrink-0">
                     <svg
-                      width="28"
-                      height="28"
+                      width="20"
+                      height="20"
                       viewBox="0 0 28 28"
                       fill="none"
                       aria-hidden="true"
@@ -271,22 +304,22 @@ export default async function WorkshopDetailPage({
                         height="13"
                         rx="3"
                         stroke="#2c241b"
-                        strokeWidth="1.6"
+                        strokeWidth="1.8"
                       />
                       <path
                         d="M9 13V10a5 5 0 0 1 10 0v3"
                         stroke="#2c241b"
-                        strokeWidth="1.6"
+                        strokeWidth="1.8"
                         strokeLinecap="round"
                       />
                       <circle cx="14" cy="19.5" r="2" fill="#2c241b" />
                     </svg>
                   </div>
-                  <div className="text-center">
-                    <p className="text-parchment font-serif text-xl mb-1">
+                  <div className="min-w-0">
+                    <p className="text-parchment font-serif text-lg leading-tight">
                       {releaseLabel ? "Предзаказ" : "Контент защищён"}
                     </p>
-                    <p className="text-parchment/70 text-sm">
+                    <p className="text-parchment/80 text-xs sm:text-sm">
                       {releaseLabel
                         ? `Уроки откроются ${releaseLabel}`
                         : "Приобретите курс, чтобы смотреть все уроки"}
@@ -519,44 +552,12 @@ export default async function WorkshopDetailPage({
             <div className="lg:sticky lg:top-24">
               <div className="bg-parchment border border-espresso/10 rounded-2xl overflow-hidden shadow-[0_4px_30px_rgba(44,36,27,0.08)]">
                 {/* Mini cover — на мобильном большая обложка уже прямо над карточкой */}
-                <div className="relative aspect-[16/9] bg-sand hidden lg:block">
-                  <Image
+                <div className="relative aspect-[16/9] overflow-hidden bg-sand hidden lg:block">
+                  <CoverPhoto
                     src={workshop.cover}
                     alt={workshop.title}
-                    fill
                     sizes="380px"
-                    className="object-cover"
                   />
-                  {workshop.price > 0 && (
-                    <div className="absolute inset-0 bg-espresso/30 flex items-center justify-center">
-                      <div className="w-14 h-14 rounded-full bg-parchment/90 flex items-center justify-center">
-                        <svg
-                          width="22"
-                          height="22"
-                          viewBox="0 0 22 22"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <rect
-                            x="3"
-                            y="10"
-                            width="16"
-                            height="11"
-                            rx="2"
-                            stroke="#2c241b"
-                            strokeWidth="1.4"
-                          />
-                          <path
-                            d="M7 10V8a4 4 0 0 1 8 0v2"
-                            stroke="#2c241b"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                          />
-                          <circle cx="11" cy="15.5" r="1.5" fill="#2c241b" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="p-4 sm:p-6">
@@ -667,7 +668,7 @@ export default async function WorkshopDetailPage({
                       alt={w.title}
                       fill
                       sizes="340px"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="object-cover object-[50%_20%] transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
                   <div className="p-4">
