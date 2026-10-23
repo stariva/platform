@@ -388,6 +388,7 @@ export function WorkshopForm({
           name="lessons"
           render={({ field }) => (
             <WorkshopLessons
+              workshopId={id}
               slug={slug}
               lessons={field.value}
               videoUploadedAt={videoUploadedAt}

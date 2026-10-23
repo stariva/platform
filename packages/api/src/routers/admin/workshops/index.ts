@@ -14,6 +14,7 @@ import { remove } from "./remove";
 import { removeOrder } from "./remove-order";
 import { removeViews } from "./remove-views";
 import { save } from "./save";
+import { setLessonVideo } from "./set-lesson-video";
 import { uploadImage } from "./upload-image";
 import { viewsList } from "./views";
 
@@ -27,6 +28,7 @@ export const adminWorkshopsRouter = {
   removeOrder,
   removeViews,
   presignUpload,
+  setLessonVideo,
   materialUrl,
   livemasterPdf,
   uploadImage,
