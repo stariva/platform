@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 const TITLE =
   "Ёлка макраме своими руками — мастер-класс в видеоуроках | Stariva";
 const COVER =
-  "https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame.webp";
+  "https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame-mk.webp";
 
 /** Последняя фраза описания: до старта — про подарок, после — про уроки. */
 function offerSentence(preorder: boolean): string {
