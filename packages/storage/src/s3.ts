@@ -206,6 +206,21 @@ export async function objectExists(key: string): Promise<boolean> {
   }
 }
 
+/** Время загрузки файла в закрытый бакет; null — файла нет. */
+export async function objectLastModified(key: string): Promise<Date | null> {
+  try {
+    const res = await getClient().send(
+      new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+    );
+    return res.LastModified ?? null;
+  } catch (error) {
+    const status = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    if (status === 404) return null;
+    throw error;
+  }
+}
+
 /** Файл в закрытом бакете: ключ, размер и время загрузки. */
 export interface StoredObject {
   key: string;

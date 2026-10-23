@@ -34,6 +34,12 @@ import { formatBytes, putFile, readVideoDuration } from "./upload";
 
 const newLessonId = () => `l-${crypto.randomUUID().slice(0, 8)}`;
 
+const dateFormat = new Intl.DateTimeFormat("ru-RU", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Europe/Moscow",
+});
+
 /** Длительность «мин:сек»: пока набирают, держим текст, в форму — только разобранное. */
 function DurationInput({
   seconds,
@@ -74,6 +80,7 @@ function DurationInput({
 export function WorkshopLessons({
   slug,
   lessons,
+  videoUploadedAt,
   getLessons,
   onChange,
   errors,
@@ -81,6 +88,8 @@ export function WorkshopLessons({
 }: {
   slug: string;
   lessons: WorkshopLessonValues[];
+  /** Когда загрузили видео уроков: videoKey → время из бакета. */
+  videoUploadedAt?: Record<string, Date>;
   /** Текущее значение формы: пока идёт загрузка, уроки могли переставить или удалить. */
   getLessons: () => WorkshopLessonValues[];
   onChange: (lessons: WorkshopLessonValues[]) => void;
@@ -92,6 +101,10 @@ export function WorkshopLessons({
   // lessonId → доля загруженного (0–1)
   const [progress, setProgress] = useState<Record<string, number>>({});
   const uploading = Object.keys(progress).length > 0;
+  // Видео, загруженные на этой странице: сервер о них ещё не знает
+  const [uploadedNow, setUploadedNow] = useState<Record<string, Date>>({});
+  const uploadedAt = (key: string) =>
+    uploadedNow[key] ?? videoUploadedAt?.[key];
 
   // Закрытая вкладка посреди загрузки оборвёт её — предупреждаем
   useEffect(() => {
@@ -150,6 +163,7 @@ export function WorkshopLessons({
         videoKey: key,
         ...(duration !== null && { durationSeconds: duration }),
       });
+      setUploadedNow((current) => ({ ...current, [key]: new Date() }));
       toast.success(
         "Видео загружено. Нажмите «Сохранить», чтобы оно появилось в курсе",
       );
@@ -177,6 +191,7 @@ export function WorkshopLessons({
           const fraction = progress[lesson.id];
           const isUploading = fraction !== undefined;
           const error = errors?.[index];
+          const videoDate = lesson.videoKey && uploadedAt(lesson.videoKey);
           return (
             <div key={lesson.id} className="space-y-3 rounded-lg border p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -274,7 +289,11 @@ export function WorkshopLessons({
                   {isUploading
                     ? `Загружаем… ${Math.round(fraction * 100)}%`
                     : lesson.videoKey
-                      ? `Видео есть · ${lesson.videoKey.split("/").pop()}`
+                      ? `Видео есть · ${lesson.videoKey.split("/").pop()}${
+                          videoDate
+                            ? ` · загружено ${dateFormat.format(videoDate)}`
+                            : ""
+                        }`
                       : "Видео не загружено"}
                 </span>
                 <div className="ml-auto flex items-center gap-2">

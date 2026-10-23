@@ -150,10 +150,13 @@ const toLines = (text: string) =>
 export function WorkshopForm({
   id,
   initialValues,
+  videoUploadedAt,
   storefrontUrl,
 }: {
   id?: string;
   initialValues: WorkshopFormValues;
+  /** Когда загрузили видео уроков: videoKey → время из бакета. */
+  videoUploadedAt?: Record<string, Date>;
   storefrontUrl?: string;
 }) {
   const router = useRouter();
@@ -387,6 +390,7 @@ export function WorkshopForm({
             <WorkshopLessons
               slug={slug}
               lessons={field.value}
+              videoUploadedAt={videoUploadedAt}
               getLessons={() => form.getValues("lessons")}
               onChange={field.onChange}
               errors={lessonErrors}
