@@ -14,6 +14,7 @@ import {
   failRendition,
   getAttemptHlsPrefix,
 } from "../services/video-renditions";
+import { sweepWorkshopStorage } from "../services/workshop-storage";
 
 // ffmpeg читает исходник по этой ссылке всё время нарезки
 const SOURCE_URL_TTL_SECONDS = 6 * 60 * 60;
@@ -82,9 +83,18 @@ const sweep = jobs.reminders.sweep.handler(async ({ context, errors }) => {
   return result;
 });
 
+const storageSweep = jobs.storage.sweep.handler(async ({ input, errors }) => {
+  if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
+  const { deleted, bytes, renditions } = await sweepWorkshopStorage({
+    dryRun: input?.dryRun ?? false,
+  });
+  return { deleted, bytes, renditions };
+});
+
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
   reminders: { sweep },
+  storage: { sweep: storageSweep },
   npd: {
     sweep: jobs.npd.sweep.handler(({ context }) =>
       context.services.runNpdIssuingSweep(),

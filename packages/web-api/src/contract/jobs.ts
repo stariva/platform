@@ -135,9 +135,28 @@ export const remindersContract = {
     .output(reminderSweepResult),
 };
 
+export const storageContract = {
+  /**
+   * Удаляет из закрытого бакета файлы мастер-классов, на которые больше
+   * никто не ссылается: заменённые видео, их нарезки, заменённые PDF.
+   * Недавние не трогает. `dryRun` — только посчитать.
+   */
+  sweep: jobProcedure
+    .errors({ [StorageNotConfiguredError.code]: StorageNotConfiguredError })
+    .input(z.object({ dryRun: z.boolean().default(false) }).optional())
+    .output(
+      z.object({
+        deleted: z.number().int().nonnegative(),
+        bytes: z.number().int().nonnegative(),
+        renditions: z.number().int().nonnegative(),
+      }),
+    ),
+};
+
 export const jobsContract = {
   videos: videosContract,
   reminders: remindersContract,
+  storage: storageContract,
   npd: {
     /** Только алерт о зависших чеках; повторная регистрация дохода запрещена. */
     sweep: jobProcedure.output(
