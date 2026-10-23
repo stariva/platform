@@ -40,7 +40,7 @@ test("дописывает страницу с кодом в конец бриф
   expect(texts[0]).toBe("");
 });
 
-test("QR и адрес — ссылки на stariva.ru/code: бриф читают и с телефона", async () => {
+test("QR и адрес (под кодом и в шаге) — ссылки: бриф читают и с телефона", async () => {
   const result = await appendCodePage(await brief([[595.28, 841.89]]));
   const proxy = await getDocumentProxy(new Uint8Array(result));
   const links = await (await proxy.getPage(2)).getAnnotations();
@@ -50,6 +50,7 @@ test("QR и адрес — ссылки на stariva.ru/code: бриф чита�
       link.url,
     ]),
   ).toEqual([
+    ["Link", CODE_PAGE_URL],
     ["Link", CODE_PAGE_URL],
     ["Link", CODE_PAGE_URL],
   ]);

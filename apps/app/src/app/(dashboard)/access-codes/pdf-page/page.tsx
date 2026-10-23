@@ -108,9 +108,30 @@ export default function AccessCodePdfPage() {
           </a>
 
           <ol className="mt-[6%] space-y-[2%] text-left text-[clamp(12px,2.6vw,16px)] leading-snug">
-            {CODE_PAGE_TEXT.steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
+            {CODE_PAGE_TEXT.steps.map((step) => {
+              // Адрес в тексте шага — тоже ссылка, как в PDF
+              const [before, after] = step.split(CODE_PAGE_TEXT.address);
+              return (
+                <li key={step}>
+                  {after === undefined ? (
+                    step
+                  ) : (
+                    <>
+                      {before}
+                      <a
+                        href={CODE_PAGE_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline decoration-1 underline-offset-2"
+                      >
+                        {CODE_PAGE_TEXT.address}
+                      </a>
+                      {after}
+                    </>
+                  )}
+                </li>
+              );
+            })}
           </ol>
 
           <p className="mt-[7%] max-w-[85%] text-[clamp(10px,2.2vw,13px)] leading-snug text-[#6b5d4f]">

@@ -222,13 +222,30 @@ function drawCodePage(page: PDFPage, font: PDFFont) {
     if (index > 0) top -= stepGap;
     for (const text of lines) {
       const lineHeight = leading(stepSize);
+      const baseline = top - lineHeight * 0.78;
       page.drawText(text, {
         x: stepsLeft,
-        y: top - lineHeight * 0.78,
+        y: baseline,
         size: stepSize,
         font,
         color: INK,
       });
+      // Адрес в тексте шага тоже ссылка — с тем же подчёркиванием
+      const at = text.indexOf(CODE_PAGE_TEXT.address);
+      if (at >= 0) {
+        const left =
+          stepsLeft + font.widthOfTextAtSize(text.slice(0, at), stepSize);
+        const right =
+          left + font.widthOfTextAtSize(CODE_PAGE_TEXT.address, stepSize);
+        const underline = baseline - stepSize * 0.15;
+        page.drawLine({
+          start: { x: left, y: underline },
+          end: { x: right, y: underline },
+          thickness: 0.5 * scale,
+          color: INK,
+        });
+        addLink(page, [left, top - lineHeight, right, top], CODE_PAGE_URL);
+      }
       top -= lineHeight;
     }
   });
