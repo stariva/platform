@@ -20,6 +20,7 @@ import type {
   WorkshopCard,
 } from "@/lib/chat/tools";
 import { cn } from "@/lib/utils";
+import { formatLessonsCount } from "@/lib/workshops-data";
 
 // ─── Иконки (в стиле проекта — тонкие линии 1.3) ────────────────────────────
 
@@ -288,7 +289,7 @@ function WorkshopCards({ workshops }: { workshops: WorkshopCard[] }) {
               {w.title}
             </p>
             <p className="text-[11px] text-taupe">
-              {w.level} · {w.lessonsCount} уроков · {w.duration}
+              {w.level} · {formatLessonsCount(w.lessonsCount)} · {w.duration}
             </p>
             <span className="mt-0.5 inline-block font-serif text-[14px] text-espresso">
               {w.priceFormatted}

@@ -18,6 +18,7 @@ import {
 import { categories } from "@/lib/products";
 import {
   categoryLabels,
+  formatLessonsCount,
   levelLabels,
   type Workshop,
 } from "@/lib/workshops-data";
@@ -75,7 +76,7 @@ function buildWorkshopsBlock(workshops: Workshop[]): string {
   return workshops
     .map(
       (w) =>
-        `  • «${w.title}» — ${categoryLabels[w.category]}, уровень «${levelLabels[w.level]}», ${formatRub(w.price)}. ${w.lessonsCount} уроков, ${w.duration}.`,
+        `  • «${w.title}» — ${categoryLabels[w.category]}, уровень «${levelLabels[w.level]}», ${formatRub(w.price)}. ${formatLessonsCount(w.lessonsCount)}, ${w.duration}.`,
     )
     .join("\n");
 }
