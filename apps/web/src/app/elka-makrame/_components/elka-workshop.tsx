@@ -163,12 +163,12 @@ export function ElkaWorkshop({
         <div className="contents lg:block lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-28">
           <div className="order-2 relative aspect-[4/3] lg:aspect-[4/5] rounded-[28px] overflow-hidden bg-linen lg:mb-6">
             <Image
-              src="https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame.webp"
-              alt="Мастер Stariva украшает бусинами зелёную ёлку макраме на стене — такую вы сплетёте на мастер-классе"
+              src="https://cdn.stariva.ru/site/images/elka/masterclass-elka-makrame-mk.webp"
+              alt="Зелёная ёлка макраме со звездой, бусинами и бантиками на стене — такую вы сплетёте на мастер-классе"
               fill
               priority
               sizes="(min-width: 1024px) 45vw, 100vw"
-              className="object-cover object-top"
+              className="object-cover object-top lg:object-[50%_25%]"
             />
           </div>
           <ul className="order-5 mt-5 lg:mt-0 grid sm:grid-cols-2 gap-3">
