@@ -92,7 +92,8 @@ export async function generateMetadata({
   };
 }
 
-// Обложка целиком, без обрезки: вертикальное фото встаёт по центру рамки 16:9,
+// На телефоне обложка идёт в своих пропорциях (не выше 4:5) — узкая полоска в рамке
+// 16:9 там слишком мелкая. С sm вертикальное фото встаёт по центру рамки 16:9,
 // а поля по бокам заполняет его же размытая копия. Фото 16:9 занимает рамку как есть.
 function CoverPhoto({
   src,
@@ -113,14 +114,15 @@ function CoverPhoto({
         aria-hidden="true"
         fill
         sizes="96px"
-        className="object-cover scale-110 blur-2xl opacity-80"
+        className="hidden sm:block object-cover scale-110 blur-2xl opacity-80"
       />
       <Image
         src={src}
         alt={alt}
-        fill
+        width={1200}
+        height={675}
         sizes={sizes}
-        className="object-contain"
+        className="w-full h-auto max-h-[125vw] object-cover object-top sm:absolute sm:inset-0 sm:h-full sm:max-h-none sm:object-contain"
         priority={priority}
       />
     </>
@@ -280,7 +282,7 @@ export default async function WorkshopDetailPage({
             </div>
 
             {/* Cover */}
-            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-sand">
+            <div className="relative sm:aspect-[16/9] rounded-2xl overflow-hidden bg-sand">
               <CoverPhoto
                 src={workshop.cover}
                 alt={workshop.title}
@@ -297,7 +299,7 @@ export default async function WorkshopDetailPage({
             </div>
             {/* Платные курсы: плашка под обложкой */}
             {workshop.price > 0 ? (
-              <div className="mt-3 rounded-2xl flex items-center gap-3 bg-gradient-to-t from-espresso/75 via-espresso/40 to-transparent px-3 pb-3 pt-8 sm:px-5 sm:pb-4 sm:pt-12">
+              <div className="mt-3 rounded-2xl flex items-center gap-3 bg-espresso px-4 py-3 sm:px-5 sm:py-4">
                 <div className="w-10 h-10 rounded-full bg-parchment/95 flex items-center justify-center flex-shrink-0">
                   <svg
                     width="20"
