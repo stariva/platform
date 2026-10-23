@@ -10,7 +10,7 @@ import {
 } from "@stariva/storage";
 import { count, eq } from "drizzle-orm";
 import { notifyStaffAlert } from "@/lib/commerce/order-notifications";
-import type { YooKassaPayment } from "@/lib/payments/yookassa";
+import type { Payment } from "@/lib/payments/payment";
 import {
   createIncome,
   isNpdAutoEmail,
@@ -21,7 +21,7 @@ import {
 } from "./client";
 
 export interface NpdReceiptInput {
-  payment: YooKassaPayment;
+  payment: Payment;
   target: { kind: "product" | "workshop"; orderId: string };
   /** Строки чека; в сумме должны давать ровно сумму платежа. */
   services: NpdService[];
