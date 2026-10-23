@@ -72,13 +72,16 @@ function WorkshopCard({ workshop }: { workshop: Workshop }) {
       className="group flex flex-col bg-parchment border border-espresso/8 rounded-2xl overflow-hidden hover:shadow-[0_8px_40px_rgba(44,36,27,0.10)] hover:-translate-y-1 transition-all duration-300"
     >
       {/* Cover image */}
-      <div className="relative aspect-[16/9] overflow-hidden bg-sand">
+      {/* В одну колонку обложка идёт в своих пропорциях (не выше 4:5) — вертикальные
+          фото не режутся; в сетке карточки выравниваются по 16:9 */}
+      <div className="relative sm:aspect-[16/9] overflow-hidden bg-sand">
         <Image
           src={workshop.cover}
           alt={workshop.title}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover object-[50%_20%] transition-transform duration-500 group-hover:scale-105"
+          width={1200}
+          height={675}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="w-full h-auto max-h-[125vw] object-cover object-top sm:absolute sm:inset-0 sm:h-full sm:max-h-none transition-transform duration-500 group-hover:scale-105"
         />
         {/* Locked overlay */}
         <div className="absolute inset-0 bg-espresso/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
