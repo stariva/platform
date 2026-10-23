@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
   isPreorder,
   levelLabels,
 } from "@/lib/workshops-data";
+import { CourseCover } from "./course-cover";
 
 export const dynamic = "force-dynamic";
 
@@ -88,18 +88,11 @@ export default async function AccountCoursesPage() {
             key={workshop.slug}
             className="bg-white border border-espresso/10 rounded-2xl overflow-hidden flex flex-col sm:flex-row"
           >
-            <Link
+            <CourseCover
               href={`/account/workshops/${workshop.slug}`}
-              className="group relative block sm:w-52 aspect-[16/9] sm:aspect-auto bg-sand flex-shrink-0 overflow-hidden"
-            >
-              <Image
-                src={workshop.cover}
-                alt={workshop.title}
-                fill
-                sizes="(max-width: 640px) 100vw, 208px"
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            </Link>
+              src={workshop.cover}
+              alt={workshop.title}
+            />
             <div className="flex-1 p-5 flex flex-col">
               <p className="label-caps text-[11px] text-taupe mb-1">
                 {categoryLabels[workshop.category]} ·{" "}
