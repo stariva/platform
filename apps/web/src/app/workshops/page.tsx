@@ -10,6 +10,7 @@ import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
   absoluteImageUrl,
   categoryLabels,
+  formatLessonsCount,
   formatPrice,
   formatReleaseDate,
   isPreorder,
@@ -158,7 +159,9 @@ function WorkshopCard({ workshop }: { workshop: Workshop }) {
         <div className="flex items-center justify-between pt-4 border-t border-espresso/8">
           <div className="flex items-center gap-3 text-xs text-taupe">
             <span>
-              {preorder ? "Предзаказ" : `${workshop.lessonsCount} уроков`}
+              {preorder
+                ? "Предзаказ"
+                : formatLessonsCount(workshop.lessonsCount)}
             </span>
           </div>
           <span className="font-serif text-xl text-espresso">

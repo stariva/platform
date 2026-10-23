@@ -27,6 +27,7 @@ import {
   absoluteImageUrl,
   categoryLabels,
   formatDurationLabel,
+  formatLessonsCount,
   formatPrice,
   formatReleaseDate,
   formatReleaseDateTime,
@@ -65,7 +66,7 @@ export async function generateMetadata({
         : "Купить на сайте Stariva.";
   const lessonsInfo =
     workshop.lessonsCount > 0
-      ? ` ${workshop.lessonsCount} уроков, ${workshop.duration}.`
+      ? ` ${formatLessonsCount(workshop.lessonsCount)}, ${workshop.duration}.`
       : "";
   const description = `${workshop.description} Уровень: ${levelLabels[workshop.level]}.${lessonsInfo} ${callToAction}`;
   const url = `/workshops/${slug}`;
@@ -386,10 +387,7 @@ export default async function WorkshopDetailPage({
               <h2 className="font-serif text-2xl mb-5">Программа курса</h2>
               {workshop.lessonsCount > 0 ? (
                 <div className="flex items-center gap-4 mb-4 text-sm text-taupe">
-                  <span>
-                    {workshop.lessonsCount} урок
-                    {workshop.lessonsCount > 1 ? "а" : ""}
-                  </span>
+                  <span>{formatLessonsCount(workshop.lessonsCount)}</span>
                   <span>·</span>
                   <span>{workshop.duration} видео</span>
                 </div>
