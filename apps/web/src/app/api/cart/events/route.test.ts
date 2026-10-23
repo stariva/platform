@@ -1,13 +1,26 @@
-import { beforeEach, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, expect, mock, spyOn, test } from "bun:test";
 import { NextRequest } from "next/server";
 import type { CartEventInput } from "@/lib/cart/event-log";
 
 const recorded: { event: CartEventInput; userId: string | null }[] = [];
 let sessionUserId: string | null = null;
+const getSession = mock(async () =>
+  sessionUserId ? { user: { id: sessionUserId } } : null,
+);
+const collectVisitor = mock(async (request: NextRequest) => ({
+  ip: request.headers.get("x-real-ip"),
+  at: new Date().toISOString(),
+  device: /bot/i.test(request.headers.get("user-agent") ?? "")
+    ? ("bot" as const)
+    : ("desktop" as const),
+}));
 
-mock.module("@/lib/auth/session", () => ({
-  getSession: async () =>
-    sessionUserId ? { user: { id: sessionUserId } } : null,
+mock.module("@/lib/auth/session", () => ({ getSession }));
+const visitor = await import("@/lib/visitor");
+mock.module("@/lib/visitor", () => ({
+  ...visitor,
+  clientIp: (headers: Headers) => headers.get("x-real-ip"),
+  collectVisitor,
 }));
 // Подменяем только запись: схема запроса — настоящая
 const eventLog = await import("@/lib/cart/event-log");
@@ -47,10 +60,18 @@ const event = {
   items: [{ ...line, quantity: 1, ozonSku: 3723160127 }],
 };
 
+let now = Date.now();
+let clock: ReturnType<typeof spyOn<typeof Date, "now">>;
 beforeEach(() => {
+  now += 60_000;
+  clock = spyOn(Date, "now").mockImplementation(() => now);
   recorded.length = 0;
   sessionUserId = null;
+  getSession.mockClear();
+  collectVisitor.mockClear();
 });
+
+afterEach(() => clock.mockRestore());
 
 test("пишет событие гостя и отбрасывает лишние поля", async () => {
   const response = await POST(request(event));
@@ -86,4 +107,53 @@ test("отклоняет неизвестное действие и кривой
   expect((await POST(request({ ...event, action: "steal" }))).status).toBe(400);
   expect((await POST(request({ ...event, cartId: "../x" }))).status).toBe(400);
   expect(recorded).toHaveLength(0);
+});
+
+test("ограничивает IP, даже при смене корзины, до сбора visitor и сессии", async () => {
+  for (let i = 0; i < 60; i++) {
+    expect(
+      (
+        await POST(
+          request(
+            { ...event, cartId: `cart-id-${i}` },
+            {
+              "x-real-ip": "203.0.113.7",
+            },
+          ),
+        )
+      ).status,
+    ).toBe(204);
+  }
+  collectVisitor.mockClear();
+  getSession.mockClear();
+  expect(
+    (await POST(request(event, { "x-real-ip": "203.0.113.7" }))).status,
+  ).toBe(429);
+  expect(collectVisitor).not.toHaveBeenCalled();
+  expect(getSession).not.toHaveBeenCalled();
+  expect(recorded).toHaveLength(60);
+  expect(
+    (await POST(request(event, { "x-real-ip": "203.0.113.8" }))).status,
+  ).toBe(204);
+});
+
+test("ограничивает корзину при смене IP и разрешает запросы через минуту", async () => {
+  const responses = await Promise.all(
+    Array.from({ length: 61 }, (_, i) =>
+      POST(request(event, { "x-real-ip": `203.0.113.${i + 1}` })),
+    ),
+  );
+  expect(responses.filter((response) => response.status === 204)).toHaveLength(
+    60,
+  );
+  expect(responses.filter((response) => response.status === 429)).toHaveLength(
+    1,
+  );
+  expect(recorded).toHaveLength(60);
+  expect(collectVisitor).toHaveBeenCalledTimes(60);
+  now += 59_999;
+  expect((await POST(request(event))).status).toBe(429);
+  now += 1;
+  expect((await POST(request(event))).status).toBe(204);
+  expect(recorded).toHaveLength(61);
 });
