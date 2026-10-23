@@ -5,6 +5,7 @@ import {
   hlsContentType,
   hlsPlaylistFile,
   isWorkshopKey,
+  parseMasterPlaylist,
   planWorkshopSweep,
   workshopHlsPrefix,
   workshopImageKey,
@@ -70,6 +71,25 @@ test("only playlist, init segment and numbered chunks are HLS files", () => {
   assert.equal(hlsContentType("v1/init.mp4"), "video/mp4");
   assert.equal(hlsPlaylistFile(1), "index.m3u8");
   assert.equal(hlsPlaylistFile(2), "master.m3u8");
+});
+
+test("master playlist variants come out best first", () => {
+  const master = [
+    "#EXTM3U",
+    "#EXT-X-INDEPENDENT-SEGMENTS",
+    "#EXT-X-STREAM-INF:BANDWIDTH=2900000,AVERAGE-BANDWIDTH=2600000,RESOLUTION=720x1280",
+    "v1/index.m3u8",
+    "#EXT-X-STREAM-INF:BANDWIDTH=6100000,AVERAGE-BANDWIDTH=5200000,RESOLUTION=1080x1920",
+    "v0/index.m3u8",
+    "#EXT-X-STREAM-INF:BANDWIDTH=1200000,AVERAGE-BANDWIDTH=1100000",
+    "v2/index.m3u8",
+  ].join("\n");
+  assert.deepEqual(parseMasterPlaylist(master), [
+    { width: 1080, height: 1920, bandwidth: 6100000 },
+    { width: 720, height: 1280, bandwidth: 2900000 },
+    { width: 0, height: 0, bandwidth: 1200000 },
+  ]);
+  assert.deepEqual(parseMasterPlaylist("#EXTM3U\n"), []);
 });
 
 test("unsupported video types are refused", () => {

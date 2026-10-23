@@ -1,12 +1,14 @@
 "use client";
 
 import {
+  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  cn,
   Input,
   Label,
   Progress,
@@ -23,22 +25,26 @@ import {
 import {
   IconArrowDown,
   IconArrowUp,
+  IconClock,
   IconPlus,
   IconTrash,
   IconVideo,
 } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { client } from "~/orpc/react";
 import { formatBytes, putFile, readVideoDuration } from "./upload";
+import {
+  HlsStatus,
+  isHlsPending,
+  type LessonVideo,
+  videoDateFormat,
+} from "./video-status";
 
 const newLessonId = () => `l-${crypto.randomUUID().slice(0, 8)}`;
 
-const dateFormat = new Intl.DateTimeFormat("ru-RU", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Europe/Moscow",
-});
+/** Как часто спрашиваем статус нарезки, пока какое-то видео режется. */
+const HLS_POLL_MS = 15_000;
 
 /** Длительность «мин:сек»: пока набирают, держим текст, в форму — только разобранное. */
 function DurationInput({
@@ -81,7 +87,7 @@ export function WorkshopLessons({
   workshopId,
   slug,
   lessons,
-  videoUploadedAt,
+  videos: initialVideos,
   getLessons,
   onChange,
   errors,
@@ -91,8 +97,8 @@ export function WorkshopLessons({
   workshopId?: string;
   slug: string;
   lessons: WorkshopLessonValues[];
-  /** Когда загрузили видео уроков: videoKey → время из бакета. */
-  videoUploadedAt?: Record<string, Date>;
+  /** Видео сохранённых уроков: videoKey → загрузка и нарезка в HLS. */
+  videos?: Record<string, LessonVideo>;
   /** Текущее значение формы: пока идёт загрузка, уроки могли переставить или удалить. */
   getLessons: () => WorkshopLessonValues[];
   onChange: (lessons: WorkshopLessonValues[]) => void;
@@ -106,8 +112,26 @@ export function WorkshopLessons({
   const uploading = Object.keys(progress).length > 0;
   // Видео, загруженные на этой странице: сервер о них ещё не знает
   const [uploadedNow, setUploadedNow] = useState<Record<string, Date>>({});
-  const uploadedAt = (key: string) =>
-    uploadedNow[key] ?? videoUploadedAt?.[key];
+  const [videos, setVideos] = useState(initialVideos ?? {});
+
+  const refreshVideos = useCallback(async () => {
+    if (!workshopId) return;
+    try {
+      setVideos(await client.admin.workshops.videos({ id: workshopId }));
+    } catch {
+      // Статус подождёт следующего раза: форма от него не зависит
+    }
+  }, [workshopId]);
+
+  // Пока видео режется, статус обновляется сам, без перезагрузки страницы
+  const hlsPending = Object.values(videos).some(isHlsPending);
+  useEffect(() => {
+    if (!workshopId || !hlsPending) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refreshVideos();
+    }, HLS_POLL_MS);
+    return () => clearInterval(timer);
+  }, [workshopId, hlsPending, refreshVideos]);
 
   // Закрытая вкладка посреди загрузки оборвёт её — предупреждаем
   useEffect(() => {
@@ -185,6 +209,8 @@ export function WorkshopLessons({
         : null;
       if (result === "failed") return;
       if (result?.saved) {
+        // Видео уже в курсе: подтянем его статус нарезки
+        void refreshVideos();
         toast.success(
           result.revalidated
             ? "Видео загружено и уже в курсе"
@@ -219,7 +245,10 @@ export function WorkshopLessons({
           const fraction = progress[lesson.id];
           const isUploading = fraction !== undefined;
           const error = errors?.[index];
-          const videoDate = lesson.videoKey && uploadedAt(lesson.videoKey);
+          const video = lesson.videoKey ? videos[lesson.videoKey] : undefined;
+          const uploadedDate = lesson.videoKey
+            ? (uploadedNow[lesson.videoKey] ?? video?.uploadedAt)
+            : undefined;
           return (
             <div key={lesson.id} className="space-y-3 rounded-lg border p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -289,59 +318,92 @@ export function WorkshopLessons({
                 </Button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pl-8">
-                <input
-                  ref={(element) => {
-                    inputs.current[lesson.id] = element;
-                  }}
-                  type="file"
-                  accept={WORKSHOP_VIDEO_TYPES.join(",")}
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void uploadVideo(lesson, file);
-                    event.target.value = "";
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isUploading}
-                  onClick={() => inputs.current[lesson.id]?.click()}
+              <div className="flex flex-wrap items-start gap-3 pl-8">
+                <div
+                  className={cn(
+                    "flex min-w-64 flex-1 items-start gap-3 rounded-md border p-3",
+                    lesson.videoKey || isUploading
+                      ? "bg-muted/40"
+                      : "border-dashed",
+                  )}
                 >
-                  <IconVideo />
-                  {lesson.videoKey ? "Заменить видео" : "Загрузить видео"}
-                </Button>
-                <span className="text-muted-foreground text-xs">
-                  {isUploading
-                    ? `Загружаем… ${Math.round(fraction * 100)}%`
-                    : lesson.videoKey
-                      ? `Видео есть · ${lesson.videoKey.split("/").pop()}${
-                          videoDate
-                            ? ` · загружено ${dateFormat.format(videoDate)}`
-                            : ""
-                        }`
-                      : "Видео не загружено"}
-                </span>
-                <div className="ml-auto flex items-center gap-2">
+                  <IconVideo className="text-muted-foreground mt-0.5 size-5 shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    {isUploading ? (
+                      <div className="space-y-1.5">
+                        <p className="text-sm tabular-nums">
+                          Загружаем… {Math.round(fraction * 100)}%
+                        </p>
+                        <Progress value={Math.round(fraction * 100)} />
+                      </div>
+                    ) : lesson.videoKey ? (
+                      <>
+                        <div className="space-y-0.5">
+                          <p
+                            className="truncate font-mono text-xs"
+                            title={lesson.videoKey}
+                          >
+                            {lesson.videoKey.split("/").pop()}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {uploadedDate
+                              ? `Загружено ${videoDateFormat.format(uploadedDate)}`
+                              : "Когда загружено — неизвестно"}
+                          </p>
+                        </div>
+                        {video ? (
+                          <HlsStatus video={video} />
+                        ) : (
+                          <Badge variant="secondary">
+                            <IconClock />
+                            Нарежется в HLS после сохранения
+                          </Badge>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground py-0.5 text-sm">
+                        Видео не загружено
+                      </p>
+                    )}
+                  </div>
+                  <input
+                    ref={(element) => {
+                      inputs.current[lesson.id] = element;
+                    }}
+                    type="file"
+                    accept={WORKSHOP_VIDEO_TYPES.join(",")}
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void uploadVideo(lesson, file);
+                      event.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={isUploading}
+                    onClick={() => inputs.current[lesson.id]?.click()}
+                  >
+                    {lesson.videoKey ? "Заменить" : "Загрузить видео"}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 pt-3">
+                  <Switch
+                    id={`free-${lesson.id}`}
+                    checked={lesson.free}
+                    onCheckedChange={(free) => patch(lesson.id, { free })}
+                  />
                   <Label
                     htmlFor={`free-${lesson.id}`}
                     className="text-sm font-normal"
                   >
                     Бесплатное превью
                   </Label>
-                  <Switch
-                    id={`free-${lesson.id}`}
-                    checked={lesson.free}
-                    onCheckedChange={(free) => patch(lesson.id, { free })}
-                  />
                 </div>
               </div>
-
-              {isUploading && (
-                <Progress value={Math.round(fraction * 100)} className="pl-8" />
-              )}
               {(error?.title || error?.videoKey) && (
                 <p className="text-destructive pl-8 text-xs">
                   {error.title ?? error.videoKey}
@@ -373,7 +435,9 @@ export function WorkshopLessons({
         </Button>
         <p className="text-muted-foreground text-xs">
           Форматы MP4, MOV, WebM, до {formatBytes(WORKSHOP_VIDEO_MAX_BYTES)} на
-          урок. Длительность подставляется из файла.
+          урок. Длительность подставляется из файла. После загрузки видео
+          нарезается в HLS в нескольких качествах: плеер сам выбирает их по
+          скорости сети.
         </p>
       </CardContent>
     </Card>

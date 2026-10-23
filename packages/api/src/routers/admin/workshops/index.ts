@@ -4,7 +4,7 @@ import {
   removeAccessCode,
 } from "./access-codes";
 import { sendBrief, sendMissingBriefs } from "./brief";
-import { byId } from "./by-id";
+import { byId, videos } from "./by-id";
 import { list } from "./list";
 import { livemasterPdf } from "./livemaster-pdf";
 import { materialUrl } from "./material-url";
@@ -21,6 +21,7 @@ import { viewsList } from "./views";
 export const adminWorkshopsRouter = {
   list,
   byId,
+  videos,
   orders: ordersList,
   views: viewsList,
   save,
