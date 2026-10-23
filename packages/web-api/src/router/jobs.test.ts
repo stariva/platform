@@ -22,6 +22,19 @@ mock.module("../services/video-renditions", () => ({
   failRendition: async () => {},
 }));
 
+const storageSweeps: { dryRun?: boolean }[] = [];
+mock.module("../services/workshop-storage", () => ({
+  sweepWorkshopStorage: async (options: { dryRun?: boolean }) => {
+    storageSweeps.push(options);
+    return {
+      deleted: 2,
+      bytes: 30,
+      renditions: 1,
+      deleteKeys: ["workshops/a/x.mp4", "workshops/a/y.mp4"],
+    };
+  },
+}));
+
 const { safe } = await import("@orpc/client");
 const { AttemptLostError, RemindersFailedError } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
@@ -134,4 +147,16 @@ test("NPD sweep requires the jobs secret and calls only its own service", async 
   expect(npdSweeps).toBe(1);
   expect(sweeps).toBe(before);
   expect(lastStatus()).toBe(200);
+});
+
+test("storage sweep requires the jobs secret and hides deleted keys", async () => {
+  storageSweeps.length = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.storage.sweep());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(storageSweeps).toHaveLength(0);
+
+  const api = client(`Bearer ${secret}`).jobs.storage;
+  expect(await api.sweep()).toEqual({ deleted: 2, bytes: 30, renditions: 1 });
+  await api.sweep({ dryRun: true });
+  expect(storageSweeps).toEqual([{ dryRun: false }, { dryRun: true }]);
 });

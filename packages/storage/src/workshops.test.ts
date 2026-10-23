@@ -5,6 +5,7 @@ import {
   hlsContentType,
   hlsPlaylistFile,
   isWorkshopKey,
+  planWorkshopSweep,
   workshopHlsPrefix,
   workshopImageKey,
   workshopMaterialFileName,
@@ -110,4 +111,119 @@ test("material attachment is named after its label", () => {
   );
   assert.equal(workshopMaterialFileName("a/b: c.PDF"), "a b c.pdf");
   assert.equal(workshopMaterialFileName("  "), "Материалы.pdf");
+});
+
+test("sweep removes replaced videos, old cuts and stale renditions", () => {
+  const now = new Date("2026-10-23T12:00:00Z");
+  const old = new Date("2026-10-01T00:00:00Z");
+  const fresh = new Date("2026-10-23T11:00:00Z");
+  const graceMs = 3 * 24 * 60 * 60_000;
+  const file = (key: string, lastModified = old) => ({
+    key,
+    size: 10,
+    lastModified,
+  });
+  const objects = [
+    file("workshops/a/l-1-new.mp4"),
+    file("workshops/a/l-1-old.mp4"),
+    file("workshops/a/hls/l-1-new/v2cut/master.m3u8"),
+    file("workshops/a/hls/l-1-new/v1cut/index.m3u8"),
+    file("workshops/a/hls/l-1-new/v1cut-2/index.m3u8"),
+    file("workshops/a/hls/l-1-old/cut/index.m3u8"),
+    file("workshops/a/hls/l-2/running/seg-00001.m4s"),
+    file("workshops/a/hls/l-2/failed/seg-00001.m4s"),
+    file("workshops/a/l-2.mp4"),
+    file("workshops/a/materials/brief-1.pdf"),
+    file("workshops/a/materials/brief-0.pdf"),
+    // Загружено в ещё не сохранённую форму
+    file("workshops/a/l-3-unsaved.mp4", fresh),
+    // Курс удалён
+    file("workshops/gone/l-1.mp4"),
+  ];
+  const plan = planWorkshopSweep(
+    objects,
+    {
+      workshops: [
+        {
+          slug: "a",
+          updatedAt: old,
+          videoKeys: ["workshops/a/l-1-new.mp4", "workshops/a/l-2.mp4"],
+          materialKeys: ["workshops/a/materials/brief-1.pdf"],
+        },
+      ],
+      renditions: [
+        {
+          videoKey: "workshops/a/l-1-new.mp4",
+          status: "ready",
+          hlsPrefix: "workshops/a/hls/l-1-new/v2cut",
+          readyHlsPrefix: "workshops/a/hls/l-1-new/v2cut",
+          updatedAt: old,
+        },
+        {
+          videoKey: "workshops/a/l-2.mp4",
+          status: "processing",
+          hlsPrefix: "workshops/a/hls/l-2/running",
+          readyHlsPrefix: null,
+          updatedAt: old,
+        },
+        {
+          videoKey: "workshops/a/l-1-old.mp4",
+          status: "ready",
+          hlsPrefix: "workshops/a/hls/l-1-old/cut",
+          readyHlsPrefix: "workshops/a/hls/l-1-old/cut",
+          updatedAt: old,
+        },
+      ],
+    },
+    { now, graceMs },
+  );
+  assert.deepEqual(plan.deleteKeys.sort(), [
+    "workshops/a/hls/l-1-new/v1cut-2/index.m3u8",
+    "workshops/a/hls/l-1-new/v1cut/index.m3u8",
+    "workshops/a/hls/l-1-old/cut/index.m3u8",
+    "workshops/a/hls/l-2/failed/seg-00001.m4s",
+    "workshops/a/l-1-old.mp4",
+    "workshops/a/materials/brief-0.pdf",
+    "workshops/gone/l-1.mp4",
+  ]);
+  assert.equal(plan.bytes, 70);
+  assert.deepEqual(plan.staleRenditions, ["workshops/a/l-1-old.mp4"]);
+});
+
+test("sweep spares folders changed within the grace period", () => {
+  const now = new Date("2026-10-23T12:00:00Z");
+  const old = new Date("2026-10-01T00:00:00Z");
+  const recent = new Date("2026-10-22T00:00:00Z");
+  const objects = [
+    { key: "workshops/a/l-1-old.mp4", size: 1, lastModified: old },
+    { key: "workshops/b/hls/l-1/v1cut/index.m3u8", size: 1, lastModified: old },
+    { key: "workshops/b/hls/l-1x/cut/index.m3u8", size: 1, lastModified: old },
+  ];
+  const plan = planWorkshopSweep(
+    objects,
+    {
+      workshops: [
+        // Видео заменили вчера: старое ещё досматривают
+        { slug: "a", updatedAt: recent, videoKeys: [], materialKeys: [] },
+        {
+          slug: "b",
+          updatedAt: old,
+          videoKeys: ["workshops/b/l-1.mp4"],
+          materialKeys: [],
+        },
+      ],
+      renditions: [
+        // Вчера перерезали: прежнюю нарезку ещё смотрят
+        {
+          videoKey: "workshops/b/l-1.mp4",
+          status: "ready",
+          hlsPrefix: "workshops/b/hls/l-1/v2cut",
+          readyHlsPrefix: "workshops/b/hls/l-1/v2cut",
+          updatedAt: recent,
+        },
+      ],
+    },
+    { now, graceMs: 3 * 24 * 60 * 60_000 },
+  );
+  assert.deepEqual(plan.deleteKeys, ["workshops/b/hls/l-1x/cut/index.m3u8"]);
 });
