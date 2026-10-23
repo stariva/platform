@@ -78,6 +78,7 @@ function DurationInput({
 
 /** Уроки мастер-класса: порядок, бесплатное превью и загрузка видео в бакет. */
 export function WorkshopLessons({
+  workshopId,
   slug,
   lessons,
   videoUploadedAt,
@@ -86,6 +87,8 @@ export function WorkshopLessons({
   errors,
   rootError,
 }: {
+  /** Сохранённый курс: видео его уроков ставим сразу после загрузки. */
+  workshopId?: string;
   slug: string;
   lessons: WorkshopLessonValues[];
   /** Когда загрузили видео уроков: videoKey → время из бакета. */
@@ -164,9 +167,34 @@ export function WorkshopLessons({
         ...(duration !== null && { durationSeconds: duration }),
       });
       setUploadedNow((current) => ({ ...current, [key]: new Date() }));
-      toast.success(
-        "Видео загружено. Нажмите «Сохранить», чтобы оно появилось в курсе",
-      );
+      // Урок уже есть в курсе — ставим видео сразу, без «Сохранить»
+      const result = workshopId
+        ? await client.admin.workshops
+            .setLessonVideo({
+              id: workshopId,
+              lessonId: lesson.id,
+              videoKey: key,
+              durationSeconds: duration,
+            })
+            .catch((err: Error) => {
+              toast.error(
+                `Видео загружено, но в курс не встало: ${err.message}. Нажмите «Сохранить»`,
+              );
+              return "failed" as const;
+            })
+        : null;
+      if (result === "failed") return;
+      if (result?.saved) {
+        toast.success(
+          result.revalidated
+            ? "Видео загружено и уже в курсе"
+            : "Видео загружено и уже в курсе. Страница на сайте обновится в течение часа",
+        );
+      } else {
+        toast.success(
+          "Видео загружено. Нажмите «Сохранить», чтобы оно появилось в курсе",
+        );
+      }
     } catch (err) {
       toast.error(`${file.name}: ${(err as Error).message}`);
     } finally {
