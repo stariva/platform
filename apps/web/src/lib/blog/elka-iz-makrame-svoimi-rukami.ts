@@ -17,6 +17,7 @@ export const elkaIzMakrameSvoimiRukami: BlogPost = {
   category: "Мастерство",
   coverImage: "/images/elka/weaving-tree.webp",
   coverPosition: "50% 25%",
+  coverOrientation: "portrait",
   content: [
     {
       type: "paragraph",
