@@ -1,7 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModelV4 } from "@ai-sdk/provider";
-import { observe, propagateAttributes } from "@langfuse/tracing";
-import { trace } from "@opentelemetry/api";
 import {
   convertToModelMessages,
   createUIMessageStreamResponse,
@@ -15,9 +13,8 @@ import {
   validateUIMessages,
 } from "ai";
 import type { NextRequest } from "next/server";
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { env } from "@/env";
-import { langfuseSpanProcessor } from "@/instrumentation";
 import { getSession } from "@/lib/auth/session";
 import {
   createFallbackModel,
@@ -98,7 +95,7 @@ function refererPath(request: NextRequest): string | null {
 
 // ─── Основной обработчик ─────────────────────────────────────────────────────
 
-async function handler(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const providers = getAvailableModels();
 
   if (providers.length === 0) {
@@ -124,7 +121,7 @@ async function handler(request: NextRequest) {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
 
-  // sessionId группирует трейсы одного чата в Langfuse и диалог в админке.
+  // sessionId группирует диалог в админке.
   // Приходит из браузера, поэтому пропускаем только короткий безопасный id.
   const rawSessionId = (body as { sessionId?: unknown })?.sessionId;
   const sessionId =
@@ -180,19 +177,6 @@ async function handler(request: NextRequest) {
   });
   const system = buildSystemPrompt(await fetchPublishedWorkshops());
 
-  // Извлекаем текст последнего сообщения пользователя для input трейса
-  const lastUserMessage = [...trimmed].reverse().find((m) => m.role === "user");
-  const inputText = lastUserMessage?.parts
-    .filter((p) => p.type === "text")
-    .map((p) => (p as { type: "text"; text: string }).text)
-    .join(" ");
-
-  // Устанавливаем input на root span через атрибуты OTel
-  const activeSpan = trace.getActiveSpan();
-  if (activeSpan && inputText) {
-    activeSpan.setAttribute("langfuse.input", inputText);
-  }
-
   // Единая модель с автоматическим переключением на резерв при ошибках.
   // Переключение работает на КАЖДОМ шаге агентного цикла streamText,
   // поэтому rate limit в середине стрима больше не доходит до клиента —
@@ -215,91 +199,58 @@ async function handler(request: NextRequest) {
     },
   });
 
-  const telemetryEnabled =
-    !!env.LANGFUSE_PUBLIC_KEY && !!env.LANGFUSE_SECRET_KEY;
-
-  return await propagateAttributes({ sessionId }, async () => {
-    const result = streamText({
-      model: fallbackModel,
-      instructions: system,
-      messages: safeModelMessages,
-      tools: chatTools as ToolSet,
-      stopWhen: isStepCount(5),
-      // Чиним некорректные вызовы инструментов локально, без обращения к модели:
-      // убираем null-значения, которые модель ставит вместо пропуска поля.
-      experimental_repairToolCall: async ({ toolCall, error }) => {
-        if (!InvalidToolInputError.isInstance(error)) return null;
-        try {
-          const parsed = JSON.parse(toolCall.input || "{}");
-          let cleaned = stripNulls(parsed);
-          // Модель иногда присылает весь вход как null/массив/примитив.
-          // Схемы инструментов — всегда объект, поэтому подставляем {}.
-          if (
-            cleaned === null ||
-            typeof cleaned !== "object" ||
-            Array.isArray(cleaned)
-          ) {
-            cleaned = {};
-          }
-          const repairedInput = JSON.stringify(cleaned);
-          if (repairedInput === toolCall.input) return null;
-          return { ...toolCall, input: repairedInput };
-        } catch {
-          return null;
+  const result = streamText({
+    model: fallbackModel,
+    instructions: system,
+    messages: safeModelMessages,
+    tools: chatTools as ToolSet,
+    stopWhen: isStepCount(5),
+    // Чиним некорректные вызовы инструментов локально, без обращения к модели:
+    // убираем null-значения, которые модель ставит вместо пропуска поля.
+    experimental_repairToolCall: async ({ toolCall, error }) => {
+      if (!InvalidToolInputError.isInstance(error)) return null;
+      try {
+        const parsed = JSON.parse(toolCall.input || "{}");
+        let cleaned = stripNulls(parsed);
+        // Модель иногда присылает весь вход как null/массив/примитив.
+        // Схемы инструментов — всегда объект, поэтому подставляем {}.
+        if (
+          cleaned === null ||
+          typeof cleaned !== "object" ||
+          Array.isArray(cleaned)
+        ) {
+          cleaned = {};
         }
-      },
-      temperature: 0.6,
-      // Переключение между провайдерами берёт на себя createFallbackModel,
-      // поэтому внутренние ретраи streamText отключаем.
-      maxRetries: 0,
-      telemetry: {
-        isEnabled: telemetryEnabled,
-        functionId: `stariva-chat:${sessionId}`,
-      },
-      onError: ({ error }) => {
-        console.error("[ai/chat] stream error (all providers failed):", error);
-      },
-    });
+        const repairedInput = JSON.stringify(cleaned);
+        if (repairedInput === toolCall.input) return null;
+        return { ...toolCall, input: repairedInput };
+      } catch {
+        return null;
+      }
+    },
+    temperature: 0.6,
+    // Переключение между провайдерами берёт на себя createFallbackModel,
+    // поэтому внутренние ретраи streamText отключаем.
+    maxRetries: 0,
+    onError: ({ error }) => {
+      console.error("[ai/chat] stream error (all providers failed):", error);
+    },
+  });
 
-    const streamResponse = createUIMessageStreamResponse({
-      stream: toUIMessageStream({
-        stream: result.stream,
-        onError: (error) => {
-          console.error("[ai/chat] ui stream error:", error);
-          return "Не удалось получить ответ. Попробуйте ещё раз.";
-        },
-        // Срабатывает и когда посетитель остановил ответ: сохраняем то,
-        // что Ника успела написать.
-        onEnd: ({ responseMessage }) =>
-          saveAssistantMessage({
-            conversationId: sessionId,
-            message: responseMessage,
-          }),
-      }),
-    });
-
-    // Обновляем output root span и закрываем его после завершения стрима
-    Promise.resolve(result.text).then(
-      (text) => {
-        activeSpan?.setAttribute("langfuse.output", text);
-        activeSpan?.end();
+  return createUIMessageStreamResponse({
+    stream: toUIMessageStream({
+      stream: result.stream,
+      onError: (error) => {
+        console.error("[ai/chat] ui stream error:", error);
+        return "Не удалось получить ответ. Попробуйте ещё раз.";
       },
-      () => {
-        activeSpan?.end();
-      },
-    );
-
-    // Гарантируем flush трейса в Langfuse после завершения стрима
-    // (важно для serverless: функция может завершиться до отправки трейса)
-    after(async () => await langfuseSpanProcessor?.forceFlush());
-
-    return streamResponse;
+      // Срабатывает и когда посетитель остановил ответ: сохраняем то,
+      // что Ника успела написать.
+      onEnd: ({ responseMessage }) =>
+        saveAssistantMessage({
+          conversationId: sessionId,
+          message: responseMessage,
+        }),
+    }),
   });
 }
-
-// Оборачиваем handler в observe() — создаёт корневой трейс в Langfuse.
-// endOnExit: false — span не закрывается сразу, ждёт завершения стрима
-export const POST = observe(handler, {
-  name: "stariva-chat",
-  endOnExit: false,
-});

@@ -27,16 +27,6 @@ export const env = createEnv({
     AI_BASE_URL: z.string().url().default("https://router.cheap/v1"),
     AI_MODEL: z.string().min(1).default("gpt-4o-mini"),
 
-    // Langfuse — трассировка и логирование запросов к AI (опционально)
-    // Ключи: https://cloud.langfuse.com → Settings → API Keys
-    LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),
-    LANGFUSE_SECRET_KEY: z.string().min(1).optional(),
-    LANGFUSE_BASE_URL: z
-      .string()
-      .url()
-      .default("https://cloud.langfuse.com")
-      .optional(),
-
     // Telegram Bot API — для отправки заявок на индивидуальный заказ
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
@@ -105,9 +95,6 @@ export const env = createEnv({
     AI_API_KEY: process.env.AI_API_KEY,
     AI_BASE_URL: process.env.AI_BASE_URL,
     AI_MODEL: process.env.AI_MODEL,
-    LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY,
-    LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY,
-    LANGFUSE_BASE_URL: process.env.LANGFUSE_BASE_URL,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     TELEGRAM_PROXY_URL: process.env.TELEGRAM_PROXY_URL,

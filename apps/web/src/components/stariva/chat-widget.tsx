@@ -504,7 +504,7 @@ export function ChatWidget() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Стабильный ID сессии — живёт всё время монтирования компонента,
-  // группирует трейсы одного чата в Langfuse
+  // группирует диалог в админке
   const sessionId = useRef(`session-${Math.random().toString(36).slice(2)}`);
 
   const { messages, sendMessage, status, stop, error } = useChat({
