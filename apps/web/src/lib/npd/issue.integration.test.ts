@@ -90,7 +90,9 @@ test.skipIf(!process.env.NPD_TEST_DATABASE_URL)(
       issueNpdReceipt({
         payment: p,
         target: { kind: "workshop", orderId },
-        services: [{ name: "Мастер-класс «Test»", amount, quantity: 1 }],
+        services: [
+          { name: "Доступ к видеоматериалу «Test»", amount, quantity: 1 },
+        ],
         email: {
           to: email,
           subject: "мастер-классу «Test»",
