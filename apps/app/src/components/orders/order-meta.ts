@@ -243,11 +243,21 @@ export const KIND_LABELS: Record<AdminOrderView["kind"], string> = {
   made_to_order: "Под заказ",
 };
 
+/**
+ * Тон плашки статуса для `Badge` из "@stariva/ui/reui": жёлтый — ждёт мастера,
+ * фиолетовый — в пути или ждёт покупателя, зелёный — деньги получены.
+ */
 export function statusVariant(
   status: string,
-): "default" | "secondary" | "destructive" | "outline" {
-  if (status === "ozon_order_failed") return "destructive";
-  if (NEEDS_ATTENTION.has(status)) return "default";
+):
+  | "warning-light"
+  | "info-light"
+  | "success-light"
+  | "destructive-light"
+  | "outline" {
+  if (status === "ozon_order_failed") return "destructive-light";
+  if (NEEDS_ATTENTION.has(status)) return "warning-light";
+  if (status === "paid" || status === "delivered") return "success-light";
   if (
     status === "pending" ||
     status === "canceled" ||
@@ -256,7 +266,7 @@ export function statusVariant(
   ) {
     return "outline";
   }
-  return "secondary";
+  return "info-light";
 }
 
 export const rubles = new Intl.NumberFormat("ru-RU", {

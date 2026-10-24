@@ -1,5 +1,5 @@
 import type { RouterOutputs } from "@stariva/api";
-import { Badge, cn } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import {
   IconAlertTriangle,
   IconCircleCheckFilled,
@@ -36,11 +36,6 @@ function variantLabel(variant: HlsVariant): string {
 const mbps = (bits: number) =>
   `${(bits / 1_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} Мбит/с`;
 
-const tone = {
-  ok: "border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  wait: "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400",
-};
-
 /** Плашки нарезки: готова ли, в каких качествах, что сейчас происходит. */
 export function HlsStatus({ video }: { video: LessonVideo }) {
   const { state, attempts, willRetry, error, ready } = video.hls;
@@ -49,7 +44,7 @@ export function HlsStatus({ video }: { video: LessonVideo }) {
       <div className="flex flex-wrap items-center gap-1.5">
         {ready ? (
           <>
-            <Badge className={tone.ok}>
+            <Badge variant="success-light">
               <IconCircleCheckFilled />
               HLS готов
             </Badge>
@@ -83,17 +78,14 @@ export function HlsStatus({ video }: { video: LessonVideo }) {
           </Badge>
         )}
         {state === "processing" && (
-          <Badge className={tone.wait}>
+          <Badge variant="warning-light">
             <IconLoader2 className="animate-spin" />
             {ready ? "Перерезаем в новые качества" : "Нарезаем в HLS"}
             {attempts > 1 && ` · попытка ${attempts}`}
           </Badge>
         )}
         {state === "failed" && (
-          <Badge
-            variant={willRetry ? undefined : "destructive"}
-            className={cn(willRetry && tone.wait)}
-          >
+          <Badge variant={willRetry ? "warning-light" : "destructive-light"}>
             <IconAlertTriangle />
             {willRetry
               ? `Не нарезалось, повторим · попытка ${attempts}`
@@ -159,7 +151,9 @@ export function VideoSummary({
         <span className="flex items-center gap-1.5">
           HLS:
           <Badge
-            className={cn(ready === withVideo.length ? tone.ok : tone.wait)}
+            variant={
+              ready === withVideo.length ? "success-light" : "warning-light"
+            }
           >
             {ready === withVideo.length && <IconCircleCheckFilled />}
             готов {ready} из {withVideo.length}
@@ -170,7 +164,7 @@ export function VideoSummary({
             </Badge>
           )}
           {failed > 0 && (
-            <Badge variant="destructive">
+            <Badge variant="destructive-light">
               <IconAlertTriangle />
               ошибка {failed}
             </Badge>

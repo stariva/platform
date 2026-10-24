@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -18,6 +17,7 @@ import {
   Textarea,
   toast,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

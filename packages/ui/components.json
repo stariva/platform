@@ -13,5 +13,8 @@
     "utils": "@stariva/ui",
     "components": "src/components/",
     "ui": "src/components/"
+  },
+  "registries": {
+    "@reui": "https://reui.io/r/base-vega/{name}.json"
   }
 }

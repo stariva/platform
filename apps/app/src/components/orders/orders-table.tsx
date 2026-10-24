@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Badge,
   Button,
   Table,
   TableBody,
@@ -10,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { useState } from "react";
 import {

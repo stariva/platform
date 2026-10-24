@@ -1,6 +1,5 @@
 import type { CartEventItem, VisitorInfo } from "@stariva/db/schema";
 import {
-  Badge,
   Table,
   TableBody,
   TableCell,
@@ -8,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import {
   dateTime,
