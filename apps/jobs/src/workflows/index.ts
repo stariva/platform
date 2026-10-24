@@ -1,6 +1,7 @@
 import { npdIssuingWatchWorkflow } from "./npd-issuing-watch";
 import { workshopRemindersWorkflow } from "./workshop-reminders";
 import { workshopStorageSweepWorkflow } from "./workshop-storage-sweep";
+import { yandexAnalyticsSyncWorkflow } from "./yandex-analytics-sync";
 
 /**
  * Все задания воркера Hatchet. Новое задание — файл рядом и строка здесь.
@@ -10,4 +11,5 @@ export const workflows = [
   workshopRemindersWorkflow,
   npdIssuingWatchWorkflow,
   workshopStorageSweepWorkflow,
+  yandexAnalyticsSyncWorkflow,
 ];

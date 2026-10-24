@@ -15,6 +15,18 @@ import {
   getAttemptHlsPrefix,
 } from "../services/video-renditions";
 import { sweepWorkshopStorage } from "../services/workshop-storage";
+import { recentRange } from "../services/yandex/common";
+import {
+  DirectReportPendingError,
+  isDirectConfigured,
+  syncDirectReport,
+} from "../services/yandex/direct";
+import {
+  isMetrikaConfigured,
+  MetrikaLogsPendingError,
+  syncMetrikaGoals,
+  syncMetrikaLogs,
+} from "../services/yandex/metrika";
 
 // ffmpeg читает исходник по этой ссылке всё время нарезки
 const SOURCE_URL_TTL_SECONDS = 6 * 60 * 60;
@@ -91,10 +103,65 @@ const storageSweep = jobs.storage.sweep.handler(async ({ input, errors }) => {
   return { deleted, bytes, renditions };
 });
 
+// Визиты за день закрываются через полчаса после полуночи, а Директ
+// дописывает конверсии задним числом — поэтому окна с запасом.
+const METRIKA_DAYS = 7;
+const DIRECT_DAYS = 14;
+
+function analyticsRange(
+  input: { from?: string; to?: string },
+  days: number,
+): { from: string; to: string } {
+  const recent = recentRange(days);
+  const range = { from: input.from ?? recent.from, to: input.to ?? recent.to };
+  if (range.from > range.to) {
+    throw new ORPCError("BAD_REQUEST", { message: "invalid_range" });
+  }
+  return range;
+}
+
+const metrikaGoals = jobs.analytics.metrikaGoals.handler(async ({ errors }) => {
+  if (!isMetrikaConfigured()) throw errors.ANALYTICS_NOT_CONFIGURED();
+  return syncMetrikaGoals();
+});
+
+const metrikaLogs = jobs.analytics.metrikaLogs.handler(
+  async ({ input, errors }) => {
+    if (!isMetrikaConfigured()) throw errors.ANALYTICS_NOT_CONFIGURED();
+    try {
+      return await syncMetrikaLogs(
+        input.source,
+        analyticsRange(input, METRIKA_DAYS),
+      );
+    } catch (error) {
+      if (error instanceof MetrikaLogsPendingError)
+        throw errors.ANALYTICS_PENDING({ cause: error });
+      throw error;
+    }
+  },
+);
+
+const directReport = jobs.analytics.directReport.handler(
+  async ({ input, errors }) => {
+    if (!isDirectConfigured()) throw errors.ANALYTICS_NOT_CONFIGURED();
+    try {
+      return await syncDirectReport(
+        input.report,
+        analyticsRange(input, DIRECT_DAYS),
+      );
+    } catch (error) {
+      if (error instanceof DirectReportPendingError)
+        throw errors.ANALYTICS_PENDING({ cause: error });
+      throw error;
+    }
+  },
+);
+
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
   reminders: { sweep },
   storage: { sweep: storageSweep },
+  analytics: { metrikaGoals, metrikaLogs, directReport },
   npd: {
     sweep: jobs.npd.sweep.handler(({ context }) =>
       context.services.runNpdIssuingSweep(),
