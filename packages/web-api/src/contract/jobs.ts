@@ -153,10 +153,67 @@ export const storageContract = {
     ),
 };
 
+/** На сайте нет OAuth-токена Метрики или Директа. */
+export const AnalyticsNotConfiguredError = error("ANALYTICS_NOT_CONFIGURED", {
+  message: "analytics_not_configured",
+});
+
+/**
+ * Яндекс ещё готовит выгрузку. Запрос уже создан, повтор с теми же днями
+ * его подхватит — воркер просто повторяет задание позже.
+ */
+export const AnalyticsPendingError = error("ANALYTICS_PENDING", {
+  message: "analytics_pending",
+});
+
+/** Дни выгрузки по Москве, включительно; без них — последние дни по вчера. */
+const analyticsRange = {
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+};
+
+const analyticsProcedure = jobProcedure.errors({
+  [AnalyticsNotConfiguredError.code]: AnalyticsNotConfiguredError,
+  [AnalyticsPendingError.code]: AnalyticsPendingError,
+});
+
+export const analyticsContract = {
+  /** Цели счётчика Метрики: имена для goal_ids. */
+  metrikaGoals: analyticsProcedure.output(
+    z.object({ goals: z.number().int().nonnegative() }),
+  ),
+
+  /** Визиты или события из Logs API Метрики; повтор перезаписывает те же. */
+  metrikaLogs: analyticsProcedure
+    .input(z.object({ source: z.enum(["visits", "hits"]), ...analyticsRange }))
+    .output(
+      z.object({
+        rows: z.number().int().nonnegative(),
+        requestId: z.number().int(),
+      }),
+    ),
+
+  /** Статистика Директа по срезам или поисковые запросы за дни. */
+  directReport: analyticsProcedure
+    .input(
+      z.object({
+        report: z.enum(["stats", "search_queries"]),
+        ...analyticsRange,
+      }),
+    )
+    .output(
+      z.object({
+        rows: z.number().int().nonnegative(),
+        goals: z.number().int().nonnegative(),
+      }),
+    ),
+};
+
 export const jobsContract = {
   videos: videosContract,
   reminders: remindersContract,
   storage: storageContract,
+  analytics: analyticsContract,
   npd: {
     /** Только алерт о зависших чеках; повторная регистрация дохода запрещена. */
     sweep: jobProcedure.output(
