@@ -61,7 +61,11 @@ export async function applyWorkshopPayment(
     payment,
     target: { kind: "workshop", orderId: order.id },
     services: [
-      { name: `Мастер-класс «${title}»`, amount: order.amount, quantity: 1 },
+      {
+        name: `Доступ к видеоматериалу «${title}»`,
+        amount: order.amount,
+        quantity: 1,
+      },
     ],
     email: { to: order.contactEmail, subject: `мастер-классу «${title}»` },
     expected: 1,

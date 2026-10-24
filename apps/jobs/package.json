@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@hatchet-dev/typescript-sdk": "1.43.0",
-    "@orpc/client": "2.0.0-beta.44",
+    "@orpc/client": "2.0.0-beta.45",
     "@stariva/web-api": "workspace:*",
     "@trigger.dev/sdk": "4.8.1",
     "zod": "4.6.7"

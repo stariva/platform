@@ -1,4 +1,5 @@
 ---
+
 name: orpc-migrate
 description: "Migrate existing codebases to current oRPC, covering tRPC to oRPC (incremental wrapping via the @orpc/trpc integration or a full rewrite with the concept mapping) and oRPC v1 to v2 (package renames, breaking changes, and a safe order of operations). Use when asked to migrate from tRPC to oRPC, convert or wrap a tRPC router, upgrade oRPC v1 to v2, fix oRPC v2 breaking changes, or swap `@trpc/*` packages for `@orpc/*` equivalents. Biases toward retrieval from the oRPC docs over pre-trained knowledge. Not for greenfield oRPC work or new features in an already-migrated codebase: use the orpc skill for those."
 license: MIT
@@ -17,9 +18,9 @@ Two paths. Pick incremental when the app must keep shipping or the tRPC router i
 Install `@orpc/trpc@beta` and convert. The result is a regular oRPC router: expose it through an RPC or OpenAPI handler, or call it with a server-side client, while the tRPC code keeps working untouched.
 
 ```ts
-import { toORPCRouter } from '@orpc/trpc'
+import { toORPCRouter } from "@orpc/trpc";
 
-const orpcRouter = toORPCRouter(trpcRouter)
+const orpcRouter = toORPCRouter(trpcRouter);
 ```
 
 - tRPC error formatting is not supported: tRPC errors arrive wrapped in `ORPCError` with the `TRPCError` as `cause` (and a `ZodError` below that for validation failures). Reshape them in a handler interceptor if consumers need structured errors.
@@ -42,7 +43,6 @@ Then rewrite leaf routers to native oRPC one at a time, mounting each next to th
 | Serializer        | `superjson` transformer                        | built in, remove `superjson`   |
 
 Steps, in order, verifying after each:
-
 1. **Packages.** Remove `@trpc/server`, `@trpc/client`, `@trpc/tanstack-react-query`; install `@orpc/server@beta`, `@orpc/client@beta`, `@orpc/tanstack-query@beta`.
 2. **Base file.** Port the context factory unchanged, then rebuild the shared procedures. In handlers and middleware, `ctx` becomes `context`:
 
@@ -92,7 +92,6 @@ Steps, in order, verifying after each:
 ## oRPC v1 to v2
 
 Most v1 names still compile through deprecated aliases (strike-through hints, not errors), so migrate in passes. Order of operations:
-
 1. **Update packages.** Install every `@orpc/*` package from the `beta` dist-tag (`npm install @orpc/server@beta @orpc/client@beta`, and so on). Swap renamed ones first: `@orpc/react-query`/`@orpc/vue-query`/`@orpc/solid-query`/`@orpc/svelte-query` all became `@orpc/tanstack-query`; `@orpc/openapi-client` merged into `@orpc/openapi`; `@orpc/react` became `@orpc/next`; `@orpc/otel` became `@orpc/opentelemetry`; the `experimental-` packages were promoted (`@orpc/publisher`, `@orpc/ratelimit`, `@orpc/pino`, `@orpc/swr`); `@orpc/vue-colada` became `@orpc/pinia-colada`. Typecheck: the remaining errors are the hard breaks.
 2. **Fix the hard breaks** (no aliases):
    - Routing: `.route`, `.prefix`, `.tag`, `.$route` are gone from the builder. Use `.meta(openapi({ method, path, prefix, tags }))` from `@orpc/openapi`, or restore `.route` with `import '@orpc/openapi/extensions/route'`.
@@ -118,7 +117,6 @@ Verification: typecheck and unit tests after steps 1, 2, and 4; step 3 needs int
 Fetch pages instead of recalling them, and if this skill and a fetched page disagree, trust the page. The v2 docs live at https://orpc.dev and the v1 docs at https://v1.orpc.dev; slugs look alike across both hosts, so check which host a page came from before copying anything from it. The index of every v2 docs page is at https://orpc.dev/llms.txt, https://orpc.dev/llms-full.txt bundles the entire docs in one large file, and appending `.md` to any page URL returns its exact source markdown.
 
 Authoritative pages to consult during the migration (this skill deliberately omits their full mapping tables):
-
 - https://orpc.dev/docs/migrations/from-trpc : side-by-side tRPC/oRPC code for every step, including server setup per framework
 - https://orpc.dev/docs/migrations/from-v1 : every v2 breaking change with v1/v2 comparisons, package rename table, and the deprecated alias cheat sheet
 - https://orpc.dev/docs/integrations/trpc : `toORPCRouter` and `toTRPCMeta` reference for the incremental path
