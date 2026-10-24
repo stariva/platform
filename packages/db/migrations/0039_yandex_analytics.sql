@@ -180,6 +180,7 @@ CREATE VIEW "public"."workshop_buyers" AS (
     select v.traffic_source, v.start_url
     from metrika_visits v
     where v.client_id = o.visitor->>'ymClientId'
+      and v.started_at <= coalesce(o.paid_at, o.created_at) at time zone 'UTC'
     order by v.started_at
     limit 1
   ) fv on true

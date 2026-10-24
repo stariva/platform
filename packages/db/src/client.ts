@@ -3,7 +3,7 @@ import { drizzle as drizzleNeonHttp } from "drizzle-orm/neon-http";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
-import { selectDbDriver } from "./driver";
+import { type DbDriver, selectDbDriver } from "./driver";
 import * as schema from "./schema";
 
 /**
@@ -36,7 +36,8 @@ class UnconfiguredPool extends Pool {
   }
 }
 
-function createDatabase(): Database {
+/** An explicit driver allows callers that need interactive transactions to use TCP. */
+export function createDatabase(driver?: DbDriver): Database {
   const connectionString = process.env.POSTGRES_URL;
   if (!connectionString) {
     console.warn(
@@ -49,9 +50,7 @@ function createDatabase(): Database {
     });
   }
 
-  const driver = selectDbDriver(connectionString);
-
-  if (driver === "neon-http") {
+  if ((driver ?? selectDbDriver(connectionString)) === "neon-http") {
     const sql = neon(connectionString);
     return drizzleNeonHttp(sql, {
       schema,

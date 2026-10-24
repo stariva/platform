@@ -6,9 +6,9 @@ import { webApi } from "../lib/web-api";
  * цели и сырые визиты и события Метрики за неделю (Logs API), статистику
  * Директа по срезам и поисковые запросы за две недели (Reports API).
  *
- * Работу делает сайт (jobs.analytics.*), воркер только задаёт порядок: цели
- * нужны раньше Директа, по ним считаются конверсии. Яндекс готовит выгрузки
- * асинхронно; не успел — сайт отвечает ANALYTICS_PENDING, и Hatchet
+ * Работу делает сайт (jobs.analytics.*). Директ запускается независимо от
+ * обновления целей Метрики и использует уже сохранённые цели. Яндекс готовит
+ * выгрузки асинхронно; не успел — сайт отвечает ANALYTICS_PENDING, и Hatchet
  * повторяет задание через несколько минут, подхватывая тот же запрос.
  * Повторы безопасны: визиты перезаписываются по id, статистика за дни —
  * целиком.
@@ -48,14 +48,12 @@ yandexAnalyticsSyncWorkflow.task({
 
 yandexAnalyticsSyncWorkflow.task({
   name: "direct-stats",
-  parents: [goals],
   ...retry,
   fn: () => webApi.jobs.analytics.directReport({ report: "stats" }, timeout),
 });
 
 yandexAnalyticsSyncWorkflow.task({
   name: "direct-search-queries",
-  parents: [goals],
   ...retry,
   fn: () =>
     webApi.jobs.analytics.directReport({ report: "search_queries" }, timeout),

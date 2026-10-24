@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { and, asc, db, gte, lte } from "@stariva/db";
+import { and, asc, gte, lte } from "@stariva/db";
+import { createDatabase } from "@stariva/db/client";
 import {
   directSearchQueries,
   directStats,
@@ -9,6 +10,9 @@ import {
 import { env } from "../../env";
 import { chunks, type DateRange, responseDetail, sleep } from "./common";
 import { parseDirectTsv } from "./tsv";
+
+// HTTP-клиент Neon не поддерживает интерактивные транзакции.
+const db = createDatabase("node");
 
 const REPORTS_URL = "https://api.direct.yandex.com/json/v5/reports";
 const INSERT_BATCH = 500;

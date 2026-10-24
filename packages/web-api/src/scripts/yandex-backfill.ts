@@ -21,8 +21,19 @@ import {
 const CHUNK_DAYS = 30;
 const WAIT = { waitMs: 60 * 60_000 };
 
+function isDate(value: string | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() + 1 === month &&
+    date.getUTCDate() === day
+  );
+}
+
 const [from, to = moscowDate(new Date(), -1)] = process.argv.slice(2);
-if (!from || !/^\d{4}-\d{2}-\d{2}$/.test(from) || from > to) {
+if (!isDate(from) || !isDate(to) || from > to) {
   console.error(
     "Использование: bun run yandex:backfill YYYY-MM-DD [YYYY-MM-DD]",
   );
