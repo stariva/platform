@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ChatWidget } from "@/components/stariva/chat-widget";
 import { ContactClickTracker } from "@/components/stariva/contact-click-tracker";
 import { CookieBanner } from "@/components/stariva/cookie-banner";
 import {
@@ -125,10 +124,7 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-white text-near-black">
         <OrganizationJsonLd />
         <WebSiteJsonLd />
-        <CartProvider>
-          {children}
-          <ChatWidget />
-        </CartProvider>
+        <CartProvider>{children}</CartProvider>
         <Toaster position="top-center" richColors />
         <CookieBanner />
         <VisitorEnv />
