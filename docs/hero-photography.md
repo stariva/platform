@@ -46,4 +46,3 @@ Composition: asymmetrical wide landscape. Main wall hanging centered x=69 percen
 Photography: eye level, 50mm lens f/5.6, subtle depth falloff, soft clean side daylight with physically natural shadows, neutral whites, tangible fibers, slight everyday irregularities, understated editorial treatment, no digital over-sharpening.
 Avoid: text, logos, watermark, sparkle marks, collage, UI, glossy synthetic fibers, perfectly repeated AI knots, floating objects, excessive props, orange sunset cast, artificial glow, HDR, illustration, CGI render.
 ```
-

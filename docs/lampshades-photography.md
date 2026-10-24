@@ -20,4 +20,3 @@ Composition: panorama 3:1. Main shade centered at x=69%, top of the dome at y=20
 Photography: 70mm full-frame lens, f/5.6; broad natural side window daylight, neutral creamy cotton whites, believable contact and cast shadows, subtle soft falloff. Sharp physically plausible cord twist, knot compression, tiny loose fibers, a few irregularities of handmade knots, gentle plaster texture, clean but unretouched editorial color. Real-world tactile softness, no plastic appearance.
 Constraints: exactly one main shade, credible continuous knots and supported structure, preserve the distinctive rosette motifs without adding invented symbols. No person, text, UI, logo, watermark, sparkle, orange cast, glowing fire, blown-out bulb, CGI, excessive props, theatrical patterns of light, extreme bokeh, digital oversharpening or collage.
 ```
-

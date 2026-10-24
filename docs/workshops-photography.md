@@ -20,4 +20,3 @@ Scene details: she is tying a simple square knot in natural ecru cotton cord, wi
 Photography: full-frame 50mm lens at f/5.6, clean diffused daylight from window at right, balanced exposure, neutral whites and understated warm midtones. Natural pores, fine facial lines and flyaway hair, five anatomically correct fingers per hand, believable relaxed wrist positions, real cotton twists and tiny fuzzy fibers, ordinary linen folds, worn wood grain. Focus on face, fingertips and knot; mild optical depth of field, no excessive blur.
 Avoid: orange color filter, glamour retouch, waxy skin, glossy fabric, fake sun flares, over-perfect staged pose, impossible knots, duplicated fingers, extra tools, overstuffed shelves, text, logos, watermark, sparkle marks, illustration, CGI, collage. Preserve source identity and honest craft atmosphere.
 ```
-
