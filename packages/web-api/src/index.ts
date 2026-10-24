@@ -25,4 +25,7 @@ export {
   type UpsertProgressInput,
   upsertLessonProgress,
 } from "./services/course-access";
-export { getReadyRendition } from "./services/video-renditions";
+export {
+  getReadyRendition,
+  MAX_RENDITION_ATTEMPTS,
+} from "./services/video-renditions";

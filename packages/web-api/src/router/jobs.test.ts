@@ -22,9 +22,52 @@ mock.module("../services/video-renditions", () => ({
   failRendition: async () => {},
 }));
 
+const storageSweeps: { dryRun?: boolean }[] = [];
+mock.module("../services/workshop-storage", () => ({
+  sweepWorkshopStorage: async (options: { dryRun?: boolean }) => {
+    storageSweeps.push(options);
+    return {
+      deleted: 2,
+      bytes: 30,
+      renditions: 1,
+      deleteKeys: ["workshops/a/x.mp4", "workshops/a/y.mp4"],
+    };
+  },
+}));
+
+let yandexConfigured = false;
+let yandexPending = false;
+const metrikaCalls: unknown[][] = [];
+const directCalls: unknown[][] = [];
+// Остальные экспорты настоящие: мок модуля действует на весь процесс тестов
+const metrika = await import("../services/yandex/metrika");
+const direct = await import("../services/yandex/direct");
+const { MetrikaLogsPendingError } = metrika;
+const { DirectReportPendingError } = direct;
+mock.module("../services/yandex/metrika", () => ({
+  ...metrika,
+  isMetrikaConfigured: () => yandexConfigured,
+  syncMetrikaGoals: async () => ({ goals: 4 }),
+  syncMetrikaLogs: async (...args: unknown[]) => {
+    metrikaCalls.push(args);
+    if (yandexPending) throw new MetrikaLogsPendingError(1);
+    return { rows: 10, requestId: 7 };
+  },
+}));
+mock.module("../services/yandex/direct", () => ({
+  ...direct,
+  isDirectConfigured: () => yandexConfigured,
+  syncDirectReport: async (...args: unknown[]) => {
+    directCalls.push(args);
+    if (yandexPending) throw new DirectReportPendingError("pending");
+    return { rows: 3, goals: 2 };
+  },
+}));
+
 const { safe } = await import("@orpc/client");
 const { AttemptLostError, RemindersFailedError } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
+const { recentRange } = await import("../services/yandex/common");
 
 let sweep: ReminderSweepResult = { checked: 0, delivered: 0, failed: 0 };
 let sweeps = 0;
@@ -134,4 +177,70 @@ test("NPD sweep requires the jobs secret and calls only its own service", async 
   expect(npdSweeps).toBe(1);
   expect(sweeps).toBe(before);
   expect(lastStatus()).toBe(200);
+});
+
+test("storage sweep requires the jobs secret and hides deleted keys", async () => {
+  storageSweeps.length = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.storage.sweep());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(storageSweeps).toHaveLength(0);
+
+  const api = client(`Bearer ${secret}`).jobs.storage;
+  expect(await api.sweep()).toEqual({ deleted: 2, bytes: 30, renditions: 1 });
+  await api.sweep({ dryRun: true });
+  expect(storageSweeps).toEqual([{ dryRun: false }, { dryRun: true }]);
+});
+
+test("analytics jobs report a missing Yandex token", async () => {
+  yandexConfigured = false;
+  const api = client(`Bearer ${secret}`).jobs.analytics;
+  for (const call of [
+    () => api.metrikaGoals(),
+    () => api.metrikaLogs({ source: "visits" }),
+    () => api.directReport({ report: "stats" }),
+  ]) {
+    const [, , definedError] = await safe(call());
+    expect(definedError?.code).toBe("ANALYTICS_NOT_CONFIGURED");
+  }
+});
+
+test("analytics jobs default to recent days and pass explicit ranges", async () => {
+  yandexConfigured = true;
+  yandexPending = false;
+  metrikaCalls.length = 0;
+  directCalls.length = 0;
+  const api = client(`Bearer ${secret}`).jobs.analytics;
+
+  expect(await api.metrikaGoals()).toEqual({ goals: 4 });
+  expect(await api.metrikaLogs({ source: "hits" })).toEqual({
+    rows: 10,
+    requestId: 7,
+  });
+  await api.metrikaLogs({
+    source: "visits",
+    from: "2026-10-01",
+    to: "2026-10-10",
+  });
+  await api.directReport({ report: "search_queries" });
+  expect(metrikaCalls).toEqual([
+    ["hits", recentRange(7)],
+    ["visits", { from: "2026-10-01", to: "2026-10-10" }],
+  ]);
+  expect(directCalls).toEqual([["search_queries", recentRange(14)]]);
+
+  const [error] = await safe(
+    api.directReport({ report: "stats", from: "2026-10-10", to: "2026-10-01" }),
+  );
+  expect(error).toMatchObject({ code: "BAD_REQUEST" });
+});
+
+test("analytics jobs ask Hatchet to retry while Yandex prepares data", async () => {
+  yandexConfigured = true;
+  yandexPending = true;
+  const api = client(`Bearer ${secret}`).jobs.analytics;
+  const [, , metrika] = await safe(api.metrikaLogs({ source: "visits" }));
+  expect(metrika?.code).toBe("ANALYTICS_PENDING");
+  const [, , direct] = await safe(api.directReport({ report: "stats" }));
+  expect(direct?.code).toBe("ANALYTICS_PENDING");
+  yandexPending = false;
 });

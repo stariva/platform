@@ -21,11 +21,12 @@
     "lint": "biome lint .",
     "check": "biome check .",
     "test": "bun --filter @stariva/config build && bun --filter @stariva/storage build && bun test",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "yandex:backfill": "bun --env-file=../../.env src/scripts/yandex-backfill.ts"
   },
   "dependencies": {
-    "@orpc/contract": "2.0.0-beta.44",
-    "@orpc/server": "2.0.0-beta.44",
+    "@orpc/contract": "2.0.0-beta.45",
+    "@orpc/server": "2.0.0-beta.45",
     "@stariva/auth": "workspace:*",
     "@stariva/config": "workspace:*",
     "@stariva/db": "workspace:*",
@@ -34,7 +35,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@orpc/client": "2.0.0-beta.44",
+    "@orpc/client": "2.0.0-beta.45",
     "@stariva/tsconfig": "workspace:*",
     "@types/node": "26.6.5",
     "typescript": "7.0.2"

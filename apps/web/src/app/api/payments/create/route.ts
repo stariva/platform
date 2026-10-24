@@ -5,7 +5,11 @@ import { grantAccess } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
-import { attachPaymentId, createOrder } from "@/lib/payments/orders";
+import {
+  attachPaymentId,
+  createOrder,
+  type WorkshopOrder,
+} from "@/lib/payments/orders";
 import {
   createInvoice,
   isRobokassaConfigured,
@@ -20,6 +24,7 @@ import {
   WORKSHOP_ORDER_COOKIE,
   workshopOrderCookieValue,
 } from "@/lib/workshops/order-cookie";
+import { reusePendingOrder } from "@/lib/workshops/pending-order";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { workshopPriceKopecks } from "@/lib/workshops-data";
 
@@ -126,6 +131,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Живой платёж открываем снова только в ЮKassa: выбрал покупатель
+  // Яндекс Пэй — не отправляем его на форму карты из прошлой попытки
+  if (input.provider === "yookassa") {
+    const reused = await reusePendingOrder(
+      request.cookies.get(WORKSHOP_ORDER_COOKIE)?.value,
+      { userId: buyer.id, workshopSlug: workshop.slug, amountKopecks },
+    );
+    if (reused) return paymentResponse(reused.order, reused.confirmationUrl);
+  }
+
   const order = await createOrder({
     userId: buyer.id,
     workshopSlug: workshop.slug,
@@ -176,24 +191,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = NextResponse.json({
-      confirmationUrl,
-      orderId: order.id,
-    });
-    // По этой cookie страница «Вы записаны» узнаёт браузер, оформивший
-    // заказ, — гостю без входа не нужно ничего вводить повторно
-    response.cookies.set(
-      WORKSHOP_ORDER_COOKIE,
-      workshopOrderCookieValue(order),
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      },
-    );
-    return response;
+    return paymentResponse(order, confirmationUrl);
   } catch (error) {
     console.error("[payments/create] Ошибка создания платежа:", error);
     return NextResponse.json(
@@ -201,4 +199,19 @@ export async function POST(request: NextRequest) {
       { status: 502 },
     );
   }
+}
+
+function paymentResponse(order: WorkshopOrder, confirmationUrl: string) {
+  const response = NextResponse.json({ confirmationUrl, orderId: order.id });
+  // По этой cookie страница «Вы записаны» узнаёт браузер, оформивший
+  // заказ, — гостю без входа не нужно ничего вводить повторно. По ней же
+  // повторное «Купить» открывает тот же платёж, а не заводит новый заказ
+  response.cookies.set(WORKSHOP_ORDER_COOKIE, workshopOrderCookieValue(order), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  return response;
 }

@@ -43,4 +43,3 @@ Composition: wide 3:1 short website banner. Lampshade centered x=65%, top of sha
 Photography: 50mm full-frame lens f/5.6, soft real side window daylight, controlled highlights, neutral linen whites, physical cotton fibers and knots, gently uneven plaster and real oak grain. Naturally lived-in, coherent shadows, quiet credible interior lighting without glowing lamps.
 Avoid: orange color cast, dramatic sunset shadows, tiny rooms with impossible perspective, heavy boho props, dried flowers, overly glossy material, fake texture, CGI render, text, watermark, logo, sparkle, collage, extreme bokeh.
 ```
-

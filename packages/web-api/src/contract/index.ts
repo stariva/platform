@@ -49,6 +49,8 @@ export {
   NewsletterFailedError,
 } from "./forms";
 export {
+  AnalyticsNotConfiguredError,
+  AnalyticsPendingError,
   AttemptLostError,
   JobsNotConfiguredError,
   PlaylistMissingError,

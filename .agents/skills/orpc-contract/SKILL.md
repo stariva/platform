@@ -1,4 +1,5 @@
 ---
+
 name: orpc-contract
 description: "Design oRPC v2 APIs contract-first, defining the API shape with oc from `@orpc/contract`, implementing it with implement from `@orpc/server`, and consuming the contract from typesafe clients. Use when a project depends on `@orpc/contract`, when defining a contract with oc, implementing a contract with implement, sharing an API contract between server and client packages, generating a contract from an existing OpenAPI spec, or publishing a typed API client to npm. Biases toward retrieval from the oRPC docs over pre-trained knowledge. For core builder, serving, and client work without a contract, use the orpc skill; for REST/OpenAPI exposure, spec generation, and OpenAPILink details, use the orpc-openapi skill."
 license: MIT
@@ -15,19 +16,18 @@ This skill targets oRPC v2. The `orpc` skill carries the v2 install and version 
 Every chain is optional and each call returns a new instance, so share base contracts freely. A contract has no `.handler`. Zod, Valibot, ArkType, and any other Standard Schema library work.
 
 ```ts
-import { oc } from '@orpc/contract'
-import * as z from 'zod'
+import { oc } from "@orpc/contract";
+import * as z from "zod";
 
 export const contract = {
   planet: {
-    list: oc
-      .output(z.array(z.object({ id: z.number(), name: z.string() }))),
+    list: oc.output(z.array(z.object({ id: z.number(), name: z.string() }))),
     find: oc
       .errors({ NOT_FOUND: {} })
       .input(z.object({ id: z.number() }))
       .output(z.object({ id: z.number(), name: z.string() })),
   },
-}
+};
 ```
 
 - Always define `.output`: without it clients infer the output as `unknown`.
@@ -45,22 +45,25 @@ Infer types with `InferRouterContractInputs`, `InferRouterContractOutputs`, and 
 `implement` turns the contract into an implementer that mirrors its shape and type-checks every handler; `.router` also enforces the contract at runtime.
 
 ```ts
-import { implement } from '@orpc/server'
+import { implement } from "@orpc/server";
 
-const implementer = implement(contract).$context<{ db: DB }>()
+const implementer = implement(contract).$context<{ db: DB }>();
 
-const listPlanets = implementer.planet.list.handler(async ({ context }) => context.db.list())
+const listPlanets = implementer.planet.list.handler(async ({ context }) =>
+  context.db.list(),
+);
 
-const findPlanet = implementer.planet.find.handler(async ({ input, context, errors }) => {
-  const planet = await context.db.find(input.id)
-  if (!planet)
-    throw errors.NOT_FOUND()
-  return planet
-})
+const findPlanet = implementer.planet.find.handler(
+  async ({ input, context, errors }) => {
+    const planet = await context.db.find(input.id);
+    if (!planet) throw errors.NOT_FOUND();
+    return planet;
+  },
+);
 
 export const router = implementer.router({
   planet: { list: listPlanets, find: findPlanet },
-})
+});
 ```
 
 - `.$context` declares the initial context the procedures require, as on `os`.
@@ -73,19 +76,23 @@ export const router = implementer.router({
 `RPCLink` needs only the contract type; `OpenAPILink` takes the contract as a runtime value to read each procedure's route. Get the client types exactly right:
 
 ```ts
-import type { RouterContractClient } from '@orpc/contract'
-import type { JsonifiedClient } from '@orpc/openapi'
-import { createORPCClient } from '@orpc/client'
-import { RPCLink } from '@orpc/client/fetch'
-import { OpenAPILink } from '@orpc/openapi/fetch'
+import type { RouterContractClient } from "@orpc/contract";
+import type { JsonifiedClient } from "@orpc/openapi";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
+import { OpenAPILink } from "@orpc/openapi/fetch";
 
 // RPC protocol (server side is RPCHandler)
-const rpcLink = new RPCLink({ origin: 'https://api.example.com', url: '/rpc' })
-const client: RouterContractClient<typeof contract> = createORPCClient(rpcLink)
+const rpcLink = new RPCLink({ origin: "https://api.example.com", url: "/rpc" });
+const client: RouterContractClient<typeof contract> = createORPCClient(rpcLink);
 
 // OpenAPI protocol (OpenAPIHandler or any spec-compliant server)
-const openapiLink = new OpenAPILink(contract, { origin: 'https://api.example.com', url: '/api' })
-const apiClient: JsonifiedClient<RouterContractClient<typeof contract>> = createORPCClient(openapiLink)
+const openapiLink = new OpenAPILink(contract, {
+  origin: "https://api.example.com",
+  url: "/api",
+});
+const apiClient: JsonifiedClient<RouterContractClient<typeof contract>> =
+  createORPCClient(openapiLink);
 ```
 
 - Router-first equivalents use `RouterClient<typeof router>` from `@orpc/server` in the same positions.
@@ -99,12 +106,12 @@ const apiClient: JsonifiedClient<RouterContractClient<typeof contract>> = create
 When the contract is derived from a router, importing it on the client is heavy and may expose internals. Minify and export JSON instead:
 
 ```ts
-import fs from 'node:fs'
-import { minifyRouterContract } from '@orpc/contract'
-import { unlazyRouter } from '@orpc/server'
+import fs from "node:fs";
+import { minifyRouterContract } from "@orpc/contract";
+import { unlazyRouter } from "@orpc/server";
 
-const minified = minifyRouterContract(await unlazyRouter(router))
-fs.writeFileSync('./contract.json', JSON.stringify(minified))
+const minified = minifyRouterContract(await unlazyRouter(router));
+fs.writeFileSync("./contract.json", JSON.stringify(minified));
 ```
 
 `minifyRouterContract` keeps only client-needed metadata. On the client, import the JSON and cast, since schemas do not survive serialization: `new OpenAPILink(contract as typeof router, ...)`.
@@ -112,17 +119,19 @@ fs.writeFileSync('./contract.json', JSON.stringify(minified))
 To publish a typed SDK to npm, export a factory that pairs the contract with a link:
 
 ```ts
-import type { RouterContractClient } from '@orpc/contract'
-import { createORPCClient } from '@orpc/client'
-import { RPCLink } from '@orpc/client/fetch'
+import type { RouterContractClient } from "@orpc/contract";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
 
-export function createMyApi(apiKey: string): RouterContractClient<typeof contract> {
+export function createMyApi(
+  apiKey: string,
+): RouterContractClient<typeof contract> {
   const link = new RPCLink({
-    origin: 'https://example.com',
-    url: '/rpc',
-    headers: { 'x-api-key': apiKey },
-  })
-  return createORPCClient(link)
+    origin: "https://example.com",
+    url: "/rpc",
+    headers: { "x-api-key": apiKey },
+  });
+  return createORPCClient(link);
 }
 ```
 
@@ -133,13 +142,13 @@ Bundle with `tsdown --dts src/index.ts`, point `exports` at `dist` types plus im
 Use Hey API's `orpc` plugin instead of hand-writing the contract. Install `@hey-api/openapi-ts@next` as a dev dependency (oRPC v2 output requires the `next` tag until the next stable Hey API release) and create `openapi-ts.config.ts`:
 
 ```ts
-import { defineConfig } from '@hey-api/openapi-ts'
+import { defineConfig } from "@hey-api/openapi-ts";
 
 export default defineConfig({
-  input: 'https://example.com/openapi.json', // local file or URL
-  output: 'src/contract',
-  plugins: [{ name: 'orpc', compatibilityVersion: '2', validator: 'zod' }],
-})
+  input: "https://example.com/openapi.json", // local file or URL
+  output: "src/contract",
+  plugins: [{ name: "orpc", compatibilityVersion: "2", validator: "zod" }],
+});
 ```
 
 Then run `npx @hey-api/openapi-ts`. It writes `orpc.gen.ts` (one procedure contract per operation, routed via `.meta(openapi({...}))` with `inputStructure: 'detailed'`, plus a combined `contract` router) and `zod.gen.ts`. The generated files import `@orpc/contract`, `@orpc/openapi`, and `zod`, so install those too. From there, implement the contract on your own server, or point `OpenAPILink` at the existing spec-compliant server.
@@ -147,13 +156,11 @@ Then run `npx @hey-api/openapi-ts`. It writes `orpc.gen.ts` (one procedure contr
 ## Full documentation
 
 If this skill and a fetched docs page disagree, trust the page: this skill is a summary and v2 is still moving. The docs are served at https://orpc.dev (the v1 docs stay at https://v1.orpc.dev):
-
 - https://orpc.dev/llms.txt : index of every page with descriptions
 - https://orpc.dev/llms-full.txt : the entire docs in one file (large; prefer single pages)
 - Append `.md` to any docs URL for that page's exact source markdown (for example https://orpc.dev/docs/contract/procedure.md)
 
 Pages to fetch when you need details beyond this skill:
-
 - Contract: `contract/procedure`, `contract/router`, `contract/implementation`, `contract/generate-from-openapi`
 - Clients: `client/client-side`, `client/server-side`, `client/error-handling`, `openapi/link`
 - Workflows: `recipes/publish-client-to-npm`, `contract/client-factory`, `recipes/monorepo-setup`

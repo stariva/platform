@@ -23,12 +23,35 @@ export const env = createEnv({
       .int()
       .positive()
       .default(1020005006898070),
+
+    // Выгрузка Метрики и Директа (jobs.analytics.*). OAuth-токены из
+    // приложения на oauth.yandex.ru: metrika:read и direct:api.
+    YANDEX_METRIKA_TOKEN: z.string().min(1).optional(),
+    YANDEX_METRIKA_COUNTER_ID: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(96190087),
+    YANDEX_DIRECT_TOKEN: z.string().min(1).optional(),
+    // Логин рекламодателя, если токен выдан представителю или агентству
+    YANDEX_DIRECT_CLIENT_LOGIN: z.string().min(1).optional(),
+    // Цели Метрики для конверсий Директа через запятую, не больше 10.
+    // Без списка — первые 10 целей счётчика.
+    YANDEX_DIRECT_GOAL_IDS: z
+      .string()
+      .regex(/^\d+(,\d+)*$/)
+      .optional(),
   },
   runtimeEnv: {
     JOBS_SECRET: process.env.JOBS_SECRET,
     OZON_API_KEY: process.env.OZON_API_KEY,
     OZON_CLIENT_ID: process.env.OZON_CLIENT_ID,
     OZON_FBS_WAREHOUSE_ID: process.env.OZON_FBS_WAREHOUSE_ID,
+    YANDEX_METRIKA_TOKEN: process.env.YANDEX_METRIKA_TOKEN,
+    YANDEX_METRIKA_COUNTER_ID: process.env.YANDEX_METRIKA_COUNTER_ID,
+    YANDEX_DIRECT_TOKEN: process.env.YANDEX_DIRECT_TOKEN,
+    YANDEX_DIRECT_CLIENT_LOGIN: process.env.YANDEX_DIRECT_CLIENT_LOGIN,
+    YANDEX_DIRECT_GOAL_IDS: process.env.YANDEX_DIRECT_GOAL_IDS,
   },
   skipValidation:
     !!process.env.CI || process.env.npm_lifecycle_event === "lint",

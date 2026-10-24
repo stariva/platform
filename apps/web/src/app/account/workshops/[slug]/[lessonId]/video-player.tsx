@@ -84,14 +84,56 @@ interface PlayerPrefs {
   volume: number;
   muted: boolean;
   rate: number;
+  /** Выбранное качество — короткая сторона кадра, px; null — «Авто». */
+  quality: number | null;
 }
 
-// Старые настройки (с autoNext) тоже подходят: лишние поля zod отбросит
+// Старые настройки (с autoNext, без качества) тоже подходят: лишние поля
+// zod отбросит, качество будет «Авто»
 const playerPrefsSchema = z.object({
   volume: z.number().min(0).max(1),
   muted: z.boolean(),
   rate: z.number().refine((rate) => SPEEDS.includes(rate)),
+  quality: z.number().int().positive().nullable().default(null),
 });
+
+/** Качество из списка плеера: у каждого урока свой набор и свои id. */
+interface Rendition {
+  id: string;
+  width?: number;
+  height?: number;
+  selected: boolean;
+}
+
+/** Короткая сторона кадра: «720p» и для горизонтального, и для вертикального видео. */
+function renditionSize(rendition: Rendition): number | null {
+  const { width, height } = rendition;
+  if (width && height) return Math.min(width, height);
+  return height || width || null;
+}
+
+/**
+ * Качество урока, ближайшее к запомненному: самое высокое, что не выше его.
+ * Если все выше — самое низкое: кто выбирал низкое, бережёт трафик.
+ */
+function pickRendition(
+  renditions: Rendition[],
+  quality: number,
+): Rendition | null {
+  let below: Rendition | null = null;
+  let lowest: Rendition | null = null;
+  for (const rendition of renditions) {
+    const size = renditionSize(rendition);
+    if (size === null) continue;
+    if (size <= quality && size > (below ? (renditionSize(below) ?? 0) : 0)) {
+      below = rendition;
+    }
+    if (!lowest || size < (renditionSize(lowest) ?? Infinity)) {
+      lowest = rendition;
+    }
+  }
+  return below ?? lowest;
+}
 
 function readPrefs(): PlayerPrefs | null {
   try {
@@ -322,6 +364,9 @@ function LessonController({
     muted: s.muted,
     playbackRate: s.playbackRate,
   }));
+  const { renditions } = usePlayer((s) => ({
+    renditions: s.videoRenditionList,
+  }));
 
   const [resumeNotice, setResumeNotice] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -337,6 +382,11 @@ function LessonController({
   const completedRef = useRef(initialCompleted);
   const retriesRef = useRef(0);
   const playingRef = useRef(false);
+  // Источник, которому уже вернули запомненное качество
+  const qualityUrlRef = useRef<string | null>(null);
+  // Качество, которое попросили у плеера, а в списке оно ещё не отмечено:
+  // плеер отмечает выбор не сразу, и до этого мы запомнили бы «Авто»
+  const pendingQualityRef = useRef<string | null>(null);
 
   // ── Сохранение прогресса ────────────────────────────────────────
   const saveProgress = useCallback(
@@ -445,13 +495,43 @@ function LessonController({
     if (paused && ready) saveNow();
   }, [paused, error, ready, saveNow]);
 
-  // ── Настройки звука и скорости ──────────────────────────────────
+  // ── Качество: возвращаем запомненное ────────────────────────────
+  // Как только новый источник загрузился (см. выше), не дожидаясь перемотки:
+  // меньше кусков успеет прийти в «Авто». До этого список качеств в плеере
+  // ещё от прошлой ссылки. Одно качество (MP4 или старая нарезка) —
+  // выбирать не из чего
+  useEffect(() => {
+    if (!source || renditions.length < 2 || duration <= 0) return;
+    if (appliedUrlRef.current !== source.url) return;
+    if (qualityUrlRef.current === source.url) return;
+    qualityUrlRef.current = source.url;
+    pendingQualityRef.current = null;
+    const quality = prefsRef.current?.quality ?? null;
+    if (quality === null) return;
+    const target = pickRendition(renditions, quality);
+    if (!target || target.selected) return;
+    pendingQualityRef.current = target.id;
+    store.selectVideoRendition(target.id);
+  }, [source, renditions, duration, store]);
+
+  // ── Настройки звука, скорости и качества ────────────────────────
   useEffect(() => {
     if (!ready) return;
-    const prefs = { volume, muted, rate: playbackRate };
+    // Где выбирать не из чего, запомненное качество не трогаем
+    let quality = prefsRef.current?.quality ?? null;
+    if (renditions.length > 1 && qualityUrlRef.current === source?.url) {
+      const selected = renditions.find((r) => r.selected) ?? null;
+      const pending = pendingQualityRef.current;
+      // Пока плеер не отметил наш выбор, «Авто» в списке — не выбор зрителя
+      if (pending === null || selected !== null) {
+        pendingQualityRef.current = null;
+        quality = selected ? renditionSize(selected) : null;
+      }
+    }
+    const prefs = { volume, muted, rate: playbackRate, quality };
     prefsRef.current = prefs;
     writePrefs(prefs);
-  }, [ready, volume, muted, playbackRate]);
+  }, [ready, volume, muted, playbackRate, renditions, source]);
 
   // ── Ошибки: истёкшая ссылка — берём новую, остальное — не больше 2 раз ──
   useEffect(() => {

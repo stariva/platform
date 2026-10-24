@@ -1,6 +1,8 @@
 import {
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -201,6 +203,74 @@ export async function objectExists(key: string): Promise<boolean> {
       .$metadata?.httpStatusCode;
     if (status === 404) return false;
     throw error;
+  }
+}
+
+/** Время загрузки файла в закрытый бакет; null — файла нет. */
+export async function objectLastModified(key: string): Promise<Date | null> {
+  try {
+    const res = await getClient().send(
+      new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+    );
+    return res.LastModified ?? null;
+  } catch (error) {
+    const status = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    if (status === 404) return null;
+    throw error;
+  }
+}
+
+/** Файл в закрытом бакете: ключ, размер и время загрузки. */
+export interface StoredObject {
+  key: string;
+  size: number;
+  lastModified: Date;
+}
+
+/** Все файлы закрытого бакета под префиксом (постранично, по 1000). */
+export async function listObjects(prefix: string): Promise<StoredObject[]> {
+  const objects: StoredObject[] = [];
+  let token: string | undefined;
+  do {
+    const res = await getClient().send(
+      new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: prefix,
+        ContinuationToken: token,
+      }),
+    );
+    for (const item of res.Contents ?? []) {
+      if (!item.Key) continue;
+      objects.push({
+        key: item.Key,
+        size: item.Size ?? 0,
+        lastModified: item.LastModified ?? new Date(0),
+      });
+    }
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return objects;
+}
+
+/** Удаляет файлы из закрытого бакета пачками по 1000 (предел S3). */
+export async function deleteObjects(keys: string[]): Promise<void> {
+  for (let i = 0; i < keys.length; i += 1000) {
+    const res = await getClient().send(
+      new DeleteObjectsCommand({
+        Bucket: BUCKET_NAME,
+        Delete: {
+          Objects: keys.slice(i, i + 1000).map((Key) => ({ Key })),
+          Quiet: true,
+        },
+      }),
+    );
+    if (res.Errors?.length) {
+      const [first] = res.Errors;
+      throw new Error(
+        `S3 delete failed for ${res.Errors.length} keys, e.g. ${first?.Key}: ${first?.Code}`,
+      );
+    }
   }
 }
 

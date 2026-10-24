@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "~/components/layout";
+import { VideoSummary } from "~/components/workshops/video-status";
 import { WorkshopForm } from "~/components/workshops/workshop-form";
 import { baseEnv } from "~/env";
 import { api } from "~/orpc/server";
@@ -21,14 +22,21 @@ export default async function EditWorkshopPage({
     <>
       <SiteHeader title={workshop.values.title} />
       <div className="space-y-4 px-4 pb-10 lg:px-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {workshop.values.title}
-        </h1>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {workshop.values.title}
+          </h1>
+          <VideoSummary
+            videoKeys={workshop.values.lessons.map((lesson) => lesson.videoKey)}
+            videos={workshop.videos}
+          />
+        </div>
         {/* key: после сохранения форма берёт свежие данные с сервера */}
         <WorkshopForm
           key={workshop.updatedAt.toISOString()}
           id={workshop.id}
           initialValues={workshop.values}
+          videos={workshop.videos}
           storefrontUrl={baseEnv.STOREFRONT_URL}
         />
       </div>

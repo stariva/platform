@@ -83,16 +83,19 @@ tooling
 <td width="50%">
 
 ### �  Performance
+
 - **Bun Runtime** — Lightning-fast package management & bundling
 - **Turborepo** — Smart caching & parallel execution
 - **Edge-ready** — Optimized for Vercel Edge Runtime
 
 ### Type Safety
+
 - **End-to-end TypeScript** — From database to UI
 - **oRPC** — Type-safe API (RPC + OpenAPI ready) without code generation
 - **Zod Validation** — Runtime type checking
 
 ### 🎨 Modern UI
+
 - **Tailwind CSS v4** — Latest styling features
 - **shadcn/ui** — Beautiful, accessible components
 - **React 19** — Latest React features
@@ -101,16 +104,19 @@ tooling
 <td width="50%">
 
 ### 🔐 Authentication
+
 - **Better Auth** — Modern, flexible auth solution
 - **Session Management** — Secure, type-safe sessions
 - **Social Providers** — Easy OAuth integration
 
 ### 💾 Database
+
 - **Drizzle ORM** — Type-safe SQL queries
 - **Env-aware driver** — `node-postgres` locally, Neon HTTP auto-detected in the cloud
 - **Migrations** — Version-controlled schema changes (`db:generate` / `db:migrate`)
 
 ### 📧 Communication & Observability
+
 - **React Email** — Beautiful email templates
 - **Resend / Nodemailer** — Reliable email delivery (inbucket sandbox locally)
 - **OpenTelemetry** — Built-in tracing via `instrumentation.ts`
@@ -220,27 +226,27 @@ bun turbo gen init
 
 ## 🛠️ Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `bun dev` | Start the self-contained Next.js app (UI + built-in API) |
-| `bun dev:all` | Start all apps and workers in development mode |
-| `bun dev:next` | Alias for starting only the Next.js app |
-| `bun build` | Build all apps and packages |
-| `bun lint` | Run Biome linting |
-| `bun lint:fix` | Fix linting issues automatically |
-| `bun format` | Check code formatting |
-| `bun format:fix` | Fix formatting issues |
-| `bun check` | Run both linting and formatting checks |
-| `bun check:fix` | Fix all linting and formatting issues |
-| `bun typecheck` | Type check all packages |
-| `bun test` | Run unit tests (bun:test) |
-| `bun db:push` | Push database schema changes |
-| `bun db:generate` | Generate SQL migrations from schema |
-| `bun db:migrate` | Apply migrations (PostgreSQL 12+) |
-| `bun db:studio` | Open Drizzle Studio |
-| `bun auth:generate` | Generate Better Auth schema |
-| `bun ui-add` | Add new shadcn/ui component |
-| `bun clean` | Clean all node_modules |
+| Command             | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `bun dev`           | Start the self-contained Next.js app (UI + built-in API) |
+| `bun dev:all`       | Start all apps and workers in development mode           |
+| `bun dev:next`      | Alias for starting only the Next.js app                  |
+| `bun build`         | Build all apps and packages                              |
+| `bun lint`          | Run Biome linting                                        |
+| `bun lint:fix`      | Fix linting issues automatically                         |
+| `bun format`        | Check code formatting                                    |
+| `bun format:fix`    | Fix formatting issues                                    |
+| `bun check`         | Run both linting and formatting checks                   |
+| `bun check:fix`     | Fix all linting and formatting issues                    |
+| `bun typecheck`     | Type check all packages                                  |
+| `bun test`          | Run unit tests (bun:test)                                |
+| `bun db:push`       | Push database schema changes                             |
+| `bun db:generate`   | Generate SQL migrations from schema                      |
+| `bun db:migrate`    | Apply migrations (PostgreSQL 12+)                        |
+| `bun db:studio`     | Open Drizzle Studio                                      |
+| `bun auth:generate` | Generate Better Auth schema                              |
+| `bun ui-add`        | Add new shadcn/ui component                              |
+| `bun clean`         | Clean all node_modules                                   |
 
 `bun db:migrate` checks the server reached through `POSTGRES_URL` for PostgreSQL
 12 or newer (PostgreSQL 12 also needs `pgcrypto` installed for the existing
@@ -294,17 +300,17 @@ succeed. These migrations must support rerunning after partial completion; use
 
 ## 📊 Comparison with Alternatives
 
-| Feature | This Starter | T3 Stack | Create Next App |
-|---------|-------------|----------|-----------------|
-| Runtime | **Bun** ⚡ | Node.js | Node.js |
-| Monorepo | ✅ Turborepo | ❌ | ❌ |
-| Type-safe API | ✅ oRPC | ✅ tRPC | ❌ |
-| Database ORM | ✅ Drizzle | ✅ Drizzle/Prisma | ❌ |
-| Authentication | ✅ Better Auth | ✅ NextAuth | ❌ |
-| Email Templates | ✅ React Email | ❌ | ❌ |
-| Observability | ✅ OpenTelemetry | ❌ | ❌ |
-| UI Components | ✅ shadcn/ui | ❌ | ❌ |
-| Setup Time | ~5 min | ~10 min | ~2 min |
+| Feature         | This Starter     | T3 Stack          | Create Next App |
+| --------------- | ---------------- | ----------------- | --------------- |
+| Runtime         | **Bun** ⚡       | Node.js           | Node.js         |
+| Monorepo        | ✅ Turborepo     | ❌                | ❌              |
+| Type-safe API   | ✅ oRPC          | ✅ tRPC           | ❌              |
+| Database ORM    | ✅ Drizzle       | ✅ Drizzle/Prisma | ❌              |
+| Authentication  | ✅ Better Auth   | ✅ NextAuth       | ❌              |
+| Email Templates | ✅ React Email   | ❌                | ❌              |
+| Observability   | ✅ OpenTelemetry | ❌                | ❌              |
+| UI Components   | ✅ shadcn/ui     | ❌                | ❌              |
+| Setup Time      | ~5 min           | ~10 min           | ~2 min          |
 
 ## 🚀 Deployment
 
@@ -315,7 +321,6 @@ This project is optimized for **zero-config deployment** on Vercel.
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/bunworks/bun-turbo-starter)
 
 **Manual Deployment:**
-
 1. Push your code to GitHub
 2. Import project on [Vercel](https://vercel.com/new)
 3. Select `apps/app` as root directory

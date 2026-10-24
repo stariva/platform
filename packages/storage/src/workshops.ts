@@ -57,6 +57,33 @@ export function hlsPlaylistFile(version: number): string {
   return version >= 2 ? "master.m3u8" : "index.m3u8";
 }
 
+/** Качество из master.m3u8: размер кадра (0 — не указан) и пиковый битрейт. */
+export interface HlsVariantInfo {
+  width: number;
+  height: number;
+  /** Бит/с. */
+  bandwidth: number;
+}
+
+/**
+ * Качества из master.m3u8, от лучшего к худшему. В самом плейлисте первым
+ * идёт среднее (с него начинает Safari), поэтому порядок свой.
+ */
+export function parseMasterPlaylist(text: string): HlsVariantInfo[] {
+  const variants: HlsVariantInfo[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.startsWith("#EXT-X-STREAM-INF:")) continue;
+    const bandwidth = /(?:^|[:,])BANDWIDTH=(\d+)/.exec(line);
+    const resolution = /RESOLUTION=(\d+)x(\d+)/.exec(line);
+    variants.push({
+      width: Number(resolution?.[1] ?? 0),
+      height: Number(resolution?.[2] ?? 0),
+      bandwidth: Number(bandwidth?.[1] ?? 0),
+    });
+  }
+  return variants.sort((a, b) => b.bandwidth - a.bandwidth);
+}
+
 /** Content-Type файла HLS-версии. Подписывается в ссылке на загрузку. */
 export function hlsContentType(file: string): string {
   if (file.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
@@ -99,6 +126,103 @@ export function workshopImageKey(
   if (!extension) throw new Error(`unsupported image type: ${contentType}`);
   const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   return `workshops/${slug}/${hash}.${extension}`;
+}
+
+/** Курс глазами чистки бакета: на какие файлы он ссылается и когда сохранён. */
+export interface SweepWorkshop {
+  slug: string;
+  updatedAt: Date;
+  videoKeys: string[];
+  materialKeys: string[];
+}
+
+/** Нарезка глазами чистки бакета. */
+export interface SweepRendition {
+  videoKey: string;
+  status: "processing" | "ready" | "failed";
+  hlsPrefix: string;
+  readyHlsPrefix: string | null;
+  updatedAt: Date;
+}
+
+export interface WorkshopSweepPlan {
+  /** Файлы, которые можно удалить из закрытого бакета. */
+  deleteKeys: string[];
+  /** Сколько байт они занимают. */
+  bytes: number;
+  /** Строки video_renditions, чьих исходников больше нет. */
+  staleRenditions: string[];
+}
+
+/**
+ * Что удалить из `workshops/` закрытого бакета. Каждая загрузка и каждая
+ * попытка нарезки получают свой ключ, поэтому после замены видео, PDF или
+ * перерезки прежние файлы остаются лежать. Удаляем всё, на что не ссылаются
+ * курсы (включая черновики) и их нарезки, кроме недавнего:
+ * - файл моложе `graceMs` — его могли загрузить в ещё не сохранённую форму;
+ * - курс или нарезку меняли позже `graceMs` назад — старое видео ещё
+ *   досматривают по выданным ссылкам.
+ */
+export function planWorkshopSweep(
+  objects: { key: string; size: number; lastModified: Date }[],
+  state: { workshops: SweepWorkshop[]; renditions: SweepRendition[] },
+  { now, graceMs }: { now: Date; graceMs: number },
+): WorkshopSweepPlan {
+  const cutoff = now.getTime() - graceMs;
+  const videoKeys = new Set(state.workshops.flatMap((w) => w.videoKeys));
+  const keepKeys = new Set([
+    ...videoKeys,
+    ...state.workshops.flatMap((w) => w.materialKeys),
+  ]);
+  // Папки со слешем на конце: префикс одной попытки не накрывает соседнюю
+  const keepFolders: string[] = [];
+  const recentFolders: string[] = [];
+
+  for (const workshop of state.workshops) {
+    if (workshop.updatedAt.getTime() > cutoff) {
+      recentFolders.push(`${workshopStoragePrefix(workshop.slug)}/`);
+    }
+  }
+  for (const rendition of state.renditions) {
+    if (!videoKeys.has(rendition.videoKey)) continue;
+    // Нарезка, которую смотрят, и попытка, которую сейчас режут. Папка
+    // упавшей попытки не нужна: повтор получит новую
+    if (rendition.readyHlsPrefix)
+      keepFolders.push(`${rendition.readyHlsPrefix}/`);
+    if (rendition.status !== "failed")
+      keepFolders.push(`${rendition.hlsPrefix}/`);
+    if (rendition.updatedAt.getTime() > cutoff) {
+      recentFolders.push(`${workshopHlsPrefix(rendition.videoKey)}/`);
+    }
+  }
+
+  const inFolder = (key: string, folders: string[]) =>
+    folders.some((folder) => key.startsWith(folder));
+  const doomed = objects.filter(
+    (object) =>
+      !keepKeys.has(object.key) &&
+      object.lastModified.getTime() <= cutoff &&
+      !inFolder(object.key, keepFolders) &&
+      !inFolder(object.key, recentFolders),
+  );
+  const deleteKeys = doomed.map((object) => object.key);
+  const doomedKeys = new Set(deleteKeys);
+  const remaining = new Set(
+    objects.map((object) => object.key).filter((key) => !doomedKeys.has(key)),
+  );
+
+  return {
+    deleteKeys,
+    bytes: doomed.reduce((sum, object) => sum + object.size, 0),
+    staleRenditions: state.renditions
+      .filter(
+        (rendition) =>
+          !videoKeys.has(rendition.videoKey) &&
+          !remaining.has(rendition.videoKey) &&
+          rendition.updatedAt.getTime() <= cutoff,
+      )
+      .map((rendition) => rendition.videoKey),
+  };
 }
 
 /** Ключ принадлежит файлам именно этого курса (а не чужому объекту бакета). */

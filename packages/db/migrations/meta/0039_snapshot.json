@@ -1,5 +1,5 @@
 {
-  "id": "fb03ac17-2331-4f5a-b120-e1a8ffd8c6a2",
+  "id": "63435a0b-ec2e-4006-90c9-ae590406e9be",
   "prevId": "a5fcefe4-feaa-45c3-be4f-4ea87c370e9f",
   "version": "7",
   "dialect": "postgresql",
@@ -94,12 +94,8 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -225,12 +221,8 @@
           "name": "login_events_user_id_users_id_fk",
           "tableFrom": "login_events",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -323,12 +315,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -338,9 +326,7 @@
         "sessions_token_unique": {
           "name": "sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -423,9 +409,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -557,12 +541,8 @@
           "name": "chat_conversations_user_id_users_id_fk",
           "tableFrom": "chat_conversations",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -638,12 +618,8 @@
           "name": "chat_messages_conversation_id_chat_conversations_id_fk",
           "tableFrom": "chat_messages",
           "tableTo": "chat_conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -651,10 +627,7 @@
       "compositePrimaryKeys": {
         "chat_messages_conversation_id_id_pk": {
           "name": "chat_messages_conversation_id_id_pk",
-          "columns": [
-            "conversation_id",
-            "id"
-          ]
+          "columns": ["conversation_id", "id"]
         }
       },
       "uniqueConstraints": {},
@@ -801,12 +774,8 @@
           "name": "cart_events_user_id_users_id_fk",
           "tableFrom": "cart_events",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -814,12 +783,8 @@
           "name": "cart_events_order_id_product_orders_id_fk",
           "tableFrom": "cart_events",
           "tableTo": "product_orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -890,12 +855,8 @@
           "name": "product_order_items_order_id_product_orders_id_fk",
           "tableFrom": "product_order_items",
           "tableTo": "product_orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -995,12 +956,8 @@
           "name": "product_order_payments_order_id_product_orders_id_fk",
           "tableFrom": "product_order_payments",
           "tableTo": "product_orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1279,12 +1236,8 @@
           "name": "product_orders_user_id_users_id_fk",
           "tableFrom": "product_orders",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1666,12 +1619,8 @@
           "name": "npd_income_requests_receipt_id_order_receipts_id_fk",
           "tableFrom": "npd_income_requests",
           "tableTo": "order_receipts",
-          "columnsFrom": [
-            "receipt_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["receipt_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1806,12 +1755,8 @@
           "name": "order_receipts_product_order_id_product_orders_id_fk",
           "tableFrom": "order_receipts",
           "tableTo": "product_orders",
-          "columnsFrom": [
-            "product_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1819,12 +1764,8 @@
           "name": "order_receipts_workshop_order_id_orders_id_fk",
           "tableFrom": "order_receipts",
           "tableTo": "orders",
-          "columnsFrom": [
-            "workshop_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workshop_order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1879,12 +1820,8 @@
           "name": "review_products_review_id_reviews_id_fk",
           "tableFrom": "review_products",
           "tableTo": "reviews",
-          "columnsFrom": [
-            "review_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["review_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1892,12 +1829,8 @@
           "name": "review_products_product_id_products_id_fk",
           "tableFrom": "review_products",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1905,10 +1838,7 @@
       "compositePrimaryKeys": {
         "review_products_review_id_product_id_pk": {
           "name": "review_products_review_id_product_id_pk",
-          "columns": [
-            "review_id",
-            "product_id"
-          ]
+          "columns": ["review_id", "product_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2056,136 +1986,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.robokassa_invoices": {
-      "name": "robokassa_invoices",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "robokassa_invoices_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1001",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "product_order_id": {
-          "name": "product_order_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "workshop_order_id": {
-          "name": "workshop_order_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount": {
-          "name": "amount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "payment_method": {
-          "name": "payment_method",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "paid_at": {
-          "name": "paid_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "robokassa_invoices_product_order_idx": {
-          "name": "robokassa_invoices_product_order_idx",
-          "columns": [
-            {
-              "expression": "product_order_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "robokassa_invoices_workshop_order_idx": {
-          "name": "robokassa_invoices_workshop_order_idx",
-          "columns": [
-            {
-              "expression": "workshop_order_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "robokassa_invoices_product_order_id_product_orders_id_fk": {
-          "name": "robokassa_invoices_product_order_id_product_orders_id_fk",
-          "tableFrom": "robokassa_invoices",
-          "tableTo": "product_orders",
-          "columnsFrom": [
-            "product_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "robokassa_invoices_workshop_order_id_orders_id_fk": {
-          "name": "robokassa_invoices_workshop_order_id_orders_id_fk",
-          "tableFrom": "robokassa_invoices",
-          "tableTo": "orders",
-          "columnsFrom": [
-            "workshop_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "robokassa_invoices_one_order": {
-          "name": "robokassa_invoices_one_order",
-          "value": "num_nonnulls(\"robokassa_invoices\".\"product_order_id\", \"robokassa_invoices\".\"workshop_order_id\") = 1"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.contact_clicks": {
       "name": "contact_clicks",
       "schema": "",
@@ -2310,12 +2110,8 @@
           "name": "contact_clicks_user_id_users_id_fk",
           "tableFrom": "contact_clicks",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2495,12 +2291,8 @@
           "name": "ad_expenses_campaign_id_ad_campaigns_id_fk",
           "tableFrom": "ad_expenses",
           "tableTo": "ad_campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2615,12 +2407,8 @@
           "name": "crm_clients_campaign_id_ad_campaigns_id_fk",
           "tableFrom": "crm_clients",
           "tableTo": "ad_campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2695,12 +2483,8 @@
           "name": "crm_sale_payments_sale_id_crm_sales_id_fk",
           "tableFrom": "crm_sale_payments",
           "tableTo": "crm_sales",
-          "columnsFrom": [
-            "sale_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sale_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2872,12 +2656,8 @@
           "name": "crm_sales_client_id_crm_clients_id_fk",
           "tableFrom": "crm_sales",
           "tableTo": "crm_clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["client_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2885,12 +2665,8 @@
           "name": "crm_sales_campaign_id_ad_campaigns_id_fk",
           "tableFrom": "crm_sales",
           "tableTo": "ad_campaigns",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2898,12 +2674,8 @@
           "name": "crm_sales_request_number_custom_order_requests_number_fk",
           "tableFrom": "crm_sales",
           "tableTo": "custom_order_requests",
-          "columnsFrom": [
-            "request_number"
-          ],
-          "columnsTo": [
-            "number"
-          ],
+          "columnsFrom": ["request_number"],
+          "columnsTo": ["number"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3281,12 +3053,8 @@
           "name": "workshop_access_codes_order_id_orders_id_fk",
           "tableFrom": "workshop_access_codes",
           "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3296,9 +3064,7 @@
         "workshop_access_codes_code_unique": {
           "name": "workshop_access_codes_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -3580,12 +3346,8 @@
           "name": "certificates_user_id_users_id_fk",
           "tableFrom": "certificates",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3595,17 +3357,12 @@
         "certificates_number_unique": {
           "name": "certificates_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "number"
-          ]
+          "columns": ["number"]
         },
         "certificates_user_workshop_uq": {
           "name": "certificates_user_workshop_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "workshop_slug"
-          ]
+          "columns": ["user_id", "workshop_slug"]
         }
       },
       "policies": {},
@@ -3653,12 +3410,8 @@
           "name": "course_access_user_id_users_id_fk",
           "tableFrom": "course_access",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3666,12 +3419,8 @@
           "name": "course_access_order_id_orders_id_fk",
           "tableFrom": "course_access",
           "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3681,10 +3430,7 @@
         "course_access_user_workshop_uq": {
           "name": "course_access_user_workshop_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "workshop_slug"
-          ]
+          "columns": ["user_id", "workshop_slug"]
         }
       },
       "policies": {},
@@ -3753,12 +3499,8 @@
           "name": "lesson_progress_user_id_users_id_fk",
           "tableFrom": "lesson_progress",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3768,10 +3510,7 @@
         "lesson_progress_user_lesson_uq": {
           "name": "lesson_progress_user_lesson_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "lesson_id"
-          ]
+          "columns": ["user_id", "lesson_id"]
         }
       },
       "policies": {},
@@ -3913,12 +3652,8 @@
           "name": "orders_user_id_users_id_fk",
           "tableFrom": "orders",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3976,12 +3711,8 @@
           "name": "workshop_order_notifications_order_id_orders_id_fk",
           "tableFrom": "workshop_order_notifications",
           "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3991,11 +3722,7 @@
         "workshop_order_notifications_uq": {
           "name": "workshop_order_notifications_uq",
           "nullsNotDistinct": false,
-          "columns": [
-            "order_id",
-            "kind",
-            "channel"
-          ]
+          "columns": ["order_id", "kind", "channel"]
         }
       },
       "policies": {},
@@ -4099,12 +3826,8 @@
           "name": "video_access_log_user_id_users_id_fk",
           "tableFrom": "video_access_log",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4204,41 +3927,866 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.direct_search_queries": {
+      "name": "direct_search_queries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "campaign_id": {
+          "name": "campaign_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "campaign_name": {
+          "name": "campaign_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_group_id": {
+          "name": "ad_group_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_group_name": {
+          "name": "ad_group_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_id": {
+          "name": "ad_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "query": {
+          "name": "query",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criterion_id": {
+          "name": "criterion_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criterion": {
+          "name": "criterion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criterion_type": {
+          "name": "criterion_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "matched_keyword": {
+          "name": "matched_keyword",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "match_type": {
+          "name": "match_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "targeting_category": {
+          "name": "targeting_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "income_grade": {
+          "name": "income_grade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "placement": {
+          "name": "placement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impressions": {
+          "name": "impressions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clicks": {
+          "name": "clicks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cost": {
+          "name": "cost",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bounces": {
+          "name": "bounces",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "conversions": {
+          "name": "conversions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revenue": {
+          "name": "revenue",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "direct_search_queries_date_idx": {
+          "name": "direct_search_queries_date_idx",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.direct_stats": {
+      "name": "direct_stats",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "campaign_id": {
+          "name": "campaign_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "campaign_name": {
+          "name": "campaign_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "campaign_type": {
+          "name": "campaign_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_group_id": {
+          "name": "ad_group_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_group_name": {
+          "name": "ad_group_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_id": {
+          "name": "ad_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_format": {
+          "name": "ad_format",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criterion_id": {
+          "name": "criterion_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criterion": {
+          "name": "criterion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criterion_type": {
+          "name": "criterion_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "match_type": {
+          "name": "match_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "targeting_category": {
+          "name": "targeting_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "age": {
+          "name": "age",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gender": {
+          "name": "gender",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "income_grade": {
+          "name": "income_grade",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "device": {
+          "name": "device",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mobile_platform": {
+          "name": "mobile_platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "carrier_type": {
+          "name": "carrier_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_name": {
+          "name": "location_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "targeting_location_id": {
+          "name": "targeting_location_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "targeting_location_name": {
+          "name": "targeting_location_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ad_network_type": {
+          "name": "ad_network_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "placement": {
+          "name": "placement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_network_name": {
+          "name": "external_network_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "slot": {
+          "name": "slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impressions": {
+          "name": "impressions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clicks": {
+          "name": "clicks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cost": {
+          "name": "cost",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bounces": {
+          "name": "bounces",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sessions": {
+          "name": "sessions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "conversions": {
+          "name": "conversions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revenue": {
+          "name": "revenue",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "direct_stats_date_idx": {
+          "name": "direct_stats_date_idx",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "direct_stats_campaign_idx": {
+          "name": "direct_stats_campaign_idx",
+          "columns": [
+            {
+              "expression": "campaign_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.metrika_goals": {
+      "name": "metrika_goals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.metrika_hits": {
+      "name": "metrika_hits",
+      "schema": "",
+      "columns": {
+        "watch_id": {
+          "name": "watch_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "visit_id": {
+          "name": "visit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referer": {
+          "name": "referer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_page_view": {
+          "name": "is_page_view",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "goal_ids": {
+          "name": "goal_ids",
+          "type": "bigint[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "metrika_hits_client_idx": {
+          "name": "metrika_hits_client_idx",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "metrika_hits_visit_idx": {
+          "name": "metrika_hits_visit_idx",
+          "columns": [
+            {
+              "expression": "visit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "metrika_hits_at_idx": {
+          "name": "metrika_hits_at_idx",
+          "columns": [
+            {
+              "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.metrika_visits": {
+      "name": "metrika_visits",
+      "schema": "",
+      "columns": {
+        "visit_id": {
+          "name": "visit_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_new_user": {
+          "name": "is_new_user",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "start_url": {
+          "name": "start_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_url": {
+          "name": "end_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "page_views": {
+          "name": "page_views",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration": {
+          "name": "duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bounce": {
+          "name": "bounce",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "traffic_source": {
+          "name": "traffic_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_traffic_source": {
+          "name": "first_traffic_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "utm_source": {
+          "name": "utm_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "utm_medium": {
+          "name": "utm_medium",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "utm_campaign": {
+          "name": "utm_campaign",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_campaign_id": {
+          "name": "direct_campaign_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_ad_group_id": {
+          "name": "direct_ad_group_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_ad_id": {
+          "name": "direct_ad_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_phrase": {
+          "name": "direct_phrase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_condition_type": {
+          "name": "direct_condition_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_platform_type": {
+          "name": "direct_platform_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_platform": {
+          "name": "direct_platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "device_category": {
+          "name": "device_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "operating_system": {
+          "name": "operating_system",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "browser": {
+          "name": "browser",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "goal_ids": {
+          "name": "goal_ids",
+          "type": "bigint[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "purchase_ids": {
+          "name": "purchase_ids",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "metrika_visits_client_idx": {
+          "name": "metrika_visits_client_idx",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "metrika_visits_started_idx": {
+          "name": "metrika_visits_started_idx",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
     "public.chat_message_role": {
       "name": "chat_message_role",
       "schema": "public",
-      "values": [
-        "user",
-        "assistant"
-      ]
+      "values": ["user", "assistant"]
     },
     "public.product_delivery_method": {
       "name": "product_delivery_method",
       "schema": "public",
-      "values": [
-        "pickup",
-        "courier",
-        "manual"
-      ]
+      "values": ["pickup", "courier", "manual"]
     },
     "public.product_order_kind": {
       "name": "product_order_kind",
       "schema": "public",
-      "values": [
-        "stock",
-        "made_to_order"
-      ]
+      "values": ["stock", "made_to_order"]
     },
     "public.product_order_payment_type": {
       "name": "product_order_payment_type",
       "schema": "public",
-      "values": [
-        "deposit",
-        "balance"
-      ]
+      "values": ["deposit", "balance"]
     },
     "public.product_order_status": {
       "name": "product_order_status",
@@ -4263,20 +4811,12 @@
     "public.product_category": {
       "name": "product_category",
       "schema": "public",
-      "values": [
-        "clothes",
-        "interior",
-        "bags"
-      ]
+      "values": ["clothes", "interior", "bags"]
     },
     "public.product_status": {
       "name": "product_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "published",
-        "archived"
-      ]
+      "values": ["draft", "published", "archived"]
     },
     "public.product_subcategory": {
       "name": "product_subcategory",
@@ -4299,64 +4839,259 @@
     "public.review_source": {
       "name": "review_source",
       "schema": "public",
-      "values": [
-        "ozon",
-        "avito",
-        "site"
-      ]
+      "values": ["ozon", "avito", "site"]
     },
     "public.workshop_category": {
       "name": "workshop_category",
       "schema": "public",
-      "values": [
-        "lampshades",
-        "clothing",
-        "interior"
-      ]
+      "values": ["lampshades", "clothing", "interior"]
     },
     "public.workshop_level": {
       "name": "workshop_level",
       "schema": "public",
-      "values": [
-        "beginner",
-        "intermediate",
-        "advanced"
-      ]
+      "values": ["beginner", "intermediate", "advanced"]
     },
     "public.workshop_status": {
       "name": "workshop_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "published",
-        "archived"
-      ]
+      "values": ["draft", "published", "archived"]
     },
     "public.order_status": {
       "name": "order_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "paid",
-        "canceled",
-        "refunded"
-      ]
+      "values": ["pending", "paid", "canceled", "refunded"]
     },
     "public.video_rendition_status": {
       "name": "video_rendition_status",
       "schema": "public",
-      "values": [
-        "processing",
-        "ready",
-        "failed"
-      ]
+      "values": ["processing", "ready", "failed"]
     }
   },
   "schemas": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
+  "views": {
+    "public.workshop_buyers": {
+      "columns": {
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "workshop_slug": {
+          "name": "workshop_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "device": {
+          "name": "device",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "device_model": {
+          "name": "device_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "os": {
+          "name": "os",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "browser": {
+          "name": "browser",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "utm_source_first": {
+          "name": "utm_source_first",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "utm_campaign_first": {
+          "name": "utm_campaign_first",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "utm_source_last": {
+          "name": "utm_source_last",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "utm_campaign_last": {
+          "name": "utm_campaign_last",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visits_before": {
+          "name": "visits_before",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "page_views_before": {
+          "name": "page_views_before",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seconds_on_site_before": {
+          "name": "seconds_on_site_before",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_visit_at": {
+          "name": "first_visit_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "days_to_purchase": {
+          "name": "days_to_purchase",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_visit_source": {
+          "name": "first_visit_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_visit_start_url": {
+          "name": "first_visit_start_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_visit_source": {
+          "name": "last_visit_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_visit_start_url": {
+          "name": "last_visit_start_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_campaign_id": {
+          "name": "direct_campaign_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_ad_group_id": {
+          "name": "direct_ad_group_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_ad_id": {
+          "name": "direct_ad_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_phrase": {
+          "name": "direct_phrase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_condition_type": {
+          "name": "direct_condition_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_platform_type": {
+          "name": "direct_platform_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direct_platform": {
+          "name": "direct_platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metrika_city": {
+          "name": "metrika_city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metrika_device": {
+          "name": "metrika_device",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n  select\n    o.id as order_id,\n    o.user_id,\n    o.workshop_slug,\n    o.amount,\n    o.created_at,\n    o.paid_at,\n    o.visitor->>'ymClientId' as client_id,\n    o.visitor->>'city' as city,\n    o.visitor->>'region' as region,\n    o.visitor->>'device' as device,\n    o.visitor->>'deviceModel' as device_model,\n    o.visitor->>'os' as os,\n    o.visitor->>'browser' as browser,\n    o.attribution->'first'->>'utm_source' as utm_source_first,\n    o.attribution->'first'->>'utm_campaign' as utm_campaign_first,\n    o.attribution->'last'->>'utm_source' as utm_source_last,\n    o.attribution->'last'->>'utm_campaign' as utm_campaign_last,\n    s.visits as visits_before,\n    s.page_views as page_views_before,\n    s.seconds as seconds_on_site_before,\n    s.first_at as first_visit_at,\n    round(extract(epoch from (coalesce(o.paid_at, o.created_at) at time zone 'UTC' - s.first_at)) / 86400, 1) as days_to_purchase,\n    fv.traffic_source as first_visit_source,\n    fv.start_url as first_visit_start_url,\n    lv.traffic_source as last_visit_source,\n    lv.start_url as last_visit_start_url,\n    lv.direct_campaign_id,\n    lv.direct_ad_group_id,\n    lv.direct_ad_id,\n    lv.direct_phrase,\n    lv.direct_condition_type,\n    lv.direct_platform_type,\n    lv.direct_platform,\n    lv.city as metrika_city,\n    lv.device_category as metrika_device\n  from orders o\n  left join lateral (\n    select\n      count(*)::int as visits,\n      sum(v.page_views)::int as page_views,\n      sum(v.duration)::int as seconds,\n      min(v.started_at) as first_at\n    from metrika_visits v\n    where v.client_id = o.visitor->>'ymClientId'\n      and v.started_at <= coalesce(o.paid_at, o.created_at) at time zone 'UTC'\n  ) s on true\n  left join lateral (\n    select v.traffic_source, v.start_url\n    from metrika_visits v\n    where v.client_id = o.visitor->>'ymClientId'\n      and v.started_at <= coalesce(o.paid_at, o.created_at) at time zone 'UTC'\n    order by v.started_at\n    limit 1\n  ) fv on true\n  left join lateral (\n    select v.*\n    from metrika_visits v\n    where v.client_id = o.visitor->>'ymClientId'\n      and v.started_at <= coalesce(o.paid_at, o.created_at) at time zone 'UTC'\n    order by v.started_at desc\n    limit 1\n  ) lv on true\n  where o.status = 'paid'\n",
+      "name": "workshop_buyers",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    }
+  },
   "_meta": {
     "columns": {},
     "schemas": {},

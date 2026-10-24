@@ -86,4 +86,3 @@ Composition: landscape 16:7 with all three pieces fully visible, vertical edges 
 Photography: a real design studio photographed in broad soft morning window daylight, 50mm lens f/5.6, neutral linen whites, honest fabric wrinkles and weight, visible twisted cotton and tiny handmade irregularities, credible knots, fine wood grain and plaster texture, subtle shadows coherently cast from one window.
 Avoid: visible lit bulbs or glowing orange lamp, artificial sunset cast, CGI, impossible product geometry, extra objects, lettering, logo, watermark, sparkle, collage, plastic fibers, extreme dramatic shadows.
 ```
-
