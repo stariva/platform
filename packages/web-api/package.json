@@ -21,7 +21,8 @@
     "lint": "biome lint .",
     "check": "biome check .",
     "test": "bun --filter @stariva/config build && bun --filter @stariva/storage build && bun test",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "yandex:backfill": "bun --env-file=../../.env src/scripts/yandex-backfill.ts"
   },
   "dependencies": {
     "@orpc/contract": "2.0.0-beta.45",
