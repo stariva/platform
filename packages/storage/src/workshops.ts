@@ -57,6 +57,33 @@ export function hlsPlaylistFile(version: number): string {
   return version >= 2 ? "master.m3u8" : "index.m3u8";
 }
 
+/** Качество из master.m3u8: размер кадра (0 — не указан) и пиковый битрейт. */
+export interface HlsVariantInfo {
+  width: number;
+  height: number;
+  /** Бит/с. */
+  bandwidth: number;
+}
+
+/**
+ * Качества из master.m3u8, от лучшего к худшему. В самом плейлисте первым
+ * идёт среднее (с него начинает Safari), поэтому порядок свой.
+ */
+export function parseMasterPlaylist(text: string): HlsVariantInfo[] {
+  const variants: HlsVariantInfo[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.startsWith("#EXT-X-STREAM-INF:")) continue;
+    const bandwidth = /(?:^|[:,])BANDWIDTH=(\d+)/.exec(line);
+    const resolution = /RESOLUTION=(\d+)x(\d+)/.exec(line);
+    variants.push({
+      width: Number(resolution?.[1] ?? 0),
+      height: Number(resolution?.[2] ?? 0),
+      bandwidth: Number(bandwidth?.[1] ?? 0),
+    });
+  }
+  return variants.sort((a, b) => b.bandwidth - a.bandwidth);
+}
+
 /** Content-Type файла HLS-версии. Подписывается в ссылке на загрузку. */
 export function hlsContentType(file: string): string {
   if (file.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";

@@ -33,6 +33,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
+import type { LessonVideo } from "./video-status";
 import { WorkshopBrief } from "./workshop-brief";
 import { WorkshopFiles } from "./workshop-files";
 import { WorkshopImageField } from "./workshop-image-field";
@@ -150,13 +151,13 @@ const toLines = (text: string) =>
 export function WorkshopForm({
   id,
   initialValues,
-  videoUploadedAt,
+  videos,
   storefrontUrl,
 }: {
   id?: string;
   initialValues: WorkshopFormValues;
-  /** Когда загрузили видео уроков: videoKey → время из бакета. */
-  videoUploadedAt?: Record<string, Date>;
+  /** Видео сохранённых уроков: videoKey → загрузка и нарезка в HLS. */
+  videos?: Record<string, LessonVideo>;
   storefrontUrl?: string;
 }) {
   const router = useRouter();
@@ -391,7 +392,7 @@ export function WorkshopForm({
               workshopId={id}
               slug={slug}
               lessons={field.value}
-              videoUploadedAt={videoUploadedAt}
+              videos={videos}
               getLessons={() => form.getValues("lessons")}
               onChange={field.onChange}
               errors={lessonErrors}
