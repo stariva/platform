@@ -8,6 +8,8 @@ export interface BlogPost {
   coverImage: string;
   /** CSS object-position for the cover, when the default center crop cuts off the subject */
   coverPosition?: string;
+  /** "portrait" puts a vertical cover beside the title instead of cropping it into the wide banner */
+  coverOrientation?: "portrait";
   content: BlogContent[];
 }
 

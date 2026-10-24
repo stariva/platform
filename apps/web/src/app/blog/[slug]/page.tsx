@@ -7,6 +7,7 @@ import { Header } from "@/components/stariva/header";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate, getPostBySlug } from "@/lib/blog-data";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { cn } from "@/lib/utils";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 
 interface BlogPostPageProps {
@@ -73,6 +74,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound();
   }
 
+  const portrait = post.coverOrientation === "portrait";
   const relatedPosts = blogPosts
     .filter((p) => p.slug !== post.slug)
     .slice(0, 2);
@@ -109,8 +111,24 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
         {/* Article Header */}
         <article className="max-w-[1400px] mx-auto px-6 lg:px-10">
-          <header className="max-w-3xl mx-auto text-center mb-12">
-            <div className="flex items-center justify-center gap-4 mb-6">
+          <div
+            className={cn(
+              portrait &&
+                "grid lg:grid-cols-[minmax(0,1fr)_480px] items-center gap-10 lg:gap-16 mb-16",
+            )}
+          >
+          <header
+            className={cn(
+              "text-center",
+              portrait ? "lg:text-left" : "max-w-3xl mx-auto mb-12",
+            )}
+          >
+            <div
+              className={cn(
+                "flex items-center justify-center gap-4 mb-6",
+                portrait && "lg:justify-start",
+              )}
+            >
               <span className="label-caps text-terracotta">
                 {post.category}
               </span>
@@ -129,17 +147,29 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </header>
 
           {/* Cover Image */}
-          <div className="relative aspect-[21/9] lg:aspect-[2.5/1] overflow-hidden rounded-xl mb-16">
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-xl",
+              portrait
+                ? "aspect-[4/5] w-full max-w-md mx-auto lg:max-w-none"
+                : "aspect-[21/9] lg:aspect-[2.5/1] mb-16",
+            )}
+          >
             <Image
               src={post.coverImage}
               alt={post.title}
               fill
               className="object-cover"
               style={{ objectPosition: post.coverPosition }}
-              sizes="(max-width: 1400px) 100vw, 1400px"
+              sizes={
+                portrait
+                  ? "(max-width: 1024px) 448px, 480px"
+                  : "(max-width: 1400px) 100vw, 1400px"
+              }
               quality={90}
               priority
             />
+          </div>
           </div>
 
           {/* Article Content */}
