@@ -5,6 +5,12 @@ import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
 import { checkDeliveryAvailable, checkout } from "@/lib/ozon-delivery/client";
 import { getCachedPickupPointsInfo } from "@/lib/ozon-delivery/pickup-points-cache";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
+import {
+  createInvoice,
+  isRobokassaConfigured,
+  paymentUrl,
+  robokassaPaymentId,
+} from "@/lib/payments/robokassa";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { collectVisitor } from "@/lib/visitor";
 import {
@@ -82,8 +88,12 @@ export const checkoutServices: CheckoutServices = {
     }
   },
 
-  async create({ userId, headers, ...data }) {
-    if (!isYooKassaConfigured() || !isOzonDeliveryConfigured()) {
+  async create({ userId, headers, paymentProvider = "yookassa", ...data }) {
+    const paymentsConfigured =
+      paymentProvider === "robokassa"
+        ? isRobokassaConfigured()
+        : isYooKassaConfigured();
+    if (!paymentsConfigured || !isOzonDeliveryConfigured()) {
       return { status: "unconfigured" };
     }
 
@@ -134,24 +144,30 @@ export const checkoutServices: CheckoutServices = {
       checkout: deliveryQuote,
     });
 
+    const description = `Заказ Stariva №${order.number}`;
+    // Фиксация согласия и акцепта: редакция документов на момент заказа.
+    const consents = { pdConsent: LEGAL_VERSION, offerAccepted: LEGAL_VERSION };
+
     try {
-      const payment = await createPayment({
-        amountKopecks: order.amountTotal,
-        description: `Заказ Stariva №${order.number}`,
-        returnUrl: `${siteUrl(headers)}/order/${order.id}?payment=success`,
-        metadata: {
-          orderId: order.id,
-          kind: "product",
-          // Фиксация согласия и акцепта: редакция документов на момент заказа.
-          pdConsent: LEGAL_VERSION,
-          offerAccepted: LEGAL_VERSION,
-        },
-        idempotenceKey: order.id,
-      });
-
-      await attachPaymentId(order.id, payment.id);
-
-      const confirmationUrl = payment.confirmation?.confirmation_url;
+      let confirmationUrl: string | undefined;
+      if (paymentProvider === "robokassa") {
+        const invoice = await createInvoice(
+          { kind: "product", orderId: order.id },
+          order.amountTotal,
+        );
+        await attachPaymentId(order.id, robokassaPaymentId(invoice.id));
+        confirmationUrl = paymentUrl(invoice, description, consents);
+      } else {
+        const payment = await createPayment({
+          amountKopecks: order.amountTotal,
+          description,
+          returnUrl: `${siteUrl(headers)}/order/${order.id}?payment=success`,
+          metadata: { orderId: order.id, kind: "product", ...consents },
+          idempotenceKey: order.id,
+        });
+        await attachPaymentId(order.id, payment.id);
+        confirmationUrl = payment.confirmation?.confirmation_url;
+      }
       if (!confirmationUrl) return { status: "payment_failed" };
 
       return {

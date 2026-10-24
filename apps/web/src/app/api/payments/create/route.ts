@@ -6,6 +6,12 @@ import { getSession } from "@/lib/auth/session";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { attachPaymentId, createOrder } from "@/lib/payments/orders";
+import {
+  createInvoice,
+  isRobokassaConfigured,
+  paymentUrl,
+  robokassaPaymentId,
+} from "@/lib/payments/robokassa";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { collectVisitor } from "@/lib/visitor";
 import { findOrCreateBuyer, sendLoginEmail } from "@/lib/workshops/buyer";
@@ -29,6 +35,8 @@ const bodySchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254).optional(),
   name: z.string().trim().max(120).optional(),
   personalDataConsent: z.boolean().optional(),
+  // robokassa — Яндекс Пэй или Сплит, иначе карта или СБП через ЮKassa
+  provider: z.enum(["yookassa", "robokassa"]).default("yookassa"),
 });
 
 /**
@@ -107,7 +115,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ free: true, emailSent: !session });
   }
 
-  if (!isYooKassaConfigured()) {
+  const providerConfigured =
+    input.provider === "robokassa"
+      ? isRobokassaConfigured()
+      : isYooKassaConfigured();
+  if (!providerConfigured) {
     return NextResponse.json(
       { error: "Приём платежей временно недоступен" },
       { status: 503 },
@@ -123,26 +135,40 @@ export async function POST(request: NextRequest) {
     visitor: await collectVisitor(request),
   });
 
+  const description = `Мастер-класс «${workshop.title}» — Stariva`;
+  // Фиксация согласия и акцепта: редакция документов на момент заказа
+  const consents = {
+    offerAccepted: LEGAL_VERSION,
+    ...(session ? {} : { pdConsent: LEGAL_VERSION }),
+  };
+
   try {
-    const payment = await createPayment({
-      amountKopecks,
-      description: `Мастер-класс «${workshop.title}» — Stariva`,
-      returnUrl: `${siteUrl()}/workshops/${workshop.slug}/booked?order=${order.id}`,
-      metadata: {
-        orderId: order.id,
-        userId: buyer.id,
-        slug: workshop.slug,
-        // Фиксация согласия и акцепта: редакция документов на момент заказа
-        offerAccepted: LEGAL_VERSION,
-        ...(session ? {} : { pdConsent: LEGAL_VERSION }),
-      },
-      // Идемпотентность по заказу — повторный клик не создаст второй платёж
-      idempotenceKey: order.id,
-    });
+    let confirmationUrl: string | undefined;
+    if (input.provider === "robokassa") {
+      const invoice = await createInvoice(
+        { kind: "workshop", orderId: order.id },
+        amountKopecks,
+      );
+      await attachPaymentId(order.id, robokassaPaymentId(invoice.id));
+      confirmationUrl = paymentUrl(invoice, description, consents);
+    } else {
+      const payment = await createPayment({
+        amountKopecks,
+        description,
+        returnUrl: `${siteUrl()}/workshops/${workshop.slug}/booked?order=${order.id}`,
+        metadata: {
+          orderId: order.id,
+          userId: buyer.id,
+          slug: workshop.slug,
+          ...consents,
+        },
+        // Идемпотентность по заказу — повторный клик не создаст второй платёж
+        idempotenceKey: order.id,
+      });
+      await attachPaymentId(order.id, payment.id);
+      confirmationUrl = payment.confirmation?.confirmation_url;
+    }
 
-    await attachPaymentId(order.id, payment.id);
-
-    const confirmationUrl = payment.confirmation?.confirmation_url;
     if (!confirmationUrl) {
       return NextResponse.json(
         { error: "Не удалось получить ссылку на оплату" },

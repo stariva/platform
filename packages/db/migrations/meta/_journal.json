@@ -274,6 +274,13 @@
       "when": 1792680768366,
       "tag": "0038_contact_clicks",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792772783661,
+      "tag": "0039_robokassa_invoices",
+      "breakpoints": true
     }
   ]
 }

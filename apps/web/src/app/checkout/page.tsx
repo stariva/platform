@@ -22,6 +22,7 @@ import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { env } from "@/env";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
@@ -74,6 +75,10 @@ export default function CheckoutPage() {
   const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  // yookassa — карта или СБП, robokassa — Яндекс Пэй или Сплит
+  const [provider, setProvider] = useState<"yookassa" | "robokassa">(
+    "yookassa",
+  );
 
   const checkoutTracked = useRef(false);
   useEffect(() => {
@@ -192,8 +197,9 @@ export default function CheckoutPage() {
     reachGoal("checkout_delivery_complete");
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(chosen: "yookassa" | "robokassa") {
     if (quoteState.status !== "ready" || !selectedPoint || !contact) return;
+    setProvider(chosen);
     // Форма уже не пропускает без согласия; здесь сужаем тип до того, что просит API
     if (contact.personalDataConsent !== true) return;
     const delivery: DeliverySelection = {
@@ -215,6 +221,7 @@ export default function CheckoutPage() {
         delivery,
         personalDataConsent: contact.personalDataConsent,
         offerAccepted: true,
+        paymentProvider: chosen,
       });
       await trackCreatedOrder(created.analytics);
       setRedirecting(true);
@@ -242,7 +249,8 @@ export default function CheckoutPage() {
           <Spinner className="size-6" />
           <p className="text-espresso">Переходим к оплате…</p>
           <p className="text-sm text-taupe">
-            Откроется защищённая страница ЮKassa
+            Откроется защищённая страница{" "}
+            {provider === "robokassa" ? "Robokassa" : "ЮKassa"}
           </p>
         </div>
       </Shell>
@@ -474,20 +482,40 @@ export default function CheckoutPage() {
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
-                  Оплата на защищённой странице ЮKassa. После оплаты вернём вас
-                  на страницу заказа.
+                  {env.NEXT_PUBLIC_ROBOKASSA_ENABLED
+                    ? "Картой или СБП — на защищённой странице ЮKassa, Яндекс Пэй и Сплит — на странице Robokassa. После оплаты вернём вас на страницу заказа."
+                    : "Оплата на защищённой странице ЮKassa. После оплаты вернём вас на страницу заказа."}
                 </p>
                 <Button
-                  onClick={handleConfirm}
+                  onClick={() => handleConfirm("yookassa")}
                   disabled={submitting || !quote}
                   className="w-full h-14 rounded-full bg-espresso text-parchment hover:bg-espresso/85 text-[15px]"
                 >
-                  {submitting ? (
+                  {submitting && provider === "yookassa" ? (
                     <Spinner />
                   ) : (
                     `Оплатить ${formatPrice(total / 100)}`
                   )}
                 </Button>
+                {env.NEXT_PUBLIC_ROBOKASSA_ENABLED && (
+                  <div className="space-y-1.5">
+                    <Button
+                      onClick={() => handleConfirm("robokassa")}
+                      disabled={submitting || !quote}
+                      aria-label={`Оплатить ${formatPrice(total / 100)} через Яндекс Пэй или частями в Сплит`}
+                      className="w-full h-14 rounded-full border border-espresso/20 bg-transparent text-espresso hover:bg-sand text-[15px]"
+                    >
+                      {submitting && provider === "robokassa" ? (
+                        <Spinner />
+                      ) : (
+                        "Яндекс Пэй или Сплит"
+                      )}
+                    </Button>
+                    <p className="text-center text-xs text-taupe">
+                      В Сплите можно оплатить частями
+                    </p>
+                  </div>
+                )}
                 <OfferAcceptanceNote action="Оплатить" />
               </div>
             </CheckoutSection>
