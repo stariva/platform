@@ -69,7 +69,9 @@ export function HlsStatus({ video }: { video: LessonVideo }) {
                 </Badge>
               ))
             ) : (
-              <Badge variant="outline">одно качество</Badge>
+              <Badge variant="outline">
+                {ready.version < 2 ? "одно качество" : "качества недоступны"}
+              </Badge>
             )}
           </>
         ) : null}

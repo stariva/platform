@@ -113,11 +113,16 @@ export function WorkshopLessons({
   // Видео, загруженные на этой странице: сервер о них ещё не знает
   const [uploadedNow, setUploadedNow] = useState<Record<string, Date>>({});
   const [videos, setVideos] = useState(initialVideos ?? {});
+  const videoRequestId = useRef(0);
 
   const refreshVideos = useCallback(async () => {
+    const requestId = ++videoRequestId.current;
     if (!workshopId) return;
     try {
-      setVideos(await client.admin.workshops.videos({ id: workshopId }));
+      const nextVideos = await client.admin.workshops.videos({
+        id: workshopId,
+      });
+      if (requestId === videoRequestId.current) setVideos(nextVideos);
     } catch {
       // Статус подождёт следующего раза: форма от него не зависит
     }
