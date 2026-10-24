@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/components/index.ts",
-    "./hooks": "./src/hooks/index.ts"
+    "./hooks": "./src/hooks/index.ts",
+    "./reui": "./src/components/reui/index.ts"
   },
   "license": "MIT",
   "scripts": {

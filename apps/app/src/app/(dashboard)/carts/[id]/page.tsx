@@ -1,5 +1,4 @@
 import {
-  Badge,
   Card,
   CardContent,
   CardHeader,
@@ -11,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
