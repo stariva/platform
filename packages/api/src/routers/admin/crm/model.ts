@@ -268,9 +268,11 @@ function toClient(
     ...payments.map((payment) => payment.at),
   ];
   const firstSeenAt = byDate[0]?.createdAt ?? record?.createdAt ?? new Date(0);
-  const lastActivityAt = times.reduce(
-    (last, at) => (at > last ? at : last),
-    record?.createdAt ?? firstSeenAt,
+  const lastActivityAt = new Date(
+    Math.max(
+      (record?.createdAt ?? firstSeenAt).getTime(),
+      ...times.map((at) => at.getTime()),
+    ),
   );
 
   const latestName = [...byDate].reverse().find((deal) => deal.name)?.name;

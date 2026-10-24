@@ -51,8 +51,9 @@ mock.module("@stariva/config", () => ({
   },
 }));
 let buyerEmails = 0;
+const StarivaWorkshopEmail = () => null;
 mock.module("@stariva/emails", () => ({
-  StarivaWorkshopEmail: () => null,
+  StarivaWorkshopEmail,
   sendEmail: async () => {
     buyerEmails++;
   },

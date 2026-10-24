@@ -1,5 +1,7 @@
 import { expect, mock, test } from "bun:test";
 
+const StarivaWorkshopEmail = () => null;
+
 test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
   "notification leases recover interrupted deliveries and fence stale workers",
   async () => {
@@ -12,7 +14,7 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
     mock.module("@stariva/emails", () => ({
       sendEmail: email,
       sendWorkshopBriefEmail: email,
-      StarivaWorkshopEmail: () => null,
+      StarivaWorkshopEmail,
     }));
     mock.module("@/lib/telegram/client-bot", () => ({
       isClientBotConfigured: () => true,
