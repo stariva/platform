@@ -137,6 +137,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               className="object-cover"
               style={{ objectPosition: post.coverPosition }}
               sizes="(max-width: 1400px) 100vw, 1400px"
+              quality={90}
               priority
             />
           </div>
