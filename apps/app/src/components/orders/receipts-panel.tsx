@@ -18,6 +18,9 @@ export function ReceiptsPanel({ target }: { target: Target }) {
   const queryClient = useQueryClient();
   const [link, setLink] = useState("");
   const [send, setSend] = useState(true);
+  // Раскрытые картинки чеков; без явного выбора раскрыт неотправленный —
+  // его Ольга смотрит перед отправкой
+  const [previews, setPreviews] = useState<Record<string, boolean>>({});
 
   const query = useQuery(
     orpc.admin.receipts.forOrder.queryOptions({ input: target }),
@@ -98,53 +101,85 @@ export function ReceiptsPanel({ target }: { target: Target }) {
           {unsent === 1
             ? "Чек привязан, но покупателю не отправлен."
             : `Чеков не отправлено покупателю: ${unsent}.`}{" "}
-          Нажмите «Отправить» рядом с чеком.
+          Проверьте чек и нажмите «Отправить».
         </p>
       )}
       {receipts.length > 0 && (
         <ul className="space-y-2">
-          {receipts.map((receipt) => (
-            <li
-              key={receipt.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"
-            >
-              <div className="min-w-0">
-                <a
-                  href={receipt.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium underline-offset-4 hover:underline"
-                >
-                  Чек №{receipt.number} ↗
-                </a>
-                <p className="text-muted-foreground text-xs break-all">
-                  {receipt.emailedAt
-                    ? `отправлен на ${receipt.emailedTo} · ${dateTime.format(new Date(receipt.emailedAt))}`
-                    : "покупателю не отправлен"}
-                </p>
-              </div>
-              <div className="flex gap-1">
-                {to && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={resend.isPending}
-                    onClick={() => resend.mutate({ id: receipt.id })}
+          {receipts.map((receipt) => {
+            const preview = previews[receipt.id] ?? !receipt.emailedAt;
+            return (
+              <li
+                key={receipt.id}
+                className="space-y-3 rounded-lg border p-3 text-sm"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <a
+                      href={receipt.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      Чек №{receipt.number} ↗
+                    </a>
+                    <p className="text-muted-foreground text-xs break-all">
+                      {receipt.emailedAt
+                        ? `отправлен на ${receipt.emailedTo} · ${dateTime.format(new Date(receipt.emailedAt))}`
+                        : "покупателю не отправлен"}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setPreviews((current) => ({
+                          ...current,
+                          [receipt.id]: !preview,
+                        }))
+                      }
+                    >
+                      {preview ? "Скрыть" : "Посмотреть"}
+                    </Button>
+                    {to && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={resend.isPending}
+                        onClick={() => resend.mutate({ id: receipt.id })}
+                      >
+                        {receipt.emailedAt ? "Ещё раз" : "Отправить"}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={remove.isPending}
+                      onClick={() => confirmRemove(receipt.id, receipt.number)}
+                    >
+                      Отвязать
+                    </Button>
+                  </div>
+                </div>
+                {preview && (
+                  <a
+                    href={receipt.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="bg-muted/40 block max-h-[60vh] overflow-y-auto rounded-md border"
                   >
-                    {receipt.emailedAt ? "Ещё раз" : "Отправить"}
-                  </Button>
+                    {/* biome-ignore lint/performance/noImgElement: картинка чека из бакета или с сервиса ФНС, без оптимизации */}
+                    <img
+                      src={receipt.url}
+                      alt={`Чек №${receipt.number}`}
+                      className="mx-auto w-full max-w-sm"
+                    />
+                  </a>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={remove.isPending}
-                  onClick={() => confirmRemove(receipt.id, receipt.number)}
-                >
-                  Отвязать
-                </Button>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 
