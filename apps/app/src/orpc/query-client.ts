@@ -17,7 +17,7 @@ export const createQueryClient = () =>
         // above 0 to avoid refetching immediately on the client
         staleTime: 30 * 1000,
         queryKeyHashFn: (queryKey) => {
-          const { json, meta } = serializer.serialize(queryKey);
+          const { json, meta } = serializer.serializeJson(queryKey);
           return hashKey([
             json,
             meta?.map((entry) => JSON.stringify(entry)).sort(),
@@ -26,7 +26,7 @@ export const createQueryClient = () =>
       },
       dehydrate: {
         serializeData: (data) => {
-          const { json, meta } = serializer.serialize(data);
+          const { json, meta } = serializer.serializeJson(data);
           return { json, meta };
         },
         shouldDehydrateQuery: (query) =>
@@ -42,7 +42,7 @@ export const createQueryClient = () =>
         },
       },
       hydrate: {
-        deserializeData: (data) => serializer.deserialize(data),
+        deserializeData: (data) => serializer.deserializeJson(data),
       },
     },
   });
