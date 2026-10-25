@@ -128,20 +128,28 @@ const directCampaignSchema = z
  */
 export const saveCampaign = adminProcedure
   .input(
-    z.object({
-      id: z.string().min(1).optional(),
-      name: z.string().trim().min(1).max(120),
-      channel: z.enum(CHANNELS),
-      utmSource: utmSchema,
-      utmCampaign: utmSchema,
-      directCampaignId: directCampaignSchema.optional(),
-      notes: z
-        .string()
-        .trim()
-        .max(2000)
-        .transform((value) => value || null),
-      archived: z.boolean().default(false),
-    }),
+    z
+      .object({
+        id: z.string().min(1).optional(),
+        name: z.string().trim().min(1).max(120),
+        channel: z.enum(CHANNELS),
+        utmSource: utmSchema,
+        utmCampaign: utmSchema,
+        directCampaignId: directCampaignSchema.optional(),
+        notes: z
+          .string()
+          .trim()
+          .max(2000)
+          .transform((value) => value || null),
+        archived: z.boolean().default(false),
+      })
+      .refine(
+        (value) => value.channel !== "vk_ads" || value.directCampaignId == null,
+        {
+          message: "К кампании VK Ads нельзя привязать кампанию Директа",
+          path: ["directCampaignId"],
+        },
+      ),
   )
   .handler(async ({ context, input }) => {
     const { id, ...fields } = input;

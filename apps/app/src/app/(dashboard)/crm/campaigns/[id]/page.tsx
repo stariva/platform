@@ -94,10 +94,9 @@ export default async function CrmCampaignPage({
             <CardHeader>
               <CardTitle>Расходы</CardTitle>
               <CardDescription>
-                Вносите каждое пополнение или оплату — по дате расхода сводка
-                считает бюджет за период.
-                {campaign.directCampaignId &&
-                  " Расход Директа по дням приходит сам каждое утро."}
+                {campaign.directCampaignId
+                  ? "Расход Директа по дням приходит сам каждое утро. Не вносите пополнения — используйте ручную запись только для замены расчёта за конкретный день."
+                  : "Вносите каждое пополнение или оплату — по дате расхода сводка считает бюджет за период."}
               </CardDescription>
             </CardHeader>
             <CardContent>
