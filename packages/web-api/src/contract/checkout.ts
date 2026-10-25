@@ -100,6 +100,8 @@ export const createOrderInputSchema = z.object({
   // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ) и акцепт оферты.
   personalDataConsent,
   offerAccepted: z.literal(true, { error: "Подтвердите согласие с офертой" }),
+  // robokassa — Яндекс Пэй или Сплит; без поля — карта или СБП через ЮKassa
+  paymentProvider: z.enum(["yookassa", "robokassa"]).optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderInputSchema>;

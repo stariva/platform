@@ -50,6 +50,18 @@ export const env = createEnv({
     // shopId и секретный ключ из личного кабинета ЮKassa
     YOOKASSA_SHOP_ID: z.string().min(1).optional(),
     YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
+    // Robokassa — Яндекс Пэй и Сплит рядом с ЮKassa. Логин магазина и
+    // пароли №1 и №2 из «Технических настроек». В тестовом режиме сюда
+    // кладут тестовую пару паролей: боевые в тесте дают ошибку подписи.
+    ROBOKASSA_LOGIN: z.string().min(1).optional(),
+    ROBOKASSA_PASSWORD_1: z.string().min(1).optional(),
+    ROBOKASSA_PASSWORD_2: z.string().min(1).optional(),
+    // Алгоритм подписи — тот же, что выбран в технических настройках магазина
+    ROBOKASSA_HASH: z
+      .enum(["md5", "sha1", "sha256", "sha384", "sha512"])
+      .default("md5"),
+    // "true" — платежи идут в тестовом режиме (IsTest=1)
+    ROBOKASSA_TEST: z.boolean().default(false),
     // Пароль от личного кабинета налогоплательщика (вход по ИНН из
     // SELLER_INN): с ним сайт сам выписывает чеки НПД в «Мой налог» на
     // каждую оплату. Без него чеки привязывают вручную в админке.
@@ -79,6 +91,10 @@ export const env = createEnv({
     // PostHog (EU Cloud) — воронки, записи сессий, ошибки. Публичный ключ
     // проекта: Project settings → Project token. Без него PostHog выключен.
     NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: z.string().startsWith("phc_").optional(),
+
+    // "true" — показывать кнопку «Яндекс Пэй или Сплит». Значение попадает
+    // в сборку, поэтому отдельно от ключей ROBOKASSA_*: включать вместе с ними.
+    NEXT_PUBLIC_ROBOKASSA_ENABLED: z.boolean().default(false),
   },
 
   /**
@@ -105,6 +121,11 @@ export const env = createEnv({
     ORDER_EMAIL_FROM: process.env.ORDER_EMAIL_FROM,
     YOOKASSA_SHOP_ID: process.env.YOOKASSA_SHOP_ID,
     YOOKASSA_SECRET_KEY: process.env.YOOKASSA_SECRET_KEY,
+    ROBOKASSA_LOGIN: process.env.ROBOKASSA_LOGIN,
+    ROBOKASSA_PASSWORD_1: process.env.ROBOKASSA_PASSWORD_1,
+    ROBOKASSA_PASSWORD_2: process.env.ROBOKASSA_PASSWORD_2,
+    ROBOKASSA_HASH: process.env.ROBOKASSA_HASH,
+    ROBOKASSA_TEST: process.env.ROBOKASSA_TEST === "true",
     LKNPD_PASSWORD: process.env.LKNPD_PASSWORD,
     LKNPD_AUTO_EMAIL: process.env.LKNPD_AUTO_EMAIL === "true",
     DADATA_API_KEY: process.env.DADATA_API_KEY,
@@ -113,6 +134,8 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY,
     NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN:
       process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN,
+    NEXT_PUBLIC_ROBOKASSA_ENABLED:
+      process.env.NEXT_PUBLIC_ROBOKASSA_ENABLED === "true",
   },
 
   skipValidation:

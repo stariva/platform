@@ -1,4 +1,5 @@
 import { getOrderById, type WorkshopOrder } from "@/lib/payments/orders";
+import { parseRobokassaPaymentId } from "@/lib/payments/robokassa";
 import {
   getPayment,
   kopecksToValue,
@@ -26,6 +27,8 @@ export function canReuseOrder(
   return (
     order.status === "pending" &&
     Boolean(order.paymentId) &&
+    // Счёт Robokassa не платёж ЮKassa — его не спросить через getPayment
+    parseRobokassaPaymentId(order.paymentId ?? "") === null &&
     order.userId === purchase.userId &&
     order.workshopSlug === purchase.workshopSlug &&
     order.amount === purchase.amountKopecks &&

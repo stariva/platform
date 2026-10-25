@@ -127,6 +127,13 @@ export function toOrderView(order: AdminOrderData): AdminOrderView {
   };
 }
 
+/** Где искать платёж: «robokassa:<номер>» — счёт Robokassa, иначе id ЮKassa. */
+export function paymentLabel(paymentId: string): string {
+  return paymentId.startsWith("robokassa:")
+    ? `Robokassa, счёт №${paymentId.slice("robokassa:".length)}`
+    : `ЮKassa ${paymentId}`;
+}
+
 export const STATUS_LABELS: Record<string, string> = {
   pending: "Ожидает оплаты",
   paid: "Оплачен",

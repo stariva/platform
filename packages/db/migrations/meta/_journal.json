@@ -281,6 +281,13 @@
       "when": 1792828706307,
       "tag": "0039_yandex_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792857709995,
+      "tag": "0040_robokassa_invoices",
+      "breakpoints": true
     }
   ]
 }

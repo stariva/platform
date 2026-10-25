@@ -22,25 +22,23 @@ import {
 import { issueNpdReceipt } from "@/lib/npd/issue";
 import { createOzonDeliveryOrder } from "@/lib/ozon-delivery/client";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
-import {
-  getPayment,
-  kopecksToValue,
-  type YooKassaPayment,
-} from "@/lib/payments/yookassa";
+import { kopecksToValue, type Payment } from "@/lib/payments/payment";
+import { fetchPayment } from "@/lib/payments/status";
 
 type ProductOrder = NonNullable<
   Awaited<ReturnType<typeof getProductOrderById>>
 >;
 
 /**
- * Применяет статус платежа YooKassa к заказу товаров: оплата → письмо
- * покупателю, отправление в Ozon Доставка, уведомление мастеру. Платёж должен
- * быть получен напрямую из API YooKassa, а не из тела уведомления. Идемпотентно:
- * его вызывают и вебхук, и страница заказа, и они могут пересечься.
+ * Применяет статус платежа к заказу товаров: оплата → письмо покупателю,
+ * отправление в Ozon Доставка, уведомление мастеру. Платёж должен быть
+ * получен у провайдера (API YooKassa, подписанное уведомление Robokassa),
+ * а не из тела запроса как есть. Идемпотентно: его вызывают и вебхук,
+ * и страница заказа, и они могут пересечься.
  */
 export async function applyProductOrderPayment(
   orderId: string,
-  payment: YooKassaPayment,
+  payment: Payment,
 ): Promise<void> {
   const canceled = payment.status === "canceled";
   const succeeded = payment.status === "succeeded" && payment.paid;
@@ -171,7 +169,7 @@ export async function applyProductOrderPayment(
  */
 async function handleMadeToOrderPayment(
   order: ProductOrder,
-  payment: YooKassaPayment,
+  payment: Payment,
   canceled: boolean,
   succeeded: boolean,
 ) {
@@ -245,9 +243,10 @@ async function handleMadeToOrderPayment(
 
 /**
  * Покупатель открыл страницу заказа, а вебхук ещё не отметил оплату — потерян
- * или опаздывает. Спрашиваем статус у YooKassa сами. Только заказы товаров из
- * наличия: у «под заказ» платежей несколько, их ведёт вебхук. Сбой не страшен —
- * вернём заказ как есть, вебхук или следующее открытие страницы догонят.
+ * или опаздывает. Спрашиваем статус у провайдера сами. Только заказы товаров
+ * из наличия: у «под заказ» платежей несколько, их ведёт вебхук. Сбой не
+ * страшен — вернём заказ как есть, вебхук или следующее открытие страницы
+ * догонят.
  */
 export async function syncPendingProductOrder(
   order: ProductOrder,
@@ -260,7 +259,8 @@ export async function syncPendingProductOrder(
     return order;
   }
   try {
-    await applyProductOrderPayment(order.id, await getPayment(order.paymentId));
+    const payment = await fetchPayment(order.paymentId);
+    if (payment) await applyProductOrderPayment(order.id, payment);
   } catch (error) {
     console.error(
       `[payments] Не удалось сверить заказ товаров ${order.id}:`,

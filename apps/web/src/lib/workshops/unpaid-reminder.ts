@@ -194,7 +194,7 @@ async function loadReminded(candidates: Candidate[]) {
 
 /**
  * Вебхук мог потеряться: платёж прошёл, а заказ всё ещё pending. Спрашиваем
- * YooKassa перед письмом, чтобы не написать «оплата не завершилась» тому,
+ * провайдера перед письмом, чтобы не написать «оплата не завершилась» тому,
  * кто заплатил.
  */
 async function stillUnpaid(candidate: Candidate): Promise<boolean> {

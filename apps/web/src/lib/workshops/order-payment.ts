@@ -5,19 +5,20 @@ import {
   markOrderPaid,
   type WorkshopOrder,
 } from "@/lib/payments/orders";
-import { getPayment, type YooKassaPayment } from "@/lib/payments/yookassa";
+import type { Payment } from "@/lib/payments/payment";
+import { fetchPayment } from "@/lib/payments/status";
 import { notifyWorkshopBooked } from "./notifications";
 import { earnsPreorderBonus } from "./preorder-bonus";
 import { getWorkshopBySlug } from "./workshops-db";
 
 /**
- * Применяет статус платежа YooKassa к заказу мастер-класса: при успехе
- * выдаёт доступ и отправляет письмо о покупке. Платёж должен быть получен
- * напрямую из API YooKassa, а не из тела уведомления.
+ * Применяет статус платежа к заказу мастер-класса: при успехе выдаёт доступ
+ * и отправляет письмо о покупке. Платёж должен быть получен у провайдера
+ * (API YooKassa, подписанное уведомление Robokassa), а не из тела запроса.
  */
 export async function applyWorkshopPayment(
   order: WorkshopOrder,
-  payment: YooKassaPayment,
+  payment: Payment,
 ): Promise<void> {
   if (payment.status === "canceled") {
     await markOrderCanceled(order.id);
@@ -73,7 +74,7 @@ export async function applyWorkshopPayment(
 }
 
 /**
- * Покупатель вернулся с оплаты раньше вебхука: спрашиваем статус у YooKassa
+ * Покупатель вернулся с оплаты раньше вебхука: спрашиваем статус у провайдера
  * сами, чтобы сразу показать «Вы записаны». Сбой — не страшно, придёт вебхук.
  * false означает сбой сверки: отправку напоминания нужно отложить.
  */
@@ -82,7 +83,8 @@ export async function syncPendingWorkshopOrder(
 ): Promise<boolean> {
   if (order.status !== "pending" || !order.paymentId) return true;
   try {
-    await applyWorkshopPayment(order, await getPayment(order.paymentId));
+    const payment = await fetchPayment(order.paymentId);
+    if (payment) await applyWorkshopPayment(order, payment);
     return true;
   } catch (error) {
     console.error(`[payments] Не удалось сверить заказ ${order.id}:`, error);

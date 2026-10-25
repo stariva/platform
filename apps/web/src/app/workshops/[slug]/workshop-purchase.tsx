@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { env } from "@/env";
 import { reachGoalBeforeLeave } from "@/lib/analytics";
 import { useSession } from "@/lib/auth/client";
 import { suggestEmailFix } from "@/lib/email-typo";
@@ -52,6 +53,9 @@ function saveEmailDraft(email: string) {
 
 type Notice = { tone: "error" | "info"; text: string } | null;
 
+/** yookassa — карта или СБП, robokassa — Яндекс Пэй или Сплит. */
+type PaymentProvider = "yookassa" | "robokassa";
+
 /**
  * Покупка мастер-класса. Гостю не нужна регистрация: достаточно email — на
  * него придут доступ и напоминания, а аккаунт заведётся сам.
@@ -68,6 +72,7 @@ export function WorkshopPurchase({
   const { data: session, isPending: sessionPending } = useSession();
   const [owned, setOwned] = useState<boolean | null>(null);
   const [buying, setBuying] = useState(false);
+  const [provider, setProvider] = useState<PaymentProvider>("yookassa");
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [emailError, setEmailError] = useState<string>();
@@ -111,10 +116,15 @@ export function WorkshopPurchase({
     return emailOk && consent;
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
     if (!validate()) return;
+    // Enter в поле email отправляет первой кнопкой — картой или СБП
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const chosen: PaymentProvider =
+      submitter?.dataset.provider === "robokassa" ? "robokassa" : "yookassa";
+    setProvider(chosen);
 
     const goalSent = buyGoal
       ? reachGoalBeforeLeave(buyGoal, {
@@ -132,8 +142,13 @@ export function WorkshopPurchase({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           session
-            ? { slug }
-            : { slug, email: guestEmail, personalDataConsent: consent },
+            ? { slug, provider: chosen }
+            : {
+                slug,
+                email: guestEmail,
+                personalDataConsent: consent,
+                provider: chosen,
+              },
         ),
       });
       const data = await res.json().catch(() => ({}));
@@ -174,7 +189,7 @@ export function WorkshopPurchase({
         setBuying(false);
         return;
       }
-      // Редирект на страницу оплаты YooKassa: иначе переход оборвёт цель
+      // Редирект на страницу оплаты: иначе переход оборвёт цель
       await goalSent;
       window.location.href = data.confirmationUrl;
     } catch {
@@ -206,6 +221,7 @@ export function WorkshopPurchase({
     );
   }
 
+  const splitAvailable = env.NEXT_PUBLIC_ROBOKASSA_ENABLED && price > 0;
   const submitLabel =
     price === 0
       ? "Смотреть бесплатно"
@@ -297,7 +313,7 @@ export function WorkshopPurchase({
             : `${submitLabel}: мастер-класс «${title}»`
         }
       >
-        {buying ? (
+        {buying && provider === "yookassa" ? (
           <>
             <Spinner className="mr-2" />
             Переходим к оплате…
@@ -306,6 +322,31 @@ export function WorkshopPurchase({
           submitLabel
         )}
       </Button>
+
+      {splitAvailable ? (
+        <>
+          <Button
+            type="submit"
+            data-provider="robokassa"
+            disabled={buying}
+            aria-busy={(buying && provider === "robokassa") || undefined}
+            aria-label={`Оплатить через Яндекс Пэй или частями в Сплит: мастер-класс «${title}»`}
+            className="mt-2 w-full h-auto min-h-12 whitespace-normal text-center border border-espresso/20 bg-transparent text-espresso hover:bg-sand py-3 rounded-2xl text-base"
+          >
+            {buying && provider === "robokassa" ? (
+              <>
+                <Spinner className="mr-2" />
+                Переходим к оплате…
+              </>
+            ) : (
+              "Яндекс Пэй или Сплит"
+            )}
+          </Button>
+          <p className="mt-1.5 text-center text-[12px] text-taupe">
+            В Сплите можно оплатить частями
+          </p>
+        </>
+      ) : null}
 
       <div aria-live="polite">
         {notice ? (

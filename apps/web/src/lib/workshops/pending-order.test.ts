@@ -34,6 +34,7 @@ test("does not reuse a settled, paymentless or different order", () => {
     { status: "canceled" },
     { status: "paid" },
     { paymentId: null },
+    { paymentId: "robokassa:1001" },
     { userId: "someone-else" },
     { workshopSlug: "other" },
     { amount: 149000 },

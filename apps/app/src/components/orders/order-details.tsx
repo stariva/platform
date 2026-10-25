@@ -8,6 +8,7 @@ import {
   dateTime,
   OZON_DELIVERY_TYPE_LABELS,
   PAYMENT_STATUS_LABELS,
+  paymentLabel,
   productSiteUrl,
   rubles,
   SHIPMENT_STATUS_LABELS,
@@ -267,7 +268,7 @@ export function OrderPaymentsCard({ order }: { order: AdminOrderView }) {
               </Badge>
             </span>
             <span className="text-muted-foreground font-mono text-xs">
-              ЮKassa {order.paymentId}
+              {paymentLabel(order.paymentId)}
             </span>
           </div>
         )}
