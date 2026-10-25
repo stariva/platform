@@ -245,7 +245,7 @@ export const KIND_LABELS: Record<AdminOrderView["kind"], string> = {
 
 /**
  * Тон плашки статуса для `Badge` из "@stariva/ui/reui": жёлтый — ждёт мастера,
- * фиолетовый — в пути или ждёт покупателя, зелёный — деньги получены.
+ * фиолетовый — изготавливается, в пути или ждёт покупателя, зелёный — деньги получены.
  */
 export function statusVariant(
   status: string,
@@ -256,6 +256,7 @@ export function statusVariant(
   | "destructive-light"
   | "outline" {
   if (status === "ozon_order_failed") return "destructive-light";
+  if (status === "in_production") return "info-light";
   if (NEEDS_ATTENTION.has(status)) return "warning-light";
   if (status === "paid" || status === "delivered") return "success-light";
   if (
