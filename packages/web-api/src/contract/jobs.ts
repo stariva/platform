@@ -193,7 +193,10 @@ export const analyticsContract = {
       }),
     ),
 
-  /** Статистика Директа по срезам или поисковые запросы за дни. */
+  /**
+   * Статистика Директа по срезам или поисковые запросы за дни. Со
+   * статистикой пересчитываются и расходы кампаний CRM за те же дни.
+   */
   directReport: analyticsProcedure
     .input(
       z.object({
@@ -205,6 +208,7 @@ export const analyticsContract = {
       z.object({
         rows: z.number().int().nonnegative(),
         goals: z.number().int().nonnegative(),
+        expenseDays: z.number().int().nonnegative().optional(),
       }),
     ),
 };
