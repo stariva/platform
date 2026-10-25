@@ -133,11 +133,15 @@ test("material attachment is named after its label", () => {
   assert.equal(workshopMaterialFileName("  "), "Материалы.pdf");
 });
 
+const grace = {
+  fileGraceMs: 3 * 24 * 60 * 60_000,
+  changeGraceMs: 12 * 60 * 60_000,
+};
+
 test("sweep removes replaced videos, old cuts and stale renditions", () => {
   const now = new Date("2026-10-23T12:00:00Z");
   const old = new Date("2026-10-01T00:00:00Z");
   const fresh = new Date("2026-10-23T11:00:00Z");
-  const graceMs = 3 * 24 * 60 * 60_000;
   const file = (key: string, lastModified = old) => ({
     key,
     size: 10,
@@ -195,7 +199,7 @@ test("sweep removes replaced videos, old cuts and stale renditions", () => {
         },
       ],
     },
-    { now, graceMs },
+    { now, ...grace },
   );
   assert.deepEqual(plan.deleteKeys.sort(), [
     "workshops/a/hls/l-1-new/v1cut-2/index.m3u8",
@@ -213,7 +217,7 @@ test("sweep removes replaced videos, old cuts and stale renditions", () => {
 test("sweep spares folders changed within the grace period", () => {
   const now = new Date("2026-10-23T12:00:00Z");
   const old = new Date("2026-10-01T00:00:00Z");
-  const recent = new Date("2026-10-22T00:00:00Z");
+  const recent = new Date("2026-10-23T06:00:00Z");
   const objects = [
     { key: "workshops/a/l-1-old.mp4", size: 1, lastModified: old },
     { key: "workshops/b/hls/l-1/v1cut/index.m3u8", size: 1, lastModified: old },
@@ -223,7 +227,7 @@ test("sweep spares folders changed within the grace period", () => {
     objects,
     {
       workshops: [
-        // Видео заменили вчера: старое ещё досматривают
+        // Видео заменили утром: старое ещё досматривают
         { slug: "a", updatedAt: recent, videoKeys: [], materialKeys: [] },
         {
           slug: "b",
@@ -233,7 +237,7 @@ test("sweep spares folders changed within the grace period", () => {
         },
       ],
       renditions: [
-        // Вчера перерезали: прежнюю нарезку ещё смотрят
+        // Утром перерезали: прежнюю нарезку ещё смотрят
         {
           videoKey: "workshops/b/l-1.mp4",
           status: "ready",
@@ -243,7 +247,51 @@ test("sweep spares folders changed within the grace period", () => {
         },
       ],
     },
-    { now, graceMs: 3 * 24 * 60 * 60_000 },
+    { now, ...grace },
   );
   assert.deepEqual(plan.deleteKeys, ["workshops/b/hls/l-1x/cut/index.m3u8"]);
+});
+
+test("saving a course holds its old files only for the change grace", () => {
+  const now = new Date("2026-10-23T12:00:00Z");
+  const old = new Date("2026-10-01T00:00:00Z");
+  // Курс правили позавчера: ссылки на прежние видео уже истекли, но файл,
+  // загруженный тогда же, может ещё ждать сохранения формы
+  const twoDaysAgo = new Date("2026-10-21T12:00:00Z");
+  const objects = [
+    { key: "workshops/a/l-1-old.mp4", size: 1, lastModified: old },
+    {
+      key: "workshops/a/hls/l-1/old-cut/index.m3u8",
+      size: 1,
+      lastModified: old,
+    },
+    { key: "workshops/a/l-2-unsaved.mp4", size: 1, lastModified: twoDaysAgo },
+  ];
+  const plan = planWorkshopSweep(
+    objects,
+    {
+      workshops: [
+        {
+          slug: "a",
+          updatedAt: twoDaysAgo,
+          videoKeys: ["workshops/a/l-1.mp4"],
+          materialKeys: [],
+        },
+      ],
+      renditions: [
+        {
+          videoKey: "workshops/a/l-1.mp4",
+          status: "ready",
+          hlsPrefix: "workshops/a/hls/l-1/new-cut",
+          readyHlsPrefix: "workshops/a/hls/l-1/new-cut",
+          updatedAt: twoDaysAgo,
+        },
+      ],
+    },
+    { now, ...grace },
+  );
+  assert.deepEqual(plan.deleteKeys.sort(), [
+    "workshops/a/hls/l-1/old-cut/index.m3u8",
+    "workshops/a/l-1-old.mp4",
+  ]);
 });

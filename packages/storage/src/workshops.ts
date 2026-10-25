@@ -159,16 +159,21 @@ export interface WorkshopSweepPlan {
  * попытка нарезки получают свой ключ, поэтому после замены видео, PDF или
  * перерезки прежние файлы остаются лежать. Удаляем всё, на что не ссылаются
  * курсы (включая черновики) и их нарезки, кроме недавнего:
- * - файл моложе `graceMs` — его могли загрузить в ещё не сохранённую форму;
- * - курс или нарезку меняли позже `graceMs` назад — старое видео ещё
+ * - файл моложе `fileGraceMs` — его могли загрузить в ещё не сохранённую форму;
+ * - курс или нарезку меняли позже `changeGraceMs` назад — старое видео ещё
  *   досматривают по выданным ссылкам.
  */
 export function planWorkshopSweep(
   objects: { key: string; size: number; lastModified: Date }[],
   state: { workshops: SweepWorkshop[]; renditions: SweepRendition[] },
-  { now, graceMs }: { now: Date; graceMs: number },
+  {
+    now,
+    fileGraceMs,
+    changeGraceMs,
+  }: { now: Date; fileGraceMs: number; changeGraceMs: number },
 ): WorkshopSweepPlan {
-  const cutoff = now.getTime() - graceMs;
+  const fileCutoff = now.getTime() - fileGraceMs;
+  const changeCutoff = now.getTime() - changeGraceMs;
   const videoKeys = new Set(state.workshops.flatMap((w) => w.videoKeys));
   const keepKeys = new Set([
     ...videoKeys,
@@ -179,7 +184,7 @@ export function planWorkshopSweep(
   const recentFolders: string[] = [];
 
   for (const workshop of state.workshops) {
-    if (workshop.updatedAt.getTime() > cutoff) {
+    if (workshop.updatedAt.getTime() > changeCutoff) {
       recentFolders.push(`${workshopStoragePrefix(workshop.slug)}/`);
     }
   }
@@ -191,7 +196,7 @@ export function planWorkshopSweep(
       keepFolders.push(`${rendition.readyHlsPrefix}/`);
     if (rendition.status !== "failed")
       keepFolders.push(`${rendition.hlsPrefix}/`);
-    if (rendition.updatedAt.getTime() > cutoff) {
+    if (rendition.updatedAt.getTime() > changeCutoff) {
       recentFolders.push(`${workshopHlsPrefix(rendition.videoKey)}/`);
     }
   }
@@ -201,7 +206,7 @@ export function planWorkshopSweep(
   const doomed = objects.filter(
     (object) =>
       !keepKeys.has(object.key) &&
-      object.lastModified.getTime() <= cutoff &&
+      object.lastModified.getTime() <= fileCutoff &&
       !inFolder(object.key, keepFolders) &&
       !inFolder(object.key, recentFolders),
   );
@@ -219,7 +224,7 @@ export function planWorkshopSweep(
         (rendition) =>
           !videoKeys.has(rendition.videoKey) &&
           !remaining.has(rendition.videoKey) &&
-          rendition.updatedAt.getTime() <= cutoff,
+          rendition.updatedAt.getTime() <= changeCutoff,
       )
       .map((rendition) => rendition.videoKey),
   };
