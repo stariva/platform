@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   date,
@@ -40,6 +41,8 @@ export const adCampaigns = pgTable(
     // Метки хранятся в нижнем регистре: в ссылках их пишут как попало
     utmSource: text("utm_source"),
     utmCampaign: text("utm_campaign"),
+    // Кампания в Директе: её расход за каждый день сам приходит в расходы
+    directCampaignId: bigint("direct_campaign_id", { mode: "number" }),
     notes: text("notes"),
     // Закончилась: не предлагается новым клиентам, но остаётся в сводке
     archived: boolean("archived").notNull().default(false),
@@ -56,12 +59,19 @@ export const adCampaigns = pgTable(
     uniqueIndex("ad_campaigns_utm_idx")
       .on(table.utmSource, sql`coalesce(${table.utmCampaign}, '')`)
       .where(sql`${table.utmSource} IS NOT NULL`),
+    uniqueIndex("ad_campaigns_direct_campaign_idx").on(table.directCampaignId),
     check(
       "ad_campaigns_utm_campaign_needs_source",
       sql`${table.utmCampaign} IS NULL OR ${table.utmSource} IS NOT NULL`,
     ),
   ],
 );
+
+/**
+ * Откуда расход: внесён вручную или посчитан по статистике Директа
+ * (direct_stats) — такие пересчитываются каждый день и руками не правятся.
+ */
+export type AdExpenseSource = "manual" | "yandex_direct";
 
 /** Расход на кампанию: пополнение кабинета, оплата посева или блогера. */
 export const adExpenses = pgTable(
@@ -78,12 +88,17 @@ export const adExpenses = pgTable(
     // Копейки, как в заказах
     amount: integer("amount").notNull(),
     note: text("note"),
+    source: text("source").$type<AdExpenseSource>().notNull().default("manual"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (table) => [
     index("ad_expenses_campaign_idx").on(table.campaignId, table.spentOn),
+    // Из Директа — одна строка на кампанию и день
+    uniqueIndex("ad_expenses_direct_day_idx")
+      .on(table.campaignId, table.spentOn)
+      .where(sql`${table.source} = 'yandex_direct'`),
     check("ad_expenses_amount_positive", sql`${table.amount} > 0`),
   ],
 );

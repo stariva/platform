@@ -9,6 +9,7 @@ import {
 } from "@stariva/db/schema";
 import { env } from "../../env";
 import { chunks, type DateRange, responseDetail, sleep } from "./common";
+import { syncDirectExpenses } from "./direct-expenses";
 import { parseDirectTsv } from "./tsv";
 
 // HTTP-клиент Neon не поддерживает интерактивные транзакции.
@@ -278,12 +279,15 @@ export function searchQueryRow(record: Record<string, string>, syncedAt: Date) {
 export interface DirectReportResult {
   rows: number;
   goals: number;
+  // Дни расходов кампаний CRM, пересчитанные по статистике
+  expenseDays?: number;
 }
 
 /**
  * Перезаливает статистику Директа за дни `range`: удаляет старые строки и
  * пишет новые в одной транзакции. Директ дописывает конверсии задним числом,
- * поэтому окно в пару недель каждый день пересчитывается.
+ * поэтому окно в пару недель каждый день пересчитывается. Вместе со
+ * статистикой пересчитываются расходы кампаний CRM за те же дни.
  */
 export async function syncDirectReport(
   report: DirectReport,
@@ -297,7 +301,7 @@ export async function syncDirectReport(
 
   if (report === "stats") {
     const rows = records.map((record) => statsRow(record, syncedAt));
-    await db.transaction(async (tx) => {
+    const expenses = await db.transaction(async (tx) => {
       await tx
         .delete(directStats)
         .where(
@@ -308,8 +312,13 @@ export async function syncDirectReport(
         );
       for (const batch of chunks(rows, INSERT_BATCH))
         await tx.insert(directStats).values(batch);
+      return syncDirectExpenses(tx, range);
     });
-    return { rows: rows.length, goals: goals.length };
+    return {
+      rows: rows.length,
+      goals: goals.length,
+      expenseDays: expenses.days,
+    };
   }
 
   const rows = records.map((record) => searchQueryRow(record, syncedAt));

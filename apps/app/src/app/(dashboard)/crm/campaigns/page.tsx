@@ -172,6 +172,7 @@ export default async function CrmCampaignsPage({
                 channel: "other",
                 utmSource: utmSource.success ? utmSource.data : "",
                 utmCampaign: utmCampaign.success ? utmCampaign.data : "",
+                directCampaignId: "",
                 notes: "",
                 archived: false,
               }}

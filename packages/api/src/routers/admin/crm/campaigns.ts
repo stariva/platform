@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { adCampaigns, adExpenses, desc, eq } from "@stariva/db";
+import { syncDirectExpenses } from "@stariva/web-api";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -113,9 +114,17 @@ const utmSchema = z
   .max(120)
   .transform((value) => normalizeUtm(value));
 
+const directCampaignSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{0,15}$/, "ID кампании в Директе — только цифры")
+  .transform((value) => (value ? Number(value) : null));
+
 /**
  * Создаёт кампанию (без id) или сохраняет её. Метки приводятся к нижнему
- * регистру; utm_campaign без utm_source не бывает.
+ * регистру; utm_campaign без utm_source не бывает. Расходы из Директа
+ * сразу пересчитываются за всю историю: по новой кампании Директа или,
+ * если привязку сняли, удаляются.
  */
 export const saveCampaign = adminProcedure
   .input(
@@ -125,6 +134,7 @@ export const saveCampaign = adminProcedure
       channel: z.enum(CHANNELS),
       utmSource: utmSchema,
       utmCampaign: utmSchema,
+      directCampaignId: directCampaignSchema.optional(),
       notes: z
         .string()
         .trim()
@@ -140,32 +150,39 @@ export const saveCampaign = adminProcedure
         message: "Укажите utm_source — utm_campaign без него не сработает",
       });
     }
+    let saved: { id: string } | undefined;
     try {
       if (!id) {
-        const [created] = await context.db
+        [saved] = await context.db
           .insert(adCampaigns)
           .values(fields)
           .returning({ id: adCampaigns.id });
-        if (!created) throw new Error("ad_campaign_insert_failed");
-        return { id: created.id };
+        if (!saved) throw new Error("ad_campaign_insert_failed");
+      } else {
+        [saved] = await context.db
+          .update(adCampaigns)
+          .set(fields)
+          .where(eq(adCampaigns.id, id))
+          .returning({ id: adCampaigns.id });
+        if (!saved) {
+          throw new ORPCError("NOT_FOUND", { message: "Кампания не найдена" });
+        }
       }
-      const [updated] = await context.db
-        .update(adCampaigns)
-        .set(fields)
-        .where(eq(adCampaigns.id, id))
-        .returning({ id: adCampaigns.id });
-      if (!updated) {
-        throw new ORPCError("NOT_FOUND", { message: "Кампания не найдена" });
-      }
-      return { id: updated.id };
     } catch (error) {
       if (isUniqueViolation(error, "ad_campaigns_utm_idx")) {
         throw new ORPCError("CONFLICT", {
           message: "Кампания с такими метками уже заведена",
         });
       }
+      if (isUniqueViolation(error, "ad_campaigns_direct_campaign_idx")) {
+        throw new ORPCError("CONFLICT", {
+          message: "Эта кампания Директа уже привязана к другой кампании",
+        });
+      }
       throw error;
     }
+    await syncDirectExpenses(context.db, { campaignId: saved.id });
+    return { id: saved.id };
   });
 
 /**
@@ -210,18 +227,44 @@ export const addExpense = adminProcedure
       .insert(adExpenses)
       .values({ ...input, amount: toKopecks(input.amount) })
       .returning({ id: adExpenses.id });
+    // Ручной расход за день вытесняет посчитанный по Директу
+    await syncDirectExpenses(context.db, {
+      campaignId: input.campaignId,
+      from: input.spentOn,
+      to: input.spentOn,
+    });
     return { id: expense?.id };
   });
 
 export const removeExpense = adminProcedure
   .input(z.object({ id: z.string().min(1) }))
   .handler(async ({ context, input }) => {
+    const [row] = await context.db
+      .select({ source: adExpenses.source })
+      .from(adExpenses)
+      .where(eq(adExpenses.id, input.id));
+    if (row?.source === "yandex_direct") {
+      throw new ORPCError("BAD_REQUEST", {
+        message:
+          "Расход из Директа пересчитывается сам — отвяжите кампанию Директа в настройках",
+      });
+    }
     const [removed] = await context.db
       .delete(adExpenses)
       .where(eq(adExpenses.id, input.id))
-      .returning({ id: adExpenses.id });
+      .returning({
+        id: adExpenses.id,
+        campaignId: adExpenses.campaignId,
+        spentOn: adExpenses.spentOn,
+      });
     if (!removed) {
       throw new ORPCError("NOT_FOUND", { message: "Расход не найден" });
     }
+    // Без ручного расхода день снова считается по Директу
+    await syncDirectExpenses(context.db, {
+      campaignId: removed.campaignId,
+      from: removed.spentOn,
+      to: removed.spentOn,
+    });
     return { id: removed.id };
   });

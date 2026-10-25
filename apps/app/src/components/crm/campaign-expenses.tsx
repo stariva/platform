@@ -1,6 +1,8 @@
 "use client";
 
+import type { AdExpenseSource } from "@stariva/db/schema";
 import {
+  Badge,
   Button,
   Input,
   Label,
@@ -24,6 +26,7 @@ export interface ExpenseView {
   spentOn: string;
   amount: number;
   note: string | null;
+  source: AdExpenseSource;
 }
 
 /** Расходы кампании: пополнения кабинета, оплата посевов и блогеров. */
@@ -134,32 +137,38 @@ export function CampaignExpenses({
                   {formatDay(expense.spentOn)}
                 </TableCell>
                 <TableCell className="text-muted-foreground max-w-[360px] whitespace-normal">
-                  {expense.note ?? "—"}
+                  {expense.source === "yandex_direct" ? (
+                    <Badge variant="outline">из Директа</Badge>
+                  ) : (
+                    (expense.note ?? "—")
+                  )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {rubles.format(expense.amount)}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-label="Удалить расход"
-                    disabled={remove.isPending}
-                    onClick={async () => {
-                      if (
-                        await confirm({
-                          title: "Удалить расход?",
-                          description: `${formatDay(expense.spentOn)} — ${rubles.format(expense.amount)}`,
-                          confirmLabel: "Удалить",
-                          destructive: true,
-                        })
-                      ) {
-                        remove.mutate({ id: expense.id });
-                      }
-                    }}
-                  >
-                    ✕
-                  </Button>
+                  {expense.source === "manual" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label="Удалить расход"
+                      disabled={remove.isPending}
+                      onClick={async () => {
+                        if (
+                          await confirm({
+                            title: "Удалить расход?",
+                            description: `${formatDay(expense.spentOn)} — ${rubles.format(expense.amount)}`,
+                            confirmLabel: "Удалить",
+                            destructive: true,
+                          })
+                        ) {
+                          remove.mutate({ id: expense.id });
+                        }
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

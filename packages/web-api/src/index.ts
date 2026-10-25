@@ -29,3 +29,7 @@ export {
   getReadyRendition,
   MAX_RENDITION_ATTEMPTS,
 } from "./services/video-renditions";
+export {
+  type DirectExpensesScope,
+  syncDirectExpenses,
+} from "./services/yandex/direct-expenses";

@@ -96,6 +96,8 @@ export default async function CrmCampaignPage({
               <CardDescription>
                 Вносите каждое пополнение или оплату — по дате расхода сводка
                 считает бюджет за период.
+                {campaign.directCampaignId &&
+                  " Расход Директа по дням приходит сам каждое утро."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -106,6 +108,7 @@ export default async function CrmCampaignPage({
                   spentOn: expense.spentOn,
                   amount: expense.amount,
                   note: expense.note,
+                  source: expense.source,
                 }))}
               />
             </CardContent>
@@ -166,6 +169,7 @@ export default async function CrmCampaignPage({
                   channel: campaign.channel,
                   utmSource: campaign.utmSource ?? "",
                   utmCampaign: campaign.utmCampaign ?? "",
+                  directCampaignId: campaign.directCampaignId?.toString() ?? "",
                   notes: campaign.notes ?? "",
                   archived: campaign.archived,
                 }}
