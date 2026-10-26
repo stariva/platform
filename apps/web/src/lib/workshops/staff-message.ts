@@ -3,6 +3,7 @@ import { formatTouch } from "@/lib/campaign-attribution";
 import type { OrderMessage } from "@/lib/commerce/order-message";
 import { formatPrice } from "@/lib/products";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
+import { getBundle } from "./bundles";
 
 type OrderRow = typeof orders.$inferSelect;
 
@@ -18,10 +19,13 @@ export function formatWorkshopPurchaseMessage(
   // Код с Ярмарки: курс оплачен там, на сайте его только активировали
   const fromLivemaster = order.attribution?.last.utm_source === "livemaster";
   const price = formatPrice(order.amount / 100);
+  const bundle = getBundle(order.bundleSlug);
   return {
     title: fromLivemaster
       ? `Активирован код с Ярмарки Мастеров: «${workshop.title}» · ${price}`
-      : `Куплен мастер-класс «${workshop.title}» · ${price}`,
+      : bundle
+        ? `Куплено комбо «${bundle.title}» · ${price}`
+        : `Куплен мастер-класс «${workshop.title}» · ${price}`,
     message: [
       `Email: ${order.contactEmail ?? email}`,
       release &&

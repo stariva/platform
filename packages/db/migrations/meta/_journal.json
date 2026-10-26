@@ -295,6 +295,13 @@
       "when": 1793023947930,
       "tag": "0041_order_from_request",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793033264221,
+      "tag": "0042_order_bundle",
+      "breakpoints": true
     }
   ]
 }
