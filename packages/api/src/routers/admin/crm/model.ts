@@ -238,8 +238,8 @@ function toClient(
   // Без рекламы показываем хотя бы переход с чужого сайта (поиск, соцсети)
   const touch = origin?.campaignId
     ? null
-    : (origin ?? byDate.find((deal) => deal.attribution))?.attribution?.first ??
-      null;
+    : ((origin ?? byDate.find((deal) => deal.attribution))?.attribution
+        ?.first ?? null);
   let source: ClientSource;
   if (record?.sourceManual) {
     source = record.campaignId
