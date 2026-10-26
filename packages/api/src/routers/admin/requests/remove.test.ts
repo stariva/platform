@@ -73,3 +73,15 @@ test.each([
 test("remove reports a missing request", async () => {
   await expect(request({})).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
+
+test("remove refuses a request with an invoiced site order", async () => {
+  await expect(
+    request({
+      error: {
+        code: "23503",
+        constraint:
+          "product_orders_request_number_custom_order_requests_number_fk",
+      },
+    }),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+});

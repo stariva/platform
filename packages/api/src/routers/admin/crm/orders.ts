@@ -143,8 +143,11 @@ export async function loadWork(db: Database, now = new Date()) {
   );
   const keyFor = clientKeys(crm.clients);
   const records = new Map(crm.records.map((record) => [record.id, record]));
+  // Заявка с заказом — записанным в CRM или со счётом на сайте — уже не новая
   const takenRequests = new Set(
-    crm.sales.map((sale) => sale.requestNumber).filter(Boolean),
+    [...crm.sales, ...crm.productRows]
+      .map((order) => order.requestNumber)
+      .filter(Boolean),
   );
 
   const orders: WorkOrder[] = [

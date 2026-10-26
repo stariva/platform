@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { rubles } from "~/components/crm/crm-meta";
 import { SiteHeader } from "~/components/layout";
+import { STATUS_LABELS } from "~/components/orders/order-meta";
 import { ArchiveRequest } from "~/components/requests/archive-request";
+import { InvoiceRequest } from "~/components/requests/invoice-request";
 import { RemoveRequest } from "~/components/requests/remove-request";
 import { DeliveryBadge } from "~/components/requests/requests-table";
 import { VisitorCard } from "~/components/visitors/visitor-card";
@@ -59,7 +61,21 @@ export default async function RequestPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {sale ? (
+          {request.order ? (
+            <>
+              <span className="text-sm">
+                Счёт выставлен: заказ №{request.order.number} ·{" "}
+                {STATUS_LABELS[request.order.status] ?? request.order.status} ·{" "}
+                {rubles.format(request.order.amountTotal)}
+              </span>
+              <Link
+                href={`/orders/${request.order.id}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Открыть заказ
+              </Link>
+            </>
+          ) : sale ? (
             <>
               <span className="text-sm">
                 Заказ записан: {rubles.format(sale.amount)}
@@ -80,11 +96,12 @@ export default async function RequestPage({
             </>
           ) : (
             <>
+              <InvoiceRequest number={request.number} />
               <Link
                 href={`/crm/orders/new?request=${request.number}`}
-                className={buttonVariants({ size: "sm" })}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
               >
-                Оформить заказ
+                Записать заказ в CRM
               </Link>
               <ArchiveRequest
                 number={request.number}

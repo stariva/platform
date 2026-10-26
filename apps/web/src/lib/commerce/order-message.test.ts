@@ -42,6 +42,7 @@ const order: OrderRow = {
   visitor: null,
   masterNotes: null,
   trackingNumber: null,
+  requestNumber: null,
   staffNotifiedAt: null,
   ozonOrderId: null,
   ozonPostingNumbers: null,

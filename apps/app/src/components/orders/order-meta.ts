@@ -20,6 +20,8 @@ export interface AdminOrderView {
   depositPaidAt: string | null;
   declineReason: string | null;
   customerNotes: string | null;
+  /** Заявка с сайта, по которой мастер выставила счёт из админки. */
+  requestNumber: number | null;
   deliveryMethod: "pickup" | "courier" | "manual";
   deliveryPointId: string | null;
   deliveryAddress: {

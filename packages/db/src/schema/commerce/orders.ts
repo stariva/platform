@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
+import { customOrderRequests } from "../custom-order";
 import type { VisitorInfo } from "../visitor";
 
 /** Статус заказа на товары (каталог, не мастер-классы). */
@@ -109,6 +110,12 @@ export const productOrders = pgTable(
     // Под заказ: служба и номер отправления, которые мастер вводит при отправке;
     // покупатель видит их на странице заказа.
     trackingNumber: text("tracking_number"),
+    // Под заказ: заявка с сайта («Обсудим вашу идею»), по которой мастер
+    // выставил счёт из админки.
+    requestNumber: integer("request_number").references(
+      () => customOrderRequests.number,
+      { onDelete: "restrict" },
+    ),
     // Когда мастеру ушло уведомление об оплаченном заказе или новой заявке.
     staffNotifiedAt: timestamp("staff_notified_at"),
     // Заполняются после успешного v2/order/create
@@ -125,5 +132,8 @@ export const productOrders = pgTable(
       .notNull(),
     paidAt: timestamp("paid_at"),
   },
-  (table) => [uniqueIndex("product_orders_number_idx").on(table.number)],
+  (table) => [
+    uniqueIndex("product_orders_number_idx").on(table.number),
+    uniqueIndex("product_orders_request_idx").on(table.requestNumber),
+  ],
 );

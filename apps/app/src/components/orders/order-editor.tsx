@@ -185,6 +185,16 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
               <Field label="Создан">
                 {dateTime.format(new Date(order.createdAt))}
               </Field>
+              {order.requestNumber !== null && (
+                <Field label="Счёт выставлен по заявке">
+                  <Link
+                    href={`/requests/${order.requestNumber}`}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    №{order.requestNumber}
+                  </Link>
+                </Field>
+              )}
               <Field
                 label={
                   order.kind === "made_to_order"
