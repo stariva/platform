@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CommunityInvite } from "@/components/stariva/community-invite";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/stariva/json-ld";
@@ -279,6 +280,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           {/* CTA Section */}
           <div className="max-w-2xl mx-auto mt-16 pt-12 border-t border-espresso/10">
+            <CommunityInvite source="blog" className="mb-6" />
             {/* CTA to catalog */}
             <div className="p-6 bg-espresso rounded-xl text-parchment text-center">
               <p className="font-serif text-xl mb-2">Понравилась статья?</p>

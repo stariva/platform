@@ -1,6 +1,8 @@
 import type { ComponentType, SVGProps } from "react";
+import { COMMUNITY_LINKS } from "@/lib/community";
 import { CONTACTS } from "@/lib/contacts";
 import { SELLER } from "@/lib/legal";
+import { CommunityLinks } from "./community-invite";
 import { CookieSettingsLink } from "./cookie-banner";
 import {
   ArrowRight,
@@ -79,6 +81,9 @@ const marketplaces: ExternalLink[] = [
   },
 ];
 
+const pillClassName =
+  "group inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-parchment/15 px-3 sm:px-4 py-2.5 text-[13px] sm:text-sm text-parchment/85 hover:border-parchment/40 hover:bg-parchment/5 hover:text-parchment transition-colors";
+
 function PillLink({
   link: { label, href, Icon },
   external,
@@ -91,7 +96,7 @@ function PillLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-parchment/15 px-3 sm:px-4 py-2.5 text-[13px] sm:text-sm text-parchment/85 hover:border-parchment/40 hover:bg-parchment/5 hover:text-parchment transition-colors"
+      className={pillClassName}
     >
       <Icon className="w-4 h-4 text-linen shrink-0" />
       {label}
@@ -194,8 +199,21 @@ export function Footer() {
 
         {/* Socials + marketplaces */}
         <div className="mt-16 pt-10 border-t border-parchment/15 grid lg:grid-cols-12 gap-10 lg:gap-12">
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 space-y-10">
             <LinkGroup title="Соцсети" links={socials} />
+            {COMMUNITY_LINKS.length > 0 && (
+              <div>
+                <div className="label-caps text-parchment/50 mb-4">
+                  Сообщество Stariva
+                </div>
+                <CommunityLinks
+                  source="footer"
+                  className="flex flex-wrap gap-2 sm:gap-2.5"
+                  linkClassName={pillClassName}
+                  iconClassName="w-4 h-4 text-linen shrink-0"
+                />
+              </div>
+            )}
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
             <LinkGroup
