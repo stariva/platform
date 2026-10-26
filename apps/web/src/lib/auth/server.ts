@@ -8,15 +8,28 @@ import {
   StarivaChangeEmailEmail,
   StarivaMagicLinkEmail,
   StarivaResetPasswordEmail,
+  StarivaSignInCodeEmail,
   StarivaVerifyEmail,
   sendEmail,
+  signInCodeSubject,
 } from "@stariva/emails";
+import type { GenericEndpointContext } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { magicLink } from "better-auth/plugins";
+import { emailOTP, magicLink } from "better-auth/plugins";
 import { antispam } from "./antispam-plugin";
 import { loginAudit, recordLoginEvent } from "./login-audit";
-import { captureMagicLink } from "./magic-link-capture";
-import { verificationPageUrl } from "./verification-link";
+import {
+  beginMagicLinkCapture,
+  captureMagicLink,
+  finishMagicLinkCapture,
+} from "./magic-link-capture";
+import { otpSignUp } from "./otp-sign-up-plugin";
+import {
+  SIGN_IN_CALLBACK_HEADER,
+  SIGN_IN_CODE_ATTEMPTS,
+  SIGN_IN_CODE_TTL_MINUTES,
+} from "./sign-in-shared";
+import { safeCallbackPath, verificationPageUrl } from "./verification-link";
 
 const vercelUrl =
   env.VERCEL_ENV === "production" && env.VERCEL_PROJECT_PRODUCTION_URL
@@ -33,8 +46,11 @@ const productionUrl = env.VERCEL_PROJECT_PRODUCTION_URL
 /**
  * Серверный экземпляр better-auth для Stariva.
  *
- * - Email + пароль с обязательным подтверждением email.
- * - Вход по магической ссылке (passwordless).
+ * - Вход и регистрация по коду из письма (emailOTP). В том же письме кнопка
+ *   входа — магическая ссылка — для тех, кто читает почту на этом устройстве.
+ *   Новый аккаунт — только с согласием на обработку ПДн (otp-sign-up-plugin).
+ * - Пароль необязателен: им входят те, кто его задал. Регистрации по паролю
+ *   нет, подтверждение email для старых аккаунтов осталось.
  * - Журнал входов, неудачных попыток, выходов и сбросов пароля (login-audit).
  * - Защита от массовых регистраций без капчи: токен формы, лимиты по часу и
  *   суткам, пауза между письмами на один ящик (см. antispam-plugin).
@@ -46,7 +62,9 @@ export const auth = initAuth({
   productionUrl,
   secret: env.AUTH_SECRET,
   requireEmailVerification: true,
-  // Вход на витрине — паролем или ссылкой из письма, кодов здесь нет
+  // Аккаунты заводит только вход по коду: там берём согласие на обработку ПДн
+  disableSignUp: true,
+  // emailOTP витрины подключён ниже со своими настройками и письмом
   emailOTP: false,
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 дней
@@ -55,7 +73,6 @@ export const auth = initAuth({
   // Лимиты на IP за час. Общий лимит better-auth (3 запроса за 10 секунд)
   // не мешал рассылать сотни писем в сутки.
   rateLimitRules: {
-    "/sign-up/email": { window: 60 * 60, max: 10 },
     "/sign-in/magic-link": { window: 60 * 60, max: 15 },
     "/request-password-reset": { window: 60 * 60, max: 5 },
     "/send-verification-email": { window: 60 * 60, max: 5 },
@@ -95,6 +112,19 @@ export const auth = initAuth({
         return row?.total ?? 0;
       },
     }),
+    emailOTP({
+      expiresIn: SIGN_IN_CODE_TTL_MINUTES * 60,
+      allowedAttempts: SIGN_IN_CODE_ATTEMPTS,
+      storeOTP: "hashed",
+      // Свой лимит плагина — 3 запроса в минуту с IP: столько раз человек
+      // ошибается в цифре. От подбора защищает число попыток на код.
+      rateLimit: { window: 60, max: 3 },
+      sendVerificationOTP: async ({ email, otp, type }, ctx) => {
+        if (type !== "sign-in") return;
+        await sendSignInCode(email, otp, ctx);
+      },
+    }),
+    otpSignUp({ allowedAttempts: SIGN_IN_CODE_ATTEMPTS }),
     magicLink({
       // Аккаунт создаётся только регистрацией: там берём согласие на
       // обработку персональных данных. Ссылка лишь пускает в существующий.
@@ -137,6 +167,65 @@ export const auth = initAuth({
     }
   },
 });
+
+/**
+ * Письмо с кодом входа. Тем, у кого аккаунт уже есть, кладём и кнопку
+ * (магическую ссылку) — она ведёт туда, откуда человек пришёл на вход. Новым
+ * только код: аккаунт появится после согласия на сайте.
+ */
+async function sendSignInCode(
+  email: string,
+  otp: string,
+  ctx: GenericEndpointContext | undefined,
+): Promise<void> {
+  const existing = ctx
+    ? await ctx.context.internalAdapter.findUserByEmail(email)
+    : null;
+  let url: string | null = null;
+  if (existing) {
+    const callbackURL = safeCallbackPath(
+      ctx?.headers?.get(SIGN_IN_CALLBACK_HEADER) ?? null,
+    );
+    url = await signInLink(email, callbackURL, ctx?.headers).catch((error) => {
+      console.error("[Auth] Не удалось сделать ссылку входа для письма", error);
+      return null;
+    });
+  }
+  await sendEmail({
+    to: [email],
+    subject: signInCodeSubject(otp),
+    react: StarivaSignInCodeEmail({
+      otp,
+      url: url ?? undefined,
+      isNewUser: !existing,
+      expiresInMinutes: SIGN_IN_CODE_TTL_MINUTES,
+    }),
+  });
+}
+
+/** Магическая ссылка без отдельного письма (см. magic-link-capture). */
+async function signInLink(
+  email: string,
+  callbackURL: string,
+  headers: Headers | undefined,
+): Promise<string | null> {
+  const captureId = beginMagicLinkCapture();
+  try {
+    await auth.api.signInMagicLink({
+      body: {
+        email,
+        callbackURL,
+        errorCallbackURL: "/sign-in",
+        metadata: { captureId },
+      },
+      headers: headers ?? new Headers(),
+    });
+  } catch (error) {
+    finishMagicLinkCapture(captureId);
+    throw error;
+  }
+  return finishMagicLinkCapture(captureId);
+}
 
 export type Session = typeof auth.$Infer.Session;
 export type AuthUser = typeof auth.$Infer.Session.user;
