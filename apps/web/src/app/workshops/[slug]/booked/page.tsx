@@ -211,10 +211,10 @@ function Paid({
             </Link>
           ) : (
             <Link
-              href={`/magic-link?callbackURL=${encodeURIComponent(`/account/workshops/${workshop.slug}`)}`}
+              href={`/sign-in?callbackURL=${encodeURIComponent(`/account/workshops/${workshop.slug}`)}`}
               className={secondaryButton}
             >
-              Письмо не пришло? Получить новую ссылку
+              Письмо не пришло? Войти по коду
             </Link>
           )}
         </div>
@@ -354,14 +354,14 @@ function Unknown({ slug }: { slug: string }) {
       <Heading>Спасибо!</Heading>
       <p className="mb-6 text-dark-grey leading-relaxed">
         Если оплата прошла, в течение пары минут на ваш email придёт письмо со
-        ссылкой на уроки. Ссылку для входа можно запросить и сейчас.
+        ссылкой на уроки. Войти можно и сейчас — по коду из письма.
       </p>
       <div className="flex flex-col gap-3">
         <Link
-          href={`/magic-link?callbackURL=${encodeURIComponent(`/account/workshops/${slug}`)}`}
+          href={`/sign-in?callbackURL=${encodeURIComponent(`/account/workshops/${slug}`)}`}
           className={primaryButton}
         >
-          Запросить ссылку для входа
+          Войти по коду
         </Link>
         <Link href={`/workshops/${slug}`} className={secondaryButton}>
           К мастер-классу

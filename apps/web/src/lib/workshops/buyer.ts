@@ -45,7 +45,7 @@ export async function createLoginRedirect(
       body: {
         email,
         callbackURL,
-        errorCallbackURL: "/magic-link",
+        errorCallbackURL: "/sign-in",
         metadata: { captureId },
       },
       headers,

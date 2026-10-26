@@ -5,6 +5,7 @@ import StarivaMagicLinkEmail from "./emails/stariva-magic-link";
 import StarivaOrderEmail from "./emails/stariva-order";
 import StarivaReceiptEmail from "./emails/stariva-receipt";
 import StarivaResetPasswordEmail from "./emails/stariva-reset-password";
+import StarivaSignInCodeEmail from "./emails/stariva-sign-in-code";
 import StarivaVerifyEmail from "./emails/stariva-verify-email";
 import StarivaWorkshopEmail from "./emails/stariva-workshop";
 import StarivaWorkshopBriefEmail from "./emails/stariva-workshop-brief";
@@ -27,6 +28,10 @@ export {
   type StarivaWorkshopUnpaidEmailProps,
   workshopUnpaidEmailSubject,
 } from "./emails/stariva-workshop-unpaid";
+export {
+  type StarivaSignInCodeEmailProps,
+  signInCodeSubject,
+} from "./emails/stariva-sign-in-code";
 export { sendOrderStatusEmail } from "./order";
 export type { OrderEmailOrder } from "./order-email";
 export { sendReceiptEmail } from "./receipt";
@@ -39,6 +44,7 @@ export {
   StarivaOrderEmail,
   StarivaReceiptEmail,
   StarivaResetPasswordEmail,
+  StarivaSignInCodeEmail,
   StarivaVerifyEmail,
   StarivaWorkshopBriefEmail,
   StarivaWorkshopEmail,
