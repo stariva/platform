@@ -73,15 +73,16 @@ function WorkshopCard({ workshop }: { workshop: Workshop }) {
     >
       {/* Cover image */}
       {/* В одну колонку обложка идёт в своих пропорциях (не выше 4:5) — вертикальные
-          фото не режутся; в сетке карточки выравниваются по 16:9 */}
-      <div className="relative sm:aspect-[16/9] overflow-hidden bg-sand">
+          фото не режутся; в сетке фото заполняет вертикальный кадр 3:4, как в кабинете:
+          ёлки помещаются почти целиком, горизонтальные обрезаются по центру */}
+      <div className="relative sm:aspect-[3/4] overflow-hidden bg-sand">
         <Image
           src={workshop.cover}
           alt={workshop.title}
           width={1200}
           height={675}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="w-full h-auto max-h-[125vw] object-cover object-top sm:absolute sm:inset-0 sm:h-full sm:max-h-none transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-auto max-h-[125vw] object-cover object-top sm:absolute sm:inset-0 sm:h-full sm:max-h-none sm:object-center transition-transform duration-500 group-hover:scale-105"
         />
         {/* Locked overlay */}
         <div className="absolute inset-0 bg-espresso/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
