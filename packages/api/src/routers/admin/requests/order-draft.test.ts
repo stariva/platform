@@ -62,6 +62,13 @@ test("free-form request keeps its text as the comment", () => {
 test("phones are formatted only for Russian mobiles", () => {
   expect(formatPhone("8 (999) 431-83-92")).toBe("+7 999 431-83-92");
   expect(formatPhone("+79994318392")).toBe("+7 999 431-83-92");
+  expect(formatPhone("9994318392")).toBe("+7 999 431-83-92");
+  expect(formatPhone("+7 (495) 123-45-67")).toBe("");
+  expect(formatPhone("8 (495) 123-45-67")).toBe("");
+  expect(formatPhone("+7 (701) 123-45-67")).toBe("");
+  expect(formatPhone("8 (701) 123-45-67")).toBe("");
+  expect(formatPhone("+7999431839")).toBe("");
+  expect(formatPhone("+799943183920")).toBe("");
   expect(formatPhone("@yana")).toBe("");
   expect(formatPhone("12345")).toBe("");
 });

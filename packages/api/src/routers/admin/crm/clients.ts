@@ -4,6 +4,7 @@ import {
   crmClients,
   crmSalePayments,
   crmSales,
+  customOrderRequests,
   type Database,
   eq,
   productOrders,
@@ -367,6 +368,11 @@ export const addSale = adminProcedure
     try {
       return await context.db.transaction(async (tx) => {
         if (input.requestNumber) {
+          await tx
+            .select({ number: customOrderRequests.number })
+            .from(customOrderRequests)
+            .where(eq(customOrderRequests.number, input.requestNumber))
+            .for("update");
           const [order] = await tx
             .select({ number: productOrders.number })
             .from(productOrders)
