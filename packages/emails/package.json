@@ -28,11 +28,11 @@
     "@react-email/components": "1.0.12",
     "@stariva/config": "workspace:*",
     "@tailwindcss/typography": "0.5.20",
-    "nodemailer": "^10.1.1",
+    "nodemailer": "^10.2.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-email": "6.11.2",
-    "resend": "^6.33.0",
+    "react-email": "6.11.3",
+    "resend": "^6.34.1",
     "sharp": "^0.35.5",
     "tailwindcss": "4.3.3",
     "tailwindcss-animate": "1.0.7",
@@ -46,7 +46,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "tsdown": "0.23.1",
+    "tsdown": "0.23.2",
     "typescript": "7.0.2"
   }
 }
