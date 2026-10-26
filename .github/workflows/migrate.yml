@@ -1,0 +1,91 @@
+name: Migrate database
+
+# Накатывает на прод-базу миграции из packages/db/migrations, которых там ещё
+# нет. Postgres живёт внутри k3s и снаружи не торчит, поэтому ходим в него через
+# `kubectl port-forward` с тем же KUBE_CONFIG, что и деплой.
+#
+# Что уже применено, решает сам packages/db/src/scripts/migrate.ts по журналу
+# drizzle.__drizzle_migrations, так что повторный запуск без новых файлов
+# ничего не делает.
+#
+# Подключаемся ролью `stariva` (владелец базы) с паролем из секрета кластера
+# stariva/postgres-credentials: новых секретов в GitHub не нужно, а созданные
+# объекты сразу принадлежат роли сайта и не требуют передачи владения.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/db/migrations/**"
+      - "packages/db/src/scripts/migrate.ts"
+      - ".github/workflows/migrate.yml"
+  workflow_dispatch:
+
+# Две миграции одновременно на одной базе не гоняем и не отменяем на лету:
+# оборванная посередине миграция хуже ожидания в очереди.
+concurrency:
+  group: migrate-stariva-db
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          # KUBE_CONFIG may be either the raw kubeconfig YAML or its base64 encoding
+          if echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config 2>/dev/null && grep -q "apiVersion" ~/.kube/config; then
+            echo "KUBE_CONFIG decoded from base64"
+          else
+            echo "$KUBE_CONFIG" > ~/.kube/config
+            echo "KUBE_CONFIG used as raw YAML"
+          fi
+          chmod 600 ~/.kube/config
+
+      - name: Port-forward to Postgres
+        run: |
+          # Пароль роли stariva — тот же, с которым сайт ходит в базу
+          password="$(kubectl get secret postgres-credentials -n stariva -o jsonpath='{.data.DB_PASSWORD}' | base64 -d)"
+          if [ -z "$password" ]; then
+            echo "::error::В секрете stariva/postgres-credentials нет DB_PASSWORD"
+            exit 1
+          fi
+          echo "::add-mask::$password"
+          encoded="$(jq -rn --arg p "$password" '$p | @uri')"
+          echo "::add-mask::$encoded"
+          echo "POSTGRES_URL=postgresql://stariva:${encoded}@127.0.0.1:5432/stariva" >> "$GITHUB_ENV"
+
+          kubectl port-forward -n postgres svc/postgres 5432:5432 > port-forward.log 2>&1 &
+          echo "PORT_FORWARD_PID=$!" >> "$GITHUB_ENV"
+
+          for _ in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/5432) 2>/dev/null; then
+              echo "port-forward ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::port-forward на postgres/svc/postgres не поднялся за 30 с"
+          cat port-forward.log
+          exit 1
+
+      - name: Apply pending migrations
+        working-directory: packages/db
+        run: bun run src/scripts/migrate.ts
+
+      - name: Stop port-forward
+        if: always()
+        run: |
+          if [ -n "${PORT_FORWARD_PID:-}" ]; then
+            kill "$PORT_FORWARD_PID" 2>/dev/null || true
+          fi

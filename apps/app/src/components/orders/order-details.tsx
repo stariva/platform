@@ -312,7 +312,7 @@ export function OrderPaymentsCard({ order }: { order: AdminOrderView }) {
   );
 }
 
-/** UTM-метки первого и последнего захода до заказа. */
+/** UTM-метки и сайт, с которого пришли, для первого и последнего захода до заказа. */
 export function OrderAttributionCard({ order }: { order: AdminOrderView }) {
   const attribution = order.attribution;
   if (!attribution) return null;
@@ -323,7 +323,7 @@ export function OrderAttributionCard({ order }: { order: AdminOrderView }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Реклама</CardTitle>
+        <CardTitle className="text-base">Источник</CardTitle>
       </CardHeader>
       <CardContent>
         <dl className="grid gap-3 sm:grid-cols-2">
