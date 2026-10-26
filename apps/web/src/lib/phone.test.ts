@@ -6,6 +6,7 @@ test("phones match regardless of formatting", () => {
   assert.ok(phonesMatch("+7 977 872 25 46", "+79778722546"));
   assert.ok(phonesMatch("+7 (977) 872-25-46", "+7 977 872 25 46"));
   assert.ok(phonesMatch("8 977 872 25 46", "+79778722546"));
+  assert.ok(phonesMatch("977 872 25 46", "+7 977 872-25-46"));
 });
 
 test("different or empty phones do not match", () => {

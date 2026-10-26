@@ -83,6 +83,7 @@ export function toAdminOrder(
     depositPaidAt: order.depositPaidAt,
     declineReason: order.declineReason,
     customerNotes: order.customerNotes,
+    requestNumber: order.requestNumber,
     deliveryMethod: order.deliveryMethod,
     deliveryPointId: order.deliveryPointId,
     deliveryAddress: deliveryAddress(order),

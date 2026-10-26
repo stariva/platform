@@ -62,6 +62,7 @@ export async function loadCrm(db: Database) {
         approvedAt: productOrders.approvedAt,
         depositPaidAt: productOrders.depositPaidAt,
         attribution: productOrders.attribution,
+        requestNumber: productOrders.requestNumber,
       })
       .from(productOrders),
     db

@@ -71,15 +71,22 @@ export function OrderItemsCard({ order }: { order: AdminOrderView }) {
                 </span>
               </div>
               <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
-                <a
-                  href={productSiteUrl(item.productSlug)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline-offset-4 hover:underline"
-                >
-                  на сайте ↗
-                </a>
-                {!item.productId && <span>товара больше нет в каталоге</span>}
+                {/* Счёт по заявке с главной — изделие без карточки в каталоге */}
+                {item.productSlug ? (
+                  <a
+                    href={productSiteUrl(item.productSlug)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    на сайте ↗
+                  </a>
+                ) : (
+                  <span>изделие не из каталога</span>
+                )}
+                {item.productSlug && !item.productId && (
+                  <span>товара больше нет в каталоге</span>
+                )}
                 {item.ozonSku !== null && <span>SKU Ozon {item.ozonSku}</span>}
               </div>
               {item.options && (
