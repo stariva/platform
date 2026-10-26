@@ -26,6 +26,6 @@
     "@stariva/tsconfig": "workspace:*",
     "@trigger.dev/build": "4.8.1",
     "@types/node": "26.6.5",
-    "typescript": "7.0.2"
+    "typescript": "7.1.0-beta"
   }
 }
