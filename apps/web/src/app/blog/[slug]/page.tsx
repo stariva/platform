@@ -117,59 +117,59 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 "grid lg:grid-cols-[minmax(0,1fr)_480px] items-center gap-10 lg:gap-16 mb-16",
             )}
           >
-          <header
-            className={cn(
-              "text-center",
-              portrait ? "lg:text-left" : "max-w-3xl mx-auto mb-12",
-            )}
-          >
-            <div
+            <header
               className={cn(
-                "flex items-center justify-center gap-4 mb-6",
-                portrait && "lg:justify-start",
+                "text-center",
+                portrait ? "lg:text-left" : "max-w-3xl mx-auto mb-12",
               )}
             >
-              <span className="label-caps text-terracotta">
-                {post.category}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-taupe/50" />
-              <span className="label-caps text-taupe">{post.readTime}</span>
-            </div>
-            <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-espresso mb-6 text-balance">
-              {post.title}
-            </h1>
-            <p className="text-taupe text-lg leading-relaxed mb-6">
-              {post.excerpt}
-            </p>
-            <time dateTime={post.date} className="text-sm text-taupe">
-              {formatDate(post.date)}
-            </time>
-          </header>
+              <div
+                className={cn(
+                  "flex items-center justify-center gap-4 mb-6",
+                  portrait && "lg:justify-start",
+                )}
+              >
+                <span className="label-caps text-terracotta">
+                  {post.category}
+                </span>
+                <span className="w-1 h-1 rounded-full bg-taupe/50" />
+                <span className="label-caps text-taupe">{post.readTime}</span>
+              </div>
+              <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-espresso mb-6 text-balance">
+                {post.title}
+              </h1>
+              <p className="text-taupe text-lg leading-relaxed mb-6">
+                {post.excerpt}
+              </p>
+              <time dateTime={post.date} className="text-sm text-taupe">
+                {formatDate(post.date)}
+              </time>
+            </header>
 
-          {/* Cover Image */}
-          <div
-            className={cn(
-              "relative overflow-hidden rounded-xl",
-              portrait
-                ? "aspect-[4/5] w-full max-w-md mx-auto lg:max-w-none"
-                : "aspect-[21/9] lg:aspect-[2.5/1] mb-16",
-            )}
-          >
-            <Image
-              src={post.coverImage}
-              alt={post.title}
-              fill
-              className="object-cover"
-              style={{ objectPosition: post.coverPosition }}
-              sizes={
+            {/* Cover Image */}
+            <div
+              className={cn(
+                "relative overflow-hidden rounded-xl",
                 portrait
-                  ? "(max-width: 1024px) 448px, 480px"
-                  : "(max-width: 1400px) 100vw, 1400px"
-              }
-              quality={90}
-              priority
-            />
-          </div>
+                  ? "aspect-[4/5] w-full max-w-md mx-auto lg:max-w-none"
+                  : "aspect-[21/9] lg:aspect-[2.5/1] mb-16",
+              )}
+            >
+              <Image
+                src={post.coverImage}
+                alt={post.title}
+                fill
+                className="object-cover"
+                style={{ objectPosition: post.coverPosition }}
+                sizes={
+                  portrait
+                    ? "(max-width: 1024px) 448px, 480px"
+                    : "(max-width: 1400px) 100vw, 1400px"
+                }
+                quality={90}
+                priority
+              />
+            </div>
           </div>
 
           {/* Article Content */}
