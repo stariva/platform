@@ -25,7 +25,7 @@ export const PRODUCT_CATEGORIES = {
       tipis: "Вигвамы и кресла",
       pannos: "Панно",
       placemats: "Плейсматы",
-      planters: "Игрушки и прочее",
+      planters: "Декор и прочее",
       trees: "Ёлки",
     },
   },
