@@ -110,6 +110,57 @@ test("no UTM — no touch; own referrer and order ids are not stored", () => {
   );
 });
 
+test("visit from another site without UTM is a touch with the referrer host", () => {
+  assert.deepEqual(
+    touchFromUrl(
+      new URL("https://stariva.ru/elka-makrame"),
+      "https://www.google.com/",
+      at,
+    ),
+    {
+      landing: "/elka-makrame",
+      referrer: "www.google.com",
+      at: at.toISOString(),
+    },
+  );
+  assert.equal(
+    touchFromUrl(
+      new URL("https://stariva.ru/catalog"),
+      "https://stariva.ru/",
+      at,
+    ),
+    null,
+  );
+  assert.equal(
+    touchFromUrl(new URL("https://stariva.ru/"), "not a url", at),
+    null,
+  );
+});
+
+test("organic touch never displaces a UTM touch, a UTM touch replaces organic first", () => {
+  const organic = {
+    landing: "/",
+    referrer: "www.google.com",
+    at: at.toISOString(),
+  };
+  const later = { ...organic, at: "2026-10-11T12:00:00.000Z" };
+  const ad = {
+    utm_source: "yandex",
+    landing: "/",
+    at: "2026-10-12T12:00:00.000Z",
+  };
+  assert.deepEqual(addTouch(addTouch(null, organic), later), {
+    first: organic,
+    last: later,
+  });
+  assert.deepEqual(addTouch(addTouch(null, organic), ad), {
+    first: ad,
+    last: ad,
+  });
+  const tagged = addTouch(null, ad);
+  assert.deepEqual(addTouch(tagged, organic), tagged);
+});
+
 test("first touch survives, last touch is replaced", () => {
   const first = { utm_source: "vk", landing: "/", at: at.toISOString() };
   const last = {
@@ -160,5 +211,13 @@ test("touch is readable in a notification", () => {
       at: at.toISOString(),
     }),
     "utm_source=yandex, utm_campaign=elka → /elka-makrame (с ya.ru)",
+  );
+  assert.equal(
+    formatTouch({
+      landing: "/elka-makrame",
+      referrer: "www.google.com",
+      at: at.toISOString(),
+    }),
+    "переход с www.google.com → /elka-makrame",
   );
 });

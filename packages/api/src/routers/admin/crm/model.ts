@@ -235,9 +235,11 @@ function toClient(
     (deal) =>
       deal.campaignId || normalizeUtm(deal.attribution?.first.utm_source),
   );
+  // Без рекламы показываем хотя бы переход с чужого сайта (поиск, соцсети)
   const touch = origin?.campaignId
     ? null
-    : (origin?.attribution?.first ?? null);
+    : (origin ?? byDate.find((deal) => deal.attribution))?.attribution?.first ??
+      null;
   let source: ClientSource;
   if (record?.sourceManual) {
     source = record.campaignId
