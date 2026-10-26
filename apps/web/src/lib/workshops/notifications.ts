@@ -38,6 +38,7 @@ import {
 } from "@/lib/telegram/client-bot";
 import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
+import { bundleExtraFor, getBundle } from "./bundles";
 import { googleCalendarUrl } from "./calendar";
 import { earnsPreorderBonus } from "./preorder-bonus";
 import {
@@ -97,10 +98,14 @@ function upcomingRelease(workshop: WorkshopRow, now = new Date()) {
 function emailSubject(kind: WorkshopEmailKind, target: Target): string {
   const title = `«${target.workshop.title}»`;
   switch (kind) {
-    case "booked":
+    case "booked": {
+      const bundle = getBundle(target.order.bundleSlug);
+      if (bundle)
+        return `Комбо «${bundle.title}»: доступ к урокам открыт — Stariva`;
       return upcomingRelease(target.workshop)
         ? `Вы записаны на мастер-класс ${title} — Stariva`
         : `Доступ к мастер-классу ${title} открыт — Stariva`;
+    }
     case "week":
       return `Через неделю старт: ${title} — Stariva`;
     case "day":
@@ -218,6 +223,7 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
           orderedAt: order.createdAt,
           releaseAt: workshop.releaseAt,
         }),
+        bundle: bundleExtraFor(order.bundleSlug),
         attachedFiles:
           brief.length > 0 ? brief.map((file) => file.label) : undefined,
       }),

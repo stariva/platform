@@ -29,6 +29,9 @@ export const orders = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     workshopSlug: text("workshop_slug").notNull(),
+    // Комбо, в составе которого куплен курс: оплата выдаёт и остальные его
+    // курсы. null — обычная покупка одного курса.
+    bundleSlug: text("bundle_slug"),
     // Сумма в копейках, чтобы избежать ошибок с плавающей точкой
     amount: integer("amount").notNull(),
     currency: text("currency").notNull().default("RUB"),
