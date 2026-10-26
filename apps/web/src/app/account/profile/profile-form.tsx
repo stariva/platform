@@ -264,53 +264,55 @@ export function ProfileForm({
           </form>
         </Form>
       )}
-      {hasPassword ? <Form {...passwordForm}>
-        <form
-          onSubmit={passwordForm.handleSubmit(changePassword)}
-          className={card}
-        >
-          <h2 className="font-serif text-xl text-espresso mb-4">
-            Смена пароля
-          </h2>
-          <FormField
-            control={passwordForm.control}
-            name="currentPassword"
-            render={({ field }) => (
-              <FormItem className="mb-3">
-                <FormLabel>Текущий пароль</FormLabel>
-                <FormControl>
-                  <PasswordInput autoComplete="current-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={passwordForm.control}
-            name="newPassword"
-            render={({ field }) => (
-              <FormItem className="mb-4">
-                <FormLabel>Новый пароль</FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    autoComplete="new-password"
-                    placeholder="Минимум 8 символов"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button
-            type="submit"
-            disabled={savingPassword}
-            className="bg-espresso text-parchment hover:bg-espresso/90"
+      {hasPassword ? (
+        <Form {...passwordForm}>
+          <form
+            onSubmit={passwordForm.handleSubmit(changePassword)}
+            className={card}
           >
-            {savingPassword ? "Сохраняем…" : "Сменить пароль"}
-          </Button>
-        </form>
-      </Form> : null}
+            <h2 className="font-serif text-xl text-espresso mb-4">
+              Смена пароля
+            </h2>
+            <FormField
+              control={passwordForm.control}
+              name="currentPassword"
+              render={({ field }) => (
+                <FormItem className="mb-3">
+                  <FormLabel>Текущий пароль</FormLabel>
+                  <FormControl>
+                    <PasswordInput autoComplete="current-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={passwordForm.control}
+              name="newPassword"
+              render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel>Новый пароль</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      autoComplete="new-password"
+                      placeholder="Минимум 8 символов"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              disabled={savingPassword}
+              className="bg-espresso text-parchment hover:bg-espresso/90"
+            >
+              {savingPassword ? "Сохраняем…" : "Сменить пароль"}
+            </Button>
+          </form>
+        </Form>
+      ) : null}
     </div>
   );
 }

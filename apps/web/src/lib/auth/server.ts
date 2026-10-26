@@ -118,7 +118,7 @@ export const auth = initAuth({
       storeOTP: "hashed",
       // Свой лимит плагина — 3 запроса в минуту с IP: столько раз человек
       // ошибается в цифре. От подбора защищает число попыток на код.
-      rateLimit: { window: 60, max: 30 },
+      rateLimit: { window: 60, max: 3 },
       sendVerificationOTP: async ({ email, otp, type }, ctx) => {
         if (type !== "sign-in") return;
         await sendSignInCode(email, otp, ctx);

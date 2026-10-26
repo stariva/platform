@@ -72,7 +72,7 @@ export default function StarivaSignInCodeEmail({
               color: colors.textGrey,
             }}
           >
-            Действует {expiresInMinutes} минут
+            {`Действует ${expiresInMinutes} минут`}
           </Text>
         </Section>
       }

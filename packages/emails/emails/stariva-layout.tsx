@@ -154,7 +154,7 @@ export function StarivaLayout({
             </Text>
             {beforeButton}
             {buttonUrl && buttonLabel ? (
-  <Link
+              <Link
                 href={buttonUrl}
                 style={{
                   display: "inline-block",
@@ -192,7 +192,7 @@ export function StarivaLayout({
               {footnote}
             </Text>
             {buttonUrl ? (
-  <Text
+              <Text
                 style={{
                   margin: "12px 0 0",
                   fontSize: 12,

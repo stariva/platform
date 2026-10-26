@@ -47,7 +47,8 @@ export function otpSignUp({ allowedAttempts }: OtpSignUpOptions) {
             if (typeof body.email !== "string" || typeof body.otp !== "string")
               return;
             const email = body.email.trim().toLowerCase();
-            if (await ctx.context.internalAdapter.findUserByEmail(email)) return;
+            if (await ctx.context.internalAdapter.findUserByEmail(email))
+              return;
 
             const record =
               await ctx.context.internalAdapter.findVerificationValue(

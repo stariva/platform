@@ -31,7 +31,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (!(error instanceof APIError)) throw error;
-    const body = error.body as { code?: unknown; message?: unknown } | undefined;
+    const body = error.body as
+      | { code?: unknown; message?: unknown }
+      | undefined;
     return NextResponse.json(
       {
         error:

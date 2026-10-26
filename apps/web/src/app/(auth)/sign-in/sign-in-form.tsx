@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { CodeInput } from "@/components/stariva/code-input";
 import {
   ConsentCheckbox,
@@ -54,6 +60,8 @@ export function SignInForm() {
   const [name, setName] = useState("");
   const [consent, setConsent] = useState(false);
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState<string>();
+  const [passwordError, setPasswordError] = useState<string>();
   const [fieldError, setFieldError] = useState<string>();
   const [consentError, setConsentError] = useState<string>();
   const [notice, setNotice] = useState<Notice>(
@@ -86,6 +94,8 @@ export function SignInForm() {
 
   function go(next: Step) {
     setStep(next);
+    setEmailError(undefined);
+    setPasswordError(undefined);
     setFieldError(undefined);
     setConsentError(undefined);
     setNotice(null);
@@ -99,7 +109,7 @@ export function SignInForm() {
 
   function checkEmail(): boolean {
     if (EMAIL_PATTERN.test(address)) return true;
-    setFieldError("Введите email, например olga@mail.ru");
+    setEmailError("Введите email, например olga@mail.ru");
     document.getElementById(emailId)?.focus();
     return false;
   }
@@ -126,6 +136,7 @@ export function SignInForm() {
       return false;
     }
     setCode("");
+    setEmailError(undefined);
     setFieldError(undefined);
     setResendIn(RESEND_SECONDS);
     return true;
@@ -133,7 +144,7 @@ export function SignInForm() {
 
   async function submitEmail(event: FormEvent) {
     event.preventDefault();
-    setFieldError(undefined);
+    setEmailError(undefined);
     if (!checkEmail()) return;
     if (await sendCode()) setStep("code");
   }
@@ -141,7 +152,10 @@ export function SignInForm() {
   async function resend() {
     if (await sendCode()) {
       setStep("code");
-      setNotice({ tone: "info", text: "Отправили новый код. Старый больше не действует." });
+      setNotice({
+        tone: "info",
+        text: "Отправили новый код. Старый больше не действует.",
+      });
     }
   }
 
@@ -167,15 +181,21 @@ export function SignInForm() {
       consent && name.trim()
         ? { name: name.trim(), personalDataConsent: true }
         : {};
-    const { error } = await signIn.emailOtp({ email: address, otp, ...profile });
-    setBusy(false);
+    const { error } = await signIn.emailOtp({
+      email: address,
+      otp,
+      ...profile,
+    });
     if (!error) return finish("Входим…");
+    setBusy(false);
     if (error.code === PROFILE_REQUIRED) {
       go("profile");
       return;
     }
     if (error.code === "OTP_EXPIRED" || error.code === "TOO_MANY_ATTEMPTS") {
-      codeExhausted(error.message || "Код больше не действует. Запросите новый.");
+      codeExhausted(
+        error.message || "Код больше не действует. Запросите новый.",
+      );
       return;
     }
     setCode("");
@@ -203,8 +223,8 @@ export function SignInForm() {
       name: trimmed,
       personalDataConsent: true,
     });
-    setBusy(false);
     if (!error) return finish("Кабинет создан. Открываем…");
+    setBusy(false);
     if (
       error.code === "OTP_EXPIRED" ||
       error.code === "TOO_MANY_ATTEMPTS" ||
@@ -223,10 +243,11 @@ export function SignInForm() {
 
   async function submitPassword(event: FormEvent) {
     event.preventDefault();
-    setFieldError(undefined);
+    setEmailError(undefined);
+    setPasswordError(undefined);
     if (!checkEmail()) return;
     if (!password) {
-      setFieldError("Введите пароль");
+      setPasswordError("Введите пароль");
       document.getElementById(passwordId)?.focus();
       return;
     }
@@ -237,8 +258,8 @@ export function SignInForm() {
       password,
       callbackURL,
     });
-    setBusy(false);
     if (!error) return finish("С возвращением!");
+    setBusy(false);
     setNotice({
       tone: "error",
       text:
@@ -288,15 +309,22 @@ export function SignInForm() {
         value={email}
         onChange={(event) => {
           setEmail(event.target.value);
-          if (fieldError) setFieldError(undefined);
+          if (emailError) setEmailError(undefined);
         }}
         disabled={busy}
         required
-        aria-invalid={fieldError && step === "email" ? true : undefined}
-        aria-describedby={fieldError ? errorId : undefined}
+        aria-invalid={emailError ? true : undefined}
+        aria-describedby={emailError ? `${emailId}-error` : undefined}
         className="h-13 rounded-xl bg-parchment text-base"
       />
-      {step === "email" ? errorText : null}
+      {emailError ? (
+        <p
+          id={`${emailId}-error`}
+          className="text-[13px] text-destructive mt-1.5"
+        >
+          {emailError}
+        </p>
+      ) : null}
       {suggestion ? (
         <p className="text-[13px] text-taupe mt-1.5">
           Возможно, вы имели в виду{" "}
@@ -319,12 +347,19 @@ export function SignInForm() {
         <StepIntro>
           Отправили код на{" "}
           <span className="font-medium text-espresso">{address}</span>.{" "}
-          <button type="button" onClick={() => go("email")} className={textButton}>
+          <button
+            type="button"
+            onClick={() => go("email")}
+            className={textButton}
+          >
             Изменить
           </button>
         </StepIntro>
         <div>
-          <label htmlFor={codeId} className="block text-sm text-espresso mb-1.5">
+          <label
+            htmlFor={codeId}
+            className="block text-sm text-espresso mb-1.5"
+          >
             Код из письма
           </label>
           <CodeInput
@@ -392,7 +427,10 @@ export function SignInForm() {
           подтверждена. Это ваш первый вход — осталось познакомиться.
         </StepIntro>
         <div>
-          <label htmlFor={nameId} className="block text-sm text-espresso mb-1.5">
+          <label
+            htmlFor={nameId}
+            className="block text-sm text-espresso mb-1.5"
+          >
             Как к вам обращаться
           </label>
           <Input
@@ -474,14 +512,21 @@ export function SignInForm() {
             value={password}
             onChange={(event) => {
               setPassword(event.target.value);
-              if (fieldError) setFieldError(undefined);
+              if (passwordError) setPasswordError(undefined);
             }}
             disabled={busy}
-            aria-invalid={fieldError ? true : undefined}
-            aria-describedby={fieldError ? errorId : undefined}
+            aria-invalid={passwordError ? true : undefined}
+            aria-describedby={passwordError ? `${passwordId}-error` : undefined}
             className="h-13 rounded-xl bg-parchment text-base"
           />
-          {errorText}
+          {passwordError ? (
+            <p
+              id={`${passwordId}-error`}
+              className="text-[13px] text-destructive mt-1.5"
+            >
+              {passwordError}
+            </p>
+          ) : null}
         </div>
         <Button
           type="submit"
@@ -500,7 +545,11 @@ export function SignInForm() {
         </Button>
         {noticeBlock}
         <div className="text-center">
-          <button type="button" onClick={() => go("email")} className={textButton}>
+          <button
+            type="button"
+            onClick={() => go("email")}
+            className={textButton}
+          >
             Войти по коду из письма
           </button>
         </div>
@@ -531,7 +580,11 @@ export function SignInForm() {
         Впервые у нас? Кабинет создадим сразу после кода.
       </p>
       <div className="text-center">
-        <button type="button" onClick={() => go("password")} className={textButton}>
+        <button
+          type="button"
+          onClick={() => go("password")}
+          className={textButton}
+        >
           Войти с паролем
         </button>
       </div>
