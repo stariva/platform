@@ -200,13 +200,24 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                   return (
                     // biome-ignore lint/suspicious/noArrayIndexKey: blog content blocks are static and never reordered
                     <figure key={index} className="my-12">
-                      <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+                      <div
+                        className={cn(
+                          "relative overflow-hidden rounded-lg",
+                          block.orientation === "portrait"
+                            ? "aspect-[4/5] max-w-md mx-auto"
+                            : "aspect-[4/3]",
+                        )}
+                      >
                         <Image
                           src={block.src ?? ""}
                           alt={block.alt ?? ""}
                           fill
                           className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 672px"
+                          sizes={
+                            block.orientation === "portrait"
+                              ? "(max-width: 768px) 100vw, 448px"
+                              : "(max-width: 768px) 100vw, 672px"
+                          }
                         />
                       </div>
                       {block.caption && (
