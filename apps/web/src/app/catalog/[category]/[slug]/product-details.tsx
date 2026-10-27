@@ -135,13 +135,9 @@ export function ProductDetails({
 }: ProductDetailsProps) {
   const faq = categoryFaq(madeToOrderLeadTime(product));
   const faqItems = faq[categorySlug] ?? faq.interior;
-  // Два независимых способа купить: готовое со склада и сплести под заказ
+  // Два независимых способа купить: готовое со склада и сплести под заказ.
+  // Одежду готовой не продаём — только на заказ
   const readyToShip = isPurchasable(product);
-  // Один размер в карточке одежды — значит, и готовое изделие этого размера
-  const readySize =
-    categorySlug === "clothes" && product.sizes?.length === 1
-      ? product.sizes[0]
-      : undefined;
   const madeToOrder = getProductMadeToOrder(product);
   const productUrl = `https://stariva.ru/catalog/${categorySlug}/${product.slug}`;
   // Бейдж не должен обещать хлопок там, где шнур полиэфирный или пряжа шерстяная
@@ -336,11 +332,6 @@ export function ProductDetails({
                   <h2 className="font-serif text-xl text-espresso mb-1.5">
                     Готовое изделие
                   </h2>
-                  {readySize && (
-                    <p className="text-espresso text-sm mb-1.5">
-                      Размер {readySize}
-                    </p>
-                  )}
                   <p className="text-taupe text-[13px] leading-relaxed mb-5">
                     {product.stockAvailable === 1
                       ? "Осталось одно изделие"

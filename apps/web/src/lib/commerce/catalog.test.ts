@@ -22,6 +22,16 @@ const product: Product = {
   featured: false,
 };
 
+// Готовым со склада продаём всё, кроме одежды
+const bag: Product = {
+  ...product,
+  id: "ozon-2",
+  slug: "avoska-5566",
+  name: "Авоська",
+  category: "bags",
+  subcategory: "totes",
+};
+
 let catalog: ProductsResult = { products: [], status: "available" };
 
 // Подменяем слой базы, а не весь service: mock.module в bun глобален для прогона,
@@ -46,19 +56,19 @@ const {
 } = await import("./catalog");
 
 test("resolves in-stock items with kopeck prices", async () => {
-  catalog = { products: [product], status: "available" };
+  catalog = { products: [bag], status: "available" };
 
   const items = await resolveCatalogItems([
-    { productSlug: product.slug, quantity: 1 },
-    { productSlug: product.slug, quantity: 2 },
+    { productSlug: bag.slug, quantity: 1 },
+    { productSlug: bag.slug, quantity: 2 },
   ]);
 
   assert.deepEqual(items, [
     {
-      productSlug: product.slug,
+      productSlug: bag.slug,
       quantity: 3,
       ozonSku: 3723160127,
-      name: "Туника",
+      name: "Авоська",
       price: 350000,
     },
   ]);
@@ -66,12 +76,12 @@ test("resolves in-stock items with kopeck prices", async () => {
 
 test("reports every sold-out or missing item at once", async () => {
   catalog = {
-    products: [product, { ...product, slug: "sold-out", inStock: false }],
+    products: [bag, { ...bag, slug: "sold-out", inStock: false }],
     status: "available",
   };
 
   const error = await resolveCatalogItems([
-    { productSlug: product.slug, quantity: 1 },
+    { productSlug: bag.slug, quantity: 1 },
     { productSlug: "sold-out", quantity: 1 },
     { productSlug: "delisted", quantity: 1 },
   ]).catch((e: unknown) => e);
@@ -80,22 +90,33 @@ test("reports every sold-out or missing item at once", async () => {
   assert.deepEqual(error.productSlugs, ["sold-out", "delisted"]);
 });
 
-test("rejects a quantity larger than the remaining stock", async () => {
+test("does not sell ready-made clothes from stock", async () => {
   catalog = { products: [product], status: "available" };
 
   const error = await resolveCatalogItems([
-    { productSlug: product.slug, quantity: 6 },
+    { productSlug: product.slug, quantity: 1 },
   ]).catch((e: unknown) => e);
 
   assert.ok(error instanceof CatalogItemsUnavailableError);
   assert.deepEqual(error.productSlugs, [product.slug]);
 });
 
+test("rejects a quantity larger than the remaining stock", async () => {
+  catalog = { products: [bag], status: "available" };
+
+  const error = await resolveCatalogItems([
+    { productSlug: bag.slug, quantity: 6 },
+  ]).catch((e: unknown) => e);
+
+  assert.ok(error instanceof CatalogItemsUnavailableError);
+  assert.deepEqual(error.productSlugs, [bag.slug]);
+});
+
 test("treats a catalog outage as a failure, not as sold-out items", async () => {
   catalog = { products: [], status: "unavailable" };
 
   const error = await resolveCatalogItems([
-    { productSlug: product.slug, quantity: 1 },
+    { productSlug: bag.slug, quantity: 1 },
   ]).catch((e: unknown) => e);
 
   assert.ok(error instanceof Error);
@@ -103,20 +124,15 @@ test("treats a catalog outage as a failure, not as sold-out items", async () => 
   assert.equal(error.message, "catalog_unavailable");
 });
 
-test("a product is buyable only with stock, RUB price and an Ozon SKU", () => {
-  assert.equal(isCatalogProductBuyable(product), true);
+test("a product is buyable only with stock, RUB price and an Ozon SKU, and not clothes", () => {
+  assert.equal(isCatalogProductBuyable(bag), true);
+  assert.equal(isCatalogProductBuyable(product), false);
   assert.equal(isCatalogProductBuyable(undefined), false);
-  assert.equal(isCatalogProductBuyable({ ...product, inStock: false }), false);
-  assert.equal(
-    isCatalogProductBuyable({ ...product, stockAvailable: 0 }),
-    false,
-  );
-  assert.equal(
-    isCatalogProductBuyable({ ...product, ozonSku: undefined }),
-    false,
-  );
-  assert.equal(isCatalogProductBuyable({ ...product, currency: "USD" }), false);
-  assert.equal(isCatalogProductBuyable({ ...product, price: 0 }), false);
+  assert.equal(isCatalogProductBuyable({ ...bag, inStock: false }), false);
+  assert.equal(isCatalogProductBuyable({ ...bag, stockAvailable: 0 }), false);
+  assert.equal(isCatalogProductBuyable({ ...bag, ozonSku: undefined }), false);
+  assert.equal(isCatalogProductBuyable({ ...bag, currency: "USD" }), false);
+  assert.equal(isCatalogProductBuyable({ ...bag, price: 0 }), false);
 });
 
 const sold: Product = { ...product, inStock: false, stockAvailable: 0 };

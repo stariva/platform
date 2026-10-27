@@ -17,6 +17,7 @@ import {
   PRODUCT_TYPES,
   SIZES,
 } from "@/lib/custom-order/pricing";
+import { isPurchasable } from "@/lib/in-stock";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { productHref } from "@/lib/products";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
@@ -105,7 +106,7 @@ export const chatTools = {
   // Поиск готовых изделий из каталога (таблица products).
   searchProducts: tool({
     description:
-      "Найти изделия из каталога Stariva. inStock=true — есть в наличии, можно сразу купить на сайте; madeToOrder=true — можно сплести под заказ в размере и цвете клиента, оформляется через мастера (одно изделие может быть и тем, и другим); если оба false — изделия сейчас нет, предложи похожее или написать мастеру. Используй, когда клиент хочет что-то купить, спрашивает что есть в наличии, просит подобрать готовое изделие или интересуется ценой конкретного товара. Можно фильтровать по категории, ключевым словам и максимальной цене.",
+      "Найти изделия из каталога Stariva. inStock=true — есть в наличии, можно сразу купить на сайте (одежду готовой не продаём — только плетём на заказ по меркам); madeToOrder=true — можно сплести под заказ в размере и цвете клиента, оформляется через мастера (одно изделие может быть и тем, и другим); если оба false — изделия сейчас нет, предложи похожее или написать мастеру. Используй, когда клиент хочет что-то купить, спрашивает что есть в наличии, просит подобрать готовое изделие или интересуется ценой конкретного товара. Можно фильтровать по категории, ключевым словам и максимальной цене.",
     inputSchema: z.object({
       query: z
         .string()
@@ -164,7 +165,7 @@ export const chatTools = {
         category: p.category,
         categoryLabel: CATEGORY_LABELS[p.category] ?? p.category,
         url: productHref(p),
-        inStock: p.inStock,
+        inStock: isPurchasable(p),
         madeToOrder: p.madeToOrder,
         shortDescription: p.shortDescription,
       }));

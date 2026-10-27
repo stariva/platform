@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { useCart } from "@/lib/cart/cart-context";
 import type { Product } from "@/lib/catalog/types";
+import { hasReadySample, IN_STOCK_SHIP_DAYS } from "@/lib/in-stock";
 import {
   CUSTOM_SIZE,
   type MadeToOrderConfig,
@@ -55,6 +56,8 @@ interface MadeToOrderProps {
 export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
   const sizes = madeToOrderSizes(product, config);
   const isClothes = product.category === "clothes";
+  // Одежду готовой не продаём, но готовый образец сокращает срок заказа
+  const readySample = hasReadySample(product);
   const router = useRouter();
   const { add } = useCart();
 
@@ -106,6 +109,17 @@ export function MadeToOrder({ product, config, productUrl }: MadeToOrderProps) {
       <p className="text-taupe text-[13px] leading-relaxed mb-5">
         {config.lead}
       </p>
+      {readySample && (
+        <p className="flex gap-2 mb-5 rounded-lg border border-sage/30 bg-sage/5 px-4 py-3 text-espresso text-[13px] leading-relaxed">
+          <span className="size-1.5 mt-2 shrink-0 rounded-full bg-sage" />
+          <span>
+            Есть готовый образец
+            {product.sizes?.length === 1 ? ` размера ${product.sizes[0]}` : ""}.
+            Если он подойдёт по вашим меркам, отправим за {IN_STOCK_SHIP_DAYS} —
+            мастер подтвердит при согласовании заказа.
+          </span>
+        </p>
+      )}
 
       {/* Размер: для одежды — стандартные или по меркам, для остальных — только если заданы в каталоге */}
       {(isClothes || sizes.length > 0) && (

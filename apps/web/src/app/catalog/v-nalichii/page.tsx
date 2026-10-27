@@ -16,7 +16,7 @@ import CategoryFilters from "../[category]/category-filters";
 export const dynamic = "force-dynamic";
 
 const title = "Макраме в наличии — готовые изделия с быстрой отправкой";
-const description = `Готовые изделия в технике макраме ручной работы: одежда, сумки и декор интерьера. Всё уже сплетено — оформите заказ на сайте, отправим за ${IN_STOCK_SHIP_DAYS}.`;
+const description = `Готовые изделия в технике макраме ручной работы: декор интерьера и сумки. Всё уже сплетено — оформите заказ на сайте, отправим за ${IN_STOCK_SHIP_DAYS}.`;
 
 export const metadata: Metadata = {
   title,
@@ -56,7 +56,7 @@ export default async function InStockPage() {
         items={[
           { name: "Главная", href: "/" },
           { name: "Каталог", href: "/catalog" },
-          { name: "В наличии", href: IN_STOCK_HREF },
+          { name: "Быстрая отправка", href: IN_STOCK_HREF },
         ]}
       />
       <ItemListJsonLd
@@ -89,7 +89,7 @@ export default async function InStockPage() {
                 Каталог
               </Link>
               <span>/</span>
-              <span className="text-espresso">В наличии</span>
+              <span className="text-espresso">Быстрая отправка</span>
             </nav>
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
               <div>
@@ -102,8 +102,9 @@ export default async function InStockPage() {
                   Готово к отправке
                 </h1>
                 <p className="text-taupe mt-4 max-w-xl text-base leading-relaxed">
-                  Эти изделия уже сплетены и ждут на складе. Оформите заказ
-                  прямо на сайте — отправим за {IN_STOCK_SHIP_DAYS}.
+                  Декор и сумки, которые уже сплетены и ждут на складе. Оформите
+                  заказ прямо на сайте — отправим за {IN_STOCK_SHIP_DAYS}.
+                  Одежду плетём только по вашим меркам.
                 </p>
               </div>
               <ul className="flex flex-wrap gap-2">
