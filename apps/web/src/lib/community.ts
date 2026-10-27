@@ -17,6 +17,7 @@ export const COMMUNITY_LINKS: { channel: CommunityChannel; href: string }[] = [
 ].filter((link) => link.href !== "");
 
 const STORAGE_KEY = "stariva:community-invite";
+const STATE_CHANGED_EVENT = "stariva:community-invite-change";
 /** Сколько не показывать карточку после «Не сейчас». */
 const SNOOZE_MS = 60 * 24 * 60 * 60 * 1000;
 
@@ -25,7 +26,20 @@ type InviteState = { joined: true } | { snoozedAt: number };
 function readState(): InviteState | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as InviteState) : null;
+    const state: unknown = raw ? JSON.parse(raw) : null;
+    if (!state || typeof state !== "object" || Array.isArray(state))
+      return null;
+    if ("joined" in state) {
+      return state.joined === true ? { joined: true } : null;
+    }
+    if (
+      "snoozedAt" in state &&
+      typeof state.snoozedAt === "number" &&
+      Number.isFinite(state.snoozedAt)
+    ) {
+      return { snoozedAt: state.snoozedAt };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -34,9 +48,23 @@ function readState(): InviteState | null {
 function writeState(state: InviteState) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // storage не срабатывает во вкладке, которая записала значение.
+    window.dispatchEvent(new Event(STATE_CHANGED_EVENT));
   } catch {
     /* storage blocked — карточка просто покажется снова */
   }
+}
+
+export function subscribeCommunityInvite(onChange: () => void): () => void {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY || event.key === null) onChange();
+  };
+  window.addEventListener(STATE_CHANGED_EVENT, onChange);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(STATE_CHANGED_EVENT, onChange);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 /**
@@ -57,5 +85,7 @@ export function markCommunityJoined() {
 }
 
 export function snoozeCommunityInvite(now = Date.now()) {
+  const state = readState();
+  if (state && "joined" in state) return;
   writeState({ snoozedAt: now });
 }

@@ -8,6 +8,7 @@ import {
   markCommunityJoined,
   shouldShowCommunityInvite,
   snoozeCommunityInvite,
+  subscribeCommunityInvite,
 } from "@/lib/community";
 import { cn } from "@/lib/utils";
 import { MaxIcon, TelegramIcon } from "./icons";
@@ -93,7 +94,10 @@ export function CommunityInvite({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(shouldShowCommunityInvite());
+    const updateVisibility = () => setVisible(shouldShowCommunityInvite());
+    const unsubscribe = subscribeCommunityInvite(updateVisibility);
+    updateVisibility();
+    return unsubscribe;
   }, []);
 
   if (!visible) return null;
