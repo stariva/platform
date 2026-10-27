@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CommunityInvite } from "@/components/stariva/community-invite";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { getSession } from "@/lib/auth/session";
@@ -339,6 +340,13 @@ function Paid({
           </ul>
         </Card>
       ) : null}
+
+      <CommunityInvite
+        source="workshop_booked"
+        title="Плетите вместе с другими участницами"
+        text="В Stariva Community делятся работами по мастер-классам, задают вопросы мастеру и первыми узнают о новых уроках."
+        className="rounded-[24px] border-0 bg-white lg:p-8 lg:pr-14"
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { CommunityInvite } from "@/components/stariva/community-invite";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
@@ -305,6 +306,12 @@ export default async function WorkshopsPage() {
             );
           },
         )}
+        <CommunityInvite
+          source="workshops"
+          title="Учиться вместе веселее"
+          text="Stariva Community — группы, где участницы делятся работами, задают вопросы мастеру и первыми узнают о новых мастер-классах."
+          className="max-w-2xl mx-auto"
+        />
       </main>
 
       <Footer />
