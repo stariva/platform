@@ -5,7 +5,7 @@
  * не показываются вовсе.
  */
 export const COMMUNITY: { telegramUrl: string; maxUrl: string } = {
-  telegramUrl: "",
+  telegramUrl: "https://t.me/stariva01",
   maxUrl: "",
 };
 
