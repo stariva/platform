@@ -8,6 +8,7 @@ import { Header } from "@/components/stariva/header";
 import { getSession } from "@/lib/auth/session";
 import { getOrderById } from "@/lib/payments/orders";
 import { clientBotStartUrl } from "@/lib/telegram/client-bot";
+import { bundleExtraFor, getBundle } from "@/lib/workshops/bundles";
 import { workshopCalendarLinks } from "@/lib/workshops/notifications";
 import {
   cookieMatchesOrder,
@@ -155,12 +156,14 @@ function Paid({
     orderedAt: order.createdAt,
     releaseAt: workshop.releaseAt ? new Date(workshop.releaseAt) : null,
   });
+  const bundle = getBundle(order.bundleSlug);
+  const bundleExtra = bundleExtraFor(order.bundleSlug);
 
   return (
     <div className="flex flex-col gap-5">
       <PaidGoal
         orderId={order.id}
-        slug={workshop.slug}
+        slug={bundle?.slug ?? workshop.slug}
         price={order.amount / 100}
       />
       <div>
@@ -294,6 +297,27 @@ function Paid({
               <p className="text-sm leading-relaxed text-dark-grey">
                 Вам бесплатно достаётся {bonus.title}. Он появится в вашем
                 кабинете {bonus.releaseLabel} — доплачивать ничего не нужно.
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
+      {bundleExtra ? (
+        <Card>
+          <div className="flex gap-4">
+            <Gift
+              className="mt-0.5 size-5 shrink-0 text-terracotta"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <h2 className="mb-1 font-serif text-xl text-espresso">
+                Второй мастер-класс комбо
+              </h2>
+              <p className="text-sm leading-relaxed text-dark-grey">
+                {bundleExtra.releaseLabel
+                  ? `Вы также оплатили ${bundleExtra.title}. Он откроется в вашем кабинете ${bundleExtra.releaseLabel}, войти можно по той же ссылке из письма.`
+                  : `Вы также оплатили ${bundleExtra.title}. Он уже открыт в вашем кабинете.`}
               </p>
             </div>
           </div>

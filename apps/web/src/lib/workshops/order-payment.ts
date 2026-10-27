@@ -6,6 +6,7 @@ import {
   type WorkshopOrder,
 } from "@/lib/payments/orders";
 import { getPayment, type YooKassaPayment } from "@/lib/payments/yookassa";
+import { getBundle } from "./bundles";
 import { notifyWorkshopBooked } from "./notifications";
 import { earnsPreorderBonus } from "./preorder-bonus";
 import { getWorkshopBySlug } from "./workshops-db";
@@ -48,6 +49,12 @@ export async function applyWorkshopPayment(
   });
   if (bonus) await grantAccess(order.userId, bonus.slug, order.id);
 
+  // Комбо: остальные курсы — тем же заказом, даже если ещё не вышли
+  const bundle = getBundle(order.bundleSlug);
+  for (const extra of bundle?.extras ?? []) {
+    await grantAccess(order.userId, extra.slug, order.id);
+  }
+
   if (wasUpdated) {
     console.info(
       `[payments] Заказ ${order.id} оплачен, доступ к «${order.workshopSlug}» выдан`,
@@ -57,17 +64,25 @@ export async function applyWorkshopPayment(
 
   // Вне wasUpdated: если прошлый вызов упал до чека, повтор вебхука его догонит
   const title = workshop?.title ?? order.workshopSlug;
+  const name = bundle
+    ? `Доступ к видеоматериалам «${title}» и ${bundle.extras.map((extra) => extra.title).join(", ")}`
+    : `Доступ к видеоматериалу «${title}»`;
   await issueNpdReceipt({
     payment,
     target: { kind: "workshop", orderId: order.id },
     services: [
       {
-        name: `Доступ к видеоматериалу «${title}»`,
+        name,
         amount: order.amount,
         quantity: 1,
       },
     ],
-    email: { to: order.contactEmail, subject: `мастер-классу «${title}»` },
+    email: {
+      to: order.contactEmail,
+      subject: bundle
+        ? `комбо мастер-классов «${bundle.title}»`
+        : `мастер-классу «${title}»`,
+    },
     expected: 1,
   });
 }

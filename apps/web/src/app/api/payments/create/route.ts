@@ -12,6 +12,7 @@ import {
 } from "@/lib/payments/orders";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { collectVisitor } from "@/lib/visitor";
+import { bundleSlugs, getBundle } from "@/lib/workshops/bundles";
 import { findOrCreateBuyer, sendLoginEmail } from "@/lib/workshops/buyer";
 import { siteUrl } from "@/lib/workshops/notifications";
 import {
@@ -31,6 +32,8 @@ export const runtime = "nodejs";
  */
 const bodySchema = z.object({
   slug: z.string().min(1),
+  // Комбо: slug — его основной курс, остальные выдаются вместе с ним
+  bundle: z.string().min(1).optional(),
   email: z.string().trim().toLowerCase().email().max(254).optional(),
   name: z.string().trim().max(120).optional(),
   personalDataConsent: z.boolean().optional(),
@@ -47,6 +50,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
   }
   const input = parsed.data;
+
+  const bundle = getBundle(input.bundle);
+  if (input.bundle && bundle?.main !== input.slug) {
+    return NextResponse.json({ error: "Комбо не найдено" }, { status: 404 });
+  }
 
   const workshop = await getWorkshopBySlug(input.slug);
   if (!workshop) {
@@ -79,8 +87,16 @@ export async function POST(request: NextRequest) {
   const coursePath = `/account/workshops/${workshop.slug}`;
 
   // Уже куплен — повторная оплата не нужна. Гостю шлём письмо со ссылкой
-  // входа: он мог купить раньше и просто забыть, как войти.
-  if (await hasAccess(buyer.id, workshop.slug)) {
+  // входа: он мог купить раньше и просто забыть, как войти. Комбо считаем
+  // купленным, если есть хоть один его курс: второй выгоднее взять отдельно
+  const owned = bundle
+    ? (
+        await Promise.all(
+          bundleSlugs(bundle).map((slug) => hasAccess(buyer.id, slug)),
+        )
+      ).some(Boolean)
+    : await hasAccess(buyer.id, workshop.slug);
+  if (owned) {
     if (!session) {
       await sendLoginEmail(buyer.email, coursePath, request.headers).catch(
         (error) =>
@@ -89,16 +105,18 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(
       {
-        error: session
-          ? "У вас уже есть доступ к этому курсу"
-          : `Этот мастер-класс уже куплен на ${buyer.email}. Мы отправили на эту почту ссылку для входа.`,
+        error: bundle
+          ? `На ${buyer.email} уже куплен один из мастер-классов комбо. Второй можно купить отдельно — он выйдет дешевле.`
+          : session
+            ? "У вас уже есть доступ к этому курсу"
+            : `Этот мастер-класс уже куплен на ${buyer.email}. Мы отправили на эту почту ссылку для входа.`,
         alreadyOwned: true,
       },
       { status: 409 },
     );
   }
 
-  const amountKopecks = workshopPriceKopecks(workshop);
+  const amountKopecks = bundle?.priceKopecks ?? workshopPriceKopecks(workshop);
 
   // Бесплатный мастер-класс — выдаём доступ сразу, без похода в ЮKassa
   if (amountKopecks === 0) {
@@ -121,13 +139,19 @@ export async function POST(request: NextRequest) {
 
   const reused = await reusePendingOrder(
     request.cookies.get(WORKSHOP_ORDER_COOKIE)?.value,
-    { userId: buyer.id, workshopSlug: workshop.slug, amountKopecks },
+    {
+      userId: buyer.id,
+      workshopSlug: workshop.slug,
+      bundleSlug: bundle?.slug ?? null,
+      amountKopecks,
+    },
   );
   if (reused) return paymentResponse(reused.order, reused.confirmationUrl);
 
   const order = await createOrder({
     userId: buyer.id,
     workshopSlug: workshop.slug,
+    bundleSlug: bundle?.slug ?? null,
     amountKopecks,
     contactEmail: buyer.email,
     attribution: attributionFromRequest(request),
@@ -137,12 +161,15 @@ export async function POST(request: NextRequest) {
   try {
     const payment = await createPayment({
       amountKopecks,
-      description: `Мастер-класс «${workshop.title}» — Stariva`,
+      description: bundle
+        ? `Комбо мастер-классов «${bundle.title}» — Stariva`
+        : `Мастер-класс «${workshop.title}» — Stariva`,
       returnUrl: `${siteUrl()}/workshops/${workshop.slug}/booked?order=${order.id}`,
       metadata: {
         orderId: order.id,
         userId: buyer.id,
         slug: workshop.slug,
+        ...(bundle ? { bundle: bundle.slug } : {}),
         // Фиксация согласия и акцепта: редакция документов на момент заказа
         offerAccepted: LEGAL_VERSION,
         ...(session ? {} : { pdConsent: LEGAL_VERSION }),

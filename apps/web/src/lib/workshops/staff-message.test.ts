@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 import type { orders } from "@stariva/db/schema";
+import { formatPrice } from "@/lib/products";
 import { formatWorkshopPurchaseMessage } from "./staff-message";
 
 const order = {
   id: "order",
   userId: "user",
   workshopSlug: "elka",
+  bundleSlug: null,
   amount: 249000,
   currency: "RUB",
   status: "paid",
@@ -61,4 +63,14 @@ test("a Livemaster code is announced as an activation, not a site purchase", () 
   expect(title).toBe(
     "Активирован код с Ярмарки Мастеров: «Ёлка макраме» · 2 490 ₽",
   );
+});
+
+test("a combo purchase is announced as the combo", () => {
+  const { title } = formatWorkshopPurchaseMessage(
+    { ...order, bundleSlug: "elka-makrame-kombo", amount: 159000 },
+    { title: "Ёлка макраме", releaseAt: null },
+    "account@example.test",
+    now,
+  );
+  expect(title).toBe(`Куплено комбо «Две ёлки макраме» · ${formatPrice(1590)}`);
 });

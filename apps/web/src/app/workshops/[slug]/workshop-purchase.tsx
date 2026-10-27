@@ -19,6 +19,8 @@ import { formatPrice } from "@/lib/workshops-data";
 
 interface WorkshopPurchaseProps {
   slug: string;
+  /** Комбо: slug — его основной курс, цена и подпись — комбо. */
+  bundle?: string;
   price: number;
   title: string;
   /** Куда вернуть после входа по ссылке «Уже покупали?». */
@@ -58,6 +60,7 @@ type Notice = { tone: "error" | "info"; text: string } | null;
  */
 export function WorkshopPurchase({
   slug,
+  bundle,
   price,
   title,
   returnPath = `/workshops/${slug}`,
@@ -118,7 +121,7 @@ export function WorkshopPurchase({
 
     const goalSent = buyGoal
       ? reachGoalBeforeLeave(buyGoal, {
-          slug,
+          slug: bundle ?? slug,
           order_price: price,
           currency: "RUB",
         })
@@ -132,8 +135,8 @@ export function WorkshopPurchase({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           session
-            ? { slug }
-            : { slug, email: guestEmail, personalDataConsent: consent },
+            ? { slug, bundle }
+            : { slug, bundle, email: guestEmail, personalDataConsent: consent },
         ),
       });
       const data = await res.json().catch(() => ({}));
@@ -215,7 +218,8 @@ export function WorkshopPurchase({
     <form onSubmit={handleSubmit} noValidate className="mb-3">
       {session ? (
         <p className="text-sm text-text-grey mb-4">
-          Мастер-класс появится в вашем кабинете{" "}
+          {bundle ? "Оба мастер-класса появятся" : "Мастер-класс появится"} в
+          вашем кабинете{" "}
           <span className="text-espresso">({session.user.email})</span>
         </p>
       ) : (
