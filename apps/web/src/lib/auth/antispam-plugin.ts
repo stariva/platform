@@ -14,6 +14,7 @@ const GUARDED_PATHS = new Set([
   "/sign-in/magic-link",
   "/request-password-reset",
   "/send-verification-email",
+  "/email-otp/send-verification-otp",
 ]);
 
 /** Новых неподтверждённых аккаунтов в сутки, после чего регистрация встаёт. */

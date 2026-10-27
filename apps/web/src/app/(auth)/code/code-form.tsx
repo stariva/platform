@@ -1,7 +1,7 @@
 "use client";
 
-import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { type FormEvent, useId, useState } from "react";
+import { CodeInput } from "@/components/stariva/code-input";
 import {
   ConsentCheckbox,
   PD_CONSENT_ERROR,
@@ -9,12 +9,6 @@ import {
 } from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth/client";
 import { suggestEmailFix } from "@/lib/email-typo";
@@ -22,27 +16,6 @@ import { SentNotice } from "../sent-notice";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CODE_DIGITS = 6;
-
-/** Код копируют из сообщения как «482 719» или «482-719» — оставляем только цифры. */
-function digitsOnly(text: string): string {
-  return text.replace(/\D/g, "").slice(0, CODE_DIGITS);
-}
-
-/** Три клетки подряд: код читается как «482 719», так же, как в сообщении. */
-function codeGroup(slots: number[], error: string | undefined) {
-  return (
-    <InputOTPGroup className="flex-1">
-      {slots.map((index) => (
-        <InputOTPSlot
-          key={index}
-          index={index}
-          aria-invalid={error ? true : undefined}
-          className="h-13 min-w-0 flex-1 bg-parchment font-mono text-2xl text-espresso first:rounded-l-xl last:rounded-r-xl"
-        />
-      ))}
-    </InputOTPGroup>
-  );
-}
 
 type Notice = { tone: "error" | "info"; text: string } | null;
 
@@ -153,12 +126,8 @@ export function CodeForm() {
         <label htmlFor={codeId} className="block text-sm text-espresso mb-1.5">
           Код из сообщения
         </label>
-        <InputOTP
+        <CodeInput
           id={codeId}
-          maxLength={CODE_DIGITS}
-          pattern={REGEXP_ONLY_DIGITS}
-          pasteTransformer={digitsOnly}
-          autoComplete="off"
           autoFocus
           value={code}
           onChange={(value) => {
@@ -166,15 +135,8 @@ export function CodeForm() {
             if (codeError) setCodeError(undefined);
           }}
           disabled={sending}
-          required
-          aria-invalid={codeError ? true : undefined}
-          aria-describedby={codeError ? `${codeId}-error` : undefined}
-          containerClassName="w-full gap-1 sm:gap-2"
-        >
-          {codeGroup([0, 1, 2], codeError)}
-          <InputOTPSeparator className="text-taupe" />
-          {codeGroup([3, 4, 5], codeError)}
-        </InputOTP>
+          errorId={codeError ? `${codeId}-error` : undefined}
+        />
         {codeError ? (
           <p
             id={`${codeId}-error`}

@@ -26,9 +26,9 @@ function guard(request: NextRequest) {
     ["INVALID_TOKEN", "EXPIRED_TOKEN"].includes(
       request.nextUrl.searchParams.get("error") ?? "",
     ) &&
-    request.nextUrl.pathname !== "/magic-link"
+    request.nextUrl.pathname !== "/sign-in"
   ) {
-    const recovery = new URL("/magic-link", request.url);
+    const recovery = new URL("/sign-in", request.url);
     recovery.searchParams.set("error", "INVALID_TOKEN");
     return NextResponse.redirect(recovery);
   }
