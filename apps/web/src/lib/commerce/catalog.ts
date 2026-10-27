@@ -1,5 +1,6 @@
 import { getProductsResult } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
+import { sellsReadyMade } from "@/lib/in-stock";
 import {
   getProductMadeToOrder,
   isMadeToOrderColor,
@@ -49,11 +50,13 @@ export function priceInKopecks(product: Product): number | null {
 
 /**
  * Можно ли продать хотя бы одно изделие: есть остаток, цена в рублях и SKU
- * для Ozon Доставки. Одно правило для корзины и для оформления заказа.
+ * для Ozon Доставки, и это не одежда — её готовой не продаём.
+ * Одно правило для корзины и для оформления заказа.
  */
 export function isCatalogProductBuyable(product: Product | undefined): boolean {
   return Boolean(
     product?.inStock &&
+      sellsReadyMade(product) &&
       (product.stockAvailable ?? 0) >= 1 &&
       product.currency === "RUB" &&
       Number.isSafeInteger(product.ozonSku) &&

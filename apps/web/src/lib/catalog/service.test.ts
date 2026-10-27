@@ -96,9 +96,11 @@ test("catalog results distinguish an unavailable database from a successful empt
 });
 
 test("in-stock results filter purchasable products and retain catalog availability", async () => {
-  const unavailableProducts = [
+  const unavailableProducts: Product[] = [
     { ...product, id: "sold-out", inStock: false },
     { ...product, id: "no-sku", ozonSku: undefined },
+    // Одежду готовой не продаём
+    { ...product, id: "clothes", category: "clothes" },
   ];
   const products = [product, ...unavailableProducts];
   fetchProducts.mockResolvedValue(products);

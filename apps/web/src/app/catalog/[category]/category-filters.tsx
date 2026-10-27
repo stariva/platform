@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Product } from "@/lib/catalog/types";
+import { isPurchasable } from "@/lib/in-stock";
 import { getProductMadeToOrder } from "@/lib/made-to-order";
 import { formatPrice, productHref, productSectionKey } from "@/lib/products";
 
@@ -228,7 +229,7 @@ function ProductCard({
             )}
           </div>
         </div>
-        {product.inStock ? (
+        {isPurchasable(product) ? (
           <p className="mt-1.5 label-caps text-[11px] text-sage">В наличии</p>
         ) : madeToOrder ? (
           <p className="mt-1.5 label-caps text-[11px] text-terracotta/90">

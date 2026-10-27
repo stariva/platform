@@ -6,15 +6,15 @@ import type { Product } from "@/lib/catalog/types";
 
 const product: Product = {
   id: "ozon-1",
-  slug: "tunika-5565",
-  name: "Туника",
+  slug: "avoska-5565",
+  name: "Авоська",
   description: "",
   shortDescription: "",
   price: 3500,
   currency: "RUB",
   images: ["https://cdn.stariva.ru/a.jpg"],
-  category: "clothes",
-  subcategory: "tops",
+  category: "bags",
+  subcategory: "totes",
   ozonSku: 3723160127,
   inStock: true,
   stockAvailable: 150,
@@ -68,11 +68,31 @@ test("returns fresh price and capped stock for buyable products", async () => {
         productSlug: product.slug,
         fulfillmentType: "stock",
         available: true,
-        name: "Туника",
+        name: "Авоська",
         image: "https://cdn.stariva.ru/a.jpg",
         ozonSku: 3723160127,
         price: 350000,
         maxQuantity: 99,
+      },
+    ],
+  });
+});
+
+test("ready-made clothes from an old cart are no longer for sale", async () => {
+  catalog = {
+    products: [{ ...product, category: "clothes", subcategory: "tops" }],
+    status: "available",
+  };
+
+  const res = await POST(request({ lines: [stock(product.slug)] }));
+
+  assert.deepEqual(await res.json(), {
+    lines: [
+      {
+        productSlug: product.slug,
+        fulfillmentType: "stock",
+        available: false,
+        reason: "sold_out",
       },
     ],
   });
@@ -128,7 +148,7 @@ test("made-to-order lines ignore stock and keep a separate line", async () => {
         productSlug: product.slug,
         fulfillmentType: "made_to_order",
         available: true,
-        name: "Туника",
+        name: "Авоська",
         image: "https://cdn.stariva.ru/a.jpg",
         price: 350000,
         maxQuantity: 10,

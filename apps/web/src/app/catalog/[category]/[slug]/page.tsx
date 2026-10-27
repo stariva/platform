@@ -22,7 +22,7 @@ import {
   getReviews,
   summarizeRatings,
 } from "@/lib/catalog/service";
-import { IN_STOCK_SHIP_DAYS_RANGE } from "@/lib/in-stock";
+import { IN_STOCK_SHIP_DAYS_RANGE, isPurchasable } from "@/lib/in-stock";
 import {
   madeToOrderLeadTime,
   madeToOrderLeadTimeDays,
@@ -229,10 +229,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
         )}
         price={product.price}
         currency={product.currency}
-        inStock={product.inStock}
+        inStock={isPurchasable(product)}
         madeToOrder={product.madeToOrder}
         handlingDays={
-          product.inStock
+          isPurchasable(product)
             ? IN_STOCK_SHIP_DAYS_RANGE
             : madeToOrderLeadTimeDays(product)
         }
