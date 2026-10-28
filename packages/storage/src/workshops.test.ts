@@ -5,7 +5,9 @@ import {
   hlsContentType,
   hlsPlaylistFile,
   isWorkshopKey,
+  mp4FrameSize,
   parseMasterPlaylist,
+  plannedHlsSizes,
   planWorkshopSweep,
   workshopHlsPrefix,
   workshopImageKey,
@@ -90,6 +92,36 @@ test("master playlist variants come out best first", () => {
     { width: 0, height: 0, bandwidth: 1200000 },
   ]);
   assert.deepEqual(parseMasterPlaylist("#EXTM3U\n"), []);
+});
+
+/** tkhd версии 0 (92 байта) с размером кадра в конце, 16.16. */
+function tkhd(width: number, height: number): Uint8Array {
+  const box = new Uint8Array(92);
+  const view = new DataView(box.buffer);
+  view.setUint32(0, box.length);
+  box.set([0x74, 0x6b, 0x68, 0x64], 4);
+  view.setUint32(84, width * 65536);
+  view.setUint32(88, height * 65536);
+  return box;
+}
+
+test("frame size comes from the video track of init.mp4", () => {
+  const audio = tkhd(0, 0);
+  const video = tkhd(1920, 1080);
+  const init = new Uint8Array(8 + audio.length + video.length);
+  init.set(audio, 8);
+  init.set(video, 8 + audio.length);
+  assert.deepEqual(mp4FrameSize(init), { width: 1920, height: 1080 });
+  assert.equal(mp4FrameSize(audio), null);
+  assert.equal(mp4FrameSize(new Uint8Array(16)), null);
+  // Обрезанный файл: tkhd вылезает за конец
+  assert.equal(mp4FrameSize(video.subarray(0, 60)), null);
+});
+
+test("worker cuts lower qualities only below the top one", () => {
+  assert.deepEqual(plannedHlsSizes(1080), [1080, 720, 480]);
+  assert.deepEqual(plannedHlsSizes(720), [720, 480]);
+  assert.deepEqual(plannedHlsSizes(480), [480]);
 });
 
 test("unsupported video types are refused", () => {
