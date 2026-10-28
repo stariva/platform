@@ -84,6 +84,47 @@ export function parseMasterPlaylist(text: string): HlsVariantInfo[] {
   return variants.sort((a, b) => b.bandwidth - a.bandwidth);
 }
 
+/** Длина куска HLS, секунды: так режет воркер (apps/jobs/src/lib/hls.ts). */
+export const HLS_SEGMENT_SECONDS = 6;
+
+/**
+ * Качества, в которые воркер режет видео, по короткой стороне кадра верхнего
+ * (оно уже не больше 1080p): само оно, а ниже — 720p и 480p, если верхнее
+ * больше них. Повторяет planVariants в apps/jobs/src/lib/hls.ts.
+ */
+export function plannedHlsSizes(top: number): number[] {
+  return [top, ...[720, 480].filter((size) => top > size)];
+}
+
+/**
+ * Размер кадра из init.mp4 нарезки: первый tkhd с ненулевыми шириной и
+ * высотой (у звуковой дорожки они нулевые). Ширина и высота — последние
+ * восемь байт tkhd, числа 16.16. null — не нашли.
+ */
+export function mp4FrameSize(
+  bytes: Uint8Array,
+): { width: number; height: number } | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  for (let i = 4; i + 4 <= bytes.length; i++) {
+    // "tkhd"
+    if (
+      bytes[i] !== 0x74 ||
+      bytes[i + 1] !== 0x6b ||
+      bytes[i + 2] !== 0x68 ||
+      bytes[i + 3] !== 0x64
+    ) {
+      continue;
+    }
+    const start = i - 4;
+    const size = view.getUint32(start);
+    if (size < 16 || start + size > bytes.length) continue;
+    const width = Math.round(view.getUint32(start + size - 8) / 65536);
+    const height = Math.round(view.getUint32(start + size - 4) / 65536);
+    if (width > 0 && height > 0) return { width, height };
+  }
+  return null;
+}
+
 /** Content-Type файла HLS-версии. Подписывается в ссылке на загрузку. */
 export function hlsContentType(file: string): string {
   if (file.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
