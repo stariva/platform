@@ -90,6 +90,8 @@ export function WorkshopPurchase({
       setOwned(false);
       return;
     }
+    // Курс сменился (выбор на лендинге комбо) — прошлый ответ не про него.
+    setOwned(null);
     webApi.account
       .workshopAccess({ slug })
       .then(({ owned }) => {
