@@ -613,6 +613,10 @@ function LessonController({
 
   const stalled = ready && started && !paused && !ended && waiting && !seeking;
   useEffect(() => {
+    if (!ready || error) {
+      stallRef.current = null;
+      return;
+    }
     if (stalled) {
       if (Date.now() - lastSeekRef.current >= SEEK_GRACE_MS) {
         stallRef.current = Date.now();
@@ -638,16 +642,13 @@ function LessonController({
       });
     }
 
+    if (!manualQuality) return;
     const recent = recentStallsRef.current.filter(
       (at) => now - at < AUTO_HINT_WINDOW_MS,
     );
     recent.push(now);
     recentStallsRef.current = recent;
-    if (
-      manualQuality &&
-      recent.length >= AUTO_HINT_STALLS &&
-      !hintShownRef.current
-    ) {
+    if (recent.length >= AUTO_HINT_STALLS && !hintShownRef.current) {
       hintShownRef.current = true;
       setAutoHint(true);
       trackLessonVideo("lesson_video_auto_hint", {
@@ -655,7 +656,7 @@ function LessonController({
         action: "shown",
       });
     }
-  }, [stalled, manualQuality, positionRef]);
+  }, [ready, error, stalled, manualQuality, positionRef]);
 
   // Зритель сам вернул «Авто» — подсказка больше не нужна
   useEffect(() => {
@@ -709,6 +710,8 @@ function LessonController({
     const expired = Date.now() > source.expiresAt - LINK_EXPIRY_MARGIN_MS;
     if (expired || retriesRef.current < MAX_SOURCE_RETRIES) {
       if (!expired) retriesRef.current += 1;
+      stallRef.current = null;
+      setReadyUrl(null);
       store.dismissError();
       onRefresh(positionRef.current, playingRef.current);
       return;
@@ -721,6 +724,7 @@ function LessonController({
   // ── Конец урока ─────────────────────────────────────────────────
   useEffect(() => {
     if (!ended || !ready) return;
+    setAutoHint(false);
     if (!completedRef.current) {
       completedRef.current = true;
       saveProgress(durationRef.current, durationRef.current, true);
