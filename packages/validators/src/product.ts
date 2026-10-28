@@ -87,6 +87,7 @@ export const productFormSchema = z
     color: optionalText(300),
     dimensions: optionalText(300),
     careInstructions: optionalText(1000),
+    ideaAuthor: optionalText(200),
     sizes: z.array(z.string().trim().min(1).max(20)).max(20),
     bestFor: optionalText(300),
     highlights: z

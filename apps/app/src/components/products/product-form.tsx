@@ -64,6 +64,7 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   color: "",
   dimensions: "",
   careInstructions: "",
+  ideaAuthor: "",
   sizes: [],
   bestFor: "",
   highlights: [],
@@ -414,6 +415,16 @@ export function ProductForm({
                   rows={2}
                   {...register("careInstructions")}
                 />
+              </FieldRow>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldRow
+                label="Автор идеи"
+                htmlFor="ideaAuthor"
+                hint="Если указан, в карточке товара появится сноска «Автор идеи — …»"
+                error={errors.ideaAuthor?.message}
+              >
+                <Input id="ideaAuthor" {...register("ideaAuthor")} />
               </FieldRow>
             </div>
             <div className="sm:col-span-2">

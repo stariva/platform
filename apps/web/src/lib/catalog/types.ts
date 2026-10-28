@@ -66,6 +66,8 @@ export interface Product {
   material: string;
   dimensions?: string;
   careInstructions?: string;
+  /** Автор идеи изделия — выводим сноской в карточке. */
+  ideaAuthor?: string;
   color?: string;
   sizes?: string[];
   /** «Лучше всего для: …» — где изделие смотрится лучше всего. */

@@ -73,6 +73,8 @@ export const products = pgTable(
     color: text("color"),
     dimensions: text("dimensions"),
     careInstructions: text("care_instructions"),
+    // Автор идеи изделия — указываем в карточке сноской, если попросили
+    ideaAuthor: text("idea_author"),
     sizes: text("sizes").array().notNull().default(sql`'{}'::text[]`),
     // Текст для витрины: «Лучше всего для: …» и короткие преимущества
     bestFor: text("best_for"),
