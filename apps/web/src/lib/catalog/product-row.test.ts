@@ -18,6 +18,7 @@ const row: ProductRow = {
   color: null,
   dimensions: null,
   careInstructions: null,
+  ideaAuthor: null,
   sizes: [],
   bestFor: null,
   highlights: [],
