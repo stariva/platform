@@ -25,6 +25,7 @@ import {
   getProductMadeToOrder,
   madeToOrderLeadTime,
 } from "@/lib/made-to-order";
+import { getIdeaCredit } from "@/lib/product-credits";
 import { formatPrice, getProductSection, productHref } from "@/lib/products";
 import { formatRating, pluralRatings, ratingSourcesLabel } from "@/lib/ratings";
 import { ProductGallery } from "./product-gallery";
@@ -147,6 +148,7 @@ export function ProductDetails({
       : "Натуральные материалы";
   const specs = productSpecs(product, categorySlug);
   const section = getProductSection(category, product.subcategory);
+  const ideaCredit = getIdeaCredit(product);
 
   return (
     <main className="min-h-screen bg-parchment">
@@ -517,6 +519,11 @@ export function ProductDetails({
                 __html: descriptionWithoutLead(product.description),
               }}
             />
+            {ideaCredit && (
+              <p className="mt-6 border-t border-espresso/10 pt-4 text-xs text-taupe">
+                {ideaCredit}
+              </p>
+            )}
           </div>
         </div>
       </section>
