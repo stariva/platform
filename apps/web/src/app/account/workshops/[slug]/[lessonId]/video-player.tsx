@@ -7,7 +7,7 @@ import { createPlayer } from "@videojs/react";
 import { I18nProvider } from "@videojs/react/i18n";
 import { HlsJsVideo } from "@videojs/react/media/hlsjs-video";
 import { Video, VideoSkin } from "@videojs/react/video";
-import { Check, RefreshCw, RotateCcw, SkipForward } from "lucide-react";
+import { Check, RefreshCw, RotateCcw, SkipForward, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { trackLessonVideo } from "@/lib/analytics";
 import { accessErrorMessage, webApi } from "@/lib/web-api";
 
 interface VideoPlayerProps {
@@ -69,6 +70,18 @@ const AUTOPLAY_KEY = "stariva-player-autoplay";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
+// Остановка на подгрузку короче этого незаметна — не считаем
+const MIN_STALL_MS = 500;
+// Подгрузка сразу после перемотки или старта — ожидаемая, а не остановка
+const SEEK_GRACE_MS = 3000;
+// Столько остановок за окно при ручном качестве — предлагаем «Авто»
+const AUTO_HINT_STALLS = 3;
+const AUTO_HINT_WINDOW_MS = 90_000;
+const AUTO_HINT_SHOW_MS = 20_000;
+// Больше событий об отдельных остановках с одной страницы не шлём:
+// остальное видно по итогу просмотра
+const MAX_STALL_EVENTS = 20;
+
 // Буфер hls.js. Вперёд держим минуту: урок одного качества (~6 Мбит/с), и
 // запас переживает провалы мобильной сети. Позади — полминуты: по умолчанию
 // hls.js копит всё просмотренное, на телефоне память MSE кончается, и он
@@ -80,21 +93,22 @@ const HLS_BUFFER = {
   backBufferLength: 30,
 };
 
+/**
+ * Что помним между уроками. Качества здесь нет: выбранное днём 1080p вечером,
+ * на медленном интернете, отключало бы «Авто» на всех уроках, и видео вставало.
+ */
 interface PlayerPrefs {
   volume: number;
   muted: boolean;
   rate: number;
-  /** Выбранное качество — короткая сторона кадра, px; null — «Авто». */
-  quality: number | null;
 }
 
-// Старые настройки (с autoNext, без качества) тоже подходят: лишние поля
-// zod отбросит, качество будет «Авто»
+// Старые настройки (с autoNext и качеством) тоже подходят: лишние поля zod
+// отбросит
 const playerPrefsSchema = z.object({
   volume: z.number().min(0).max(1),
   muted: z.boolean(),
   rate: z.number().refine((rate) => SPEEDS.includes(rate)),
-  quality: z.number().int().positive().nullable().default(null),
 });
 
 /** Качество из списка плеера: у каждого урока свой набор и свои id. */
@@ -364,11 +378,17 @@ function LessonController({
     muted: s.muted,
     playbackRate: s.playbackRate,
   }));
-  const { renditions } = usePlayer((s) => ({
+  const { renditions, activeRendition } = usePlayer((s) => ({
     renditions: s.videoRenditionList,
+    activeRendition: s.activeVideoRendition,
+  }));
+  const { waiting, seeking } = usePlayer((s) => ({
+    waiting: s.waiting,
+    seeking: s.seeking,
   }));
 
   const [resumeNotice, setResumeNotice] = useState<number | null>(null);
+  const [autoHint, setAutoHint] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   // Источник, для которого уже восстановили место и настройки
   const [readyUrl, setReadyUrl] = useState<string | null>(null);
@@ -382,7 +402,11 @@ function LessonController({
   const completedRef = useRef(initialCompleted);
   const retriesRef = useRef(0);
   const playingRef = useRef(false);
-  // Источник, которому уже вернули запомненное качество
+  // Качество, выбранное вручную на этом уроке (короткая сторона кадра, px;
+  // null — «Авто»). Нужно, только чтобы новая ссылка взамен истёкшей
+  // продолжила в том же качестве
+  const qualityRef = useRef<number | null>(null);
+  // Источник, которому уже вернули выбранное качество
   const qualityUrlRef = useRef<string | null>(null);
   // Качество, которое попросили у плеера, а в списке оно ещё не отмечено:
   // плеер отмечает выбор не сразу, и до этого мы запомнили бы «Авто»
@@ -495,7 +519,7 @@ function LessonController({
     if (paused && ready) saveNow();
   }, [paused, error, ready, saveNow]);
 
-  // ── Качество: возвращаем запомненное ────────────────────────────
+  // ── Качество: после новой ссылки — выбранное на этом уроке ──────
   // Как только новый источник загрузился (см. выше), не дожидаясь перемотки:
   // меньше кусков успеет прийти в «Авто». До этого список качеств в плеере
   // ещё от прошлой ссылки. Одно качество (MP4 или старая нарезка) —
@@ -506,7 +530,7 @@ function LessonController({
     if (qualityUrlRef.current === source.url) return;
     qualityUrlRef.current = source.url;
     pendingQualityRef.current = null;
-    const quality = prefsRef.current?.quality ?? null;
+    const quality = qualityRef.current;
     if (quality === null) return;
     const target = pickRendition(renditions, quality);
     if (!target || target.selected) return;
@@ -514,24 +538,170 @@ function LessonController({
     store.selectVideoRendition(target.id);
   }, [source, renditions, duration, store]);
 
-  // ── Настройки звука, скорости и качества ────────────────────────
+  // Что выбрал зритель. Где выбирать не из чего, выбор не трогаем
+  useEffect(() => {
+    if (!ready || renditions.length < 2) return;
+    if (qualityUrlRef.current !== source?.url) return;
+    const selected = renditions.find((r) => r.selected) ?? null;
+    // Пока плеер не отметил наш выбор, «Авто» в списке — не выбор зрителя
+    if (pendingQualityRef.current !== null && selected === null) return;
+    pendingQualityRef.current = null;
+    qualityRef.current = selected ? renditionSize(selected) : null;
+  }, [ready, renditions, source]);
+
+  // ── Настройки звука и скорости ──────────────────────────────────
   useEffect(() => {
     if (!ready) return;
-    // Где выбирать не из чего, запомненное качество не трогаем
-    let quality = prefsRef.current?.quality ?? null;
-    if (renditions.length > 1 && qualityUrlRef.current === source?.url) {
-      const selected = renditions.find((r) => r.selected) ?? null;
-      const pending = pendingQualityRef.current;
-      // Пока плеер не отметил наш выбор, «Авто» в списке — не выбор зрителя
-      if (pending === null || selected !== null) {
-        pendingQualityRef.current = null;
-        quality = selected ? renditionSize(selected) : null;
-      }
-    }
-    const prefs = { volume, muted, rate: playbackRate, quality };
+    const prefs = { volume, muted, rate: playbackRate };
     prefsRef.current = prefs;
     writePrefs(prefs);
-  }, [ready, volume, muted, playbackRate, renditions, source]);
+  }, [ready, volume, muted, playbackRate]);
+
+  // ── Остановки на подгрузку: подсказка и аналитика ───────────────
+  const manualQuality = renditions.some((r) => r.selected);
+  // Свежие значения для событий: обработчики ниже не перезапускаются ради них
+  const videoInfoRef = useRef<Record<string, unknown>>({});
+  useEffect(() => {
+    videoInfoRef.current = {
+      workshop: slug,
+      lesson_id: lessonId,
+      source: source?.type ?? null,
+      quality_mode: manualQuality ? "manual" : "auto",
+      height: activeRendition ? renditionSize(activeRendition) : null,
+      bitrate: activeRendition?.bitrate ?? null,
+      renditions: renditions.length,
+      rate: playbackRate,
+    };
+  }, [
+    slug,
+    lessonId,
+    source,
+    manualQuality,
+    activeRendition,
+    renditions.length,
+    playbackRate,
+  ]);
+
+  const statsRef = useRef({ watched: 0, stalls: 0, stallMs: 0, events: 0 });
+  const lastTimeRef = useRef<number | null>(null);
+  const lastSeekRef = useRef(0);
+  const stallRef = useRef<number | null>(null);
+  const recentStallsRef = useRef<number[]>([]);
+  const hintShownRef = useRef(false);
+
+  // Сколько секунд урока реально проиграно — знаменатель для остановок
+  useEffect(() => {
+    if (!ready || paused || seeking) {
+      lastTimeRef.current = null;
+      return;
+    }
+    const last = lastTimeRef.current;
+    lastTimeRef.current = currentTime;
+    if (last === null) return;
+    const delta = currentTime - last;
+    if (delta > 0 && delta < 5) statsRef.current.watched += delta;
+  }, [ready, paused, seeking, currentTime]);
+
+  useEffect(() => {
+    if (seeking) lastSeekRef.current = Date.now();
+  }, [seeking]);
+
+  // Новая ссылка подгружается заново — это не остановка
+  useEffect(() => {
+    if (ready) lastSeekRef.current = Date.now();
+  }, [ready]);
+
+  const stalled = ready && started && !paused && !ended && waiting && !seeking;
+  useEffect(() => {
+    if (stalled) {
+      if (Date.now() - lastSeekRef.current >= SEEK_GRACE_MS) {
+        stallRef.current = Date.now();
+      }
+      return;
+    }
+    const startedAt = stallRef.current;
+    stallRef.current = null;
+    if (startedAt === null) return;
+    const now = Date.now();
+    const stallMs = now - startedAt;
+    if (stallMs < MIN_STALL_MS) return;
+
+    const stats = statsRef.current;
+    stats.stalls += 1;
+    stats.stallMs += stallMs;
+    if (stats.events < MAX_STALL_EVENTS) {
+      stats.events += 1;
+      trackLessonVideo("lesson_video_stall", {
+        ...videoInfoRef.current,
+        stall_ms: stallMs,
+        position_s: Math.round(positionRef.current),
+      });
+    }
+
+    const recent = recentStallsRef.current.filter(
+      (at) => now - at < AUTO_HINT_WINDOW_MS,
+    );
+    recent.push(now);
+    recentStallsRef.current = recent;
+    if (
+      manualQuality &&
+      recent.length >= AUTO_HINT_STALLS &&
+      !hintShownRef.current
+    ) {
+      hintShownRef.current = true;
+      setAutoHint(true);
+      trackLessonVideo("lesson_video_auto_hint", {
+        ...videoInfoRef.current,
+        action: "shown",
+      });
+    }
+  }, [stalled, manualQuality, positionRef]);
+
+  // Зритель сам вернул «Авто» — подсказка больше не нужна
+  useEffect(() => {
+    if (!manualQuality) setAutoHint(false);
+  }, [manualQuality]);
+
+  useEffect(() => {
+    if (!autoHint) return;
+    const t = window.setTimeout(() => setAutoHint(false), AUTO_HINT_SHOW_MS);
+    return () => window.clearTimeout(t);
+  }, [autoHint]);
+
+  const switchToAuto = () => {
+    store.selectVideoRendition("auto");
+    qualityRef.current = null;
+    setAutoHint(false);
+    trackLessonVideo("lesson_video_auto_hint", {
+      ...videoInfoRef.current,
+      action: "accepted",
+    });
+  };
+
+  // Итог просмотра — при уходе со страницы или к другому уроку. Короткие
+  // заходы не шлём: по ним ничего не понять
+  useEffect(() => {
+    const send = () => {
+      const stats = statsRef.current;
+      statsRef.current = { watched: 0, stalls: 0, stallMs: 0, events: 0 };
+      if (stats.watched < 10) return;
+      trackLessonVideo(
+        "lesson_video_summary",
+        {
+          ...videoInfoRef.current,
+          watched_s: Math.round(stats.watched),
+          stalls: stats.stalls,
+          stall_s: Math.round(stats.stallMs / 1000),
+        },
+        { beforeLeave: true },
+      );
+    };
+    window.addEventListener("pagehide", send);
+    return () => {
+      window.removeEventListener("pagehide", send);
+      send();
+    };
+  }, []);
 
   // ── Ошибки: истёкшая ссылка — берём новую, остальное — не больше 2 раз ──
   useEffect(() => {
@@ -597,7 +767,7 @@ function LessonController({
     <>
       {/* «Продолжаем с …» */}
       <AnimatePresence>
-        {resumeNotice !== null && started && !ended && (
+        {resumeNotice !== null && started && !ended && !autoHint && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -616,6 +786,36 @@ function LessonController({
               className="rounded-full bg-white/15 px-3 py-1 font-medium hover:bg-white/25 transition-colors"
             >
               Начать сначала
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Тормозит при ручном качестве — «Авто» подберёт его под скорость.
+          Внутри плеера, чтобы было видно и на весь экран */}
+      <AnimatePresence>
+        {autoHint && !ended && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="absolute z-[35] left-3 right-3 bottom-20 sm:left-5 sm:right-auto sm:bottom-24 flex items-center gap-3 rounded-full bg-black/75 py-1.5 pl-4 pr-1.5 text-xs sm:text-sm text-white backdrop-blur-md"
+          >
+            <span className="text-white/80">Видео не успевает загрузиться</span>
+            <button
+              type="button"
+              onClick={switchToAuto}
+              className="shrink-0 rounded-full bg-white/15 px-3 py-1 font-medium hover:bg-white/25 transition-colors"
+            >
+              Включить «Авто»
+            </button>
+            <button
+              type="button"
+              aria-label="Закрыть"
+              onClick={() => setAutoHint(false)}
+              className="shrink-0 rounded-full p-1 text-white/60 hover:text-white transition-colors"
+            >
+              <X className="size-4" />
             </button>
           </motion.div>
         )}

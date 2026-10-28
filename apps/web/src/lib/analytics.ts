@@ -318,6 +318,28 @@ export function trackHydrationMismatch(properties: Record<string, unknown>) {
 }
 
 /**
+ * Только PostHog: как идёт видео урока — остановки на подгрузку, качество,
+ * подсказка про «Авто». beforeLeave — событие уходит при закрытии страницы,
+ * его отправляем сразу (beacon), а не пачкой.
+ */
+export function trackLessonVideo(
+  event:
+    | "lesson_video_stall"
+    | "lesson_video_summary"
+    | "lesson_video_auto_hint",
+  properties: Record<string, unknown>,
+  { beforeLeave = false }: { beforeLeave?: boolean } = {},
+) {
+  postHog((posthog) =>
+    posthog.capture(
+      event,
+      properties,
+      beforeLeave ? { send_instantly: true } : undefined,
+    ),
+  );
+}
+
+/**
  * После «Отказаться»: больше ничего не отправлять (даже $pageleave при
  * перезагрузке) и не дописывать ph_* в хранилище после того, как баннер его очистит.
  */
