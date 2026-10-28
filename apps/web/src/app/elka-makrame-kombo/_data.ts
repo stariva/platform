@@ -56,12 +56,8 @@ export function komboChoices(
   big: Workshop,
   now = new Date(),
 ): [KomboChoice, ...KomboChoice[]] {
-  const { price, separately, saving, bigReleaseLabel } = komboOffer(
-    bundle,
-    small,
-    big,
-    now,
-  );
+  const { price, separately, saving, smallReleaseLabel, bigReleaseLabel } =
+    komboOffer(bundle, small, big, now);
   const single = (
     id: Exclude<KomboChoiceId, "kombo">,
     workshop: Workshop,
@@ -108,9 +104,10 @@ export function komboChoices(
       buyGoal: "elka_kombo_buy",
       summary:
         "Два мастер-класса одним заказом: видеоуроки, схемы и списки материалов — доступ навсегда.",
-      access: bigReleaseLabel
-        ? `Ёлка ${WORKSHOP_TREE_SIZE} откроется сразу, большая — ${bigReleaseLabel}`
-        : "Оба мастер-класса открываются сразу — с телефона или компьютера",
+      access:
+        smallReleaseLabel || bigReleaseLabel
+          ? `Ёлка ${WORKSHOP_TREE_SIZE} откроется ${smallReleaseLabel ?? "сразу"}, большая — ${bigReleaseLabel ?? "сразу"}`
+          : "Оба мастер-класса открываются сразу — с телефона или компьютера",
     },
     single("small", small, "Только ёлка", WORKSHOP_TREE_SIZE),
     single("big", big, "Только большая ёлка", BONUS_TREE_SIZE),
@@ -129,11 +126,15 @@ export function komboOffer(
 ) {
   const price = bundle.priceKopecks / 100;
   const separately = small.price + big.price;
+  const smallPreorder = isPreorder(small, now) && small.releaseAt;
   const bigPreorder = isPreorder(big, now) && big.releaseAt;
   return {
     price,
     separately,
     saving: Math.max(separately - price, 0),
+    smallReleaseLabel: smallPreorder
+      ? formatReleaseDate(smallPreorder)
+      : undefined,
     /** «3 ноября», пока уроки большой ёлки не открылись. */
     bigReleaseLabel: bigPreorder ? formatReleaseDate(bigPreorder) : undefined,
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { WorkshopPurchase } from "@/app/workshops/[slug]/workshop-purchase";
 import { reachGoal } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,7 @@ export function KomboChoiceLink({
     <a
       href={`#${choiceHash(choice)}`}
       onClick={(event) => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey) return;
         event.preventDefault();
         reachGoal("elka_kombo_single_cta", { choice });
         window.dispatchEvent(new CustomEvent(CHOICE_EVENT, { detail: choice }));
@@ -58,26 +59,53 @@ export function KomboPurchase({
   path: string;
 }) {
   const [selectedId, setSelectedId] = useState<KomboChoiceId>("kombo");
+  const [buying, setBuying] = useState(false);
+  const buyingRef = useRef(false);
   const selected =
     choices.find((choice) => choice.id === selectedId) ?? choices[0];
 
   useEffect(() => {
-    const showForm = (id: KomboChoiceId) => {
+    const showForm = (id: KomboChoiceId, focus = false) => {
+      if (buyingRef.current) return;
       setSelectedId(id);
       document.getElementById(BUY_ID)?.scrollIntoView({ block: "start" });
+      if (focus) {
+        document
+          .getElementById(`${BUY_ID}-${id}-choice`)
+          ?.focus({ preventScroll: true });
+      }
     };
     const onChoice = (event: Event) =>
-      showForm((event as CustomEvent<KomboChoiceId>).detail);
-    const hash = window.location.hash.slice(1);
-    const fromHash = choices.find(
-      (item) => item.id !== "kombo" && choiceHash(item.id) === hash,
-    );
-    if (fromHash) showForm(fromHash.id);
+      showForm((event as CustomEvent<KomboChoiceId>).detail, true);
+    const applyHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (!hash) {
+        if (!buyingRef.current) setSelectedId("kombo");
+        return;
+      }
+      const fromHash = choices.find((item) =>
+        item.id === "kombo"
+          ? hash === SECTION_ID || hash === BUY_ID
+          : choiceHash(item.id) === hash,
+      );
+      if (fromHash) showForm(fromHash.id);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
     window.addEventListener(CHOICE_EVENT, onChoice);
-    return () => window.removeEventListener(CHOICE_EVENT, onChoice);
+    return () => {
+      window.removeEventListener("hashchange", applyHash);
+      window.removeEventListener(CHOICE_EVENT, onChoice);
+    };
   }, [choices]);
 
+  function changeBuying(value: boolean) {
+    buyingRef.current = value;
+    setBuying(value);
+  }
+
   function pick(id: KomboChoiceId) {
+    if (buyingRef.current) return;
     setSelectedId(id);
     reachGoal("elka_kombo_pick", { choice: id });
   }
@@ -102,10 +130,12 @@ export function KomboPurchase({
                 )}
               >
                 <input
+                  id={`${BUY_ID}-${choice.id}-choice`}
                   type="radio"
                   name="kombo-choice"
                   value={choice.id}
                   checked={checked}
+                  disabled={buying}
                   onChange={() => pick(choice.id)}
                   className="mt-1 size-4 shrink-0 accent-terracotta"
                 />
@@ -151,7 +181,9 @@ export function KomboPurchase({
         bundle={selected.bundle}
         price={selected.price}
         title={selected.title}
-        returnPath={`${path}#${SECTION_ID}`}
+        returnPath={`${path}#${selected.id === "kombo" ? SECTION_ID : choiceHash(selected.id)}`}
+        buying={buying}
+        onBuyingChange={changeBuying}
         preorder={selected.preorder}
         buyLabel={selected.buyLabel}
         buyGoal={selected.buyGoal}
