@@ -1,6 +1,5 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
-import { WorkshopPurchase } from "@/app/workshops/[slug]/workshop-purchase";
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import {
   BIG_TREE_PATH,
@@ -12,7 +11,14 @@ import type { WorkshopBundle } from "@/lib/workshops/bundles";
 import { formatPrice, type Workshop } from "@/lib/workshops-data";
 import { WorkshopStickyCta } from "../../elka-makrame/_components/workshop-sticky-cta";
 import { WORKSHOP_INCLUDES, WORKSHOP_PROGRAM } from "../../elka-makrame/_data";
-import { BUY_ID, komboOffer, QUICK_BUY_ID, SECTION_ID } from "../_data";
+import {
+  BUY_ID,
+  komboChoices,
+  komboOffer,
+  QUICK_BUY_ID,
+  SECTION_ID,
+} from "../_data";
+import { KomboChoiceLink, KomboPurchase } from "./kombo-purchase";
 
 /**
  * Первый экран лендинга комбо: две ёлки, цена против покупки по отдельности,
@@ -37,6 +43,7 @@ export function KomboOffer({
     small.whatYouLearn.length > 0 ? small.whatYouLearn : WORKSHOP_PROGRAM;
   const trees = [
     {
+      id: "small" as const,
       workshop: small,
       name: "Ёлка",
       size: WORKSHOP_TREE_SIZE,
@@ -46,6 +53,7 @@ export function KomboOffer({
       goal: "elka_kombo_small_more",
     },
     {
+      id: "big" as const,
       workshop: big,
       name: "Большая ёлка",
       size: BONUS_TREE_SIZE,
@@ -183,13 +191,16 @@ export function KomboOffer({
                 <span className="text-sm leading-relaxed text-dark-grey mb-3">
                   {tree.text}
                 </span>
-                <span className="mt-auto flex items-baseline justify-between gap-3 text-sm text-text-grey">
-                  <span>
-                    Отдельно —{" "}
+                <span className="mt-auto flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-text-grey">
+                  <KomboChoiceLink
+                    choice={tree.id}
+                    className="text-terracotta underline underline-offset-4 hover:text-terracotta-dark"
+                  >
+                    Купить отдельно за{" "}
                     <span className="whitespace-nowrap">
                       {formatPrice(tree.workshop.price)}
                     </span>
-                  </span>
+                  </KomboChoiceLink>
                   <TrackedLink
                     href={tree.href}
                     goal={tree.goal}
@@ -220,48 +231,10 @@ export function KomboOffer({
             id={BUY_ID}
             className="rounded-[24px] bg-white p-6 lg:p-8 scroll-mt-24"
           >
-            <div className="flex items-baseline gap-3 mb-1">
-              <span className="font-serif text-4xl text-espresso">
-                {formatPrice(price)}
-              </span>
-              {saving > 0 && (
-                <s className="text-text-grey">{formatPrice(separately)}</s>
-              )}
-            </div>
-            <p className="text-sm text-text-grey mb-6">
-              {saving > 0
-                ? `Два мастер-класса одним заказом — экономия ${formatPrice(saving)}.`
-                : "Два мастер-класса одним заказом."}{" "}
-              Видеоуроки, схемы и списки материалов — доступ навсегда.
-            </p>
-            <WorkshopPurchase
-              slug={small.slug}
-              bundle={bundle.slug}
-              price={price}
-              title={`Комбо «${bundle.title}»`}
-              returnPath={`${bundle.path}#${SECTION_ID}`}
-              buyLabel={`Купить комбо за ${formatPrice(price)}`}
-              buyGoal="elka_kombo_buy"
+            <KomboPurchase
+              choices={komboChoices(bundle, small, big)}
+              path={bundle.path}
             />
-            <ol
-              aria-label="Как проходит запись"
-              className="mt-5 grid gap-3 border-t border-espresso/10 pt-5 text-sm text-dark-grey"
-            >
-              {[
-                "Оплата картой или СБП через ЮKassa — без регистрации",
-                "Сразу после оплаты — письмо со ссылкой на личный кабинет",
-                bigReleaseLabel
-                  ? `Ёлка ${WORKSHOP_TREE_SIZE} откроется сразу, большая — ${bigReleaseLabel}`
-                  : "Оба мастер-класса открываются сразу — с телефона или компьютера",
-              ].map((step, index) => (
-                <li key={step} className="flex gap-2.5">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-sage-pale font-serif text-xs text-espresso">
-                    {index + 1}
-                  </span>
-                  {step}
-                </li>
-              ))}
-            </ol>
           </div>
         </div>
       </div>

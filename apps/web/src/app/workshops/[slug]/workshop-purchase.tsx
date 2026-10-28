@@ -31,6 +31,9 @@ interface WorkshopPurchaseProps {
   buyGoal?: string;
   /** Предзаказ: уроки откроются позже, поэтому обещаем напоминание о старте. */
   preorder?: boolean;
+  /** Общее состояние оплаты с выбором курса на лендинге. */
+  buying?: boolean;
+  onBuyingChange?: (buying: boolean) => void;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -67,10 +70,17 @@ export function WorkshopPurchase({
   buyLabel,
   buyGoal,
   preorder = false,
+  buying: controlledBuying,
+  onBuyingChange,
 }: WorkshopPurchaseProps) {
   const { data: session, isPending: sessionPending } = useSession();
   const [owned, setOwned] = useState<boolean | null>(null);
-  const [buying, setBuying] = useState(false);
+  const [localBuying, setLocalBuying] = useState(false);
+  const buying = controlledBuying ?? localBuying;
+  function setBuying(value: boolean) {
+    setLocalBuying(value);
+    onBuyingChange?.(value);
+  }
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [emailError, setEmailError] = useState<string>();
@@ -90,6 +100,8 @@ export function WorkshopPurchase({
       setOwned(false);
       return;
     }
+    // Курс сменился (выбор на лендинге комбо) — прошлый ответ не про него.
+    setOwned(null);
     webApi.account
       .workshopAccess({ slug })
       .then(({ owned }) => {
