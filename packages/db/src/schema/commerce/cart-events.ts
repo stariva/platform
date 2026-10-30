@@ -1,5 +1,7 @@
 import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
+import type { SessionEntry } from "../contact-clicks";
 import type { VisitorInfo } from "../visitor";
 import { productOrders } from "./orders";
 
@@ -61,6 +63,10 @@ export const cartEvents = pgTable(
     ip: text("ip"),
     // Город, провайдер, устройство, страница: всё, что известно по запросу
     visitor: jsonb("visitor").$type<VisitorInfo>(),
+    // С чего начался этот заход (вкладка): метки, yclid, сайт-источник
+    entry: jsonb("entry").$type<SessionEntry>(),
+    // Первый и последний заход по UTM за 90 дней (cookie stariva_src)
+    attribution: jsonb("attribution").$type<CampaignAttribution>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

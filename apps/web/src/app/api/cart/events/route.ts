@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { cartEventSchema, recordCartEvent } from "@/lib/cart/event-log";
 import { readJsonBody } from "@/lib/read-json";
 import { collectVisitor } from "@/lib/visitor";
@@ -40,7 +41,11 @@ export async function POST(request: NextRequest) {
   if (visitor.device !== "bot") {
     // Сбой авторизации не должен терять событие: тогда оно просто гостевое
     const userId = (await getSession().catch(() => null))?.user.id ?? null;
-    await recordCartEvent(parsed.data, { userId, visitor });
+    await recordCartEvent(parsed.data, {
+      userId,
+      visitor,
+      attribution: attributionFromRequest(request),
+    });
   }
   return new NextResponse(null, { status: 204 });
 }

@@ -278,7 +278,16 @@ export const rubles = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 0,
 });
 
+// Сервер админки живёт в UTC, а читает её Москва: пояс задаём явно
 export const dateTime = new Intl.DateTimeFormat("ru-RU", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: "Europe/Moscow",
+});
+
+/** С секундами: события корзины идут с разницей в секунды. */
+export const dateTimeSeconds = new Intl.DateTimeFormat("ru-RU", {
+  dateStyle: "medium",
+  timeStyle: "medium",
+  timeZone: "Europe/Moscow",
 });

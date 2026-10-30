@@ -330,6 +330,13 @@
       "when": 1793383742971,
       "tag": "0046_email_log_html",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793383964954,
+      "tag": "0047_cart_events_source",
+      "breakpoints": true
     }
   ]
 }
