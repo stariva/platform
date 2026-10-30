@@ -82,6 +82,7 @@ export const auth = initAuth({
     await sendEmail({
       to: [email],
       subject: "Подтвердите email — Stariva",
+      sensitive: true,
       react: StarivaVerifyEmail({ url: verificationPageUrl(url) }),
     });
   },
@@ -90,6 +91,7 @@ export const auth = initAuth({
       await sendEmail({
         to: [newEmail],
         subject: "Подтвердите смену email — Stariva",
+        sensitive: true,
         react: StarivaChangeEmailEmail({ url: verificationPageUrl(url) }),
       });
     },
@@ -142,6 +144,7 @@ export const auth = initAuth({
         await sendEmail({
           to: [email],
           subject: "Вход в личный кабинет — Stariva",
+          sensitive: true,
           react: StarivaMagicLinkEmail({ url }),
         });
       },
@@ -162,6 +165,7 @@ export const auth = initAuth({
       await sendEmail({
         to: [email],
         subject: "Сброс пароля — Stariva",
+        sensitive: true,
         react: StarivaResetPasswordEmail({ url }),
       });
     }
@@ -194,6 +198,7 @@ async function sendSignInCode(
   await sendEmail({
     to: [email],
     subject: signInCodeSubject(otp),
+    sensitive: true,
     react: StarivaSignInCodeEmail({
       otp,
       url: url ?? undefined,

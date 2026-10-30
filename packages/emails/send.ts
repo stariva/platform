@@ -18,6 +18,11 @@ export type { EmailAttachment } from "./providers";
 
 export interface Emails {
   idempotencyKey?: string;
+  /**
+   * В письме код входа или личная ссылка (вход, сброс пароля, подтверждение
+   * почты): тело в журнал email_log не кладём.
+   */
+  sensitive?: boolean;
   attachments?: EmailAttachment[];
   react: ReactNode;
   subject: string;
@@ -55,6 +60,7 @@ export const sendEmail = async (email: Emails) => {
     react: email.react,
     attachments: email.attachments,
     idempotencyKey: email.idempotencyKey,
+    sensitive: email.sensitive,
   });
 };
 
@@ -67,22 +73,33 @@ export const sendEmailHtml = async (email: EmailHtml) =>
     idempotencyKey: email.idempotencyKey,
   });
 
+/** HTML письма для журнала; не отрисовался — пишем письмо без тела, а не роняем отправку. */
+async function htmlForLog(email: OutgoingEmail): Promise<string | null> {
+  try {
+    return "html" in email ? email.html : await render(email.react);
+  } catch (error) {
+    logger.error("email_log.render_failed", error, { subject: email.subject });
+    return null;
+  }
+}
+
 /**
  * Отправляет письмо основным провайдером (EMAIL_PROVIDER); если он не
  * настроен или отказал — запасным (EMAIL_FALLBACK_PROVIDER). Ошибка уходит
  * наружу, только когда не отправил ни один.
  */
-async function deliver(email: OutgoingEmail) {
+async function deliver(email: OutgoingEmail & { sensitive?: boolean }) {
   const startedAt = Date.now();
   const attempts: EmailAttempt[] = [];
   /** Итог отправки в журнал email_log: письма видно в админке. */
-  const record = () =>
+  const record = async () =>
     recordEmail({
       to: email.to,
       subject: email.subject,
       attempts,
       attachments: email.attachments?.length ?? 0,
       idempotencyKey: email.idempotencyKey,
+      html: email.sensitive ? null : await htmlForLog(email),
       durationMs: Date.now() - startedAt,
     });
 

@@ -23,6 +23,8 @@ export interface EmailLogEntry {
   attempts: EmailAttempt[];
   attachments: number;
   idempotencyKey?: string;
+  /** HTML письма; пусто, если тело в журнал не кладём. */
+  html?: string | null;
   durationMs: number;
 }
 
@@ -42,6 +44,7 @@ export function emailLogRow(entry: EmailLogEntry) {
     error: delivered ? null : (last?.error ?? null),
     attachments: entry.attachments,
     idempotencyKey: entry.idempotencyKey ?? null,
+    html: entry.html ?? null,
     durationMs: entry.durationMs,
     ...emailContext(entry.idempotencyKey),
   };

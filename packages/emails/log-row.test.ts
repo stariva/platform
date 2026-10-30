@@ -55,6 +55,14 @@ test("marks the email failed with the last provider's error", () => {
   });
 });
 
+test("keeps the email html in the row, empty when it was not rendered", () => {
+  const attempts = [{ provider: "resend", ok: true, ms: 10 }];
+  expect(emailLogRow({ ...base, attempts, html: "<p>Привет</p>" }).html).toBe(
+    "<p>Привет</p>",
+  );
+  expect(emailLogRow({ ...base, attempts }).html).toBeNull();
+});
+
 test("cuts long provider errors", () => {
   expect(errorText(new Error("x".repeat(900)))).toHaveLength(500);
   expect(errorText("plain")).toBe("plain");

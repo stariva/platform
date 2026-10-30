@@ -327,6 +327,20 @@ test("falls back from Postbox to Resend when Postbox rejects the request", async
   }
 });
 
+test("logs the rendered html, but not for sensitive emails", async () => {
+  resetMocks();
+  try {
+    await sendEmail(email);
+    await sendEmail({ ...email, sensitive: true });
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      html: expect.stringContaining("<!DOCTYPE html"),
+    });
+    expect(recordEmail.mock.calls[1]?.[0]).toMatchObject({ html: null });
+  } finally {
+    restore();
+  }
+});
+
 test("logs a failed send with every attempt when all providers fail", async () => {
   resetMocks();
   env.EMAIL_FALLBACK_PROVIDER = "postbox";
