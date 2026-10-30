@@ -3,6 +3,7 @@ import type {
   CartEventChange,
   CartEventItem,
 } from "@stariva/db/schema";
+import { currentEntry } from "@/lib/contact-clicks/entry";
 import { type CartItem, cartLineKey } from "./cart-context";
 
 const CART_ID_KEY = "stariva:cart-id";
@@ -93,6 +94,7 @@ export function logCartEvent({
         changes,
         items: after.map(toEventItem),
         ...(orderId ? { orderId } : {}),
+        entry: currentEntry(),
       }),
       keepalive: true,
     }).catch(() => undefined);

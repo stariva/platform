@@ -11,9 +11,13 @@ import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { dateTime } from "~/components/crm/crm-meta";
 import { duration, kindLabel, providerLabel } from "./email-meta";
+import { EmailPreview } from "./email-preview";
+
+/** Строка журнала без тела письма: оно открывается отдельно, по кнопке. */
+export type EmailRow = Omit<EmailLogRow, "html"> & { hasHtml: boolean };
 
 /** Что случилось с письмом: ушло сразу, ушло с запасного канала или не ушло. */
-function StatusBadge({ row }: { row: EmailLogRow }) {
+function StatusBadge({ row }: { row: EmailRow }) {
   if (row.status === "failed") {
     return <Badge variant="destructive-light">Не ушло</Badge>;
   }
@@ -25,7 +29,7 @@ function StatusBadge({ row }: { row: EmailLogRow }) {
 }
 
 /** Таблица писем: когда, кому, какое, чем кончилось и что отвечал каждый провайдер. */
-export function EmailTable({ rows }: { rows: EmailLogRow[] }) {
+export function EmailTable({ rows }: { rows: EmailRow[] }) {
   return (
     <div className="rounded-lg border contain-inline-size">
       <Table>
@@ -77,6 +81,15 @@ export function EmailTable({ rows }: { rows: EmailLogRow[] }) {
                       </Link>
                     )}
                   </div>
+                  {row.hasHtml && (
+                    <div className="mt-2">
+                      <EmailPreview
+                        id={row.id}
+                        subject={row.subject}
+                        recipient={row.recipient}
+                      />
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-sm whitespace-normal">
                   <StatusBadge row={row} />

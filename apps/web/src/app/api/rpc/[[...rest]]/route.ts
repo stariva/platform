@@ -82,7 +82,14 @@ const handler = new RPCHandler(webRouter, {
       if (error instanceof ORPCError && webErrorStatus(error.code) < 500) {
         return;
       }
-      logger.error("web_orpc.handler_error", error);
+      // data у REMINDERS_FAILED — сколько отправок не ушло; причины в своих строках лога
+      logger.error(
+        "web_orpc.handler_error",
+        error,
+        error instanceof ORPCError
+          ? { code: error.code, data: error.data }
+          : undefined,
+      );
     }),
   ],
 });

@@ -10,6 +10,7 @@ import {
 import {
   StarivaWorkshopEmail,
   sendEmail,
+  sendEmailHtml,
   sendWorkshopBriefEmail,
   type WorkshopBriefFile,
   type WorkshopEmailKind,
@@ -20,6 +21,7 @@ import { baseEnv, env } from "@/env";
 import {
   type DeliveryConfig,
   deliverNotification,
+  escapeHtml,
 } from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
 import {
@@ -280,13 +282,31 @@ function configuredStaffChannels(): StaffChannel[] {
     channels.push({
       channel: "staff-email",
       config: {
-        emailKey: baseEnv.RESEND_API_KEY,
         emailFrom: env.ORDER_EMAIL_FROM,
         emailTo: env.ORDER_EMAIL_TO,
       },
     });
   }
   return channels;
+}
+
+/**
+ * Письмо мастеру идёт через sendEmail, как и письма покупателям: если Resend
+ * отказал, его подхватит запасной провайдер, а попытка попадёт в журнал писем.
+ * Напрямую в Resend письмо падало без запасного пути и роняло каждый прогон.
+ */
+async function sendStaffEmail(
+  { emailFrom, emailTo }: DeliveryConfig,
+  notification: { id: string; title: string; message: string },
+) {
+  if (!emailFrom || !emailTo) throw new Error("staff_email_not_configured");
+  await sendEmailHtml({
+    idempotencyKey: `workshop-purchase/${notification.id}`,
+    from: emailFrom,
+    to: [emailTo],
+    subject: `${notification.title} · Stariva`,
+    html: `<pre>${escapeHtml(`${notification.title}\n${notification.message}`)}</pre>`,
+  });
 }
 
 /** Отдельный резерв на каждый канал: повторяем только недоставленное. */
@@ -297,6 +317,10 @@ function deliverStaff(target: Target, { channel, config }: StaffChannel) {
     target.email,
   );
   return claimed(target, "booked", channel, async () => {
+    if (channel === "staff-email") {
+      await sendStaffEmail(config, { id: target.order.id, title, message });
+      return;
+    }
     const delivered = await deliverNotification(
       {
         id: target.order.id,

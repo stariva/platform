@@ -4,6 +4,7 @@ import {
   desc,
   EMAIL_LOG_STATUSES,
   emailLog,
+  getTableColumns,
   gte,
   lt,
   type SQL,
@@ -70,9 +71,14 @@ export const list = adminProcedure
     }
     const where = and(...filters);
 
+    // Тело письма в список не берём (см. email-log/html): только признак, что оно есть
+    const { html: _html, ...columns } = getTableColumns(emailLog);
     const [items, [totals], summary] = await Promise.all([
       context.db
-        .select()
+        .select({
+          ...columns,
+          hasHtml: sql<boolean>`${emailLog.html} is not null`,
+        })
         .from(emailLog)
         .where(where)
         .orderBy(desc(emailLog.createdAt), desc(emailLog.id))

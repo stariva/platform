@@ -57,6 +57,12 @@ mock.module("@stariva/emails", () => ({
   sendEmail: async () => {
     buyerEmails++;
   },
+  sendEmailHtml: async (email: { idempotencyKey?: string; to: string[] }) => {
+    assert.equal(email.idempotencyKey, "workshop-purchase/synthetic-order");
+    assert.deepEqual(email.to, ["staff@example.test"]);
+    attempts.email++;
+    if (failEmail) throw new Error("email_failed");
+  },
   sendWorkshopBriefEmail: async () => {},
 }));
 mock.module("@stariva/storage", () => ({
@@ -113,18 +119,10 @@ const attempts = { telegram: 0, email: 0 };
 let failTelegram = ["telegram-fails", "both-fail"].includes(scenario ?? "");
 let failEmail = ["email-fails", "both-fail"].includes(scenario ?? "");
 // Exercise the real delivery helper, with synthetic HTTP responses.
-globalThis.fetch = mock(async (url, options) => {
-  if (String(url).startsWith("https://api.telegram.org/")) {
-    attempts.telegram++;
-    return Response.json({ ok: !failTelegram });
-  }
-  assert.equal(String(url), "https://api.resend.com/emails");
-  assert.equal(
-    new Headers(options?.headers).get("Idempotency-Key"),
-    "workshop-purchase/synthetic-order",
-  );
-  attempts.email++;
-  return Response.json(failEmail ? { error: "failure" } : { id: "receipt" });
+globalThis.fetch = mock(async (url) => {
+  assert.ok(String(url).startsWith("https://api.telegram.org/"));
+  attempts.telegram++;
+  return Response.json({ ok: !failTelegram });
 }) as unknown as typeof fetch;
 
 const { notifyWorkshopBooked, runWorkshopReminderSweep } = await import(

@@ -1,3 +1,4 @@
+import type { VisitorInfo } from "@stariva/db/schema";
 import {
   Card,
   CardContent,
@@ -13,6 +14,7 @@ import {
 import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CartSourceBlock } from "~/components/carts/cart-source";
 import {
   ACTION_LABELS,
   cartTotal,
@@ -22,16 +24,21 @@ import {
 import { SiteHeader } from "~/components/layout";
 import {
   dateTime,
+  dateTimeSeconds,
   KIND_LABELS,
   productSiteUrl,
   rubles,
   STATUS_LABELS,
   statusVariant,
 } from "~/components/orders/order-meta";
-import { VisitorCard } from "~/components/visitors/visitor-card";
+import { isLocalIp, VisitorCard } from "~/components/visitors/visitor-card";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
+
+/** «Москва · МТС»; пусто, если по IP ничего не определилось. */
+const guestPlace = (visitor: VisitorInfo | null) =>
+  [visitor?.city, visitor?.isp].filter(Boolean).join(" · ");
 
 /** «2 → 3», «было 2», а у новой строки — просто количество. */
 function quantityChange(before: number, after: number) {
@@ -82,7 +89,7 @@ export default async function CartPage({
                 ))
               : "Гость без входа в кабинет"}
             {guest && ` · ${guest}`} · с {dateTime.format(cart.firstAt)} по{" "}
-            {dateTime.format(cart.lastAt)}
+            {dateTime.format(cart.lastAt)} (МСК)
           </p>
         </div>
 
@@ -180,8 +187,9 @@ export default async function CartPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Когда</TableHead>
+                  <TableHead>Когда (МСК)</TableHead>
                   <TableHead>Что</TableHead>
+                  <TableHead>Реклама</TableHead>
                   <TableHead>Откуда</TableHead>
                 </TableRow>
               </TableHeader>
@@ -189,7 +197,7 @@ export default async function CartPage({
                 {cart.events.map((event) => (
                   <TableRow key={event.id}>
                     <TableCell className="text-muted-foreground align-top text-sm whitespace-nowrap">
-                      {dateTime.format(event.createdAt)}
+                      {dateTimeSeconds.format(event.createdAt)}
                     </TableCell>
                     <TableCell className="align-top text-sm whitespace-normal">
                       <div className="font-medium">
@@ -219,14 +227,34 @@ export default async function CartPage({
                         ))}
                       </ul>
                     </TableCell>
+                    <TableCell className="max-w-[240px] align-top">
+                      <CartSourceBlock source={event.source} />
+                    </TableCell>
                     <TableCell className="text-muted-foreground align-top text-xs">
                       {event.visitor?.page}
-                      <div>{event.ip}</div>
+                      {event.ip && (
+                        <div className="font-mono">
+                          {event.ip}
+                          {isLocalIp(event.ip) && " (локальный)"}
+                        </div>
+                      )}
+                      {guestPlace(event.visitor) && (
+                        <div>{guestPlace(event.visitor)}</div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Реклама</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CartSourceBlock source={cart.source} />
           </CardContent>
         </Card>
 

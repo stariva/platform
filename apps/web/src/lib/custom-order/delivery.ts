@@ -24,7 +24,7 @@ export interface DeliveryConfig {
   emailFrom?: string;
   emailTo?: string;
 }
-const escapeHtml = (value: string) =>
+export const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export async function deliverNotification(

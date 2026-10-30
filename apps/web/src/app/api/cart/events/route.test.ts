@@ -1,8 +1,14 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { NextRequest } from "next/server";
+import type { CampaignAttribution } from "@stariva/db/schema";
 import type { CartEventInput } from "@/lib/cart/event-log";
+import { ATTRIBUTION_COOKIE } from "@/lib/campaign-attribution";
 
-const recorded: { event: CartEventInput; userId: string | null }[] = [];
+const recorded: {
+  event: CartEventInput;
+  userId: string | null;
+  attribution: CampaignAttribution | null;
+}[] = [];
 let sessionUserId: string | null = null;
 
 mock.module("@/lib/auth/session", () => ({
@@ -15,9 +21,12 @@ mock.module("@/lib/cart/event-log", () => ({
   ...eventLog,
   recordCartEvent: async (
     event: CartEventInput,
-    { userId }: { userId: string | null },
+    {
+      userId,
+      attribution,
+    }: { userId: string | null; attribution: CampaignAttribution | null },
   ) => {
-    recorded.push({ event, userId });
+    recorded.push({ event, userId, attribution });
   },
 }));
 
@@ -64,6 +73,34 @@ test("привязывает событие к аккаунту, если пос
   sessionUserId = "user-1";
   await POST(request(event));
   expect(recorded[0]?.userId).toBe("user-1");
+});
+
+test("пишет заход вкладки и UTM из cookie: с какой рекламы пришли", async () => {
+  const touch = {
+    utm_source: "yandex",
+    utm_medium: "cpc",
+    utm_campaign: "gnomes",
+    landing: "/catalog",
+    at: "2026-10-30T10:00:00.000Z",
+  };
+  const entry = { ...touch, yclid: "123", at: "2026-10-30T10:05:00.000Z" };
+  await POST(
+    request(
+      { ...event, entry },
+      {
+        cookie: `${ATTRIBUTION_COOKIE}=${encodeURIComponent(JSON.stringify({ first: touch, last: touch }))}`,
+      },
+    ),
+  );
+  expect(recorded[0]?.event.entry).toEqual(entry);
+  expect(recorded[0]?.attribution?.last.utm_campaign).toBe("gnomes");
+});
+
+test("битый заход не теряет событие", async () => {
+  const response = await POST(request({ ...event, entry: { landing: 5 } }));
+  expect(response.status).toBe(204);
+  expect(recorded[0]?.event.entry).toBeUndefined();
+  expect(recorded[0]?.attribution).toBeNull();
 });
 
 test("ботов не пишет", async () => {
