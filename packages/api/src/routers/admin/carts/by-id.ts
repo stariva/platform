@@ -1,11 +1,14 @@
 import { ORPCError } from "@orpc/server";
 import {
   adCampaigns,
+  and,
+  asc,
   cartEvents,
   desc,
   eq,
   inArray,
   productOrders,
+  sql,
   user,
 } from "@stariva/db";
 import { z } from "zod";
@@ -21,7 +24,8 @@ const EVENTS_LIMIT = 500;
  * Одна корзина целиком: события от новых к старым (что положил, убрал,
  * оформил, откуда и с какой рекламы), аккаунт, если посетитель входил, и
  * заказы, которыми закончились оформления. Реклама корзины — та, с которой
- * пришли впервые; нет её — источник последнего события.
+ * пришли впервые (ищется по всей истории, не только по последним
+ * 500 событиям); нет её — источник последнего события.
  *
  * Бросает NOT_FOUND, если событий с таким cart_id нет.
  */
@@ -55,7 +59,7 @@ export const byId = adminProcedure
     const orderIds = [
       ...new Set(events.flatMap((event) => event.orderId ?? [])),
     ];
-    const [users, orders, campaigns] = await Promise.all([
+    const [users, orders, campaigns, [firstAd]] = await Promise.all([
       userIds.length
         ? context.db
             .select({ id: user.id, name: user.name, email: user.email })
@@ -80,6 +84,27 @@ export const byId = adminProcedure
             .orderBy(desc(productOrders.createdAt))
         : [],
       context.db.select().from(adCampaigns),
+      // Первая реклама ищется по всей истории, а не в окне последних событий.
+      // Метка клика (yclid, rb_clickid) — тоже реклама, даже без UTM.
+      context.db
+        .select({
+          entry: cartEvents.entry,
+          attribution: cartEvents.attribution,
+        })
+        .from(cartEvents)
+        .where(
+          and(
+            eq(cartEvents.cartId, input.id),
+            sql`(
+              ${cartEvents.entry}->>'utm_source' is not null
+              or ${cartEvents.entry}->>'yclid' is not null
+              or ${cartEvents.entry}->>'rb_clickid' is not null
+              or ${cartEvents.attribution}->'last'->>'utm_source' is not null
+            )`,
+          ),
+        )
+        .orderBy(asc(cartEvents.createdAt), asc(cartEvents.id))
+        .limit(1),
     ]);
     const campaignsById = byIdMap(campaigns);
     const sourceOf = (
@@ -93,10 +118,7 @@ export const byId = adminProcedure
       entry: event.entry,
       attribution: event.attribution,
     });
-    const sources = events.map(sourceOf);
-    const source =
-      [...sources].reverse().find((item) => item.campaign.kind !== "none") ??
-      sourceOf(latest);
+    const source = sourceOf(firstAd ?? latest);
     const orderNumbers = new Map(
       orders.map((order) => [order.id, order.number]),
     );
