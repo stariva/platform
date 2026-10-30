@@ -75,7 +75,10 @@ export const list = adminProcedure
     const { html: _html, ...columns } = getTableColumns(emailLog);
     const [items, [totals], summary] = await Promise.all([
       context.db
-        .select({ ...columns, hasHtml: sql<boolean>`${emailLog.html} is not null` })
+        .select({
+          ...columns,
+          hasHtml: sql<boolean>`${emailLog.html} is not null`,
+        })
         .from(emailLog)
         .where(where)
         .orderBy(desc(emailLog.createdAt), desc(emailLog.id))

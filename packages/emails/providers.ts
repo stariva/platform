@@ -185,6 +185,11 @@ const providers: Record<EmailProviderName, EmailProvider> = {
   postbox: postboxProvider,
 };
 
+/** Есть ли хоть один выбранный провайдер с ключами: без него письма не уходят вовсе. */
+export function isEmailConfigured(): boolean {
+  return selectedEmailProviders().some((provider) => provider.isConfigured());
+}
+
 /** Провайдеры по порядку попыток: основной (EMAIL_PROVIDER), затем запасной. */
 export function selectedEmailProviders(): EmailProvider[] {
   const names = [env.EMAIL_PROVIDER, env.EMAIL_FALLBACK_PROVIDER];

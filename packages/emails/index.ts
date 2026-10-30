@@ -33,6 +33,7 @@ export {
   signInCodeSubject,
 } from "./emails/stariva-sign-in-code";
 export { sendOrderStatusEmail } from "./order";
+export { isEmailConfigured } from "./providers";
 export type { OrderEmailOrder } from "./order-email";
 export { sendReceiptEmail } from "./receipt";
 export { type EmailAttachment, sendEmail, sendEmailHtml } from "./send";
