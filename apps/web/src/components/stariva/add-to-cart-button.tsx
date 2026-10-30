@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon } from "lucide-react";
+import { ArrowRightIcon, CheckIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -55,12 +55,32 @@ export function AddToCartButton({
   );
 
   // Весь остаток уже в корзине — класть больше нечего, ведём к оформлению.
-  // Пока кнопка показывает «Добавлено», не подменяем её ссылкой.
+  // Пока кнопка показывает «Добавлено», не подменяем её ссылкой. Вид другой —
+  // спокойный, а не заливка покупки: это состояние, а не призыв к действию.
   if (inCart >= limit && !added) {
     return (
-      <Button asChild className={buttonClassName}>
-        <Link href="/cart">
-          {limit === 1 ? "В корзине — перейти" : "Весь остаток в корзине"}
+      <Button
+        asChild
+        className={cn(
+          buttonClassName,
+          "bg-sage/10 text-sage border border-sage/30 hover:bg-sage/20 hover:text-sage",
+        )}
+      >
+        <Link
+          href="/cart"
+          aria-label={
+            limit === 1
+              ? "Уже в корзине, перейти к оформлению"
+              : "Весь остаток уже в корзине, перейти к оформлению"
+          }
+        >
+          <CheckIcon className="size-4" strokeWidth={2} aria-hidden="true" />
+          {limit === 1 ? "В корзине" : "Весь остаток в корзине"}
+          <ArrowRightIcon
+            className="size-4"
+            strokeWidth={2}
+            aria-hidden="true"
+          />
         </Link>
       </Button>
     );
@@ -119,6 +139,24 @@ export function AddToCartButton({
           <>
             <CheckIcon className="size-4" strokeWidth={2} aria-hidden="true" />
             Добавлено
+          </>
+        ) : inCart > 0 ? (
+          // Часть остатка уже в корзине: можно добавить ещё, но видно, сколько лежит
+          <>
+            Добавить ещё
+            <span
+              className="inline-flex items-center gap-0.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] tabular-nums"
+              title={`В корзине: ${inCart}`}
+              role="img"
+              aria-label={`Уже в корзине: ${inCart}`}
+            >
+              <CheckIcon
+                className="size-3"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              />
+              {inCart}
+            </span>
           </>
         ) : (
           label
