@@ -112,13 +112,7 @@ export const byId = adminProcedure
       orders,
       source,
       events: events.map(
-        ({
-          items: _items,
-          userId: _userId,
-          entry,
-          attribution,
-          ...event
-        }) => ({
+        ({ items: _items, userId: _userId, entry, attribution, ...event }) => ({
           ...event,
           source: sourceOf({ ...event, entry, attribution }),
           orderNumber: event.orderId

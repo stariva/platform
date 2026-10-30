@@ -31,10 +31,7 @@ import {
   STATUS_LABELS,
   statusVariant,
 } from "~/components/orders/order-meta";
-import {
-  isLocalIp,
-  VisitorCard,
-} from "~/components/visitors/visitor-card";
+import { isLocalIp, VisitorCard } from "~/components/visitors/visitor-card";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
