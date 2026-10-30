@@ -16,7 +16,9 @@ const env: Record<string, unknown> = {
   POSTBOX_ACCESS_KEY_ID: "synthetic-key-id",
   POSTBOX_SECRET_ACCESS_KEY: "synthetic-secret",
 };
+const recordEmail = mock(async (_entry: unknown) => {});
 mock.module("./env", () => ({ env }));
+mock.module("./log", () => ({ recordEmail }));
 mock.module("resend", () => ({
   Resend: class {
     emails = { send };
@@ -78,6 +80,7 @@ function resetMocks() {
   send.mockClear();
   smtp.mockClear();
   postbox.mockClear();
+  recordEmail.mockClear();
   globalThis.fetch = postbox as unknown as typeof fetch;
 }
 
@@ -302,9 +305,44 @@ test("falls back from Postbox to Resend when Postbox rejects the request", async
       new Response('{"message":"sender not verified"}', { status: 403 }),
   );
   try {
-    await sendEmail(email);
+    await sendEmail({ ...email, idempotencyKey: "workshop:o1:booked:email" });
     expect(postbox).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledTimes(1);
+    expect(recordEmail).toHaveBeenCalledTimes(1);
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      to: email.to,
+      subject: "Test",
+      idempotencyKey: "workshop:o1:booked:email",
+      attempts: [
+        {
+          provider: "postbox",
+          ok: false,
+          error: expect.stringContaining("403"),
+        },
+        { provider: "resend", ok: true },
+      ],
+    });
+  } finally {
+    restore();
+  }
+});
+
+test("logs a failed send with every attempt when all providers fail", async () => {
+  resetMocks();
+  env.EMAIL_FALLBACK_PROVIDER = "postbox";
+  send.mockImplementationOnce(async () => ({ error: { message: "down" } }));
+  postbox.mockImplementationOnce(
+    async () => new Response("unavailable", { status: 503 }),
+  );
+  try {
+    await expect(sendEmail(email)).rejects.toThrow();
+    expect(recordEmail).toHaveBeenCalledTimes(1);
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      attempts: [
+        { provider: "resend", ok: false, error: "Resend error: down" },
+        { provider: "postbox", ok: false },
+      ],
+    });
   } finally {
     restore();
   }

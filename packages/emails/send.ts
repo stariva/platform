@@ -1,10 +1,13 @@
 import { render } from "@react-email/components";
 import { logger } from "@stariva/config";
+import type { EmailAttempt } from "@stariva/db";
 import nodemailer from "nodemailer";
 import type Mail from "nodemailer/lib/mailer";
 import type { ReactNode } from "react";
 
 import { env } from "./env";
+import { recordEmail } from "./log";
+import { errorText } from "./log-row";
 import {
   type EmailAttachment,
   type OutgoingEmail,
@@ -68,6 +71,19 @@ export const sendEmailHtml = async (email: EmailHtml) =>
  * наружу, только когда не отправил ни один.
  */
 async function deliver(email: OutgoingEmail) {
+  const startedAt = Date.now();
+  const attempts: EmailAttempt[] = [];
+  /** Итог отправки в журнал email_log: письма видно в админке. */
+  const record = () =>
+    recordEmail({
+      to: email.to,
+      subject: email.subject,
+      attempts,
+      attachments: email.attachments?.length ?? 0,
+      idempotencyKey: email.idempotencyKey,
+      durationMs: Date.now() - startedAt,
+    });
+
   const chain = selectedEmailProviders().filter((provider) => {
     const configured = provider.isConfigured();
     if (!configured) {
@@ -85,8 +101,15 @@ async function deliver(email: OutgoingEmail) {
   }
   let lastError: unknown;
   for (const [index, provider] of chain.entries()) {
+    const attemptStartedAt = Date.now();
     try {
       await provider.send(email);
+      attempts.push({
+        provider: provider.name,
+        ok: true,
+        ms: Date.now() - attemptStartedAt,
+      });
+      await record();
       return;
     } catch (error) {
       logger.error(`${provider.label} failed to send email`, error, {
@@ -94,8 +117,15 @@ async function deliver(email: OutgoingEmail) {
         idempotencyKey: email.idempotencyKey,
         willRetryWith: chain[index + 1]?.label,
       });
+      attempts.push({
+        provider: provider.name,
+        ok: false,
+        error: errorText(error),
+        ms: Date.now() - attemptStartedAt,
+      });
       lastError = error;
     }
   }
+  await record();
   throw lastError;
 }
