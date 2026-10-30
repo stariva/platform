@@ -83,8 +83,13 @@ jobs:
           # Старый под обслуживает трафик, пока новый не прошёл readiness (maxUnavailable: 0),
           # так что при неудаче достаточно вернуть предыдущую ревизию
           if ! kubectl rollout status deployment/stariva -n stariva --timeout=300s; then
-            kubectl get pods -n stariva -l app=stariva
-            kubectl describe pods -n stariva -l app=stariva | tail -n 60
+            # Один сбой API или соединения не повод откатывать здоровую ревизию:
+            # откат только если и повторная проверка не прошла
+            if kubectl rollout status deployment/stariva -n stariva --timeout=60s; then
+              exit 0
+            fi
+            kubectl get pods -n stariva -l app=stariva || true
+            kubectl describe pods -n stariva -l app=stariva | tail -n 60 || true
             kubectl rollout undo deployment/stariva -n stariva
             kubectl rollout status deployment/stariva -n stariva --timeout=120s
             echo "::error::Выкатка stariva не прошла, возвращена предыдущая ревизия"
@@ -158,8 +163,13 @@ jobs:
           fi
           kubectl set image deployment/stariva-app stariva-app=ghcr.io/stariva/platform-app:${{ needs.build-and-push-app.outputs.sha }} -n stariva
           if ! kubectl rollout status deployment/stariva-app -n stariva --timeout=300s; then
-            kubectl get pods -n stariva -l app=stariva-app
-            kubectl describe pods -n stariva -l app=stariva-app | tail -n 60
+            # Один сбой API или соединения не повод откатывать здоровую ревизию:
+            # откат только если и повторная проверка не прошла
+            if kubectl rollout status deployment/stariva-app -n stariva --timeout=60s; then
+              exit 0
+            fi
+            kubectl get pods -n stariva -l app=stariva-app || true
+            kubectl describe pods -n stariva -l app=stariva-app | tail -n 60 || true
             kubectl rollout undo deployment/stariva-app -n stariva
             kubectl rollout status deployment/stariva-app -n stariva --timeout=120s
             echo "::error::Выкатка stariva-app не прошла, возвращена предыдущая ревизия"
@@ -232,8 +242,13 @@ jobs:
           kubectl set image deployment/stariva-jobs stariva-jobs=ghcr.io/stariva/platform-jobs:${{ needs.build-and-push-jobs.outputs.sha }} -n stariva
           # Старый воркер до 120 с дожидается текущих заданий, а rollout status ждёт его выхода
           if ! kubectl rollout status deployment/stariva-jobs -n stariva --timeout=240s; then
-            kubectl get pods -n stariva -l app=stariva-jobs
-            kubectl describe pods -n stariva -l app=stariva-jobs | tail -n 60
+            # Один сбой API или соединения не повод откатывать здоровую ревизию:
+            # откат только если и повторная проверка не прошла
+            if kubectl rollout status deployment/stariva-jobs -n stariva --timeout=60s; then
+              exit 0
+            fi
+            kubectl get pods -n stariva -l app=stariva-jobs || true
+            kubectl describe pods -n stariva -l app=stariva-jobs | tail -n 60 || true
             kubectl rollout undo deployment/stariva-jobs -n stariva
             kubectl rollout status deployment/stariva-jobs -n stariva --timeout=240s
             echo "::error::Выкатка stariva-jobs не прошла, возвращена предыдущая ревизия"
