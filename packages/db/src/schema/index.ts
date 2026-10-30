@@ -5,6 +5,7 @@ export * from "./commerce";
 export * from "./contact-clicks";
 export * from "./crm";
 export * from "./custom-order";
+export * from "./email-log";
 export * from "./integrations";
 export * from "./post";
 export * from "./visitor";

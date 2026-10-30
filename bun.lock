@@ -244,6 +244,7 @@
         "@radix-ui/colors": "3.0.0",
         "@react-email/components": "1.0.12",
         "@stariva/config": "workspace:*",
+        "@stariva/db": "workspace:*",
         "@tailwindcss/typography": "0.5.20",
         "nodemailer": "^10.2.1",
         "react": "19.3.1",

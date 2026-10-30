@@ -26,6 +26,7 @@ export type OutgoingEmail = {
 } & ({ react: ReactNode } | { html: string });
 
 export interface EmailProvider {
+  name: EmailProviderName;
   label: string;
   isConfigured: () => boolean;
   send: (email: OutgoingEmail) => Promise<void>;
@@ -34,6 +35,7 @@ export interface EmailProvider {
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 const resendProvider: EmailProvider = {
+  name: "resend",
   label: "Resend",
   isConfigured: () => resend !== null,
   async send(email) {
@@ -132,6 +134,7 @@ async function postboxAttachment(attachment: EmailAttachment) {
  * postbox.sender; адрес отправителя должен быть подтверждён в Postbox.
  */
 const postboxProvider: EmailProvider = {
+  name: "postbox",
   label: "Yandex Postbox",
   isConfigured: () => postboxCredentials() !== null,
   async send(email) {

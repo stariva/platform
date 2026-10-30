@@ -22,6 +22,7 @@ import {
   IconInbox,
   IconKey,
   IconLayoutKanban,
+  IconMail,
   IconMessageChatbot,
   IconMessageForward,
   IconMessageStar,
@@ -137,6 +138,7 @@ const customers: NavItem[] = [
     icon: IconMessageChatbot,
     today: "chats",
   },
+  { title: "Журнал писем", url: "/email-log", icon: IconMail },
 ];
 
 const allItems = [

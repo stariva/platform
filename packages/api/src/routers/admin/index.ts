@@ -2,6 +2,7 @@ import { adminCartsRouter } from "./carts";
 import { adminChatsRouter } from "./chats";
 import { adminContactClicksRouter } from "./contact-clicks";
 import { adminCrmRouter } from "./crm";
+import { adminEmailLogRouter } from "./email-log";
 import { adminOrdersRouter } from "./orders";
 import { adminProductsRouter } from "./products";
 import { adminReceiptsRouter } from "./receipts";
@@ -16,6 +17,7 @@ export const adminRouter = {
   orders: adminOrdersRouter,
   carts: adminCartsRouter,
   contactClicks: adminContactClicksRouter,
+  emailLog: adminEmailLogRouter,
   receipts: adminReceiptsRouter,
   requests: adminRequestsRouter,
   reviews: adminReviewsRouter,
