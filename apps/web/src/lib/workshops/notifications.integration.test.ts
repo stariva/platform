@@ -13,6 +13,8 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
     const telegram = mock(async () => {});
     mock.module("@stariva/emails", () => ({
       sendEmail: email,
+      sendEmailHtml: async () => {},
+      isEmailConfigured: () => false,
       sendWorkshopBriefEmail: email,
       StarivaWorkshopEmail,
     }));

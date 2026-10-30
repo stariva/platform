@@ -8,6 +8,7 @@ import {
   workshops,
 } from "@stariva/db/schema";
 import {
+  isEmailConfigured,
   StarivaWorkshopEmail,
   sendEmail,
   sendEmailHtml,
@@ -196,6 +197,8 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
     const brief = kind === "booked" ? await briefForBookedEmail(target) : [];
     await sendEmail({
       idempotencyKey: `workshop:${order.id}:${kind}:email`,
+      // В письме личная ссылка доступа к заказу: в журнал её не кладём
+      sensitive: true,
       to: [target.email],
       subject: emailSubject(kind, target),
       attachments: brief.map(({ filename, url }) => ({
@@ -278,7 +281,10 @@ function configuredStaffChannels(): StaffChannel[] {
       config: telegramStaffConfig(),
     });
   }
-  if (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_FROM && env.ORDER_EMAIL_TO) {
+  // Письмо уходит через sendEmailHtml, так что канал включён, только если
+  // настроен выбранный провайдер: без него отправка молча ничего не делает,
+  // а уведомление считалось бы доставленным.
+  if (env.ORDER_EMAIL_FROM && env.ORDER_EMAIL_TO && isEmailConfigured()) {
     channels.push({
       channel: "staff-email",
       config: {

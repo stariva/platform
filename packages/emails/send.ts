@@ -20,7 +20,7 @@ export interface Emails {
   idempotencyKey?: string;
   /**
    * В письме код входа или личная ссылка (вход, сброс пароля, подтверждение
-   * почты): тело в журнал email_log не кладём.
+   * почты, доступ к заказу мастер-класса): тело в журнал email_log не кладём.
    */
   sensitive?: boolean;
   attachments?: EmailAttachment[];

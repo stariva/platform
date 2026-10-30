@@ -55,9 +55,11 @@ const briefEmails: Array<{ idempotencyKey: string; files: unknown[] }> = [];
 const StarivaWorkshopEmail = () => null;
 mock.module("@stariva/emails", () => ({
   StarivaWorkshopEmail,
+  isEmailConfigured: () => false,
   sendEmail: async (email: (typeof bookedEmails)[number]) => {
     bookedEmails.push(email);
   },
+  sendEmailHtml: async () => {},
   sendWorkshopBriefEmail: async (email: (typeof briefEmails)[number]) => {
     briefEmails.push(email);
   },
