@@ -19,6 +19,10 @@ COPY --from=pruner /repo/out/full/ .
 COPY .env.example .env
 ENV APP_URL=https://app.stariva.ru
 ENV NEXT_PUBLIC_APP_URL=https://app.stariva.ru
+# Идентификатор выкладки для защиты от рассинхрона версий при rolling update:
+# клиент со старой страницей после выкатки перезагрузится целиком.
+ARG DEPLOYMENT_ID=dev
+ENV NEXT_DEPLOYMENT_ID=$DEPLOYMENT_ID
 RUN bun run build --filter=@stariva/app
 
 # 3. Minimal runtime image, just the Next.js standalone output
@@ -29,6 +33,8 @@ COPY --from=builder --chown=nextjs:nodejs /repo/apps/app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/app/.next/static ./apps/app/.next/static
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/app/public ./apps/app/public
 USER nextjs
+ARG DEPLOYMENT_ID=dev
+ENV NEXT_DEPLOYMENT_ID=$DEPLOYMENT_ID
 ENV NODE_ENV=production
 ENV APP_URL=https://app.stariva.ru
 ENV NEXT_PUBLIC_APP_URL=https://app.stariva.ru

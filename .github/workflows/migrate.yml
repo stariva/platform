@@ -12,12 +12,9 @@ name: Migrate database
 # stariva/postgres-credentials: новых секретов в GitHub не нужно, а созданные
 # объекты сразу принадлежат роли сайта и не требуют передачи владения.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "packages/db/migrations/**"
-      - "packages/db/src/scripts/migrate.ts"
-      - ".github/workflows/migrate.yml"
+  # Вызывается из deploy.yml перед каждой выкаткой; отдельный push-триггер не
+  # нужен, иначе миграция запускалась бы дважды.
+  workflow_call:
   workflow_dispatch:
 
 # Две миграции одновременно на одной базе не гоняем и не отменяем на лету:
