@@ -30,6 +30,7 @@ export type EmailHtml = {
   subject: string;
   to: string[];
   from?: string;
+  idempotencyKey?: string;
 };
 export const sendEmail = async (email: Emails) => {
   if (env.EMAIL_SANDBOX_ENABLED) {
@@ -63,6 +64,7 @@ export const sendEmailHtml = async (email: EmailHtml) =>
     from: email.from ?? env.EMAIL_FROM,
     subject: email.subject,
     html: email.html,
+    idempotencyKey: email.idempotencyKey,
   });
 
 /**
