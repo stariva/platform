@@ -18,11 +18,6 @@ export type { EmailAttachment } from "./providers";
 
 export interface Emails {
   idempotencyKey?: string;
-  /**
-   * В письме код входа или личная ссылка (вход, сброс пароля, подтверждение
-   * почты, доступ к заказу мастер-класса): тело в журнал email_log не кладём.
-   */
-  sensitive?: boolean;
   attachments?: EmailAttachment[];
   react: ReactNode;
   subject: string;
@@ -60,7 +55,6 @@ export const sendEmail = async (email: Emails) => {
     react: email.react,
     attachments: email.attachments,
     idempotencyKey: email.idempotencyKey,
-    sensitive: email.sensitive,
   });
 };
 
@@ -88,7 +82,7 @@ async function htmlForLog(email: OutgoingEmail): Promise<string | null> {
  * настроен или отказал — запасным (EMAIL_FALLBACK_PROVIDER). Ошибка уходит
  * наружу, только когда не отправил ни один.
  */
-async function deliver(email: OutgoingEmail & { sensitive?: boolean }) {
+async function deliver(email: OutgoingEmail) {
   const startedAt = Date.now();
   const attempts: EmailAttempt[] = [];
   /** Итог отправки в журнал email_log: письма видно в админке. */
@@ -99,7 +93,7 @@ async function deliver(email: OutgoingEmail & { sensitive?: boolean }) {
       attempts,
       attachments: email.attachments?.length ?? 0,
       idempotencyKey: email.idempotencyKey,
-      html: email.sensitive ? null : await htmlForLog(email),
+      html: await htmlForLog(email),
       durationMs: Date.now() - startedAt,
     });
 

@@ -197,8 +197,6 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
     const brief = kind === "booked" ? await briefForBookedEmail(target) : [];
     await sendEmail({
       idempotencyKey: `workshop:${order.id}:${kind}:email`,
-      // В письме личная ссылка доступа к заказу: в журнал её не кладём
-      sensitive: true,
       to: [target.email],
       subject: emailSubject(kind, target),
       attachments: brief.map(({ filename, url }) => ({
