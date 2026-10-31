@@ -81,15 +81,20 @@ export function EmailTable({ rows }: { rows: EmailRow[] }) {
                       </Link>
                     )}
                   </div>
-                  {row.hasHtml && (
-                    <div className="mt-2">
+                  <div className="mt-2">
+                    {row.hasHtml ? (
                       <EmailPreview
                         id={row.id}
                         subject={row.subject}
                         recipient={row.recipient}
                       />
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-muted-foreground text-xs">
+                        Тело письма не сохранено: письмо отправлено до появления
+                        просмотра
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm whitespace-normal">
                   <StatusBadge row={row} />

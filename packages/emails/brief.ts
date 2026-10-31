@@ -30,8 +30,6 @@ export async function sendWorkshopBriefEmail({
 }): Promise<void> {
   await sendEmail({
     idempotencyKey,
-    // В письме личная ссылка доступа к заказу: в журнал её не кладём
-    sensitive: true,
     to: [to],
     subject: workshopBriefEmailSubject({ workshopTitle }),
     react: StarivaWorkshopBriefEmail({

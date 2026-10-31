@@ -54,7 +54,6 @@ export const auth = initAuth({
       await sendEmail({
         to: [email],
         subject: "Reset Your Password",
-        sensitive: true,
         react: ResetPasswordEmail({ resetLink: url }),
       });
     } else {
@@ -65,7 +64,6 @@ export const auth = initAuth({
       await sendEmail({
         to: [email],
         subject: type === "sign-in" ? "Your Sign In Code" : "Verify Your Email",
-        sensitive: true,
         react: OtpSignInEmail({ otp, isSignUp: type !== "sign-in" }),
       });
     }
