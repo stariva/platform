@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { z } from "zod";
+import { applyBundlePricing, type WithListPrice } from "@/lib/commerce/bundles";
 import { madeToOrderOptionsSchema } from "@/lib/commerce/made-to-order-options";
 import { logCartEvent } from "./events";
 
@@ -36,6 +37,9 @@ const cartItemSchema = z.object({
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
+
+/** Позиция корзины с ценой комплекта; `listPrice` — цена без скидки за комплект. */
+export type PricedCartItem = WithListPrice<CartItem>;
 
 /**
  * Строка корзины. Готовое изделие — по товару, изделие под заказ — ещё и по
@@ -63,7 +67,8 @@ export interface CatalogUpdate {
 }
 
 interface CartContextValue {
-  items: CartItem[];
+  /** Цены уже с учётом комплектов (два гнома вместе дешевле). */
+  items: PricedCartItem[];
   /** Корзина прочитана из localStorage; до этого items пуст не потому, что корзина пуста. */
   hydrated: boolean;
   add: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
@@ -282,9 +287,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [commit],
   );
 
+  // В хранилище и журнале лежат цены каталога, комплект считаем на лету
+  const pricedItems = useMemo(() => applyBundlePricing(items), [items]);
   const subtotal = useMemo(
-    () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
-    [items],
+    () => pricedItems.reduce((sum, i) => sum + i.price * i.quantity, 0),
+    [pricedItems],
   );
   const count = useMemo(
     () => items.reduce((sum, i) => sum + i.quantity, 0),
@@ -293,7 +300,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      items,
+      items: pricedItems,
       hydrated,
       add,
       remove,
@@ -304,7 +311,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       count,
     }),
     [
-      items,
+      pricedItems,
       hydrated,
       add,
       remove,

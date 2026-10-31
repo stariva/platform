@@ -46,20 +46,25 @@ test("a missing gnome is skipped instead of breaking the page", () => {
   expect(gnomeList(pickGnomes([other]))).toEqual([]);
 });
 
-test("pair offer sums prices and saving comes from old prices", () => {
-  const offer = pairOffer([
-    { ...pumpkin, price: 3300, oldPrice: 3700 },
-    { ...flyAgaric, price: 3300, oldPrice: 3700 },
-  ]);
+test("pair costs the bundle price while each gnome keeps its own price", () => {
+  const offer = pairOffer([pumpkin, flyAgaric]);
   expect(offer).toMatchObject({
-    price: 6600,
+    price: 6500,
     regularPrice: 7400,
-    saving: 800,
+    saving: 900,
     isPair: true,
   });
   expect(pairButtonLabel(offer).replace(/\s/g, " ")).toBe(
-    "Оба гнома в корзину — 6 600 ₽",
+    "Оба гнома в корзину — 6 500 ₽",
   );
+});
+
+test("the bundle price never exceeds the sum of single prices", () => {
+  const offer = pairOffer([
+    { ...pumpkin, price: 3000 },
+    { ...flyAgaric, price: 3000 },
+  ]);
+  expect(offer).toMatchObject({ price: 6000, saving: 0 });
 });
 
 test("a sold-out gnome leaves a single-item offer", () => {

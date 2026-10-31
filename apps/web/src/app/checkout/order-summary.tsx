@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useId, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
-import type { CartItem } from "@/lib/cart/cart-context";
+import type { PricedCartItem } from "@/lib/cart/cart-context";
 import { pluralItems } from "@/lib/in-stock";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ export type DeliveryCost =
   | { status: "ready"; kopecks: number };
 
 interface OrderSummaryProps {
-  items: CartItem[];
+  items: PricedCartItem[];
   subtotal: number;
   delivery: DeliveryCost;
 }

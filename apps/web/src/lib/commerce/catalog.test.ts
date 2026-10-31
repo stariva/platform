@@ -74,6 +74,36 @@ test("resolves in-stock items with kopeck prices", async () => {
   ]);
 });
 
+test("both gnomes together are charged the bundle price, one alone the catalog price", async () => {
+  const gnome = (slug: string, sku: number): Product => ({
+    ...bag,
+    id: slug,
+    slug,
+    name: slug,
+    price: 3700,
+    stockAvailable: 1,
+    ozonSku: sku,
+  });
+  catalog = {
+    products: [gnome("gnom-tykva-9563", 1), gnome("gnom-mukhomor-0554", 2)],
+    status: "available",
+  };
+
+  const both = await resolveCatalogItems([
+    { productSlug: "gnom-tykva-9563", quantity: 1 },
+    { productSlug: "gnom-mukhomor-0554", quantity: 1 },
+  ]);
+  assert.equal(
+    both.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    650000,
+  );
+
+  const one = await resolveCatalogItems([
+    { productSlug: "gnom-tykva-9563", quantity: 1 },
+  ]);
+  assert.equal(one[0]?.price, 370000);
+});
+
 test("reports every sold-out or missing item at once", async () => {
   catalog = {
     products: [bag, { ...bag, slug: "sold-out", inStock: false }],

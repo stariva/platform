@@ -26,9 +26,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackProductEvent } from "@/lib/analytics";
 import {
-  type CartItem,
   cartLineKey,
   type FulfillmentType,
+  type PricedCartItem,
   useCart,
 } from "@/lib/cart/cart-context";
 import {
@@ -66,7 +66,7 @@ export default function CartPage() {
   const { states, loading, notices, dismissNotices } = useCartValidation();
   const ctaRef = useRef<HTMLDivElement>(null);
 
-  const stateOf = (item: CartItem): CartLineState =>
+  const stateOf = (item: PricedCartItem): CartLineState =>
     states.get(cartLineKey(item)) ?? { status: "unknown" };
   // Готовые изделия и изделия под заказ оформляются и оплачиваются раздельно
   const sections = SECTION_ORDER.map((kind) => {
@@ -89,7 +89,7 @@ export default function CartPage() {
   const single = sections.length === 1 ? sections[0] : undefined;
   const ctaInView = useInView(ctaRef, hydrated && Boolean(single));
 
-  function removeItem(item: CartItem) {
+  function removeItem(item: PricedCartItem) {
     remove(cartLineKey(item));
     trackProductEvent("remove", [
       {
@@ -99,14 +99,16 @@ export default function CartPage() {
         quantity: item.quantity,
       },
     ]);
-    const { quantity, ...product } = item;
+    // Возвращаем цену каталога: скидку комплекта корзина посчитает заново
+    const { quantity, listPrice, ...product } = item;
+    product.price = listPrice ?? product.price;
     toast("Изделие удалено из корзины", {
       description: item.name,
       action: { label: "Вернуть", onClick: () => add(product, quantity) },
     });
   }
 
-  function removeUnavailable(unavailable: CartItem[]) {
+  function removeUnavailable(unavailable: PricedCartItem[]) {
     for (const item of unavailable) remove(cartLineKey(item));
   }
 

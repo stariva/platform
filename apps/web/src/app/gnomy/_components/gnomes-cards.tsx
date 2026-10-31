@@ -6,7 +6,7 @@ import type { Product } from "@/lib/catalog/types";
 import { isPurchasable } from "@/lib/in-stock";
 import { productHref } from "@/lib/products";
 import { formatPrice } from "@/lib/workshops-data";
-import { GNOMES_CARDS_ID } from "../_data";
+import { GNOMES_CARDS_ID, type pairOffer } from "../_data";
 
 /** Чем гномы различаются — коротко, чтобы выбрать одного или взять обоих. */
 const CHARACTER: Record<string, string[]> = {
@@ -27,7 +27,13 @@ function characterOf(product: Product): string[] {
   return tail ? (CHARACTER[tail] ?? []) : [];
 }
 
-export function GnomesCards({ gnomes }: { gnomes: Product[] }) {
+export function GnomesCards({
+  gnomes,
+  offer,
+}: {
+  gnomes: Product[];
+  offer: ReturnType<typeof pairOffer>;
+}) {
   return (
     <section
       id={GNOMES_CARDS_ID}
@@ -50,6 +56,9 @@ export function GnomesCards({ gnomes }: { gnomes: Product[] }) {
             Каждый гном связан в единственном экземпляре — таким, как на фото.
             Выберите одного или поставьте пару на разной высоте: так они не
             спорят друг с другом.
+            {offer.isPair && offer.saving > 0
+              ? ` Оба вместе — ${formatPrice(offer.price)} вместо ${formatPrice(offer.regularPrice)}: цена комплекта применится в корзине сама.`
+              : null}
           </p>
         </div>
 
