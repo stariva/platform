@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/workshops-data";
 import {
   GNOMES_CARDS_ID,
   GNOMES_SECTION_ID,
+  heroCopy,
   pairButtonLabel,
   type pairOffer,
 } from "../_data";
@@ -32,6 +33,10 @@ export function GnomesHero({
   offer: ReturnType<typeof pairOffer>;
 }) {
   const { price, regularPrice, saving, isPair, available } = offer;
+  const copy = heroCopy(offer);
+  const facts = copy.inStock
+    ? FACTS
+    : FACTS.filter((fact) => !fact.startsWith("Уже в наличии"));
   return (
     <section
       id={GNOMES_SECTION_ID}
@@ -49,13 +54,11 @@ export function GnomesHero({
             className="font-serif text-espresso leading-[1.08] text-balance mb-6"
             style={{ fontSize: "clamp(34px, 5vw, 62px)" }}
           >
-            Два вязаных гнома —{" "}
+            {copy.title} —{" "}
             <em className="not-italic text-taupe">от осени до Нового года</em>
           </h1>
           <p className="text-lg text-dark-grey leading-relaxed max-w-xl mb-8 text-pretty">
-            Тыква и Мухомор: интерьерный декор ручной вязки высотой 40–45 см.
-            Поставьте на каминную полку, подоконник или комод — а к декабрю
-            смените соседей, и гномы останутся новогодним акцентом.
+            {copy.lead}
           </p>
 
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-5">
@@ -91,7 +94,7 @@ export function GnomesHero({
           </div>
 
           <ul className="grid sm:grid-cols-2 gap-3 max-w-xl">
-            {FACTS.map((fact) => (
+            {facts.map((fact) => (
               <li
                 key={fact}
                 className="flex items-start gap-2 text-sm text-espresso"

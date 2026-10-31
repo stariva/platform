@@ -3,6 +3,7 @@ import type { Product } from "@/lib/catalog/types";
 import {
   gnomeList,
   gnomesFaq,
+  heroCopy,
   pairButtonLabel,
   pairOffer,
   pickGnomes,
@@ -81,4 +82,20 @@ test("faq never calls a gnome a toy or addresses children", () => {
     .join(" ")
     .toLowerCase();
   expect(text).not.toMatch(/игрушк|детям|ребёнк|ребенк/);
+});
+
+test("hero promises a pair only while both gnomes are in stock", () => {
+  const sold = { ...flyAgaric, inStock: false };
+  const pair = heroCopy(pairOffer([pumpkin, flyAgaric]));
+  expect(pair.title).toBe("Два вязаных гнома");
+  expect(pair.inStock).toBe(true);
+
+  const single = heroCopy(pairOffer([pumpkin, sold]));
+  expect(single.title).toBe("Вязаный гном");
+  expect(single.lead).toContain(pumpkin.name);
+  expect(single.inStock).toBe(true);
+
+  const none = heroCopy(pairOffer([{ ...pumpkin, inStock: false }, sold]));
+  expect(none.inStock).toBe(false);
+  expect(none.lead).toContain("нет в наличии");
 });
