@@ -1,5 +1,6 @@
 import type { FAQItem } from "@/components/stariva/json-ld";
 import type { Product } from "@/lib/catalog/types";
+import { GNOME_PAIR_PRICE_KOPECKS, GNOME_TAILS } from "@/lib/commerce/bundles";
 import { IN_STOCK_SHIP_DAYS, isPurchasable } from "@/lib/in-stock";
 import { formatPrice } from "@/lib/workshops-data";
 
@@ -10,12 +11,8 @@ export const GNOMES_PATH = "/gnomy";
 export const GNOMES_SECTION_ID = "gnomy";
 export const GNOMES_CARDS_ID = "gnomy-cards";
 
-/**
- * Slug товара — название с Ozon и последние четыре цифры Ozon ID. Название
- * меняется, хвост остаётся, поэтому гномов узнаём по хвосту.
- */
-const PUMPKIN_TAIL = "-9563";
-const FLY_AGARIC_TAIL = "-0554";
+/** Хвосты slug гномов общие с ценой комплекта в корзине (lib/commerce/bundles). */
+const [PUMPKIN_TAIL, FLY_AGARIC_TAIL] = GNOME_TAILS;
 
 export interface Gnomes {
   pumpkin?: Product;
@@ -35,24 +32,24 @@ export function gnomeList({ pumpkin, flyAgaric }: Gnomes): Product[] {
 }
 
 /**
- * Что можно купить прямо сейчас и сколько это стоит. Цены берутся из каталога:
- * скидка на странице — это `oldPrice` у товаров в админке, а не отдельная
- * логика корзины.
+ * Что можно купить прямо сейчас и сколько это стоит. По отдельности гномы
+ * стоят по цене каталога; вместе — цена комплекта (её же считают корзина и
+ * сервер, `applyBundlePricing`), если она ниже суммы.
  */
 export function pairOffer(gnomes: Product[]) {
   const available = gnomes.filter(isPurchasable);
-  const price = available.reduce((sum, p) => sum + p.price, 0);
-  const regular = available.reduce(
-    (sum, p) => sum + Math.max(p.oldPrice ?? p.price, p.price),
-    0,
-  );
+  const regular = available.reduce((sum, p) => sum + p.price, 0);
+  const isPair = available.length === 2;
+  const price = isPair
+    ? Math.min(regular, GNOME_PAIR_PRICE_KOPECKS / 100)
+    : regular;
   return {
     available,
     price,
     regularPrice: regular,
     saving: regular - price,
     /** Есть оба гнома — продаём парой, иначе страница честно говорит об одном. */
-    isPair: available.length === 2,
+    isPair,
   };
 }
 
@@ -117,7 +114,7 @@ export function gnomesFaq(gnomes: Product[]): FAQItem[] {
     {
       question: "Можно купить только одного гнома?",
       answer:
-        "Да. У каждого гнома на странице своя кнопка «В корзину». Пара удобна тем, что один заказ и одна доставка, а гномы на полке друг друга поддерживают.",
+        "Да, каждый гном продаётся и отдельно — у него на странице своя кнопка «В корзину». Если взять обоих сразу, комплект выходит дешевле: цена комплекта применяется автоматически, когда оба гнома в корзине.",
     },
     {
       question: "Как ухаживать за гномом?",

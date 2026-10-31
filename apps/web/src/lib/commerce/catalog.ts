@@ -6,6 +6,7 @@ import {
   isMadeToOrderColor,
   isMadeToOrderSize,
 } from "@/lib/made-to-order";
+import { applyBundlePricing } from "./bundles";
 import {
   MAX_MADE_TO_ORDER_QUANTITY,
   type MadeToOrderOptions,
@@ -197,5 +198,6 @@ export async function resolveCatalogItems(
   if (unavailable.length > 0) {
     throw new CatalogItemsUnavailableError(unavailable);
   }
-  return resolved;
+  // Цены комплектов считает сервер: сумма заказа и платёж берутся отсюда
+  return applyBundlePricing(resolved);
 }

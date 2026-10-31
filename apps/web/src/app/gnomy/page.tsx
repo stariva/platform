@@ -86,7 +86,7 @@ export default async function GnomesPage() {
       <Header variant="solid" />
       <main>
         <GnomesHero gnomes={gnomes} offer={offer} />
-        <GnomesCards gnomes={gnomes} />
+        <GnomesCards gnomes={gnomes} offer={offer} />
         <GnomesIdeas
           available={offer.available}
           label={pairButtonLabel(offer)}

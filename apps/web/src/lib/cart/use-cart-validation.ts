@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatPrice } from "@/lib/products";
-import { type CartItem, cartLineKey, useCart } from "./cart-context";
+import { cartLineKey, type PricedCartItem, useCart } from "./cart-context";
 import {
   type CartValidationLine,
   cartValidationResponseSchema,
@@ -24,14 +24,23 @@ export type CartLineState =
  * при оформлении. Состояния отдаются по ключу строки корзины (`cartLineKey`).
  */
 export function useCartValidation() {
-  const { items, hydrated, syncWithCatalog } = useCart();
+  const { items, hydrated, syncWithCatalog, setUnavailableKeys } = useCart();
   const [lines, setLines] = useState<Map<string, CartValidationLine>>(
     () => new Map(),
   );
+
+  // Проданное изделие не входит в комплект: оставшееся стоит без скидки сразу,
+  // а не после того, как покупатель уберёт проданное из корзины
+  useEffect(() => {
+    const unavailable = new Set<string>();
+    for (const [key, line] of lines) if (!line.available) unavailable.add(key);
+    setUnavailableKeys(unavailable);
+  }, [lines, setUnavailableKeys]);
+  useEffect(() => () => setUnavailableKeys(new Set()), [setUnavailableKeys]);
   const [loading, setLoading] = useState(false);
   const [notices, setNotices] = useState<string[]>([]);
 
-  const itemsRef = useRef<CartItem[]>(items);
+  const itemsRef = useRef<PricedCartItem[]>(items);
   itemsRef.current = items;
   const checked = useRef(new Set<string>());
 
@@ -141,7 +150,7 @@ export function useCartValidation() {
 
 /** Что изменилось в корзине из-за новых цен и остатков — по-русски, для покупателя. */
 function describeChanges(
-  items: CartItem[],
+  items: PricedCartItem[],
   fresh: Extract<CartValidationLine, { available: true }>[],
 ): string[] {
   const messages: string[] = [];
@@ -150,9 +159,11 @@ function describeChanges(
     const matching = items.filter((item) => validationLineKey(item) === key);
     const [item] = matching;
     if (!item) continue;
-    if (item.price !== line.price) {
+    // Цена в корзине может быть ниже каталожной из-за комплекта — это не изменение
+    const cartPrice = item.listPrice ?? item.price;
+    if (cartPrice !== line.price) {
       messages.push(
-        `«${line.name}»: цена изменилась с ${formatPrice(item.price / 100)} на ${formatPrice(line.price / 100)}`,
+        `«${line.name}»: цена изменилась с ${formatPrice(cartPrice / 100)} на ${formatPrice(line.price / 100)}`,
       );
     }
     if (matching.some((i) => i.quantity > line.maxQuantity)) {
