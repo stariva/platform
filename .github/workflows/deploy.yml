@@ -85,11 +85,35 @@ jobs:
           if ! kubectl rollout status deployment/stariva -n stariva --timeout=300s; then
             # Один сбой API или соединения не повод откатывать здоровую ревизию:
             # откат только если и повторная проверка не прошла
-            if kubectl rollout status deployment/stariva -n stariva --timeout=60s; then
+            if kubectl rollout status deployment/stariva -n stariva --timeout=90s; then
               exit 0
             fi
             kubectl get pods -n stariva -l app=stariva || true
             kubectl describe pods -n stariva -l app=stariva | tail -n 60 || true
+            # Откатываем только при подтверждённом таймауте выкатки. Если состояние
+            # не прочитать (API недоступен), лучше упасть без отката.
+            # progressDeadlineSeconds (по умолчанию 600 с) может быть дольше ожидания
+            # выше, поэтому ждём, пока Kubernetes сам признает выкатку зависшей
+            deadline="$(kubectl get deployment/stariva -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
+            end=$((SECONDS + ${deadline:-600} + 30))
+            while true; do
+              reason="$(kubectl get deployment/stariva -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
+                echo "::error::Не удалось прочитать состояние stariva, откат не выполняю"
+                exit 1
+              }
+              if [ "$reason" = "ProgressDeadlineExceeded" ]; then
+                break
+              fi
+              if [ "$reason" = "NewReplicaSetAvailable" ]; then
+                echo "stariva: выкатка завершилась, пока ждали подтверждения"
+                exit 0
+              fi
+              if [ "$SECONDS" -ge "$end" ]; then
+                echo "::error::stariva: выкатка не завершилась, но ProgressDeadlineExceeded не подтверждён (причина: ${reason:-нет}), откат не выполняю"
+                exit 1
+              fi
+              sleep 10
+            done
             kubectl rollout undo deployment/stariva -n stariva
             kubectl rollout status deployment/stariva -n stariva --timeout=120s
             echo "::error::Выкатка stariva не прошла, возвращена предыдущая ревизия"
@@ -165,11 +189,35 @@ jobs:
           if ! kubectl rollout status deployment/stariva-app -n stariva --timeout=300s; then
             # Один сбой API или соединения не повод откатывать здоровую ревизию:
             # откат только если и повторная проверка не прошла
-            if kubectl rollout status deployment/stariva-app -n stariva --timeout=60s; then
+            if kubectl rollout status deployment/stariva-app -n stariva --timeout=90s; then
               exit 0
             fi
             kubectl get pods -n stariva -l app=stariva-app || true
             kubectl describe pods -n stariva -l app=stariva-app | tail -n 60 || true
+            # Откатываем только при подтверждённом таймауте выкатки. Если состояние
+            # не прочитать (API недоступен), лучше упасть без отката.
+            # progressDeadlineSeconds (по умолчанию 600 с) может быть дольше ожидания
+            # выше, поэтому ждём, пока Kubernetes сам признает выкатку зависшей
+            deadline="$(kubectl get deployment/stariva-app -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
+            end=$((SECONDS + ${deadline:-600} + 30))
+            while true; do
+              reason="$(kubectl get deployment/stariva-app -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
+                echo "::error::Не удалось прочитать состояние stariva-app, откат не выполняю"
+                exit 1
+              }
+              if [ "$reason" = "ProgressDeadlineExceeded" ]; then
+                break
+              fi
+              if [ "$reason" = "NewReplicaSetAvailable" ]; then
+                echo "stariva-app: выкатка завершилась, пока ждали подтверждения"
+                exit 0
+              fi
+              if [ "$SECONDS" -ge "$end" ]; then
+                echo "::error::stariva-app: выкатка не завершилась, но ProgressDeadlineExceeded не подтверждён (причина: ${reason:-нет}), откат не выполняю"
+                exit 1
+              fi
+              sleep 10
+            done
             kubectl rollout undo deployment/stariva-app -n stariva
             kubectl rollout status deployment/stariva-app -n stariva --timeout=120s
             echo "::error::Выкатка stariva-app не прошла, возвращена предыдущая ревизия"
@@ -244,11 +292,35 @@ jobs:
           if ! kubectl rollout status deployment/stariva-jobs -n stariva --timeout=240s; then
             # Один сбой API или соединения не повод откатывать здоровую ревизию:
             # откат только если и повторная проверка не прошла
-            if kubectl rollout status deployment/stariva-jobs -n stariva --timeout=60s; then
+            if kubectl rollout status deployment/stariva-jobs -n stariva --timeout=90s; then
               exit 0
             fi
             kubectl get pods -n stariva -l app=stariva-jobs || true
             kubectl describe pods -n stariva -l app=stariva-jobs | tail -n 60 || true
+            # Откатываем только при подтверждённом таймауте выкатки. Если состояние
+            # не прочитать (API недоступен), лучше упасть без отката.
+            # progressDeadlineSeconds (по умолчанию 600 с) может быть дольше ожидания
+            # выше, поэтому ждём, пока Kubernetes сам признает выкатку зависшей
+            deadline="$(kubectl get deployment/stariva-jobs -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
+            end=$((SECONDS + ${deadline:-600} + 30))
+            while true; do
+              reason="$(kubectl get deployment/stariva-jobs -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
+                echo "::error::Не удалось прочитать состояние stariva-jobs, откат не выполняю"
+                exit 1
+              }
+              if [ "$reason" = "ProgressDeadlineExceeded" ]; then
+                break
+              fi
+              if [ "$reason" = "NewReplicaSetAvailable" ]; then
+                echo "stariva-jobs: выкатка завершилась, пока ждали подтверждения"
+                exit 0
+              fi
+              if [ "$SECONDS" -ge "$end" ]; then
+                echo "::error::stariva-jobs: выкатка не завершилась, но ProgressDeadlineExceeded не подтверждён (причина: ${reason:-нет}), откат не выполняю"
+                exit 1
+              fi
+              sleep 10
+            done
             kubectl rollout undo deployment/stariva-jobs -n stariva
             kubectl rollout status deployment/stariva-jobs -n stariva --timeout=240s
             echo "::error::Выкатка stariva-jobs не прошла, возвращена предыдущая ревизия"
