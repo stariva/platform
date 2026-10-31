@@ -90,8 +90,7 @@ export function EmailTable({ rows }: { rows: EmailRow[] }) {
                       />
                     ) : (
                       <span className="text-muted-foreground text-xs">
-                        Тело письма не сохранено: письмо отправлено до появления
-                        просмотра
+                        Тело письма не сохранено
                       </span>
                     )}
                   </div>
