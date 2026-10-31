@@ -35,6 +35,22 @@ test("an odd discount is split without losing a kopeck", () => {
   expect(total(priced)).toBe(GNOME_PAIR_PRICE_KOPECKS);
 });
 
+test("the discount follows the prices, so a cheap gnome never goes negative", () => {
+  const priced = applyBundlePricing([
+    { ...pumpkin, price: 100_000 },
+    { ...flyAgaric, price: 800_000 },
+  ]);
+  expect(total(priced)).toBe(GNOME_PAIR_PRICE_KOPECKS);
+  for (const item of priced) expect(item.price).toBeGreaterThan(0);
+
+  const extreme = applyBundlePricing([
+    { ...pumpkin, price: 1 },
+    { ...flyAgaric, price: 700_000 },
+  ]);
+  expect(total(extreme)).toBe(GNOME_PAIR_PRICE_KOPECKS);
+  for (const item of extreme) expect(item.price).toBeGreaterThan(0);
+});
+
 test("a single gnome is sold at the catalog price", () => {
   expect(applyBundlePricing([pumpkin, other])).toEqual([pumpkin, other]);
   expect(applyBundlePricing([flyAgaric])).toEqual([flyAgaric]);

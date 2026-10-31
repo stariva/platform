@@ -33,9 +33,10 @@ export function isGnomeSlug(slug: string): boolean {
 
 /**
  * Цены с учётом комплектов. Оба гнома по одному в корзине — скидка делится
- * между ними, чтобы суммы позиций (и чека ЮKassa) сходились до копейки.
- * Изделие в корзине единственное; если в корзине их больше, комплект не
- * считаем — цена за единицу у позиции одна, поровну скидку не разделить.
+ * между ними пропорционально цене, чтобы суммы позиций (и чека ЮKassa)
+ * сходились до копейки, а цена ни одной позиции не ушла в минус.
+ * Если в корзине их больше одного, комплект не считаем — цена за единицу у
+ * позиции одна, скидку между штуками не разделить.
  */
 export function applyBundlePricing<T extends BundleItem>(
   items: T[],
@@ -54,8 +55,10 @@ export function applyBundlePricing<T extends BundleItem>(
   const discount = a.price + b.price - GNOME_PAIR_PRICE_KOPECKS;
   if (discount <= 0) return items;
 
-  const cutA = Math.floor(discount / 2);
+  // Скидка пропорциональна цене, поэтому дешёвое изделие не уйдёт в минус
+  const cutA = Math.floor((discount * a.price) / (a.price + b.price));
   const cutB = discount - cutA;
+  if (a.price - cutA < 1 || b.price - cutB < 1) return items;
   return items.map((item) => {
     if (item === a)
       return { ...item, price: item.price - cutA, listPrice: a.price };

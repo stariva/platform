@@ -24,10 +24,19 @@ export type CartLineState =
  * при оформлении. Состояния отдаются по ключу строки корзины (`cartLineKey`).
  */
 export function useCartValidation() {
-  const { items, hydrated, syncWithCatalog } = useCart();
+  const { items, hydrated, syncWithCatalog, setUnavailableKeys } = useCart();
   const [lines, setLines] = useState<Map<string, CartValidationLine>>(
     () => new Map(),
   );
+
+  // Проданное изделие не входит в комплект: оставшееся стоит без скидки сразу,
+  // а не после того, как покупатель уберёт проданное из корзины
+  useEffect(() => {
+    const unavailable = new Set<string>();
+    for (const [key, line] of lines) if (!line.available) unavailable.add(key);
+    setUnavailableKeys(unavailable);
+  }, [lines, setUnavailableKeys]);
+  useEffect(() => () => setUnavailableKeys(new Set()), [setUnavailableKeys]);
   const [loading, setLoading] = useState(false);
   const [notices, setNotices] = useState<string[]>([]);
 

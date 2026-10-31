@@ -81,6 +81,11 @@ interface CartContextValue {
   clear: (fulfillmentType?: FulfillmentType, orderId?: string) => void;
   /** Подставляет актуальные цены и ограничивает количество остатком. */
   syncWithCatalog: (updates: CatalogUpdate[]) => void;
+  /**
+   * Строки, которые каталог уже не продаёт (`fulfillmentType:productSlug`):
+   * в комплект они не входят, иначе оставшийся гном остался бы со скидкой.
+   */
+  setUnavailableKeys: (keys: ReadonlySet<string>) => void;
   subtotal: number;
   count: number;
 }
@@ -137,6 +142,9 @@ function clampQuantity(quantity: number): number {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [unavailableKeys, setUnavailableKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   // Корзина на этот момент, без ожидания рендера: два изменения подряд
   // (например, убрать несколько раскупленных товаров) видят друг друга, и
   // журнал получает изменение сразу, до ухода на оплату.
@@ -288,7 +296,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   // В хранилище и журнале лежат цены каталога, комплект считаем на лету
-  const pricedItems = useMemo(() => applyBundlePricing(items), [items]);
+  const pricedItems = useMemo(() => {
+    const live = items.filter(
+      (item) =>
+        !unavailableKeys.has(`${item.fulfillmentType}:${item.productSlug}`),
+    );
+    const priced = new Map(
+      applyBundlePricing(live).map((item) => [cartLineKey(item), item]),
+    );
+    return items.map((item) => priced.get(cartLineKey(item)) ?? item);
+  }, [items, unavailableKeys]);
   const subtotal = useMemo(
     () => pricedItems.reduce((sum, i) => sum + i.price * i.quantity, 0),
     [pricedItems],
@@ -307,6 +324,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setQty,
       clear,
       syncWithCatalog,
+      setUnavailableKeys,
       subtotal,
       count,
     }),
