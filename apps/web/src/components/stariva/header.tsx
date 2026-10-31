@@ -505,19 +505,6 @@ export function Header({
 
             <CartTrigger isSolid={isSolid} />
 
-            <Button
-              asChild
-              className={`inline-flex items-center gap-2 text-xs whitespace-nowrap xl:label-caps-nav px-3 sm:px-4 2xl:px-5 py-2 min-h-10 h-auto rounded-full transition-colors ${
-                isSolid
-                  ? "bg-terracotta text-parchment hover:bg-terracotta-dark"
-                  : "bg-white/15 border border-white/40 text-white hover:bg-white hover:text-espresso"
-              }`}
-            >
-              <Link href="/#order">
-                Рассчитать<span className="hidden sm:inline">&nbsp;заказ</span>
-              </Link>
-            </Button>
-
             {/* Burger */}
             <button
               type="button"
