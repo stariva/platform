@@ -149,13 +149,7 @@ export default function Page() {
       <BreadcrumbJsonLd items={[{ name: "Главная", href: "/" }]} />
       <Header variant="solid" />
       <HomeOrderProvider>
-        <Hero
-          announcement={
-            <Suspense fallback={null}>
-              <WorkshopsStrip />
-            </Suspense>
-          }
-        />
+        <Hero announcement={<WorkshopsStrip />} />
         <Suspense fallback={null}>
           <WorkshopsTeaser />
         </Suspense>

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
@@ -21,24 +22,32 @@ async function homeWorkshops() {
 
 /**
  * Полоса над первым экраном на телефоне: с главной иначе не видно, что
- * мастер-классы продаются. На десктопе они есть в шапке.
+ * мастер-классы продаются. На десктопе они есть в шапке. Полоса выводится
+ * сразу, из базы дожидается только цена — первый экран не сдвигается.
  */
-export async function WorkshopsStrip() {
-  const prices = (await homeWorkshops())
-    .map((workshop) => workshop.price)
-    .filter((price) => price > 0);
-  if (prices.length === 0) return null;
-
+export function WorkshopsStrip() {
   return (
     <TrackedLink
       href="/workshops"
       goal="home_workshops_strip"
-      className="lg:hidden flex items-center justify-center gap-2 min-h-11 px-5 bg-espresso text-parchment text-[13px]"
+      className="lg:hidden flex items-center justify-center gap-1.5 min-h-11 px-5 bg-espresso text-parchment text-[13px]"
     >
-      Сплетите сами — видео-мастер-классы от {formatPrice(Math.min(...prices))}
+      Сплетите сами — видео-мастер-классы
+      <Suspense fallback={null}>
+        <StartingPrice />
+      </Suspense>
       <span aria-hidden="true">↗</span>
     </TrackedLink>
   );
+}
+
+/** «от 990 ₽» — по всем платным курсам, не только по карточкам витрины. */
+async function StartingPrice() {
+  const prices = (await fetchPublishedWorkshops())
+    .map((workshop) => workshop.price)
+    .filter((price) => price > 0);
+  if (prices.length === 0) return null;
+  return <span>от {formatPrice(Math.min(...prices))}</span>;
 }
 
 export async function WorkshopsTeaser() {
@@ -65,7 +74,9 @@ export async function WorkshopsTeaser() {
             </h2>
             <p className="mt-4 max-w-xl text-espresso/70 leading-relaxed">
               Ольга показывает каждый шаг — от первого узла до готовой работы.
-              Оплачиваете один раз, уроки остаются в личном кабинете навсегда.
+              {workshops.some((workshop) => workshop.price > 0)
+                ? " Оплачиваете один раз, уроки остаются в личном кабинете навсегда."
+                : " Уроки остаются в личном кабинете навсегда."}
             </p>
           </div>
           <Link
