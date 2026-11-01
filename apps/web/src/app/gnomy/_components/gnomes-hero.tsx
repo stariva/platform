@@ -18,7 +18,7 @@ const FACTS = [
   "Связаны вручную из плюшевой пряжи",
   `Уже в наличии — отправим за ${IN_STOCK_SHIP_DAYS}`,
   "Доставка в пункты выдачи Ozon по России",
-  "Упаковка в крафт и лён — в подарок",
+  "Упаковка в крафт и лён — удобно дарить к празднику",
 ];
 
 /**
@@ -55,7 +55,7 @@ export function GnomesHero({
             style={{ fontSize: "clamp(34px, 5vw, 62px)" }}
           >
             {copy.title} —{" "}
-            <em className="not-italic text-taupe">от осени до Нового года</em>
+            <em className="not-italic text-taupe">новогодний декор для дома</em>
           </h1>
           <p className="text-lg text-dark-grey leading-relaxed max-w-xl mb-8 text-pretty">
             {copy.lead}
