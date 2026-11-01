@@ -89,6 +89,17 @@ test("faq never calls a gnome a toy or addresses children", () => {
   expect(text).not.toMatch(/игрушк|детям|ребёнк|ребенк/);
 });
 
+test("the landing speaks of New Year, not of autumn", () => {
+  const text = [
+    heroCopy(pairOffer([pumpkin, flyAgaric])).lead,
+    ...gnomesFaq([pumpkin, flyAgaric]).map((i) => `${i.question} ${i.answer}`),
+  ]
+    .join(" ")
+    .toLowerCase();
+  expect(text).toContain("нов");
+  expect(text).not.toMatch(/осен/);
+});
+
 test("hero promises a pair only while both gnomes are in stock", () => {
   const sold = { ...flyAgaric, inStock: false };
   const pair = heroCopy(pairOffer([pumpkin, flyAgaric]));
