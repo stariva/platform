@@ -100,6 +100,7 @@ export default async function ElkaMakrameKomboPage() {
           title="Частые вопросы о комбо"
           message="Здравствуйте, Ольга! У меня вопрос про комбо мастер-классов по ёлкам макраме."
           source="elka_kombo_faq"
+          community
         />
       </main>
       <Footer />

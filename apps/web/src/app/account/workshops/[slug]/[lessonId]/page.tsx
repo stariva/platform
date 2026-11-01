@@ -2,8 +2,10 @@ import { isAdminUser } from "@stariva/auth";
 import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CommunityLinks } from "@/components/stariva/community-invite";
 import { getCourseProgressMap } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { COMMUNITY_LINKS } from "@/lib/community";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
 import { VideoPlayer } from "./video-player";
@@ -74,6 +76,19 @@ export default async function LessonPlayerPage({
               {lesson.title}
             </h1>
           </div>
+
+          {COMMUNITY_LINKS.length > 0 ? (
+            <p className="mt-3 text-sm text-taupe">
+              Что-то не получается? Спросите в группе участниц — Ольга подскажет.{" "}
+              <CommunityLinks
+                source="account_lesson"
+                labelPrefix="Группа в "
+                className="inline-flex flex-wrap gap-x-3"
+                linkClassName="inline-flex items-center gap-1.5 text-espresso underline underline-offset-4 hover:text-terracotta"
+                iconClassName="size-3.5 shrink-0"
+              />
+            </p>
+          ) : null}
 
           {(prev || next) && (
             <div className="flex items-center justify-between mt-8 gap-3">
