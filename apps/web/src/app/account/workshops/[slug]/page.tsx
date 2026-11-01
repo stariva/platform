@@ -2,6 +2,7 @@ import { isAdminUser } from "@stariva/auth";
 import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CommunityNote } from "@/components/stariva/community-invite";
 import {
   getCourseProgressMap,
   getCourseProgressSummary,
@@ -71,6 +72,12 @@ export default async function AccountCoursePage({
         <PreorderNotice workshop={workshop} releaseAt={workshop.releaseAt} />
         {/* Материалы лучше купить заранее — до старта уроков */}
         {brief}
+        <CommunityNote
+          source="account_preorder"
+          title="Пока ждёте старта"
+          text="Загляните в группу Stariva: там участницы показывают работы по мастер-классам, а Ольга отвечает на вопросы — например, какие шнуры взять."
+          className="mt-6 bg-white border border-espresso/10"
+        />
       </div>
     );
   }
@@ -241,6 +248,13 @@ export default async function AccountCoursePage({
           })}
         </ol>
       </section>
+
+      <CommunityNote
+        source="account_course"
+        title="Плетите вместе с другими участницами"
+        text="Если узел не выходит, спросите в группе Stariva — Ольга подскажет. Там же можно показать, что получилось, и посмотреть работы других участниц."
+        className="mt-8 bg-white border border-espresso/10"
+      />
     </div>
   );
 }

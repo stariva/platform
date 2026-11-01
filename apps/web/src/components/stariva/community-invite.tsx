@@ -39,19 +39,22 @@ function CloseIcon({ className }: { className?: string }) {
 /** Ссылки на группы сообщества; клик — цель в Метрику и больше без карточки. */
 export function CommunityLinks({
   source,
+  labelPrefix = "",
   className,
   linkClassName,
   iconClassName,
 }: {
   /** Где стоит приглашение — для аналитики («footer», «blog»…). */
   source: string;
+  /** Текст перед названием мессенджера: «Группа в » → «Группа в Telegram». */
+  labelPrefix?: string;
   className?: string;
   linkClassName?: string;
   iconClassName?: string;
 }) {
   if (COMMUNITY_LINKS.length === 0) return null;
   return (
-    <div className={className}>
+    <span className={className}>
       {COMMUNITY_LINKS.map(({ channel, href }) => {
         const { label, Icon } = CHANNELS[channel];
         return (
@@ -67,11 +70,12 @@ export function CommunityLinks({
             className={linkClassName}
           >
             <Icon className={iconClassName} />
+            {labelPrefix}
             {label}
           </a>
         );
       })}
-    </div>
+    </span>
   );
 }
 
@@ -132,6 +136,86 @@ export function CommunityInvite({
         linkClassName="inline-flex items-center gap-2 rounded-full border border-espresso/15 bg-white px-4 py-2.5 text-sm text-espresso hover:border-espresso/40 transition-colors"
         iconClassName="size-4 shrink-0 text-terracotta"
       />
+    </aside>
+  );
+}
+
+/** Шнур с квадратным узлом вдоль левого края приглашения. */
+function KnotCord() {
+  return (
+    <div aria-hidden="true" className="relative w-6 shrink-0">
+      <svg
+        viewBox="0 0 24 26"
+        fill="none"
+        className="block h-[26px] w-6 text-espresso/45"
+      >
+        <path d="M9 0v10M15 0v10" stroke="currentColor" strokeWidth="1" />
+        <rect
+          x="2.5"
+          y="10.5"
+          width="18"
+          height="7"
+          rx="3.5"
+          stroke="currentColor"
+        />
+        <rect
+          x="3.5"
+          y="18"
+          width="18"
+          height="7"
+          rx="3.5"
+          stroke="currentColor"
+        />
+      </svg>
+      <span className="absolute top-[26px] bottom-0 left-[8.5px] w-px bg-gradient-to-b from-espresso/30 to-transparent" />
+      <span className="absolute top-[26px] bottom-0 left-[14.5px] w-px bg-gradient-to-b from-espresso/30 to-transparent" />
+    </div>
+  );
+}
+
+/**
+ * Приглашение в группу как часть содержания страницы: работы участниц и
+ * ответы Ольги. Не закрывается — на странице курса и в кабинете группа
+ * нужна и тем, кто в ней уже состоит.
+ */
+export function CommunityNote({
+  source,
+  title,
+  text,
+  labelPrefix = "Открыть группу в ",
+  className,
+}: {
+  source: string;
+  title: string;
+  text: string;
+  labelPrefix?: string;
+  className?: string;
+}) {
+  if (COMMUNITY_LINKS.length === 0) return null;
+  return (
+    <aside
+      aria-label="Группа Stariva в мессенджерах"
+      className={cn(
+        "flex gap-4 rounded-2xl bg-sand p-5 sm:gap-5 sm:p-6",
+        className,
+      )}
+    >
+      <KnotCord />
+      <div className="min-w-0 pt-0.5">
+        <h2 className="mb-2 font-serif text-xl text-espresso text-balance">
+          {title}
+        </h2>
+        <p className="mb-5 max-w-[60ch] text-sm leading-relaxed text-dark-grey">
+          {text}
+        </p>
+        <CommunityLinks
+          source={source}
+          labelPrefix={labelPrefix}
+          className="flex flex-wrap gap-2"
+          linkClassName="inline-flex min-h-11 items-center gap-2.5 rounded-full bg-espresso px-5 py-2.5 text-sm text-parchment hover:bg-dark-grey transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso/40 focus-visible:ring-offset-2"
+          iconClassName="size-4 shrink-0"
+        />
+      </div>
     </aside>
   );
 }

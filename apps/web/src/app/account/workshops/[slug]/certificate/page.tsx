@@ -1,6 +1,7 @@
 import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CommunityLinks } from "@/components/stariva/community-invite";
 import { issueCertificateIfComplete } from "@/lib/account/certificates";
 import { getSession } from "@/lib/auth/session";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
@@ -105,6 +106,17 @@ export default async function CertificatePage({
           </div>
         </div>
       </div>
+
+      <p className="no-print mt-8 text-center text-sm text-taupe">
+        Покажите готовую работу другим участницам и Ольге.{" "}
+        <CommunityLinks
+          source="account_certificate"
+          labelPrefix="Группа в "
+          className="inline-flex flex-wrap gap-x-3"
+          linkClassName="inline-flex items-center gap-1.5 text-espresso underline underline-offset-4 hover:text-terracotta"
+          iconClassName="size-3.5 shrink-0"
+        />
+      </p>
     </div>
   );
 }

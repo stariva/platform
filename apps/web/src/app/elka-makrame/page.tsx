@@ -141,6 +141,7 @@ export default async function ElkaMakramePage() {
           title="Частые вопросы о мастер-классе"
           message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по ёлке макраме."
           source="elka_faq"
+          community
         />
         <ElkaReadyTrees trees={trees} />
         <LegacyModelsRedirect />

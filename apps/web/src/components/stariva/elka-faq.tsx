@@ -1,3 +1,4 @@
+import { CommunityLinks } from "@/components/stariva/community-invite";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import type { FAQItem } from "@/components/stariva/json-ld";
 import { CONTACTS } from "@/lib/contacts";
@@ -9,6 +10,7 @@ export function ElkaFaq({
   title,
   message,
   source,
+  community = false,
 }: {
   items: FAQItem[];
   title: string;
@@ -16,6 +18,8 @@ export function ElkaFaq({
   message: string;
   /** Откуда клик — источник заявки и префикс целей Метрики (`${source}_telegram`). */
   source: string;
+  /** Ссылка на группу участниц — на страницах мастер-классов. */
+  community?: boolean;
 }) {
   return (
     <section aria-labelledby="faq-title" className="bg-parchment">
@@ -48,6 +52,15 @@ export function ElkaFaq({
             >
               {CONTACTS.phone}
             </TrackedLink>
+            {community ? (
+              <CommunityLinks
+                source={source}
+                labelPrefix="Группа участниц в "
+                className="contents"
+                linkClassName="inline-flex items-center gap-2 underline underline-offset-4 hover:text-terracotta"
+                iconClassName="size-4 shrink-0"
+              />
+            ) : null}
           </div>
         </div>
 

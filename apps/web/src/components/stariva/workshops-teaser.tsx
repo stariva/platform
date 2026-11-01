@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { CommunityLinks } from "@/components/stariva/community-invite";
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
@@ -79,12 +80,21 @@ export async function WorkshopsTeaser() {
                 : " Уроки остаются в личном кабинете навсегда."}
             </p>
           </div>
-          <Link
-            href="/workshops"
-            className="py-2 text-sm underline underline-offset-4"
-          >
-            Все мастер-классы ↗
-          </Link>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+            <CommunityLinks
+              source="home_workshops"
+              labelPrefix="Работы участниц в "
+              className="contents"
+              linkClassName="inline-flex items-center gap-1.5 py-2 text-sm text-espresso/70 underline underline-offset-4 hover:text-espresso transition-colors"
+              iconClassName="size-3.5 shrink-0"
+            />
+            <Link
+              href="/workshops"
+              className="py-2 text-sm underline underline-offset-4"
+            >
+              Все мастер-классы ↗
+            </Link>
+          </div>
         </div>
         <ul className="-mx-5 px-5 scroll-px-5 flex gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:grid md:grid-cols-3 md:overflow-visible lg:gap-8">
           {workshops.map((workshop) => (

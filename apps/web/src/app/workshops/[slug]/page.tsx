@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CommunityNote } from "@/components/stariva/community-invite";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -508,6 +509,14 @@ export default async function WorkshopDetailPage({
                 </blockquote>
               </section>
             )}
+
+            {/* До покупки — посмотреть работы участниц и спросить Ольгу */}
+            <CommunityNote
+              source="workshop_page"
+              title="Посмотрите, что получается у участниц"
+              text="В группе Stariva участницы показывают свои работы по мастер-классам, а Ольга отвечает на вопросы. Спросить можно и до покупки."
+              className="mb-10"
+            />
 
             {/* FAQ */}
             <section className="mt-12">

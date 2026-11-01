@@ -113,6 +113,7 @@ export default async function ElkaMakrameBolshayaPage() {
           title="Частые вопросы о мастер-классе"
           message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по большой ёлке макраме."
           source="elka_big_faq"
+          community
         />
       </main>
       <Footer />
