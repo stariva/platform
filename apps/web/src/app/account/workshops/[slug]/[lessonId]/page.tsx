@@ -79,7 +79,8 @@ export default async function LessonPlayerPage({
 
           {COMMUNITY_LINKS.length > 0 ? (
             <p className="mt-3 text-sm text-taupe">
-              Что-то не получается? Спросите в группе участниц — Ольга подскажет.{" "}
+              Что-то не получается? Спросите в группе участниц — Ольга
+              подскажет.{" "}
               <CommunityLinks
                 source="account_lesson"
                 labelPrefix="Группа в "
