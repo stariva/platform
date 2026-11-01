@@ -55,9 +55,7 @@ export function GnomesHero({
             style={{ fontSize: "clamp(34px, 5vw, 62px)" }}
           >
             {copy.title} —{" "}
-            <em className="not-italic text-taupe">
-              новогодний декор для дома
-            </em>
+            <em className="not-italic text-taupe">новогодний декор для дома</em>
           </h1>
           <p className="text-lg text-dark-grey leading-relaxed max-w-xl mb-8 text-pretty">
             {copy.lead}
