@@ -15,6 +15,10 @@ import { PhotoshootsTeaser } from "@/components/stariva/photoshoots-teaser";
 import { Process } from "@/components/stariva/process";
 import { ProductCardImages } from "@/components/stariva/product-card-images";
 import { Reviews } from "@/components/stariva/reviews";
+import {
+  WorkshopsStrip,
+  WorkshopsTeaser,
+} from "@/components/stariva/workshops-teaser";
 import { getFeaturedProducts } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
 import { getHomeCopy } from "@/lib/home-portfolio";
@@ -145,7 +149,16 @@ export default function Page() {
       <BreadcrumbJsonLd items={[{ name: "Главная", href: "/" }]} />
       <Header variant="solid" />
       <HomeOrderProvider>
-        <Hero />
+        <Hero
+          announcement={
+            <Suspense fallback={null}>
+              <WorkshopsStrip />
+            </Suspense>
+          }
+        />
+        <Suspense fallback={null}>
+          <WorkshopsTeaser />
+        </Suspense>
         <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
           <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
             <p className="label-caps text-terracotta mb-4">Примеры работ</p>

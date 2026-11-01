@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import styles from "./hero.module.css";
 import { useHomeOrder } from "./home-order-context";
 
@@ -65,7 +65,8 @@ const slides = [
   },
 ] as const;
 
-export function Hero() {
+/** `announcement` — строка над фото, общая для всех слайдов. */
+export function Hero({ announcement }: { announcement?: ReactNode }) {
   const [active, setActive] = useState(0);
   const [instant, setInstant] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -89,6 +90,7 @@ export function Hero() {
       <h1 className="sr-only">
         Stariva — одежда, декор и абажуры макраме на заказ
       </h1>
+      {announcement}
       <div className={styles.stage}>
         <div
           className={styles.photos}
