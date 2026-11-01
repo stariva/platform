@@ -147,6 +147,7 @@ function KnotCord() {
       <svg
         viewBox="0 0 24 26"
         fill="none"
+        aria-hidden="true"
         className="block h-[26px] w-6 text-espresso/45"
       >
         <path d="M9 0v10M15 0v10" stroke="currentColor" strokeWidth="1" />
