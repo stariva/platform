@@ -17,6 +17,11 @@ export interface WorkshopBundle {
   main: string;
   /** Курсы, которые выдаются вместе с основным. */
   extras: BundleExtra[];
+  /**
+   * Цель Метрики при оплате — своя у каждого комбо, чтобы реклама комбо
+   * училась на покупках комбо, а не любого мастер-класса.
+   */
+  paidGoal: string;
 }
 
 export interface BundleExtra {
@@ -41,6 +46,7 @@ const BUNDLES: Record<string, WorkshopBundle> = {
         releaseAt: "2026-11-03T07:00:00.000Z",
       },
     ],
+    paidGoal: "elka_kombo_paid",
   },
 };
 

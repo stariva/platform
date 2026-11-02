@@ -29,15 +29,20 @@ export function PaymentPolling() {
   ) : null;
 }
 
-/** Цель «оплачен мастер-класс» для Директа — один раз на заказ. */
+/**
+ * Цель «оплачен мастер-класс» для Директа — один раз на заказ. У комбо
+ * вдобавок своя цель: на неё оптимизируется реклама комбо.
+ */
 export function PaidGoal({
   orderId,
   slug,
   price,
+  bundleGoal,
 }: {
   orderId: string;
   slug: string;
   price: number;
+  bundleGoal?: string;
 }) {
   useEffect(() => {
     const key = `stariva:workshop-paid:${orderId}`;
@@ -47,7 +52,9 @@ export function PaidGoal({
     } catch {
       // Без хранилища цель может отправиться дважды — не страшно
     }
-    reachGoal("workshop_paid", { slug, order_price: price, currency: "RUB" });
-  }, [orderId, slug, price]);
+    const params = { slug, order_price: price, currency: "RUB" };
+    reachGoal("workshop_paid", params);
+    if (bundleGoal) reachGoal(bundleGoal, params);
+  }, [orderId, slug, price, bundleGoal]);
   return null;
 }
