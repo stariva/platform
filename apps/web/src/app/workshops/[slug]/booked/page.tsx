@@ -166,6 +166,7 @@ function Paid({
         orderId={order.id}
         slug={bundle?.slug ?? workshop.slug}
         price={order.amount / 100}
+        bundleGoal={bundle?.paidGoal}
       />
       <div>
         <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-sage/20 px-4 py-2 text-sm text-espresso">
