@@ -17,7 +17,7 @@ test("renders the button, the unsubscribe link and the open pixel", async () => 
     StarivaCampaignEmail({
       previewText: "",
       heading: "Приглашаю в сообщество",
-      body: "Здравствуйте, это Ольга.\n\nВторой абзац\nс переносом.",
+      body: "Здравствуйте,\nэто Ольга.\n\nВторой абзац\nс переносом.",
       buttonLabel: "Перейти в канал",
       buttonUrl: "https://stariva.example.test/api/m/c/t1",
       reason: "Письмо пришло, потому что вы купили мастер-класс.",
@@ -28,6 +28,7 @@ test("renders the button, the unsubscribe link and the open pixel", async () => 
   expect(html).toContain('href="https://stariva.example.test/api/m/c/t1"');
   expect(html).toContain('href="https://stariva.example.test/unsubscribe/t1"');
   expect(html).toContain('src="https://stariva.example.test/api/m/o/t1"');
+  expect(html).toContain("Здравствуйте,<br/>это Ольга.");
   expect(html).toContain("Второй абзац<br/>с переносом.");
   // Без строки-превью во «Входящих» видно начало текста
   expect(html).toContain("Здравствуйте, это Ольга.");

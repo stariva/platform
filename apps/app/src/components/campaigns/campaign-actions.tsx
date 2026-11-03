@@ -26,9 +26,12 @@ export function CampaignPreview({
   subject: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Без кеша: после сохранения правок окно должно показать новую версию
   const query = useQuery({
     ...orpc.admin.campaigns.preview.queryOptions({ input: { id } }),
     enabled: open,
+    staleTime: 0,
+    gcTime: 0,
   });
   return (
     <>

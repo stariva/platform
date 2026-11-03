@@ -227,31 +227,31 @@ const sendTest = adminProcedure
 const start = adminProcedure
   .input(idInput)
   .handler(async ({ context, input }) => {
-    const campaign = await findCampaign(context.db, input.id);
-    if (campaign.status !== "draft") {
-      throw new ORPCError("CONFLICT", { message: "Рассылка уже запущена" });
-    }
-    const members = (await loadAudience(context.db, campaign.segment)).filter(
-      (member) => !member.suppressed,
-    );
-    if (members.length === 0) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Некому отправлять: в сегменте никого нет",
-      });
-    }
-
-    const started = await context.db.transaction(async (tx) => {
-      const [row] = await tx
+    // Черновик заперт до конца транзакции: сохранение из другой вкладки
+    // дождётся запуска и получит отказ, а получатели возьмутся из того
+    // сегмента, что в базе
+    const recipients = await context.db.transaction(async (tx) => {
+      const [campaign] = await tx
+        .select()
+        .from(emailCampaigns)
+        .where(eq(emailCampaigns.id, input.id))
+        .for("update");
+      if (!campaign) throw new ORPCError("NOT_FOUND");
+      if (campaign.status !== "draft") {
+        throw new ORPCError("CONFLICT", { message: "Рассылка уже запущена" });
+      }
+      const members = (
+        await loadAudience(tx as unknown as Database, campaign.segment)
+      ).filter((member) => !member.suppressed);
+      if (members.length === 0) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Некому отправлять: в сегменте никого нет",
+        });
+      }
+      await tx
         .update(emailCampaigns)
         .set({ status: "sending", startedAt: new Date() })
-        .where(
-          and(
-            eq(emailCampaigns.id, campaign.id),
-            eq(emailCampaigns.status, "draft"),
-          ),
-        )
-        .returning({ id: emailCampaigns.id });
-      if (!row) return false;
+        .where(eq(emailCampaigns.id, campaign.id));
       await tx
         .insert(r)
         .values(
@@ -263,27 +263,17 @@ const start = adminProcedure
           })),
         )
         .onConflictDoNothing();
-      return true;
+      return members.length;
     });
-    if (!started) {
-      throw new ORPCError("CONFLICT", { message: "Рассылка уже запущена" });
-    }
 
-    const totals = { sent: 0, failed: 0, skipped: 0 };
-    const deadline = Date.now() + START_BUDGET_MS;
-    while (Date.now() < deadline) {
-      const batch = await sendCampaignBatch({
-        db: context.db,
-        siteUrl: siteUrl(),
-        campaignId: campaign.id,
-        limit: 20,
-      });
-      totals.sent += batch.sent;
-      totals.failed += batch.failed;
-      totals.skipped += batch.skipped;
-      if (batch.sent + batch.failed + batch.skipped === 0) break;
-    }
-    return { recipients: members.length, ...totals };
+    const totals = await sendCampaignBatch({
+      db: context.db,
+      siteUrl: siteUrl(),
+      campaignId: input.id,
+      limit: recipients,
+      deadline: Date.now() + START_BUDGET_MS,
+    });
+    return { recipients, ...totals };
   });
 
 export const adminCampaignsRouter = {

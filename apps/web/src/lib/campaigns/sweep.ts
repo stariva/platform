@@ -4,6 +4,9 @@ import { siteUrl } from "@/lib/workshops/notifications";
 
 // Сколько писем рассылок отправить за один прогон крона
 const BATCH_SIZE = 100;
+// Воркер ждёт ответа 110 с, а до рассылок успевают уйти напоминания: новое
+// письмо после этого срока не начинаем, остаток — в следующий прогон
+const TIME_BUDGET_MS = 60_000;
 
 /**
  * Дошлёт рассылки из админки: письма, которые не ушли с первого раза, и
@@ -16,6 +19,7 @@ export async function runCampaignSweep(): Promise<void> {
     const result = await sendCampaignBatch({
       siteUrl: siteUrl(),
       limit: BATCH_SIZE,
+      deadline: Date.now() + TIME_BUDGET_MS,
     });
     if (result.sent + result.failed + result.skipped > 0) {
       logger.info("email_campaign.sweep", { ...result });

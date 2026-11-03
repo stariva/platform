@@ -26,7 +26,7 @@ import { sendEmail } from "./send";
 
 /** Столько раз пробуем отправить письмо одному получателю, потом сдаёмся. */
 export const CAMPAIGN_MAX_ATTEMPTS = 3;
-// Дольше одна отправка не длится: у каждого провайдера таймаут 30 секунд
+// Аренда на одно письмо: у каждого провайдера таймаут 30 секунд, их два
 const LEASE_MS = 5 * 60 * 1000;
 // Не ушло — следующая попытка не раньше, чем через столько
 const RETRY_DELAY_MS = 10 * 60 * 1000;
@@ -128,9 +128,10 @@ export interface CampaignBatchResult {
   skipped: number;
 }
 
+const r = emailCampaignRecipients;
+
 /** Получатели, которым пора отправить: впервые или повторно после сбоя. */
 function dueRecipients(now: Date, campaignId?: string) {
-  const r = emailCampaignRecipients;
   return and(
     eq(emailCampaigns.status, "sending"),
     or(
@@ -143,36 +144,15 @@ function dueRecipients(now: Date, campaignId?: string) {
 }
 
 /**
- * Отправляет очередную порцию писем рассылок, которые сейчас идут
- * (status = sending). Получателя сначала берёт в аренду, поэтому два
- * параллельных прогона — из админки и крона — письмо не задвоят. Рассылку,
- * которой больше некому слать, помечает отправленной.
+ * Берёт в аренду одного получателя, которому пора отправить. Аренда — на
+ * одно письмо: пока оно уходит, другой прогон этого получателя не возьмёт.
  */
-export async function sendCampaignBatch({
-  db = defaultDb,
-  siteUrl,
-  campaignId,
-  limit = 50,
-  now = new Date(),
-}: {
-  db?: Database;
-  siteUrl: string;
-  campaignId?: string;
-  limit?: number;
-  now?: Date;
-}): Promise<CampaignBatchResult> {
-  const result: CampaignBatchResult = { sent: 0, failed: 0, skipped: 0 };
-  if (!env.EMAIL_SANDBOX_ENABLED && !isEmailConfigured()) {
-    throw new Error("email_not_configured");
-  }
-  const r = emailCampaignRecipients;
-
-  const claimed = await db
+async function claimRecipient(db: Database, campaignId?: string) {
+  const now = new Date();
+  const leaseUntil = new Date(now.getTime() + LEASE_MS);
+  const [recipient] = await db
     .update(r)
-    .set({
-      leaseUntil: new Date(now.getTime() + LEASE_MS),
-      attempts: sql`${r.attempts} + 1`,
-    })
+    .set({ leaseUntil })
     .where(
       inArray(
         r.id,
@@ -182,95 +162,117 @@ export async function sendCampaignBatch({
           .innerJoin(emailCampaigns, eq(emailCampaigns.id, r.campaignId))
           .where(dueRecipients(now, campaignId))
           .orderBy(r.createdAt, r.id)
-          .limit(limit)
+          .limit(1)
           .for("update", { of: r, skipLocked: true }),
       ),
     )
     .returning();
+  return recipient ? { recipient, leaseUntil } : null;
+}
 
-  if (claimed.length > 0) {
-    const campaigns = new Map(
-      (
-        await db
-          .select()
-          .from(emailCampaigns)
-          .where(
-            inArray(emailCampaigns.id, [
-              ...new Set(claimed.map((row) => row.campaignId)),
-            ]),
-          )
-      ).map((campaign) => [campaign.id, campaign]),
-    );
-    // Мог отписаться уже после запуска — например, из другой рассылки
-    const suppressed = new Set(
-      (
-        await db
-          .select({ email: emailSuppressions.email })
-          .from(emailSuppressions)
-          .where(
-            inArray(
-              emailSuppressions.email,
-              claimed.map((row) => row.email.toLowerCase()),
-            ),
-          )
-      ).map((row) => row.email),
-    );
+/**
+ * Отправляет письма рассылок, которые сейчас идут (status = sending), по
+ * одному: аренда получателя, проверка отписки, отправка, итог. Итог пишется,
+ * только пока аренда наша, а попытка засчитывается, когда отправка
+ * закончилась, — оборванная на полпути не съедает попытку. Останавливается
+ * на `limit` письмах или к `deadline`. Рассылку, которой больше некому
+ * слать, помечает отправленной.
+ */
+export async function sendCampaignBatch({
+  db = defaultDb,
+  siteUrl,
+  campaignId,
+  limit = 50,
+  deadline,
+}: {
+  db?: Database;
+  siteUrl: string;
+  campaignId?: string;
+  limit?: number;
+  /** Время (мс), после которого новое письмо уже не начинаем. */
+  deadline?: number;
+}): Promise<CampaignBatchResult> {
+  const result: CampaignBatchResult = { sent: 0, failed: 0, skipped: 0 };
+  if (!env.EMAIL_SANDBOX_ENABLED && !isEmailConfigured()) {
+    throw new Error("email_not_configured");
+  }
+  const campaigns = new Map<string, EmailCampaignRow>();
 
-    for (const [index, recipient] of claimed.entries()) {
-      const campaign = campaigns.get(recipient.campaignId);
+  for (let handled = 0; handled < limit; handled++) {
+    if (deadline !== undefined && Date.now() >= deadline) break;
+    const claim = await claimRecipient(db, campaignId);
+    if (!claim) break;
+    const { recipient, leaseUntil } = claim;
+    const ours = and(eq(r.id, recipient.id), eq(r.leaseUntil, leaseUntil));
+
+    let campaign = campaigns.get(recipient.campaignId);
+    if (!campaign) {
+      [campaign] = await db
+        .select()
+        .from(emailCampaigns)
+        .where(eq(emailCampaigns.id, recipient.campaignId));
       if (!campaign) continue;
-      if (suppressed.has(recipient.email.toLowerCase())) {
-        await db
-          .update(r)
-          .set({ status: "skipped", leaseUntil: null })
-          .where(eq(r.id, recipient.id));
-        result.skipped++;
-        continue;
-      }
-      if (index > 0) {
-        await new Promise((resolve) => setTimeout(resolve, SEND_INTERVAL_MS));
-      }
-      try {
-        await sendEmail({
-          ...campaignEmail(campaign, { siteUrl, token: recipient.token }),
-          to: [recipient.email],
-          idempotencyKey: `campaign:${campaign.id}:${recipient.id}`,
-        });
-        await db
-          .update(r)
-          .set({
-            status: "sent",
-            sentAt: new Date(),
-            error: null,
-            leaseUntil: null,
-          })
-          .where(eq(r.id, recipient.id));
-        result.sent++;
-      } catch (error) {
-        logger.error("email_campaign.send_failed", error, {
-          campaignId: campaign.id,
-          recipientId: recipient.id,
-        });
-        await db
-          .update(r)
-          .set({
-            status: "failed",
-            error: errorText(error),
-            leaseUntil: new Date(Date.now() + RETRY_DELAY_MS),
-          })
-          .where(eq(r.id, recipient.id));
-        result.failed++;
-      }
+      campaigns.set(campaign.id, campaign);
+    }
+
+    // Мог отписаться уже после запуска, в том числе пока уходили другие письма
+    const [suppressed] = await db
+      .select({ email: emailSuppressions.email })
+      .from(emailSuppressions)
+      .where(eq(emailSuppressions.email, recipient.email.toLowerCase()));
+    if (suppressed) {
+      await db
+        .update(r)
+        .set({ status: "skipped", leaseUntil: null })
+        .where(ours);
+      result.skipped++;
+      continue;
+    }
+
+    if (result.sent + result.failed > 0) {
+      await new Promise((resolve) => setTimeout(resolve, SEND_INTERVAL_MS));
+    }
+    try {
+      await sendEmail({
+        ...campaignEmail(campaign, { siteUrl, token: recipient.token }),
+        to: [recipient.email],
+        idempotencyKey: `campaign:${campaign.id}:${recipient.id}`,
+      });
+      await db
+        .update(r)
+        .set({
+          status: "sent",
+          sentAt: new Date(),
+          error: null,
+          attempts: sql`${r.attempts} + 1`,
+          leaseUntil: null,
+        })
+        .where(ours);
+      result.sent++;
+    } catch (error) {
+      logger.error("email_campaign.send_failed", error, {
+        campaignId: campaign.id,
+        recipientId: recipient.id,
+      });
+      await db
+        .update(r)
+        .set({
+          status: "failed",
+          error: errorText(error),
+          attempts: sql`${r.attempts} + 1`,
+          leaseUntil: new Date(Date.now() + RETRY_DELAY_MS),
+        })
+        .where(ours);
+      result.failed++;
     }
   }
 
-  await finishCampaigns(db, now);
+  await finishCampaigns(db, new Date());
   return result;
 }
 
 /** Рассылки, где не осталось ни очереди, ни писем на повтор, — отправлены. */
 async function finishCampaigns(db: Database, now: Date) {
-  const r = emailCampaignRecipients;
   await db
     .update(emailCampaigns)
     .set({ status: "sent", finishedAt: now })

@@ -74,7 +74,7 @@ export default function StarivaCampaignEmail(
     <StarivaLayout
       previewText={props.previewText || first.join(" ")}
       heading={props.heading}
-      intro={first.join(" ")}
+      intro={<Lines lines={first} />}
       beforeButton={
         rest.length > 0 ? (
           <div style={{ margin: "-12px 0 32px" }}>

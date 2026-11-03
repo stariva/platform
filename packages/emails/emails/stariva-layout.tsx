@@ -59,7 +59,8 @@ export function StarivaLayout({
 }: {
   previewText: string;
   heading: string;
-  intro: string;
+  /** Строка или строки с переносами (<br />) — у рассылок из админки. */
+  intro: ReactNode;
   /** Блок между вступлением и кнопкой — например, код входа. */
   beforeButton?: ReactNode;
   /** Без кнопки письмо обходится и без ссылки «скопируйте в браузер». */
