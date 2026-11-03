@@ -23,6 +23,7 @@ import {
   IconKey,
   IconLayoutKanban,
   IconMail,
+  IconMailForward,
   IconMessageChatbot,
   IconMessageForward,
   IconMessageStar,
@@ -122,6 +123,7 @@ const marketing: NavItem[] = [
     url: "/crm/campaigns",
     icon: IconSpeakerphone,
   },
+  { title: "Рассылки", url: "/campaigns", icon: IconMailForward },
   {
     title: "Переходы в мессенджеры",
     url: "/contact-clicks",

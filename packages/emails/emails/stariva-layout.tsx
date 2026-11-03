@@ -54,6 +54,7 @@ export function StarivaLayout({
   buttonLabel,
   buttonUrl,
   footnote,
+  footer,
   children,
 }: {
   previewText: string;
@@ -65,6 +66,8 @@ export function StarivaLayout({
   buttonLabel?: string;
   buttonUrl?: string;
   footnote: string;
+  /** Под ссылкой на кнопку — например, отписка от рассылки. */
+  footer?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -208,6 +211,7 @@ export function StarivaLayout({
                 </Link>
               </Text>
             ) : null}
+            {footer}
           </Section>
 
           <Section style={{ padding: "28px 24px 0", textAlign: "center" }}>

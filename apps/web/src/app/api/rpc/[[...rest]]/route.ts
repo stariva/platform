@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { issueFormToken } from "@/lib/auth/antispam";
 import { auth } from "@/lib/auth/server";
+import { runCampaignSweep } from "@/lib/campaigns/sweep";
 import { checkoutServices } from "@/lib/commerce/checkout-services";
 import { orderServices } from "@/lib/commerce/order-services";
 import {
@@ -38,13 +39,14 @@ const MAX_BODY_BYTES = 9 * 1024 * 1024;
 // better-auth тянут за собой половину apps/web
 const services: WebServices = {
   // Один крон воркера на все письма по мастер-классам: покупка, старт и
-  // «оплата не завершилась»
+  // «оплата не завершилась». Заодно дошлёт рассылки из админки
   async runWorkshopReminderSweep() {
     const now = new Date();
     const results = [
       await runWorkshopReminderSweep(now),
       await runUnpaidOrderSweep(now),
     ];
+    await runCampaignSweep();
     return {
       checked: results.reduce((sum, r) => sum + r.checked, 0),
       delivered: results.reduce((sum, r) => sum + r.delivered, 0),

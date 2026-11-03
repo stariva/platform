@@ -14,6 +14,7 @@ test("takes the order and kind from a workshop idempotency key", () => {
     workshopOrderId: "4170ebb5",
     kind: "booked",
   });
+  expect(emailContext("campaign:c1:r1")).toEqual({ kind: "campaign" });
   expect(emailContext("receipt:1")).toEqual({});
   expect(emailContext(undefined)).toEqual({});
 });

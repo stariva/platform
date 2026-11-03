@@ -1,0 +1,107 @@
+import { db } from "@stariva/db";
+import {
+  emailCampaignRecipients,
+  emailCampaigns,
+  emailSuppressions,
+} from "@stariva/db/schema";
+import { eq, sql } from "drizzle-orm";
+
+/**
+ * Пробное письмо из админки несёт токен test-<рассылка>: кнопка в нём ведёт
+ * туда же, куда в настоящем, но ничего не засчитывается.
+ */
+const TEST_TOKEN = /^test-([0-9a-f-]{36})$/;
+// Токены получателей — base64url; всё прочее в базу не несём
+const TOKEN = /^[A-Za-z0-9_-]{16,64}$/;
+
+const r = emailCampaignRecipients;
+
+/** Открыли письмо: подгрузилась картинка-пиксель. */
+export async function recordOpen(token: string): Promise<void> {
+  if (!TOKEN.test(token)) return;
+  await db
+    .update(r)
+    .set({
+      openCount: sql`${r.openCount} + 1`,
+      firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
+    })
+    .where(eq(r.token, token));
+}
+
+/**
+ * Нажали кнопку письма: засчитываем переход (и открытие — картинки могли
+ * быть выключены) и отдаём адрес кнопки. null — токен чужой или у
+ * рассылки нет кнопки.
+ */
+export async function recordClick(token: string): Promise<string | null> {
+  const test = TEST_TOKEN.exec(token);
+  if (test) {
+    const [campaign] = await db
+      .select({ buttonUrl: emailCampaigns.buttonUrl })
+      .from(emailCampaigns)
+      .where(eq(emailCampaigns.id, test[1] as string))
+      .limit(1);
+    return campaign?.buttonUrl ?? null;
+  }
+  if (!TOKEN.test(token)) return null;
+  const [row] = await db
+    .update(r)
+    .set({
+      clickCount: sql`${r.clickCount} + 1`,
+      firstClickedAt: sql`coalesce(${r.firstClickedAt}, now())`,
+      firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
+    })
+    .where(eq(r.token, token))
+    .returning({ campaignId: r.campaignId });
+  if (!row) return null;
+  const [campaign] = await db
+    .select({ buttonUrl: emailCampaigns.buttonUrl })
+    .from(emailCampaigns)
+    .where(eq(emailCampaigns.id, row.campaignId))
+    .limit(1);
+  return campaign?.buttonUrl ?? null;
+}
+
+/** Адрес получателя по токену и отписан ли он уже — для страницы отписки. */
+export async function findRecipient(
+  token: string,
+): Promise<{ email: string; unsubscribed: boolean } | null> {
+  if (!TOKEN.test(token)) return null;
+  const [row] = await db
+    .select({ email: r.email, suppressedAt: emailSuppressions.createdAt })
+    .from(r)
+    .leftJoin(
+      emailSuppressions,
+      eq(emailSuppressions.email, sql`lower(${r.email})`),
+    )
+    .where(eq(r.token, token))
+    .limit(1);
+  return row
+    ? { email: row.email, unsubscribed: row.suppressedAt !== null }
+    : null;
+}
+
+/**
+ * Отписывает адрес от всех рассылок. Повторная отписка ничего не меняет.
+ * false — токен чужой.
+ */
+export async function unsubscribe(token: string): Promise<boolean> {
+  if (!TOKEN.test(token)) return false;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(r)
+      .set({ unsubscribedAt: sql`coalesce(${r.unsubscribedAt}, now())` })
+      .where(eq(r.token, token))
+      .returning({ email: r.email, campaignId: r.campaignId });
+    if (!row) return false;
+    await tx
+      .insert(emailSuppressions)
+      .values({
+        email: row.email.toLowerCase(),
+        reason: "unsubscribed",
+        campaignId: row.campaignId,
+      })
+      .onConflictDoNothing();
+    return true;
+  });
+}

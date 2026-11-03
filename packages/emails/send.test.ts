@@ -127,6 +127,30 @@ test("sends through the Postbox REST API when it is the default provider", async
   }
 });
 
+test("passes extra headers to Postbox and Resend", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  env.EMAIL_FALLBACK_PROVIDER = "resend";
+  const headers = {
+    "List-Unsubscribe": "<https://stariva.example.test/api/m/u/t1>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+  try {
+    await sendEmail({ ...email, headers });
+    const body = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body));
+    expect(body.Content.Simple.Headers).toEqual([
+      { Name: "List-Unsubscribe", Value: headers["List-Unsubscribe"] },
+      { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+    ]);
+
+    env.EMAIL_PROVIDER = "resend";
+    await sendEmail({ ...email, headers });
+    expect(send.mock.calls[0]?.[0]).toMatchObject({ headers });
+  } finally {
+    restore();
+  }
+});
+
 test("sends attachments to Postbox as base64, downloading linked ones", async () => {
   resetMocks();
   env.EMAIL_PROVIDER = "postbox";

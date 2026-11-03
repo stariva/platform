@@ -19,6 +19,7 @@ export type { EmailAttachment } from "./providers";
 export interface Emails {
   idempotencyKey?: string;
   attachments?: EmailAttachment[];
+  headers?: Record<string, string>;
   react: ReactNode;
   subject: string;
   to: string[];
@@ -40,6 +41,7 @@ export const sendEmail = async (email: Emails) => {
       html: await render(email.react),
       subject: email.subject,
       ...(email.attachments?.length ? { attachments: email.attachments } : {}),
+      ...(email.headers ? { headers: email.headers } : {}),
     };
     const transporter = nodemailer.createTransport({
       host: env.EMAIL_SANDBOX_HOST,
@@ -54,6 +56,7 @@ export const sendEmail = async (email: Emails) => {
     subject: email.subject,
     react: email.react,
     attachments: email.attachments,
+    headers: email.headers,
     idempotencyKey: email.idempotencyKey,
   });
 };
