@@ -28,10 +28,10 @@ export default async function UnsubscribePage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ done?: string; error?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { token } = await params;
-  const { done, error } = await searchParams;
+  const { error } = await searchParams;
 
   if (error) {
     return (
@@ -70,7 +70,8 @@ export default async function UnsubscribePage({
     );
   }
 
-  if (done || recipient.unsubscribed) {
+  // Только по базе: форма отписывает до перехода сюда, а не ссылкой
+  if (recipient.unsubscribed) {
     return (
       <AuthCard
         title="Вы отписались"

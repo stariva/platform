@@ -232,43 +232,68 @@ export async function sendCampaignBatch({
     if (result.sent + result.failed > 0) {
       await new Promise((resolve) => setTimeout(resolve, SEND_INTERVAL_MS));
     }
+    let sendError: unknown = null;
     try {
       await sendEmail({
         ...campaignEmail(campaign, { siteUrl, token: recipient.token }),
         to: [recipient.email],
         idempotencyKey: `campaign:${campaign.id}:${recipient.id}`,
       });
-      await db
-        .update(r)
-        .set({
-          status: "sent",
-          sentAt: new Date(),
-          error: null,
-          attempts: sql`${r.attempts} + 1`,
-          leaseUntil: null,
-        })
-        .where(ours);
-      result.sent++;
     } catch (error) {
-      logger.error("email_campaign.send_failed", error, {
-        campaignId: campaign.id,
-        recipientId: recipient.id,
-      });
-      await db
-        .update(r)
-        .set({
-          status: "failed",
-          error: errorText(error),
-          attempts: sql`${r.attempts} + 1`,
-          leaseUntil: new Date(Date.now() + RETRY_DELAY_MS),
-        })
-        .where(ours);
-      result.failed++;
+      sendError = error;
     }
+
+    if (sendError === null) {
+      // Письмо уже принято: сбой записи не должен превратиться в «не ушло» с
+      // повтором — Postbox дубль не отсечёт. Поэтому запись пробуем ещё раз,
+      // а не дойдя — бросаем: строка останется под арендой, и повтор будет
+      // только после её истечения
+      await withRetry(() =>
+        db
+          .update(r)
+          .set({
+            status: "sent",
+            sentAt: new Date(),
+            error: null,
+            attempts: sql`${r.attempts} + 1`,
+            leaseUntil: null,
+          })
+          .where(ours),
+      );
+      result.sent++;
+      continue;
+    }
+
+    logger.error("email_campaign.send_failed", sendError, {
+      campaignId: campaign.id,
+      recipientId: recipient.id,
+    });
+    await db
+      .update(r)
+      .set({
+        status: "failed",
+        error: errorText(sendError),
+        attempts: sql`${r.attempts} + 1`,
+        leaseUntil: new Date(Date.now() + RETRY_DELAY_MS),
+      })
+      .where(ours);
+    result.failed++;
   }
 
   await finishCampaigns(db, new Date());
   return result;
+}
+
+/** Три попытки с паузой в секунду: переждать короткий сбой базы. */
+async function withRetry<T>(run: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      if (attempt >= 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
 }
 
 /** Рассылки, где не осталось ни очереди, ни писем на повтор, — отправлены. */

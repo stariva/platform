@@ -42,10 +42,17 @@ const services: WebServices = {
   // «оплата не завершилась». Заодно дошлёт рассылки из админки
   async runWorkshopReminderSweep() {
     const now = new Date();
-    const results = [
-      await runWorkshopReminderSweep(now),
-      await runUnpaidOrderSweep(now),
-    ];
+    let results: Awaited<ReturnType<typeof runUnpaidOrderSweep>>[];
+    try {
+      results = [
+        await runWorkshopReminderSweep(now),
+        await runUnpaidOrderSweep(now),
+      ];
+    } catch (error) {
+      // Рассылки дошлём и при сбое напоминаний; наружу — ошибка напоминаний
+      await runCampaignSweep().catch(() => {});
+      throw error;
+    }
     await runCampaignSweep();
     return {
       checked: results.reduce((sum, r) => sum + r.checked, 0),

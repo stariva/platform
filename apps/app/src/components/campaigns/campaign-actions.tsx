@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
+import { useDraftState } from "./draft-state";
 
 /** Письмо, как его увидит получатель: открывается по кнопке. */
 export function CampaignPreview({
@@ -120,11 +121,13 @@ export function StartCampaign({
   id: string;
   name: string;
   recipients: number;
-  /** Есть несохранённые правки или некому слать. */
+  /** Некому слать. */
   disabled?: boolean;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
+  // Уйдёт сохранённая версия: с несохранёнными правками отправлять нельзя
+  const dirty = useDraftState()?.dirty ?? false;
   const start = useMutation({
     ...orpc.admin.campaigns.start.mutationOptions(),
     onSuccess: (result) => {
@@ -142,23 +145,30 @@ export function StartCampaign({
     },
   });
   return (
-    <Button
-      className="w-full"
-      disabled={disabled || start.isPending}
-      onClick={async () => {
-        if (
-          await confirm({
-            title: `Отправить «${name}»?`,
-            description: `Письмо уйдёт ${recipients} получателям. После запуска его уже не изменить и не отменить.`,
-            confirmLabel: "Отправить",
-          })
-        ) {
-          start.mutate({ id });
-        }
-      }}
-    >
-      {start.isPending ? "Отправляю…" : "Отправить рассылку"}
-    </Button>
+    <div className="space-y-1.5">
+      <Button
+        className="w-full"
+        disabled={disabled || dirty || start.isPending}
+        onClick={async () => {
+          if (
+            await confirm({
+              title: `Отправить «${name}»?`,
+              description: `Письмо уйдёт ${recipients} получателям. После запуска его уже не изменить и не отменить.`,
+              confirmLabel: "Отправить",
+            })
+          ) {
+            start.mutate({ id });
+          }
+        }}
+      >
+        {start.isPending ? "Отправляю…" : "Отправить рассылку"}
+      </Button>
+      {dirty && (
+        <p className="text-muted-foreground text-xs">
+          Сначала сохраните правки — уйдёт сохранённая версия письма
+        </p>
+      )}
+    </div>
   );
 }
 

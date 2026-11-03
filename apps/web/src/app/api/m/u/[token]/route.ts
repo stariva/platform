@@ -32,7 +32,7 @@ export async function POST(
     return new Response(null, { status });
   }
   const page = new URL(`/unsubscribe/${encodeURIComponent(token)}`, siteUrl());
+  // Итог страница берёт из базы; в ссылке — только сбой
   if (done === "error") page.searchParams.set("error", "1");
-  else if (done) page.searchParams.set("done", "1");
   return NextResponse.redirect(page, 303);
 }

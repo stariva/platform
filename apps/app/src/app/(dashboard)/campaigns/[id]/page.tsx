@@ -19,6 +19,7 @@ import {
   CAMPAIGN_STATUS_LABELS,
   share,
 } from "~/components/campaigns/campaign-meta";
+import { DraftStateProvider } from "~/components/campaigns/draft-state";
 import { RecipientsTable } from "~/components/campaigns/recipients-table";
 import { dateTime } from "~/components/crm/crm-meta";
 import { Stat } from "~/components/crm/stat";
@@ -71,46 +72,50 @@ export default async function CampaignPage({
     return (
       <>
         <SiteHeader title={campaign.name} />
-        <div className="grid gap-4 px-4 pb-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:px-6">
-          <Card>
-            {header}
-            <CardContent>
-              <CampaignForm
-                id={campaign.id}
-                initial={{
-                  name: campaign.name,
-                  subject: campaign.subject,
-                  previewText: campaign.previewText,
-                  heading: campaign.heading,
-                  body: campaign.body,
-                  buttonLabel: campaign.buttonLabel ?? "",
-                  buttonUrl: campaign.buttonUrl ?? "",
-                  segment: campaign.segment,
-                }}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Отправка</CardTitle>
-              <CardDescription>
-                Уйдёт последняя сохранённая версия. Перед запуском пришлите
-                пробное письмо себе.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <CampaignPreview id={campaign.id} subject={campaign.subject} />
-              <SendTest id={campaign.id} />
-              <StartCampaign
-                id={campaign.id}
-                name={campaign.name}
-                recipients={willReceive}
-                disabled={willReceive === 0}
-              />
-              <RemoveCampaign id={campaign.id} name={campaign.name} />
-            </CardContent>
-          </Card>
-        </div>
+        <DraftStateProvider>
+          <div className="grid gap-4 px-4 pb-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:px-6">
+            <Card>
+              {header}
+              <CardContent>
+                <CampaignForm
+                  // После сохранения — новая форма со значениями из базы
+                  key={campaign.updatedAt.getTime()}
+                  id={campaign.id}
+                  initial={{
+                    name: campaign.name,
+                    subject: campaign.subject,
+                    previewText: campaign.previewText,
+                    heading: campaign.heading,
+                    body: campaign.body,
+                    buttonLabel: campaign.buttonLabel ?? "",
+                    buttonUrl: campaign.buttonUrl ?? "",
+                    segment: campaign.segment,
+                  }}
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Отправка</CardTitle>
+                <CardDescription>
+                  Уйдёт последняя сохранённая версия. Перед запуском пришлите
+                  пробное письмо себе.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <CampaignPreview id={campaign.id} subject={campaign.subject} />
+                <SendTest id={campaign.id} />
+                <StartCampaign
+                  id={campaign.id}
+                  name={campaign.name}
+                  recipients={willReceive}
+                  disabled={willReceive === 0}
+                />
+                <RemoveCampaign id={campaign.id} name={campaign.name} />
+              </CardContent>
+            </Card>
+          </div>
+        </DraftStateProvider>
       </>
     );
   }

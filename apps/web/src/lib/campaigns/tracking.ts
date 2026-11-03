@@ -44,22 +44,23 @@ export async function recordClick(token: string): Promise<string | null> {
     return campaign?.buttonUrl ?? null;
   }
   if (!TOKEN.test(token)) return null;
+  // Без кнопки в письме переходить было не по чему — такой переход не считаем
   const [row] = await db
+    .select({ buttonUrl: emailCampaigns.buttonUrl })
+    .from(r)
+    .innerJoin(emailCampaigns, eq(emailCampaigns.id, r.campaignId))
+    .where(eq(r.token, token))
+    .limit(1);
+  if (!row?.buttonUrl) return null;
+  await db
     .update(r)
     .set({
       clickCount: sql`${r.clickCount} + 1`,
       firstClickedAt: sql`coalesce(${r.firstClickedAt}, now())`,
       firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
     })
-    .where(eq(r.token, token))
-    .returning({ campaignId: r.campaignId });
-  if (!row) return null;
-  const [campaign] = await db
-    .select({ buttonUrl: emailCampaigns.buttonUrl })
-    .from(emailCampaigns)
-    .where(eq(emailCampaigns.id, row.campaignId))
-    .limit(1);
-  return campaign?.buttonUrl ?? null;
+    .where(eq(r.token, token));
+  return row.buttonUrl;
 }
 
 /** Адрес получателя по токену и отписан ли он уже — для страницы отписки. */

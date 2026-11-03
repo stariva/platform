@@ -82,12 +82,13 @@ export async function loadAudience(
   }
   if (members.size === 0) return [];
 
+  // Отписавшихся немного — берём всех, а не список адресов в параметрах
+  // запроса: тот упёрся бы в лимит параметров Postgres на больших сегментах
   const suppressed = new Set(
     (
       await db
         .select({ email: emailSuppressions.email })
         .from(emailSuppressions)
-        .where(inArray(emailSuppressions.email, [...members.keys()]))
     ).map((row) => row.email),
   );
   return [...members.entries()]

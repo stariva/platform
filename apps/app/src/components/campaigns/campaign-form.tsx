@@ -5,8 +5,9 @@ import { Button, Checkbox, Input, Label, Textarea, toast } from "@stariva/ui";
 import { Badge } from "@stariva/ui/reui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { orpc } from "~/orpc/react";
+import { useDraftState } from "./draft-state";
 
 export interface CampaignFormValues {
   name: string;
@@ -118,7 +119,11 @@ function plural(count: number) {
   return "людям";
 }
 
-/** Новая рассылка (без id) или правка черновика. */
+/**
+ * Новая рассылка (без id) или правка черновика. Страница черновика
+ * пересоздаёт форму после сохранения (key по updatedAt), чтобы в ней были
+ * значения из базы, а не введённые.
+ */
 export function CampaignForm({
   id,
   initial,
@@ -144,6 +149,8 @@ export function CampaignForm({
   });
 
   const changed = JSON.stringify(values) !== JSON.stringify(initial);
+  const setDirty = useDraftState()?.setDirty;
+  useEffect(() => setDirty?.(changed), [changed, setDirty]);
 
   return (
     <form
