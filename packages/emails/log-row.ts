@@ -7,6 +7,9 @@ const MAX_ERROR_LENGTH = 500;
  * (workshop:<заказ>:<вид>:email). У писем без такого ключа — пустой объект.
  */
 export function emailContext(idempotencyKey?: string) {
+  if (/^campaign:[^:]+:[^:]+$/.test(idempotencyKey ?? "")) {
+    return { kind: "campaign" };
+  }
   const match = /^workshop:([^:]+):([^:]+):email$/.exec(idempotencyKey ?? "");
   return match ? { workshopOrderId: match[1], kind: match[2] } : {};
 }

@@ -54,17 +54,21 @@ export function StarivaLayout({
   buttonLabel,
   buttonUrl,
   footnote,
+  footer,
   children,
 }: {
   previewText: string;
   heading: string;
-  intro: string;
+  /** Строка или строки с переносами (<br />) — у рассылок из админки. */
+  intro: ReactNode;
   /** Блок между вступлением и кнопкой — например, код входа. */
   beforeButton?: ReactNode;
   /** Без кнопки письмо обходится и без ссылки «скопируйте в браузер». */
   buttonLabel?: string;
   buttonUrl?: string;
   footnote: string;
+  /** Под ссылкой на кнопку — например, отписка от рассылки. */
+  footer?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -208,6 +212,7 @@ export function StarivaLayout({
                 </Link>
               </Text>
             ) : null}
+            {footer}
           </Section>
 
           <Section style={{ padding: "28px 24px 0", textAlign: "center" }}>

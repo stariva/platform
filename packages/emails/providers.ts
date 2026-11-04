@@ -20,6 +20,8 @@ export type EmailAttachment =
 export type OutgoingEmail = {
   attachments?: EmailAttachment[];
   from: string;
+  /** Дополнительные заголовки письма, например List-Unsubscribe у рассылок. */
+  headers?: Record<string, string>;
   idempotencyKey?: string;
   subject: string;
   to: string[];
@@ -51,6 +53,7 @@ const resendProvider: EmailProvider = {
         ...(email.attachments?.length
           ? { attachments: email.attachments }
           : {}),
+        ...(email.headers ? { headers: email.headers } : {}),
       },
       email.idempotencyKey
         ? { idempotencyKey: email.idempotencyKey }
@@ -150,6 +153,14 @@ const postboxProvider: EmailProvider = {
       Content: {
         Simple: {
           Subject: { Data: email.subject, Charset: "UTF-8" },
+          ...(email.headers
+            ? {
+                Headers: Object.entries(email.headers).map(([Name, Value]) => ({
+                  Name,
+                  Value,
+                })),
+              }
+            : {}),
           Body: { Html: { Data: html, Charset: "UTF-8" } },
           ...(attachments ? { Attachments: attachments } : {}),
         },

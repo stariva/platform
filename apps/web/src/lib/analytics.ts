@@ -51,11 +51,16 @@ export function analyticsUrl(value: string): string {
   }
 }
 
-/** По этим ссылкам открывают заказ или видео без входа — id в них работает как пароль. */
+/**
+ * По этим ссылкам открывают заказ, видео или отписку от рассылки без входа —
+ * id в них работает как пароль.
+ */
 const SECRET_PATHS: Array<[RegExp, string]> = [
   [/^\/order\/[^/]+/, "/order/status"],
   [/^\/api\/video\/hls\/[^/]+/, "/api/video/hls/:token"],
   [/^\/api\/workshops\/access\/[^/]+/, "/api/workshops/access/:token"],
+  [/^\/unsubscribe\/[^/]+/, "/unsubscribe/:token"],
+  [/^\/api\/m\/([ocu])\/[^/]+/, "/api/m/$1/:token"],
 ];
 
 export function analyticsPath(pathname: string): string {

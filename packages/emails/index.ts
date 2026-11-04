@@ -14,12 +14,25 @@ import WelcomeEmail from "./emails/welcome";
 
 export { sendWorkshopBriefEmail, type WorkshopBriefFile } from "./brief";
 export {
+  CAMPAIGN_MAX_ATTEMPTS,
+  type CampaignBatchResult,
+  campaignEmail,
+  campaignLinks,
+  renderCampaignHtml,
+  sendCampaignBatch,
+  sendCampaignTest,
+} from "./campaign";
+export {
   isOrderEmailStatus,
   ORDER_EMAIL_STATUSES,
   type OrderEmailItem,
   type OrderEmailStatus,
   type StarivaOrderEmailProps,
 } from "./emails/stariva-order";
+export {
+  type StarivaSignInCodeEmailProps,
+  signInCodeSubject,
+} from "./emails/stariva-sign-in-code";
 export type {
   StarivaWorkshopEmailProps,
   WorkshopEmailKind,
@@ -28,13 +41,9 @@ export {
   type StarivaWorkshopUnpaidEmailProps,
   workshopUnpaidEmailSubject,
 } from "./emails/stariva-workshop-unpaid";
-export {
-  type StarivaSignInCodeEmailProps,
-  signInCodeSubject,
-} from "./emails/stariva-sign-in-code";
 export { sendOrderStatusEmail } from "./order";
-export { isEmailConfigured } from "./providers";
 export type { OrderEmailOrder } from "./order-email";
+export { isEmailConfigured } from "./providers";
 export { sendReceiptEmail } from "./receipt";
 export { type EmailAttachment, sendEmail, sendEmailHtml } from "./send";
 export {

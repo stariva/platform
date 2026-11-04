@@ -337,6 +337,13 @@
       "when": 1793383964954,
       "tag": "0047_cart_events_source",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793731719819,
+      "tag": "0048_email_campaigns",
+      "breakpoints": true
     }
   ]
 }

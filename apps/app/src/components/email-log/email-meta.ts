@@ -15,6 +15,7 @@ const KIND_LABELS: Record<string, string> = {
   day: "Напоминание: завтра",
   release: "Уроки открыты",
   unpaid: "Оплата не завершена",
+  campaign: "Рассылка",
 };
 
 export const kindLabel = (kind: string | null) =>
