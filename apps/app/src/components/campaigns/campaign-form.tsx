@@ -9,13 +9,16 @@ import {
   Label,
   RadioGroup,
   RadioGroupItem,
+  Textarea,
   toast,
 } from "@stariva/ui";
 import { Badge } from "@stariva/ui/reui";
+import { parseCampaignEmails } from "@stariva/validators";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { orpc } from "~/orpc/react";
+import { EmailPreviewDialog } from "./campaign-actions";
 import type {
   CampaignFormValues,
   CampaignTemplateOption,
@@ -68,7 +71,43 @@ function TemplatePicker({
   );
 }
 
-/** Кому уйдёт письмо: курсы на выбор и список адресов. */
+/** Письмо с полями из формы ещё до сохранения: по кнопке, в окне. */
+function TemplatePreview({
+  template,
+  params,
+  buyers,
+  subject,
+}: {
+  template: CampaignTemplateId;
+  params: Record<string, string>;
+  /** Без покупателей в письме строчка для адресов вручную. */
+  buyers: boolean;
+  subject: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const query = useQuery({
+    ...orpc.admin.campaigns.previewTemplate.queryOptions({
+      input: { template, params, buyers },
+    }),
+    enabled: open,
+  });
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        Посмотреть письмо
+      </Button>
+      <EmailPreviewDialog
+        open={open}
+        onOpenChange={setOpen}
+        subject={subject}
+        description="Так письмо увидит получатель. Незаполненные поля — пример из шаблона."
+        query={query}
+      />
+    </>
+  );
+}
+
+/** Кому уйдёт письмо: покупатели курсов, адреса вручную и итоговый список. */
 function SegmentPicker({
   segment,
   onChange,
@@ -81,6 +120,8 @@ function SegmentPicker({
   );
   const members = audience.data?.members ?? [];
   const active = members.filter((member) => !member.suppressed);
+  const [emailsText, setEmailsText] = useState(segment.emails.join("\n"));
+  const { invalid } = parseCampaignEmails(emailsText);
   const toggle = (slug: string, checked: boolean) =>
     onChange({
       ...segment,
@@ -92,25 +133,66 @@ function SegmentPicker({
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label>Получатели — купили мастер-класс</Label>
+        <Label className="font-medium">
+          <Checkbox
+            checked={segment.buyers}
+            onCheckedChange={(checked) =>
+              onChange({ ...segment, buyers: checked === true })
+            }
+          />
+          Покупатели мастер-классов
+        </Label>
+        {segment.buyers && (
+          <>
+            <p className="text-muted-foreground text-xs">
+              Ничего не отмечено — все, кто оплатил любой мастер-класс. Возвраты
+              и неоплаченные заказы не считаются.
+            </p>
+            <div className="flex flex-col gap-2 pt-1 pl-6">
+              {audience.data?.workshops.map((workshop) => (
+                <Label key={workshop.slug} className="font-normal">
+                  <Checkbox
+                    checked={segment.workshops.includes(workshop.slug)}
+                    onCheckedChange={(checked) =>
+                      toggle(workshop.slug, checked === true)
+                    }
+                  />
+                  {workshop.title}
+                  <span className="text-muted-foreground">
+                    · {workshop.buyers}
+                  </span>
+                </Label>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="campaign-emails">Адреса вручную</Label>
+        <Textarea
+          id="campaign-emails"
+          rows={3}
+          placeholder={"anna@example.ru\nmaria@example.ru"}
+          value={emailsText}
+          onChange={(event) => {
+            setEmailsText(event.target.value);
+            onChange({
+              ...segment,
+              emails: parseCampaignEmails(event.target.value).emails,
+            });
+          }}
+        />
         <p className="text-muted-foreground text-xs">
-          Ничего не отмечено — все, кто оплатил любой мастер-класс. Возвраты и
-          неоплаченные заказы не считаются.
+          Через запятую или с новой строки. Отправляйте только тем, кто согласен
+          получать письма. Адрес, который уже есть среди покупателей, получит
+          одно письмо.
         </p>
-        <div className="flex flex-col gap-2 pt-1">
-          {audience.data?.workshops.map((workshop) => (
-            <Label key={workshop.slug} className="font-normal">
-              <Checkbox
-                checked={segment.workshops.includes(workshop.slug)}
-                onCheckedChange={(checked) =>
-                  toggle(workshop.slug, checked === true)
-                }
-              />
-              {workshop.title}
-              <span className="text-muted-foreground">· {workshop.buyers}</span>
-            </Label>
-          ))}
-        </div>
+        {invalid.length > 0 && (
+          <p className="text-destructive text-xs">
+            Не похоже на адрес, пропущу: {invalid.join(", ")}
+          </p>
+        )}
       </div>
 
       <div className="rounded-lg border p-3">
@@ -137,6 +219,9 @@ function SegmentPicker({
                 >
                   {member.email}
                 </span>
+                {member.source === "manual" && (
+                  <Badge variant="outline">вручную</Badge>
+                )}
                 {member.suppressed && (
                   <Badge variant="secondary">отписался</Badge>
                 )}
@@ -247,6 +332,15 @@ export function CampaignForm({
           )}
         </div>
       ))}
+
+      {template && (
+        <TemplatePreview
+          template={template.id}
+          params={values.params}
+          buyers={values.segment.buyers}
+          subject={template.subject}
+        />
+      )}
 
       <SegmentPicker
         segment={values.segment}

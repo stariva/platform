@@ -24,6 +24,8 @@ interface CampaignTemplate<P extends Record<string, string>> {
   previewText: string;
   fields: CampaignTemplateField[];
   params: z.ZodType<P>;
+  /** Поля для предпросмотра, пока админ не заполнил свои. */
+  example: P;
   /** Куда ведёт кнопка письма; сайт засчитывает переход и отправляет сюда. */
   buttonUrl: (params: P) => string | null;
   render: (
@@ -49,6 +51,7 @@ const telegramInvite: CampaignTemplate<{ channelUrl: string }> = {
     },
   ],
   params: z.object({ channelUrl: httpsUrl }),
+  example: { channelUrl: "https://t.me/stariva" },
   buttonUrl: (params) => params.channelUrl,
   render: ({ clickUrl, ...links }) =>
     StarivaTelegramInviteEmail({ ...links, channelUrl: clickUrl }),

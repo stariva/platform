@@ -18,7 +18,51 @@ import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import { useDraftState } from "./draft-state";
 
-/** Письмо, как его увидит получатель: открывается по кнопке. */
+/** Окно с письмом, как его увидит получатель. */
+export function EmailPreviewDialog({
+  open,
+  onOpenChange,
+  subject,
+  description,
+  query,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  subject: string;
+  description: string;
+  query: { isPending: boolean; isError: boolean; data?: { html: string } };
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="break-words">{subject}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        {query.isPending && (
+          <p className="text-muted-foreground text-sm">Загружаю…</p>
+        )}
+        {query.isError && (
+          <p className="text-destructive text-sm">
+            Не получилось показать письмо
+          </p>
+        )}
+        {query.data && (
+          // Пустой sandbox: скрипты и переходы из письма не выполняются
+          <iframe
+            title={subject}
+            srcDoc={query.data.html}
+            sandbox=""
+            referrerPolicy="no-referrer"
+            className="h-[70vh] w-full rounded-md border bg-white"
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Сохранённая рассылка, как её увидит получатель: открывается по кнопке. */
 export function CampaignPreview({
   id,
   subject,
@@ -43,34 +87,13 @@ export function CampaignPreview({
       >
         Посмотреть письмо
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="break-words">{subject}</DialogTitle>
-            <DialogDescription>
-              Так письмо увидит получатель. Последние сохранённые правки.
-            </DialogDescription>
-          </DialogHeader>
-          {query.isPending && (
-            <p className="text-muted-foreground text-sm">Загружаю…</p>
-          )}
-          {query.isError && (
-            <p className="text-destructive text-sm">
-              Не получилось показать письмо
-            </p>
-          )}
-          {query.data && (
-            // Пустой sandbox: скрипты и переходы из письма не выполняются
-            <iframe
-              title={subject}
-              srcDoc={query.data.html}
-              sandbox=""
-              referrerPolicy="no-referrer"
-              className="h-[70vh] w-full rounded-md border bg-white"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <EmailPreviewDialog
+        open={open}
+        onOpenChange={setOpen}
+        subject={subject}
+        description="Так письмо увидит получатель. Последние сохранённые правки."
+        query={query}
+      />
     </>
   );
 }

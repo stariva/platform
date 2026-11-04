@@ -2,6 +2,7 @@ import {
   courseAccess,
   type Database,
   type EmailCampaignSegment,
+  type EmailRecipientSource,
   emailSuppressions,
   eq,
   inArray,
@@ -13,7 +14,9 @@ import {
 
 export interface AudienceMember {
   email: string;
-  userId: string;
+  /** Аккаунт покупателя; у добавленных вручную — null. */
+  userId: string | null;
+  source: EmailRecipientSource;
   /** Какие из курсов сегмента купил. */
   workshops: string[];
   /** Отписался или ящик не существует: рассылка ему не уйдёт. */
@@ -46,8 +49,10 @@ function paidPurchases(db: Database) {
 }
 
 /**
- * Кому уйдёт рассылка: по адресу на человека, отписавшиеся помечены. Список
- * считается заново при каждом вызове; при запуске рассылки он фиксируется.
+ * Кому уйдёт рассылка: по адресу на человека, отписавшиеся помечены.
+ * Покупатели (если они в сегменте) и адреса, добавленные вручную; адрес из
+ * обоих списков считается покупателем. Список считается заново при каждом
+ * вызове; при запуске рассылки он фиксируется.
  */
 export async function loadAudience(
   db: Database,
@@ -56,9 +61,15 @@ export async function loadAudience(
   const wanted = new Set(segment.workshops);
   const members = new Map<
     string,
-    { userId: string; paidAt: number; workshops: Set<string> }
+    {
+      userId: string | null;
+      source: EmailRecipientSource;
+      paidAt: number;
+      workshops: Set<string>;
+    }
   >();
-  for (const purchase of await paidPurchases(db)) {
+  const purchases = segment.buyers ? await paidPurchases(db) : [];
+  for (const purchase of purchases) {
     const matched = purchase.workshops.filter(
       (slug) => wanted.size === 0 || wanted.has(slug),
     );
@@ -68,6 +79,7 @@ export async function loadAudience(
     if (!member) {
       members.set(purchase.email, {
         userId: purchase.userId,
+        source: "buyer",
         paidAt,
         workshops: new Set(matched),
       });
@@ -79,6 +91,15 @@ export async function loadAudience(
       member.paidAt = paidAt;
     }
     for (const slug of matched) member.workshops.add(slug);
+  }
+  for (const email of segment.emails) {
+    if (members.has(email)) continue;
+    members.set(email, {
+      userId: null,
+      source: "manual",
+      paidAt: 0,
+      workshops: new Set(),
+    });
   }
   if (members.size === 0) return [];
 
@@ -96,6 +117,7 @@ export async function loadAudience(
     .map(([email, member]) => ({
       email,
       userId: member.userId,
+      source: member.source,
       workshops: [...member.workshops].sort(),
       suppressed: suppressed.has(email),
     }));
