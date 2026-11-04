@@ -53,9 +53,12 @@ export interface PeriodParams {
 
 /**
  * Период из адреса: свои даты (?from=&to=) важнее готового (?period=),
- * без всего — этот месяц.
+ * без всего — `fallback` (по умолчанию этот месяц).
  */
-export function resolvePeriod(params: PeriodParams) {
+export function resolvePeriod(
+  params: PeriodParams,
+  fallback: Preset = "month",
+) {
   const today = todayInMoscow();
   const customFrom = daySchema.safeParse(first(params.from));
   const customTo = daySchema.safeParse(first(params.to));
@@ -65,7 +68,7 @@ export function resolvePeriod(params: PeriodParams) {
     ? null
     : parsedPreset.success
       ? parsedPreset.data
-      : "month";
+      : fallback;
   const range = preset
     ? presetRange(preset, today)
     : {
@@ -84,11 +87,14 @@ export function PeriodPicker({
   preset,
   range,
   today,
+  fallback = "month",
 }: {
   basePath: string;
   preset: Preset | null;
   range: { from?: string; to?: string };
   today: string;
+  /** Период страницы без параметров в адресе: для него ссылка без ?period=. */
+  fallback?: Preset;
 }) {
   return (
     <div className="space-y-3">
@@ -96,7 +102,7 @@ export function PeriodPicker({
         {(Object.keys(PRESETS) as Preset[]).map((key) => (
           <Link
             key={key}
-            href={key === "month" ? basePath : `${basePath}?period=${key}`}
+            href={key === fallback ? basePath : `${basePath}?period=${key}`}
             aria-current={preset === key ? "page" : undefined}
             className={buttonVariants({
               variant: preset === key ? "default" : "outline",
