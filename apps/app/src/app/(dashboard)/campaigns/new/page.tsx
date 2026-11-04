@@ -6,14 +6,16 @@ import {
   CardTitle,
 } from "@stariva/ui";
 import Link from "next/link";
-import {
-  CampaignForm,
-  EMPTY_CAMPAIGN,
-} from "~/components/campaigns/campaign-form";
+import { CampaignForm } from "~/components/campaigns/campaign-form";
+import { emptyCampaign } from "~/components/campaigns/campaign-meta";
 import { SiteHeader } from "~/components/layout";
+import { api } from "~/orpc/server";
+
+export const dynamic = "force-dynamic";
 
 /** Новая рассылка: сначала черновик, отправка — со страницы черновика. */
-export default function NewCampaignPage() {
+export default async function NewCampaignPage() {
+  const templates = await api.admin.campaigns.templates();
   return (
     <>
       <SiteHeader title="Новая рассылка" />
@@ -28,7 +30,10 @@ export default function NewCampaignPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CampaignForm initial={EMPTY_CAMPAIGN} />
+            <CampaignForm
+              initial={emptyCampaign(templates)}
+              templates={templates}
+            />
           </CardContent>
         </Card>
       </div>

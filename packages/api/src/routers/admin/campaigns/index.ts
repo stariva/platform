@@ -12,6 +12,9 @@ import {
   sql,
 } from "@stariva/db";
 import {
+  CAMPAIGN_TEMPLATE_IDS,
+  campaignParamsError,
+  campaignTemplateList,
   renderCampaignHtml,
   sendCampaignBatch,
   sendCampaignTest,
@@ -35,24 +38,13 @@ const segmentSchema = z.object({
   workshops: z.array(z.string().trim().min(1).max(100)).max(50),
 });
 
-const contentSchema = z
-  .object({
-    name: z.string().trim().min(1).max(120),
-    subject: z.string().trim().min(1).max(200),
-    previewText: z.string().trim().max(200),
-    heading: z.string().trim().min(1).max(200),
-    body: z.string().trim().min(1).max(10_000),
-    buttonLabel: z.string().trim().max(60),
-    buttonUrl: z.union([
-      z.literal(""),
-      z.url({ protocol: /^https?$/ }).max(2000),
-    ]),
-    segment: segmentSchema,
-  })
-  .refine((value) => !value.buttonLabel === !value.buttonUrl, {
-    message: "Укажите и текст кнопки, и ссылку — или оставьте оба поля пустыми",
-    path: ["buttonUrl"],
-  });
+const contentSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  template: z.enum(CAMPAIGN_TEMPLATE_IDS),
+  // Поля шаблона; сами значения проверяет шаблон (campaignParamsError)
+  params: z.record(z.string().max(100), z.string().trim().max(2000)),
+  segment: segmentSchema,
+});
 
 const r = emailCampaignRecipients;
 
@@ -146,21 +138,26 @@ const audience = adminProcedure
     return { members, workshops };
   });
 
-/** Новая рассылка (без id) или правка черновика. Запущенную менять нельзя. */
+/** Тема письма из шаблона: её показывают список рассылок и история. */
+const templateSubject = (template: string) =>
+  campaignTemplateList().find((item) => item.id === template)?.subject ?? "";
+
+/** Готовые письма для выбора в форме: название, тема и поля под заполнение. */
+const templates = adminProcedure.handler(() => campaignTemplateList());
+
+/**
+ * Новая рассылка (без id) или правка черновика. Запущенную менять нельзя.
+ * Тема берётся из шаблона: письма готовые, их текст живёт в коде.
+ */
 const save = adminProcedure
-  .input(
-    z.intersection(
-      contentSchema,
-      z.object({ id: z.string().uuid().optional() }),
-    ),
-  )
+  .input(contentSchema.extend({ id: z.string().uuid().optional() }))
   .handler(async ({ context, input }) => {
     const { id, ...content } = input;
-    const values = {
-      ...content,
-      buttonLabel: content.buttonLabel || null,
-      buttonUrl: content.buttonUrl || null,
-    };
+    const paramsError = campaignParamsError(content.template, content.params);
+    if (paramsError) {
+      throw new ORPCError("BAD_REQUEST", { message: paramsError });
+    }
+    const values = { ...content, subject: templateSubject(content.template) };
     if (!id) {
       const [created] = await context.db
         .insert(emailCampaigns)
@@ -240,6 +237,15 @@ const start = adminProcedure
       if (campaign.status !== "draft") {
         throw new ORPCError("CONFLICT", { message: "Рассылка уже запущена" });
       }
+      // Без нужных полей (например, ссылки на канал) письмо не соберётся, и
+      // все получатели ушли бы в «не ушло»
+      const paramsError = campaignParamsError(
+        campaign.template,
+        campaign.params,
+      );
+      if (paramsError) {
+        throw new ORPCError("BAD_REQUEST", { message: paramsError });
+      }
       const members = (
         await loadAudience(tx as unknown as Database, campaign.segment)
       ).filter((member) => !member.suppressed);
@@ -250,7 +256,12 @@ const start = adminProcedure
       }
       await tx
         .update(emailCampaigns)
-        .set({ status: "sending", startedAt: new Date() })
+        .set({
+          status: "sending",
+          startedAt: new Date(),
+          // Тема, с которой письма уходят: шаблон в коде мог поменяться
+          subject: templateSubject(campaign.template),
+        })
         .where(eq(emailCampaigns.id, campaign.id));
       await tx
         .insert(r)
@@ -280,6 +291,7 @@ export const adminCampaignsRouter = {
   list,
   get,
   audience,
+  templates,
   save,
   remove,
   preview,

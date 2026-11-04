@@ -1,3 +1,4 @@
+import type { CampaignTemplateId } from "@stariva/emails";
 import {
   Card,
   CardContent,
@@ -46,9 +47,12 @@ export default async function CampaignPage({
       throw error;
     });
   const draft = campaign.status === "draft";
-  const audience = draft
-    ? await api.admin.campaigns.audience({ segment: campaign.segment })
-    : null;
+  const [audience, templates] = draft
+    ? await Promise.all([
+        api.admin.campaigns.audience({ segment: campaign.segment }),
+        api.admin.campaigns.templates(),
+      ])
+    : [null, []];
   const willReceive =
     audience?.members.filter((member) => !member.suppressed).length ?? 0;
 
@@ -81,14 +85,13 @@ export default async function CampaignPage({
                   // После сохранения — новая форма со значениями из базы
                   key={campaign.updatedAt.getTime()}
                   id={campaign.id}
+                  templates={templates}
                   initial={{
                     name: campaign.name,
-                    subject: campaign.subject,
-                    previewText: campaign.previewText,
-                    heading: campaign.heading,
-                    body: campaign.body,
-                    buttonLabel: campaign.buttonLabel ?? "",
-                    buttonUrl: campaign.buttonUrl ?? "",
+                    // Шаблон, которого уже нет в коде, форма не выделит, а
+                    // сохранение попросит выбрать другой
+                    template: campaign.template as CampaignTemplateId,
+                    params: campaign.params,
                     segment: campaign.segment,
                   }}
                 />

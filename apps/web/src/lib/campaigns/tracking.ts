@@ -4,6 +4,7 @@ import {
   emailCampaigns,
   emailSuppressions,
 } from "@stariva/db/schema";
+import { campaignButtonUrl } from "@stariva/emails";
 import { eq, sql } from "drizzle-orm";
 
 /**
@@ -34,24 +35,29 @@ export async function recordOpen(token: string): Promise<void> {
  * рассылки нет кнопки.
  */
 export async function recordClick(token: string): Promise<string | null> {
+  const columns = {
+    template: emailCampaigns.template,
+    params: emailCampaigns.params,
+  };
   const test = TEST_TOKEN.exec(token);
   if (test) {
     const [campaign] = await db
-      .select({ buttonUrl: emailCampaigns.buttonUrl })
+      .select(columns)
       .from(emailCampaigns)
       .where(eq(emailCampaigns.id, test[1] as string))
       .limit(1);
-    return campaign?.buttonUrl ?? null;
+    return campaign ? campaignButtonUrl(campaign) : null;
   }
   if (!TOKEN.test(token)) return null;
-  // Без кнопки в письме переходить было не по чему — такой переход не считаем
-  const [row] = await db
-    .select({ buttonUrl: emailCampaigns.buttonUrl })
+  const [campaign] = await db
+    .select(columns)
     .from(r)
     .innerJoin(emailCampaigns, eq(emailCampaigns.id, r.campaignId))
     .where(eq(r.token, token))
     .limit(1);
-  if (!row?.buttonUrl) return null;
+  // Без кнопки в письме переходить было не по чему — такой переход не считаем
+  const target = campaign ? campaignButtonUrl(campaign) : null;
+  if (!target) return null;
   await db
     .update(r)
     .set({
@@ -60,7 +66,7 @@ export async function recordClick(token: string): Promise<string | null> {
       firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
     })
     .where(eq(r.token, token));
-  return row.buttonUrl;
+  return target;
 }
 
 /** Адрес получателя по токену и отписан ли он уже — для страницы отписки. */

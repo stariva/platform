@@ -16,12 +16,23 @@ export { sendWorkshopBriefEmail, type WorkshopBriefFile } from "./brief";
 export {
   CAMPAIGN_MAX_ATTEMPTS,
   type CampaignBatchResult,
-  campaignEmail,
-  campaignLinks,
-  renderCampaignHtml,
   sendCampaignBatch,
   sendCampaignTest,
 } from "./campaign";
+export {
+  campaignEmail,
+  campaignLinks,
+  renderCampaignHtml,
+} from "./campaign-email";
+export {
+  CAMPAIGN_TEMPLATE_IDS,
+  type CampaignTemplateField,
+  type CampaignTemplateId,
+  campaignButtonUrl,
+  campaignParamsError,
+  campaignTemplateList,
+  isCampaignTemplateId,
+} from "./campaign-templates";
 export {
   isOrderEmailStatus,
   ORDER_EMAIL_STATUSES,

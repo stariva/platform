@@ -1,51 +1,32 @@
 import { expect, test } from "bun:test";
 import { render } from "@react-email/components";
 
-import StarivaCampaignEmail, {
-  campaignParagraphs,
-} from "./emails/stariva-campaign";
+import { campaignEmail } from "./campaign-email";
+import { TELEGRAM_INVITE_SUBJECT } from "./emails/stariva-telegram-invite";
 
-test("splits the body into paragraphs on blank lines", () => {
-  expect(
-    campaignParagraphs("Привет.\r\n\r\n Строка один\nстрока два \n\n\n\nКонец"),
-  ).toEqual([["Привет."], ["Строка один", "строка два"], ["Конец"]]);
-  expect(campaignParagraphs("  \n\n ")).toEqual([]);
+const campaign = {
+  template: "telegram-invite",
+  params: { channelUrl: "https://t.me/example" },
+  segment: { type: "workshop_buyers" as const, workshops: [] },
+};
+
+test("campaignEmail sends the button through the site, not to the channel", async () => {
+  const email = campaignEmail(campaign, {
+    siteUrl: "https://stariva.example.test/",
+    token: "tok123",
+  });
+  const html = await render(email.react);
+  expect(html).toContain('href="https://stariva.example.test/api/m/c/tok123"');
+  expect(html).not.toContain("https://t.me/example");
+  expect(email.headers["List-Unsubscribe"]).toBe(
+    "<https://stariva.example.test/api/m/u/tok123>",
+  );
 });
 
-test("renders the button, the unsubscribe link and the open pixel", async () => {
-  const html = await render(
-    StarivaCampaignEmail({
-      previewText: "",
-      heading: "Приглашаю в сообщество",
-      body: "Здравствуйте,\nэто Ольга.\n\nВторой абзац\nс переносом.",
-      buttonLabel: "Перейти в канал",
-      buttonUrl: "https://stariva.example.test/api/m/c/t1",
-      reason: "Письмо пришло, потому что вы купили мастер-класс.",
-      unsubscribeUrl: "https://stariva.example.test/unsubscribe/t1",
-      openPixelUrl: "https://stariva.example.test/api/m/o/t1",
-    }),
-  );
-  expect(html).toContain('href="https://stariva.example.test/api/m/c/t1"');
-  expect(html).toContain('href="https://stariva.example.test/unsubscribe/t1"');
-  expect(html).toContain('src="https://stariva.example.test/api/m/o/t1"');
-  expect(html).toContain("Здравствуйте,<br/>это Ольга.");
-  expect(html).toContain("Второй абзац<br/>с переносом.");
-  // Без строки-превью во «Входящих» видно начало текста
-  expect(html).toContain("Здравствуйте, это Ольга.");
-});
-
-test("omits the button when it has no link", async () => {
-  const html = await render(
-    StarivaCampaignEmail({
-      previewText: "Превью",
-      heading: "Новости",
-      body: "Текст",
-      buttonLabel: "Кнопка",
-      buttonUrl: null,
-      reason: "Причина",
-      unsubscribeUrl: "https://stariva.example.test/unsubscribe/t1",
-    }),
-  );
-  expect(html).not.toContain("Кнопка");
-  expect(html).not.toContain("api/m/o/");
+test("campaignEmail takes the subject from the template", () => {
+  const email = campaignEmail(campaign, {
+    siteUrl: "https://stariva.example.test",
+    token: "tok123",
+  });
+  expect(email.subject).toBe(TELEGRAM_INVITE_SUBJECT);
 });

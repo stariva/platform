@@ -39,9 +39,9 @@ export type EmailCampaignSegment = {
 };
 
 /**
- * Рассылка из админки: письмо (тема, заголовок, текст, кнопка) и кому его
- * слать. Список получателей фиксируется при запуске в
- * email_campaign_recipients, после запуска письмо не меняется.
+ * Рассылка из админки: готовое письмо из кода (шаблон React Email и его
+ * параметры) и кому его слать. Список получателей фиксируется при запуске в
+ * email_campaign_recipients, после запуска рассылка не меняется.
  */
 export const emailCampaigns = pgTable("email_campaigns", {
   id: text("id")
@@ -49,14 +49,12 @@ export const emailCampaigns = pgTable("email_campaigns", {
     .$defaultFn(() => crypto.randomUUID()),
   // Название для админки, адресат его не видит
   name: text("name").notNull(),
+  // Тема из шаблона на момент сохранения: в списке рассылок и в истории
   subject: text("subject").notNull(),
-  // Строка-превью рядом с темой во «Входящих»
-  previewText: text("preview_text").notNull().default(""),
-  heading: text("heading").notNull(),
-  // Простой текст; пустая строка разделяет абзацы
-  body: text("body").notNull(),
-  buttonLabel: text("button_label"),
-  buttonUrl: text("button_url"),
+  // Шаблон письма: id из реестра @stariva/emails (campaign-templates.ts)
+  template: text("template").notNull(),
+  // Что админ заполнил под шаблон, например ссылку на канал
+  params: jsonb("params").$type<Record<string, string>>().notNull().default({}),
   segment: jsonb("segment").$type<EmailCampaignSegment>().notNull(),
   status: text("status", { enum: EMAIL_CAMPAIGN_STATUSES })
     .notNull()

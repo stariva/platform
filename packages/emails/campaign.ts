@@ -1,11 +1,9 @@
-import { render } from "@react-email/components";
 import { logger } from "@stariva/config";
 import {
   and,
   type Database,
   db as defaultDb,
   type EmailCampaignRow,
-  type EmailCampaignSegment,
   emailCampaignRecipients,
   emailCampaigns,
   emailSuppressions,
@@ -18,7 +16,7 @@ import {
   sql,
 } from "@stariva/db";
 
-import StarivaCampaignEmail from "./emails/stariva-campaign";
+import { type CampaignContent, campaignEmail } from "./campaign-email";
 import { env } from "./env";
 import { errorText } from "./log-row";
 import { isEmailConfigured } from "./providers";
@@ -32,77 +30,6 @@ const LEASE_MS = 5 * 60 * 1000;
 const RETRY_DELAY_MS = 10 * 60 * 1000;
 // Пауза между письмами, чтобы не упереться в лимит провайдера
 const SEND_INTERVAL_MS = 200;
-
-type CampaignContent = Pick<
-  EmailCampaignRow,
-  | "subject"
-  | "previewText"
-  | "heading"
-  | "body"
-  | "buttonLabel"
-  | "buttonUrl"
-  | "segment"
->;
-
-/**
- * Ссылки письма для одного получателя. Все ведут на сайт: он засчитывает
- * открытие и переход и только потом отправляет дальше.
- */
-export function campaignLinks(siteUrl: string, token: string) {
-  const base = siteUrl.replace(/\/+$/, "");
-  return {
-    open: `${base}/api/m/o/${token}`,
-    click: `${base}/api/m/c/${token}`,
-    /** Страница с кнопкой «Отписаться»: сама ссылка ничего не меняет. */
-    unsubscribe: `${base}/unsubscribe/${token}`,
-    /** Отписка в один клик из почтовика (RFC 8058), только POST. */
-    oneClick: `${base}/api/m/u/${token}`,
-  };
-}
-
-/** Почему адресату пришло письмо — строчка внизу письма. */
-export function campaignReason(segment: EmailCampaignSegment): string {
-  switch (segment.type) {
-    case "workshop_buyers":
-      return "Письмо пришло, потому что вы купили мастер-класс на stariva.ru.";
-  }
-}
-
-/** Тема, тело и заголовки письма рассылки для одного получателя. */
-export function campaignEmail(
-  campaign: CampaignContent,
-  { siteUrl, token }: { siteUrl: string; token: string },
-) {
-  const links = campaignLinks(siteUrl, token);
-  const hasButton = Boolean(campaign.buttonLabel && campaign.buttonUrl);
-  return {
-    subject: campaign.subject,
-    react: StarivaCampaignEmail({
-      previewText: campaign.previewText,
-      heading: campaign.heading,
-      body: campaign.body,
-      buttonLabel: hasButton ? campaign.buttonLabel : null,
-      buttonUrl: hasButton ? links.click : null,
-      reason: campaignReason(campaign.segment),
-      unsubscribeUrl: links.unsubscribe,
-      openPixelUrl: links.open,
-    }),
-    headers: {
-      "List-Unsubscribe": `<${links.oneClick}>`,
-      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-    },
-  };
-}
-
-/** HTML письма для предпросмотра в админке: ссылки как в пробном письме. */
-export function renderCampaignHtml(
-  campaign: CampaignContent & { id: string },
-  siteUrl: string,
-): Promise<string> {
-  return render(
-    campaignEmail(campaign, { siteUrl, token: `test-${campaign.id}` }).react,
-  );
-}
 
 /**
  * Пробное письмо рассылки себе. Токен test-<рассылка>: кнопка ведёт туда же,

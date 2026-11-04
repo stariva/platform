@@ -1,7 +1,46 @@
 import type {
+  EmailCampaignSegment,
   EmailCampaignStatus,
   EmailRecipientStatus,
 } from "@stariva/db/schema";
+import type {
+  CampaignTemplateField,
+  CampaignTemplateId,
+} from "@stariva/emails";
+
+/** Готовое письмо из кода (@stariva/emails), как его отдаёт API. */
+export interface CampaignTemplateOption {
+  id: CampaignTemplateId;
+  label: string;
+  description: string;
+  subject: string;
+  previewText: string;
+  fields: CampaignTemplateField[];
+}
+
+export interface CampaignFormValues {
+  name: string;
+  template: CampaignTemplateId;
+  params: Record<string, string>;
+  segment: EmailCampaignSegment;
+}
+
+/**
+ * Новая рассылка: первое письмо из списка, его название и все покупатели.
+ * Не в campaign-form: её зовёт серверная страница, а клиентский модуль
+ * на сервере отдаёт ссылки, а не функции.
+ */
+export function emptyCampaign(
+  templates: CampaignTemplateOption[],
+): CampaignFormValues {
+  const [first] = templates;
+  return {
+    name: first?.label ?? "",
+    template: first?.id ?? "telegram-invite",
+    params: {},
+    segment: { type: "workshop_buyers", workshops: [] },
+  };
+}
 
 export const CAMPAIGN_STATUS_LABELS: Record<EmailCampaignStatus, string> = {
   draft: "Черновик",
