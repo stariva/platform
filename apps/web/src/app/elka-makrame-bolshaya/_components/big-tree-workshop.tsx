@@ -87,7 +87,7 @@ export function BigTreeWorkshop({
 
           <div
             id={QUICK_BUY_ID}
-            className="mt-6 flex items-center gap-4 lg:hidden"
+            className="mt-6 flex items-center gap-4 lg:mt-0 lg:mb-10 lg:max-w-md"
           >
             <div className="shrink-0">
               <span className="block font-serif text-3xl leading-none text-espresso">

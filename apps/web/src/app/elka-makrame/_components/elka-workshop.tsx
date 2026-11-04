@@ -88,7 +88,9 @@ export function ElkaWorkshop({
           цена с кнопкой, потом текст — ёлку видно сразу, а цена остаётся над
           баннером cookie. Для этого обёртки текста и фото на телефоне
           display: contents, а порядок задают order-*. На десктопе фото слева
-          на всю высоту, текст справа. Сверху — отступ под фиксированную шапку. */}
+          на всю высоту, текст справа, цена с кнопкой — сразу под описанием:
+          форма оплаты ниже первого экрана, а без цены уходило 62% посетителей.
+          Сверху — отступ под фиксированную шапку. */}
       <div className="max-w-[1440px] mx-auto px-5 lg:px-12 pt-28 pb-16 lg:pt-36 lg:pb-24 grid lg:grid-cols-2 gap-5 lg:gap-x-16 lg:gap-y-0 items-start">
         <div className="contents lg:block lg:col-start-2">
           <div className="order-1">
@@ -137,7 +139,7 @@ export function ElkaWorkshop({
           {workshop ? (
             <div
               id={WORKSHOP_QUICK_BUY_ID}
-              className="order-3 flex items-center gap-4 lg:hidden"
+              className="order-3 flex items-center gap-4 lg:mb-10 lg:max-w-md"
             >
               <div className="shrink-0">
                 <span className="block font-serif text-3xl leading-none text-espresso">
