@@ -24,7 +24,7 @@ export default async function PurchaseMapPage({
   searchParams: Promise<PeriodParams>;
 }) {
   const { today, preset, range } = resolvePeriod(await searchParams, "all");
-  const { places, unplaced, orders, revenue } =
+  const { places, unplaced, orders, workshops, revenue } =
     await api.admin.purchaseMap.list(range);
 
   const cities = places.length;
@@ -39,9 +39,9 @@ export default async function PurchaseMapPage({
             Карта покупок
           </h1>
           <p className="text-muted-foreground max-w-3xl text-sm">
-            Города, где купили нашу продукцию: оплаченные заказы с сайта, без
-            отменённых и возвращённых. Мастер-классы и продажи, внесённые в CRM
-            вручную, сюда не входят — у них нет города.
+            Города, где купили у нас: оплаченные заказы товаров и записи на
+            мастер-классы, без отменённых и возвращённых. Продажи, внесённые в
+            CRM вручную, сюда не входят — у них нет города.
           </p>
         </div>
 
@@ -56,20 +56,22 @@ export default async function PurchaseMapPage({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat label="Городов" value={cities} />
           <Stat
-            label="Заказов"
+            label="Покупок"
             value={orders}
-            hint={
-              unplaced > 0
-                ? `У ${unplaced} город неизвестен — на карте их нет`
-                : undefined
-            }
+            hint={[
+              `Записей на мастер-классы: ${workshops}`,
+              unplaced > 0 &&
+                `у ${unplaced} город неизвестен — на карте их нет`,
+            ]
+              .filter(Boolean)
+              .join(", ")}
           />
           <Stat
             label="Покупателей"
             value={customers}
             hint="Сумма по городам: тот, кто купил в двух городах, посчитан дважды"
           />
-          <Stat label="Сумма заказов" value={rubles.format(revenue)} />
+          <Stat label="Сумма покупок" value={rubles.format(revenue)} />
         </div>
 
         <PurchaseMap places={places} />

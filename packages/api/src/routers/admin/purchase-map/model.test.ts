@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { insideRussia, type PurchaseRow, placeOf, placesOf } from "./model";
 
 const row = (fields: Partial<PurchaseRow> = {}): PurchaseRow => ({
+  kind: "product",
   amountTotal: 250_000,
   userId: null,
   contactPhone: "+7 916 123-45-67",
@@ -80,6 +81,7 @@ test("заказы одного города сливаются в точку с
   ]);
   expect(places[0]).toMatchObject({
     orders: 3,
+    workshops: 0,
     customers: 2,
     revenue: 6000,
     byIp: 0,
@@ -126,4 +128,33 @@ test("точка в Германии не попадает на карту Ро�
     }),
   ]);
   expect(places[0]?.inRussia).toBe(false);
+});
+
+test("запись на мастер-класс считается покупкой города по IP и покупателем по аккаунту", () => {
+  const { places } = placesOf([
+    row({ deliveryAddress: spb, userId: "a" }),
+    row({
+      kind: "workshop",
+      contactPhone: "",
+      userId: "a",
+      amountTotal: 150_000,
+      visitor: { ...moscowVisitor, city: "Санкт-Петербург" },
+    }),
+    row({
+      kind: "workshop",
+      contactPhone: "",
+      userId: "b",
+      visitor: moscowVisitor,
+    }),
+  ]);
+  const [petersburg, moscow] = places;
+  expect(petersburg).toMatchObject({
+    city: "Санкт-Петербург",
+    orders: 2,
+    workshops: 1,
+    customers: 1,
+    revenue: 4000,
+    byIp: 1,
+  });
+  expect(moscow).toMatchObject({ city: "Москва", orders: 1, workshops: 1 });
 });
