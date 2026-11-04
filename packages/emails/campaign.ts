@@ -18,7 +18,7 @@ import {
   sql,
 } from "@stariva/db";
 
-import StarivaCampaignEmail from "./emails/stariva-campaign";
+import { campaignTemplate } from "./campaign-templates";
 import { env } from "./env";
 import { errorText } from "./log-row";
 import { isEmailConfigured } from "./providers";
@@ -35,13 +35,7 @@ const SEND_INTERVAL_MS = 200;
 
 type CampaignContent = Pick<
   EmailCampaignRow,
-  | "subject"
-  | "previewText"
-  | "heading"
-  | "body"
-  | "buttonLabel"
-  | "buttonUrl"
-  | "segment"
+  "subject" | "template" | "params" | "segment"
 >;
 
 /**
@@ -68,21 +62,22 @@ export function campaignReason(segment: EmailCampaignSegment): string {
   }
 }
 
-/** Тема, тело и заголовки письма рассылки для одного получателя. */
+/**
+ * Тема, тело и заголовки письма рассылки для одного получателя: готовое
+ * письмо из реестра шаблонов с параметрами рассылки. Кнопка письма ведёт на
+ * сайт, а тот — по адресу из параметров.
+ */
 export function campaignEmail(
   campaign: CampaignContent,
   { siteUrl, token }: { siteUrl: string; token: string },
 ) {
   const links = campaignLinks(siteUrl, token);
-  const hasButton = Boolean(campaign.buttonLabel && campaign.buttonUrl);
+  const template = campaignTemplate(campaign.template);
   return {
     subject: campaign.subject,
-    react: StarivaCampaignEmail({
-      previewText: campaign.previewText,
-      heading: campaign.heading,
-      body: campaign.body,
-      buttonLabel: hasButton ? campaign.buttonLabel : null,
-      buttonUrl: hasButton ? links.click : null,
+    react: template.render({
+      params: template.params.parse(campaign.params),
+      clickUrl: links.click,
       reason: campaignReason(campaign.segment),
       unsubscribeUrl: links.unsubscribe,
       openPixelUrl: links.open,

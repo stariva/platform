@@ -12,6 +12,9 @@ import {
   sql,
 } from "@stariva/db";
 import {
+  CAMPAIGN_TEMPLATE_IDS,
+  campaignParamsError,
+  campaignTemplateList,
   renderCampaignHtml,
   sendCampaignBatch,
   sendCampaignTest,
@@ -35,24 +38,13 @@ const segmentSchema = z.object({
   workshops: z.array(z.string().trim().min(1).max(100)).max(50),
 });
 
-const contentSchema = z
-  .object({
-    name: z.string().trim().min(1).max(120),
-    subject: z.string().trim().min(1).max(200),
-    previewText: z.string().trim().max(200),
-    heading: z.string().trim().min(1).max(200),
-    body: z.string().trim().min(1).max(10_000),
-    buttonLabel: z.string().trim().max(60),
-    buttonUrl: z.union([
-      z.literal(""),
-      z.url({ protocol: /^https?$/ }).max(2000),
-    ]),
-    segment: segmentSchema,
-  })
-  .refine((value) => !value.buttonLabel === !value.buttonUrl, {
-    message: "Укажите и текст кнопки, и ссылку — или оставьте оба поля пустыми",
-    path: ["buttonUrl"],
-  });
+const contentSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  template: z.enum(CAMPAIGN_TEMPLATE_IDS),
+  // Поля шаблона; сами значения проверяет шаблон (campaignParamsError)
+  params: z.record(z.string().max(100), z.string().trim().max(2000)),
+  segment: segmentSchema,
+});
 
 const r = emailCampaignRecipients;
 
@@ -146,21 +138,25 @@ const audience = adminProcedure
     return { members, workshops };
   });
 
-/** Новая рассылка (без id) или правка черновика. Запущенную менять нельзя. */
+/** Готовые письма для выбора в форме: название, тема и поля под заполнение. */
+const templates = adminProcedure.handler(() => campaignTemplateList());
+
+/**
+ * Новая рассылка (без id) или правка черновика. Запущенную менять нельзя.
+ * Тема берётся из шаблона: письма готовые, их текст живёт в коде.
+ */
 const save = adminProcedure
-  .input(
-    z.intersection(
-      contentSchema,
-      z.object({ id: z.string().uuid().optional() }),
-    ),
-  )
+  .input(contentSchema.extend({ id: z.string().uuid().optional() }))
   .handler(async ({ context, input }) => {
     const { id, ...content } = input;
-    const values = {
-      ...content,
-      buttonLabel: content.buttonLabel || null,
-      buttonUrl: content.buttonUrl || null,
-    };
+    const paramsError = campaignParamsError(content.template, content.params);
+    if (paramsError) {
+      throw new ORPCError("BAD_REQUEST", { message: paramsError });
+    }
+    const template = campaignTemplateList().find(
+      (item) => item.id === content.template,
+    );
+    const values = { ...content, subject: template?.subject ?? "" };
     if (!id) {
       const [created] = await context.db
         .insert(emailCampaigns)
@@ -280,6 +276,7 @@ export const adminCampaignsRouter = {
   list,
   get,
   audience,
+  templates,
   save,
   remove,
   preview,

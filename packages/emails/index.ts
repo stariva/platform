@@ -23,6 +23,15 @@ export {
   sendCampaignTest,
 } from "./campaign";
 export {
+  CAMPAIGN_TEMPLATE_IDS,
+  type CampaignTemplateField,
+  type CampaignTemplateId,
+  campaignButtonUrl,
+  campaignParamsError,
+  campaignTemplateList,
+  isCampaignTemplateId,
+} from "./campaign-templates";
+export {
   isOrderEmailStatus,
   ORDER_EMAIL_STATUSES,
   type OrderEmailItem,

@@ -1,7 +1,19 @@
 "use client";
 
 import type { EmailCampaignSegment } from "@stariva/db/schema";
-import { Button, Checkbox, Input, Label, Textarea, toast } from "@stariva/ui";
+import type {
+  CampaignTemplateField,
+  CampaignTemplateId,
+} from "@stariva/emails";
+import {
+  Button,
+  Checkbox,
+  Input,
+  Label,
+  RadioGroup,
+  RadioGroupItem,
+  toast,
+} from "@stariva/ui";
 import { Badge } from "@stariva/ui/reui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -9,27 +21,79 @@ import { useEffect, useState } from "react";
 import { orpc } from "~/orpc/react";
 import { useDraftState } from "./draft-state";
 
-export interface CampaignFormValues {
-  name: string;
+/** Готовое письмо из кода (@stariva/emails), как его отдаёт API. */
+export interface CampaignTemplateOption {
+  id: CampaignTemplateId;
+  label: string;
+  description: string;
   subject: string;
   previewText: string;
-  heading: string;
-  body: string;
-  buttonLabel: string;
-  buttonUrl: string;
+  fields: CampaignTemplateField[];
+}
+
+export interface CampaignFormValues {
+  name: string;
+  template: CampaignTemplateId;
+  params: Record<string, string>;
   segment: EmailCampaignSegment;
 }
 
-export const EMPTY_CAMPAIGN: CampaignFormValues = {
-  name: "",
-  subject: "",
-  previewText: "",
-  heading: "",
-  body: "Здравствуйте, это Ольга.\n\n",
-  buttonLabel: "",
-  buttonUrl: "",
-  segment: { type: "workshop_buyers", workshops: [] },
-};
+/** Новая рассылка: первое письмо из списка, его название и все покупатели. */
+export function emptyCampaign(
+  templates: CampaignTemplateOption[],
+): CampaignFormValues {
+  const [first] = templates;
+  return {
+    name: first?.label ?? "",
+    template: first?.id ?? "telegram-invite",
+    params: {},
+    segment: { type: "workshop_buyers", workshops: [] },
+  };
+}
+
+/** Выбор готового письма: название, о чём оно и тема во «Входящих». */
+function TemplatePicker({
+  templates,
+  value,
+  onChange,
+}: {
+  templates: CampaignTemplateOption[];
+  value: CampaignTemplateId;
+  onChange: (value: CampaignTemplateId) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>Письмо</Label>
+      <RadioGroup
+        value={value}
+        onValueChange={(next) => onChange(next as CampaignTemplateId)}
+      >
+        {templates.map((template) => (
+          <Label
+            key={template.id}
+            className="has-[[data-checked]]:border-primary items-start gap-3 rounded-lg border p-3 font-normal"
+          >
+            <RadioGroupItem value={template.id} className="mt-0.5" />
+            <span className="space-y-1">
+              <span className="block font-medium">{template.label}</span>
+              <span className="text-muted-foreground block text-xs leading-snug">
+                {template.description}
+              </span>
+              <span className="block text-xs leading-snug">
+                <span className="text-muted-foreground">Тема: </span>
+                {template.subject}
+              </span>
+            </span>
+          </Label>
+        ))}
+      </RadioGroup>
+      <p className="text-muted-foreground text-xs">
+        Тексты писем готовые и живут в коде. Новое письмо добавляет разработчик
+        — оно появится в этом списке.
+      </p>
+    </div>
+  );
+}
 
 /** Кому уйдёт письмо: курсы на выбор и список адресов. */
 function SegmentPicker({
@@ -127,12 +191,20 @@ function plural(count: number) {
 export function CampaignForm({
   id,
   initial,
+  templates,
 }: {
   id?: string;
   initial: CampaignFormValues;
+  templates: CampaignTemplateOption[];
 }) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
+  const template = templates.find((item) => item.id === values.template);
+  const setParam = (name: string, value: string) =>
+    setValues((current) => ({
+      ...current,
+      params: { ...current.params, [name]: value },
+    }));
   const set = <K extends keyof CampaignFormValues>(
     field: K,
     value: CampaignFormValues[K],
@@ -157,7 +229,14 @@ export function CampaignForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        save.mutate({ id, ...values });
+        // Только поля выбранного письма: от другого шаблона могли остаться
+        const params = Object.fromEntries(
+          (template?.fields ?? []).map((field) => [
+            field.name,
+            values.params[field.name] ?? "",
+          ]),
+        );
+        save.mutate({ id, ...values, params });
       }}
     >
       <div className="space-y-1.5">
@@ -172,78 +251,29 @@ export function CampaignForm({
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="campaign-subject">Тема письма</Label>
-        <Input
-          id="campaign-subject"
-          required
-          maxLength={200}
-          value={values.subject}
-          onChange={(event) => set("subject", event.target.value)}
-        />
-      </div>
+      <TemplatePicker
+        templates={templates}
+        value={values.template}
+        onChange={(next) => set("template", next)}
+      />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="campaign-preview">Строка рядом с темой</Label>
-        <Input
-          id="campaign-preview"
-          maxLength={200}
-          placeholder="Пусто — начало текста письма"
-          value={values.previewText}
-          onChange={(event) => set("previewText", event.target.value)}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="campaign-heading">Заголовок в письме</Label>
-        <Input
-          id="campaign-heading"
-          required
-          maxLength={200}
-          value={values.heading}
-          onChange={(event) => set("heading", event.target.value)}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="campaign-body">Текст</Label>
-        <Textarea
-          id="campaign-body"
-          required
-          rows={10}
-          maxLength={10_000}
-          value={values.body}
-          onChange={(event) => set("body", event.target.value)}
-        />
-        <p className="text-muted-foreground text-xs">
-          Пустая строка — новый абзац. Ссылку лучше дать кнопкой ниже: по ней
-          видно, кто перешёл.
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-[200px_minmax(0,1fr)]">
-        <div className="space-y-1.5">
-          <Label htmlFor="campaign-button-label">Текст кнопки</Label>
+      {template?.fields.map((field) => (
+        <div key={field.name} className="space-y-1.5">
+          <Label htmlFor={`campaign-param-${field.name}`}>{field.label}</Label>
           <Input
-            id="campaign-button-label"
-            maxLength={60}
-            placeholder="Перейти в канал"
-            value={values.buttonLabel}
-            onChange={(event) => set("buttonLabel", event.target.value)}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="campaign-button-url">Ссылка кнопки</Label>
-          <Input
-            id="campaign-button-url"
-            type="url"
+            id={`campaign-param-${field.name}`}
+            type={field.type}
+            required
             maxLength={2000}
-            placeholder="https://t.me/…"
-            value={values.buttonUrl}
-            onChange={(event) => set("buttonUrl", event.target.value)}
+            placeholder={field.placeholder}
+            value={values.params[field.name] ?? ""}
+            onChange={(event) => setParam(field.name, event.target.value)}
           />
+          {field.hint && (
+            <p className="text-muted-foreground text-xs">{field.hint}</p>
+          )}
         </div>
-      </div>
+      ))}
 
       <SegmentPicker
         segment={values.segment}
