@@ -13,6 +13,7 @@ import {
   toast,
 } from "@stariva/ui";
 import { Badge } from "@stariva/ui/reui";
+import { parseCampaignEmails } from "@stariva/validators";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
@@ -74,16 +75,19 @@ function TemplatePicker({
 function TemplatePreview({
   template,
   params,
+  buyers,
   subject,
 }: {
   template: CampaignTemplateId;
   params: Record<string, string>;
+  /** Без покупателей в письме строчка для адресов вручную. */
+  buyers: boolean;
   subject: string;
 }) {
   const [open, setOpen] = useState(false);
   const query = useQuery({
     ...orpc.admin.campaigns.previewTemplate.queryOptions({
-      input: { template, params },
+      input: { template, params, buyers },
     }),
     enabled: open,
   });
@@ -103,18 +107,6 @@ function TemplatePreview({
   );
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Адреса из поля «вручную»: через запятую, пробел или с новой строки. */
-function parseEmails(text: string) {
-  const words = text.split(/[\s,;]+/).filter(Boolean);
-  const valid = words.filter((word) => EMAIL.test(word));
-  return {
-    emails: [...new Set(valid.map((email) => email.toLowerCase()))],
-    invalid: words.filter((word) => !EMAIL.test(word)),
-  };
-}
-
 /** Кому уйдёт письмо: покупатели курсов, адреса вручную и итоговый список. */
 function SegmentPicker({
   segment,
@@ -129,7 +121,7 @@ function SegmentPicker({
   const members = audience.data?.members ?? [];
   const active = members.filter((member) => !member.suppressed);
   const [emailsText, setEmailsText] = useState(segment.emails.join("\n"));
-  const { invalid } = parseEmails(emailsText);
+  const { invalid } = parseCampaignEmails(emailsText);
   const toggle = (slug: string, checked: boolean) =>
     onChange({
       ...segment,
@@ -187,7 +179,7 @@ function SegmentPicker({
             setEmailsText(event.target.value);
             onChange({
               ...segment,
-              emails: parseEmails(event.target.value).emails,
+              emails: parseCampaignEmails(event.target.value).emails,
             });
           }}
         />
@@ -345,6 +337,7 @@ export function CampaignForm({
         <TemplatePreview
           template={template.id}
           params={values.params}
+          buyers={values.segment.buyers}
           subject={template.subject}
         />
       )}

@@ -1,5 +1,9 @@
 import { render } from "@react-email/components";
-import type { EmailCampaignRow, EmailRecipientSource } from "@stariva/db";
+import type {
+  EmailCampaignRow,
+  EmailCampaignSegment,
+  EmailRecipientSource,
+} from "@stariva/db";
 
 import { campaignTemplate } from "./campaign-templates";
 
@@ -64,6 +68,17 @@ export function campaignEmail(
 }
 
 /**
+ * Каким получателем показать предпросмотр и пробное письмо: если покупатели
+ * в рассылке выключены, письма уходят только ручным адресам — с их строчкой
+ * «почему пришло письмо». В смешанной рассылке показываем вариант покупателя.
+ */
+export function previewSource(
+  segment: Pick<EmailCampaignSegment, "buyers">,
+): EmailRecipientSource {
+  return segment.buyers ? "buyer" : "manual";
+}
+
+/**
  * HTML письма для предпросмотра в админке, со ссылками как в пробном
  * письме. Черновик без id и с незаполненными полями тоже можно посмотреть:
  * вместо его полей подставляется пример из шаблона.
@@ -71,6 +86,7 @@ export function campaignEmail(
 export function renderCampaignHtml(
   campaign: CampaignContent & { id?: string },
   siteUrl: string,
+  source: EmailRecipientSource = "buyer",
 ): Promise<string> {
   const template = campaignTemplate(campaign.template);
   const params = template.params.safeParse(campaign.params).success
@@ -79,7 +95,7 @@ export function renderCampaignHtml(
   return render(
     campaignEmail(
       { ...campaign, params },
-      { siteUrl, token: `test-${campaign.id ?? "preview"}` },
+      { siteUrl, token: `test-${campaign.id ?? "preview"}`, source },
     ).react,
   );
 }

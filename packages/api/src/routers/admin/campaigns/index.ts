@@ -15,10 +15,12 @@ import {
   CAMPAIGN_TEMPLATE_IDS,
   campaignParamsError,
   campaignTemplateList,
+  previewSource,
   renderCampaignHtml,
   sendCampaignBatch,
   sendCampaignTest,
 } from "@stariva/emails";
+import { campaignEmailSchema } from "@stariva/validators";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -38,7 +40,7 @@ const segmentSchema = z.object({
   workshops: z.array(z.string().trim().min(1).max(100)).max(50),
   // Адреса вручную: в нижнем регистре и без повторов, как в email_suppressions
   emails: z
-    .array(z.email().max(254))
+    .array(campaignEmailSchema)
     .max(1000)
     .transform((emails) => [
       ...new Set(emails.map((email) => email.trim().toLowerCase())),
@@ -213,19 +215,34 @@ const preview = adminProcedure
   .input(idInput)
   .handler(async ({ context, input }) => {
     const campaign = await findCampaign(context.db, input.id);
-    return { html: await renderCampaignHtml(campaign, siteUrl()) };
+    return {
+      html: await renderCampaignHtml(
+        campaign,
+        siteUrl(),
+        previewSource(campaign.segment),
+      ),
+    };
   });
 
 /**
  * HTML готового письма до сохранения: шаблон с полями из формы. Пока поля не
- * заполнены, подставляется пример из шаблона.
+ * заполнены, подставляется пример из шаблона. По флагу «покупатели» видно,
+ * какую строчку «почему пришло письмо» получат адресаты.
  */
 const previewTemplate = adminProcedure
   .input(
-    z.object({ template: z.enum(CAMPAIGN_TEMPLATE_IDS), params: paramsSchema }),
+    z.object({
+      template: z.enum(CAMPAIGN_TEMPLATE_IDS),
+      params: paramsSchema,
+      buyers: z.boolean().default(true),
+    }),
   )
   .handler(async ({ input }) => ({
-    html: await renderCampaignHtml(input, siteUrl()),
+    html: await renderCampaignHtml(
+      input,
+      siteUrl(),
+      previewSource({ buyers: input.buyers }),
+    ),
   }));
 
 /** Пробное письмо себе (на почту админа) или на указанный адрес. */

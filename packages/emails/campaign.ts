@@ -4,6 +4,7 @@ import {
   type Database,
   db as defaultDb,
   type EmailCampaignRow,
+  type EmailCampaignSegment,
   emailCampaignRecipients,
   emailCampaigns,
   emailSuppressions,
@@ -16,7 +17,11 @@ import {
   sql,
 } from "@stariva/db";
 
-import { type CampaignContent, campaignEmail } from "./campaign-email";
+import {
+  type CampaignContent,
+  campaignEmail,
+  previewSource,
+} from "./campaign-email";
 import { env } from "./env";
 import { errorText } from "./log-row";
 import { isEmailConfigured } from "./providers";
@@ -36,7 +41,7 @@ const SEND_INTERVAL_MS = 200;
  * куда в настоящем письме, но переход и отписка ничего не засчитают.
  */
 export async function sendCampaignTest(
-  campaign: CampaignContent & { id: string },
+  campaign: CampaignContent & { id: string; segment: EmailCampaignSegment },
   { to, siteUrl }: { to: string; siteUrl: string },
 ): Promise<void> {
   if (!env.EMAIL_SANDBOX_ENABLED && !isEmailConfigured()) {
@@ -45,6 +50,7 @@ export async function sendCampaignTest(
   const email = campaignEmail(campaign, {
     siteUrl,
     token: `test-${campaign.id}`,
+    source: previewSource(campaign.segment),
   });
   await sendEmail({ ...email, subject: `[Тест] ${email.subject}`, to: [to] });
 }

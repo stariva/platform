@@ -22,6 +22,7 @@ export {
 export {
   campaignEmail,
   campaignLinks,
+  previewSource,
   renderCampaignHtml,
 } from "./campaign-email";
 export {

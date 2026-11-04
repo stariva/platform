@@ -1,7 +1,11 @@
 import { expect, test } from "bun:test";
 import { render } from "@react-email/components";
 
-import { campaignEmail, renderCampaignHtml } from "./campaign-email";
+import {
+  campaignEmail,
+  previewSource,
+  renderCampaignHtml,
+} from "./campaign-email";
 import { TELEGRAM_INVITE_SUBJECT } from "./emails/stariva-telegram-invite";
 
 const campaign = {
@@ -39,6 +43,17 @@ test("the reason line depends on where the recipient came from", async () => {
   expect(buyer).toContain("вы купили мастер-класс");
   expect(manual).toContain("ваш адрес есть в рассылке Stariva");
   expect(manual).not.toContain("вы купили мастер-класс");
+});
+
+test("previews and test sends follow the segment: manual-only shows its reason", async () => {
+  expect(previewSource({ buyers: true })).toBe("buyer");
+  expect(previewSource({ buyers: false })).toBe("manual");
+  const html = await renderCampaignHtml(
+    campaign,
+    "https://stariva.example.test",
+    previewSource({ buyers: false }),
+  );
+  expect(html).toContain("ваш адрес есть в рассылке Stariva");
 });
 
 test("a draft without its fields previews with the template example", async () => {
