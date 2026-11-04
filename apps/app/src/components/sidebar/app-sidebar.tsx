@@ -24,6 +24,7 @@ import {
   IconLayoutKanban,
   IconMail,
   IconMailForward,
+  IconMap2,
   IconMessageChatbot,
   IconMessageForward,
   IconMessageStar,
@@ -89,6 +90,7 @@ const sales: NavItem[] = [
     today: "orders",
   },
   { title: "Корзины", url: "/carts", icon: IconShoppingCart, today: "carts" },
+  { title: "Карта покупок", url: "/purchase-map", icon: IconMap2 },
   { title: "Заявки", url: "/requests", icon: IconInbox, today: "requests" },
   { title: "Клиенты", url: "/crm/clients", icon: IconAddressBook },
 ];
