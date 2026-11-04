@@ -33,7 +33,11 @@ export const emailEvents = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("email_events_message_idx").on(t.messageId, t.occurredAt)],
+  (t) => [
+    index("email_events_message_idx").on(t.messageId, t.occurredAt),
+    // Прогон каждую минуту пересчитывает письма с событиями за последний час
+    index("email_events_created_idx").on(t.createdAt),
+  ],
 );
 
 /**
