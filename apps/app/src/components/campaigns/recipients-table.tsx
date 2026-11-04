@@ -1,4 +1,7 @@
-import type { EmailRecipientStatus } from "@stariva/db/schema";
+import type {
+  EmailRecipientSource,
+  EmailRecipientStatus,
+} from "@stariva/db/schema";
 import {
   Table,
   TableBody,
@@ -14,6 +17,7 @@ import { RECIPIENT_STATUS_LABELS } from "./campaign-meta";
 export interface RecipientRow {
   id: string;
   email: string;
+  source: EmailRecipientSource;
   status: EmailRecipientStatus;
   error: string | null;
   attempts: number;
@@ -86,6 +90,11 @@ export function RecipientsTable({ rows }: { rows: RecipientRow[] }) {
             <TableRow key={row.id}>
               <TableCell className="max-w-[260px] text-sm break-words whitespace-normal">
                 {row.email}
+                {row.source === "manual" && (
+                  <div className="mt-1">
+                    <Badge variant="outline">вручную</Badge>
+                  </div>
+                )}
               </TableCell>
               <TableCell className="max-w-[320px] text-sm whitespace-normal">
                 <Badge variant={STATUS_VARIANTS[row.status]}>

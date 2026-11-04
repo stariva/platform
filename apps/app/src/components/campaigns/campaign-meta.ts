@@ -38,7 +38,7 @@ export function emptyCampaign(
     name: first?.label ?? "",
     template: first?.id ?? "telegram-invite",
     params: {},
-    segment: { type: "workshop_buyers", workshops: [] },
+    segment: { buyers: true, workshops: [], emails: [] },
   };
 }
 

@@ -34,15 +34,24 @@ const START_BUDGET_MS = 40_000;
 const idInput = z.object({ id: z.string().uuid() });
 
 const segmentSchema = z.object({
-  type: z.literal("workshop_buyers"),
+  buyers: z.boolean(),
   workshops: z.array(z.string().trim().min(1).max(100)).max(50),
+  // Адреса вручную: в нижнем регистре и без повторов, как в email_suppressions
+  emails: z
+    .array(z.email().max(254))
+    .max(1000)
+    .transform((emails) => [
+      ...new Set(emails.map((email) => email.trim().toLowerCase())),
+    ]),
 });
+
+const paramsSchema = z.record(z.string().max(100), z.string().trim().max(2000));
 
 const contentSchema = z.object({
   name: z.string().trim().min(1).max(120),
   template: z.enum(CAMPAIGN_TEMPLATE_IDS),
   // Поля шаблона; сами значения проверяет шаблон (campaignParamsError)
-  params: z.record(z.string().max(100), z.string().trim().max(2000)),
+  params: paramsSchema,
   segment: segmentSchema,
 });
 
@@ -107,6 +116,7 @@ const get = adminProcedure
         .select({
           id: r.id,
           email: r.email,
+          source: r.source,
           status: r.status,
           error: r.error,
           attempts: r.attempts,
@@ -206,6 +216,18 @@ const preview = adminProcedure
     return { html: await renderCampaignHtml(campaign, siteUrl()) };
   });
 
+/**
+ * HTML готового письма до сохранения: шаблон с полями из формы. Пока поля не
+ * заполнены, подставляется пример из шаблона.
+ */
+const previewTemplate = adminProcedure
+  .input(
+    z.object({ template: z.enum(CAMPAIGN_TEMPLATE_IDS), params: paramsSchema }),
+  )
+  .handler(async ({ input }) => ({
+    html: await renderCampaignHtml(input, siteUrl()),
+  }));
+
 /** Пробное письмо себе (на почту админа) или на указанный адрес. */
 const sendTest = adminProcedure
   .input(idInput.extend({ to: z.email().optional() }))
@@ -270,6 +292,7 @@ const start = adminProcedure
             campaignId: campaign.id,
             email: member.email,
             userId: member.userId,
+            source: member.source,
             token: randomBytes(18).toString("base64url"),
           })),
         )
@@ -295,6 +318,7 @@ export const adminCampaignsRouter = {
   save,
   remove,
   preview,
+  previewTemplate,
   sendTest,
   start,
 };

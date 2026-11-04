@@ -162,7 +162,11 @@ export async function sendCampaignBatch({
     let sendError: unknown = null;
     try {
       await sendEmail({
-        ...campaignEmail(campaign, { siteUrl, token: recipient.token }),
+        ...campaignEmail(campaign, {
+          siteUrl,
+          token: recipient.token,
+          source: recipient.source,
+        }),
         to: [recipient.email],
         idempotencyKey: `campaign:${campaign.id}:${recipient.id}`,
       });

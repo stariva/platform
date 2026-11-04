@@ -30,13 +30,21 @@ export const EMAIL_SUPPRESSION_REASONS = [
 export type EmailSuppressionReason = (typeof EMAIL_SUPPRESSION_REASONS)[number];
 
 /**
- * Кому уходит рассылка. Пока один вид — покупатели мастер-классов: по
- * оплаченным заказам, пустой список курсов — все курсы.
+ * Кому уходит рассылка: покупатели мастер-классов (по оплаченным заказам) и
+ * адреса, добавленные вручную. Адрес из обоих списков получает одно письмо.
  */
 export type EmailCampaignSegment = {
-  type: "workshop_buyers";
+  /** Слать покупателям; false — только адресам из emails. */
+  buyers: boolean;
+  /** Курсы покупателей; пустой список — все курсы. */
   workshops: string[];
+  /** Адреса, добавленные вручную, в нижнем регистре. */
+  emails: string[];
 };
+
+/** Откуда получатель: купил мастер-класс или добавлен вручную. */
+export const EMAIL_RECIPIENT_SOURCES = ["buyer", "manual"] as const;
+export type EmailRecipientSource = (typeof EMAIL_RECIPIENT_SOURCES)[number];
 
 /**
  * Рассылка из админки: готовое письмо из кода (шаблон React Email и его
@@ -93,6 +101,10 @@ export const emailCampaignRecipients = pgTable(
       onDelete: "set null",
     }),
     token: text("token").notNull().unique(),
+    // От источника зависит строчка «почему пришло письмо»
+    source: text("source", { enum: EMAIL_RECIPIENT_SOURCES })
+      .notNull()
+      .default("buyer"),
     status: text("status", { enum: EMAIL_RECIPIENT_STATUSES })
       .notNull()
       .default("queued"),

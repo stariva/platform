@@ -1,12 +1,9 @@
 import { render } from "@react-email/components";
-import type { EmailCampaignRow, EmailCampaignSegment } from "@stariva/db";
+import type { EmailCampaignRow, EmailRecipientSource } from "@stariva/db";
 
 import { campaignTemplate } from "./campaign-templates";
 
-export type CampaignContent = Pick<
-  EmailCampaignRow,
-  "template" | "params" | "segment"
->;
+export type CampaignContent = Pick<EmailCampaignRow, "template" | "params">;
 
 /**
  * Ссылки письма для одного получателя. Все ведут на сайт: он засчитывает
@@ -25,10 +22,12 @@ export function campaignLinks(siteUrl: string, token: string) {
 }
 
 /** Почему адресату пришло письмо — строчка внизу письма. */
-export function campaignReason(segment: EmailCampaignSegment): string {
-  switch (segment.type) {
-    case "workshop_buyers":
+export function campaignReason(source: EmailRecipientSource): string {
+  switch (source) {
+    case "buyer":
       return "Письмо пришло, потому что вы купили мастер-класс на stariva.ru.";
+    case "manual":
+      return "Письмо пришло, потому что ваш адрес есть в рассылке Stariva.";
   }
 }
 
@@ -40,7 +39,11 @@ export function campaignReason(segment: EmailCampaignSegment): string {
  */
 export function campaignEmail(
   campaign: CampaignContent,
-  { siteUrl, token }: { siteUrl: string; token: string },
+  {
+    siteUrl,
+    token,
+    source = "buyer",
+  }: { siteUrl: string; token: string; source?: EmailRecipientSource },
 ) {
   const links = campaignLinks(siteUrl, token);
   const template = campaignTemplate(campaign.template);
@@ -49,7 +52,7 @@ export function campaignEmail(
     react: template.render({
       params: template.params.parse(campaign.params),
       clickUrl: links.click,
-      reason: campaignReason(campaign.segment),
+      reason: campaignReason(source),
       unsubscribeUrl: links.unsubscribe,
       openPixelUrl: links.open,
     }),
@@ -60,12 +63,23 @@ export function campaignEmail(
   };
 }
 
-/** HTML письма для предпросмотра в админке: ссылки как в пробном письме. */
+/**
+ * HTML письма для предпросмотра в админке, со ссылками как в пробном
+ * письме. Черновик без id и с незаполненными полями тоже можно посмотреть:
+ * вместо его полей подставляется пример из шаблона.
+ */
 export function renderCampaignHtml(
-  campaign: CampaignContent & { id: string },
+  campaign: CampaignContent & { id?: string },
   siteUrl: string,
 ): Promise<string> {
+  const template = campaignTemplate(campaign.template);
+  const params = template.params.safeParse(campaign.params).success
+    ? campaign.params
+    : template.example;
   return render(
-    campaignEmail(campaign, { siteUrl, token: `test-${campaign.id}` }).react,
+    campaignEmail(
+      { ...campaign, params },
+      { siteUrl, token: `test-${campaign.id ?? "preview"}` },
+    ).react,
   );
 }
