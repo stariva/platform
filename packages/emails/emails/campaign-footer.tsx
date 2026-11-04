@@ -5,6 +5,11 @@ import { colors } from "./stariva-layout";
 export interface CampaignEmailLinks {
   /** Почему пришло письмо: «вы купили мастер-класс на stariva.ru». */
   reason: string;
+  /**
+   * Купил мастер-класс; false — адрес добавлен вручную. Шаблон не должен
+   * благодарить за покупку того, кто ничего не покупал.
+   */
+  buyer: boolean;
   unsubscribeUrl: string;
   /** Картинка-пиксель: по ней видно, что письмо открыли. */
   openPixelUrl?: string;
@@ -14,7 +19,7 @@ export interface CampaignEmailLinks {
 export function CampaignFooter({
   unsubscribeUrl,
   openPixelUrl,
-}: Omit<CampaignEmailLinks, "reason">) {
+}: Pick<CampaignEmailLinks, "unsubscribeUrl" | "openPixelUrl">) {
   return (
     <>
       <Text
@@ -25,10 +30,11 @@ export function CampaignFooter({
           color: colors.textGrey,
         }}
       >
-        Не хотите получать такие письма?{" "}
+        Если не хотите получать такие письма, можно{" "}
         <Link href={unsubscribeUrl} style={{ color: colors.darkGrey }}>
-          Отписаться
+          отписаться
         </Link>
+        .
       </Text>
       {openPixelUrl && (
         <Img

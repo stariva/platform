@@ -54,6 +54,7 @@ export function StarivaLayout({
   buttonLabel,
   buttonUrl,
   footnote,
+  linkFallback = true,
   footer,
   children,
 }: {
@@ -67,6 +68,11 @@ export function StarivaLayout({
   buttonLabel?: string;
   buttonUrl?: string;
   footnote: string;
+  /**
+   * «Если кнопка не работает, скопируйте ссылку» под письмом. Выключают,
+   * когда ссылка кнопки служебная (переход через сайт у рассылок).
+   */
+  linkFallback?: boolean;
   /** Под ссылкой на кнопку — например, отписка от рассылки. */
   footer?: ReactNode;
   children?: ReactNode;
@@ -195,7 +201,7 @@ export function StarivaLayout({
             >
               {footnote}
             </Text>
-            {buttonUrl ? (
+            {buttonUrl && linkFallback ? (
               <Text
                 style={{
                   margin: "12px 0 0",

@@ -29,9 +29,9 @@ export function campaignLinks(siteUrl: string, token: string) {
 export function campaignReason(source: EmailRecipientSource): string {
   switch (source) {
     case "buyer":
-      return "Письмо пришло, потому что вы купили мастер-класс на stariva.ru.";
+      return "Вы получили это письмо, потому что купили мастер-класс на stariva.ru.";
     case "manual":
-      return "Письмо пришло, потому что ваш адрес есть в рассылке Stariva.";
+      return "Вы получили это письмо, потому что ваш адрес есть в списке рассылки Stariva.";
   }
 }
 
@@ -57,6 +57,7 @@ export function campaignEmail(
       params: template.params.parse(campaign.params),
       clickUrl: links.click,
       reason: campaignReason(source),
+      buyer: source === "buyer",
       unsubscribeUrl: links.unsubscribe,
       openPixelUrl: links.open,
     }),

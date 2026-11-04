@@ -11,7 +11,9 @@ import {
 
 const links = {
   clickUrl: "https://stariva.example.test/api/m/c/t1",
-  reason: "Письмо пришло, потому что вы купили мастер-класс на stariva.ru.",
+  reason:
+    "Вы получили это письмо, потому что купили мастер-класс на stariva.ru.",
+  buyer: true,
   unsubscribeUrl: "https://stariva.example.test/unsubscribe/t1",
   openPixelUrl: "https://stariva.example.test/api/m/o/t1",
 };
@@ -41,11 +43,15 @@ test("the Telegram invite speaks as Olga and does not sell", async () => {
       params: { channelUrl: "https://t.me/example" },
     }),
   );
-  expect(html).toContain("это Ольга");
+  expect(html).toContain("Это Ольга");
   expect(html).toContain("Перейти в канал");
-  // Сервисное письмо участницам: без «мастерской» и без продажи
+  // Ольга работает одна: канал «свой», не «наш»; без «мастерской» и продажи
   // («купили мастер-класс» в строке «почему пришло письмо» — не продажа)
-  expect(html).not.toMatch(/мастерск|купите|оплатите|скидк|цена|цены/i);
+  expect(html).not.toMatch(
+    /наш(?:\s|[аеиу])|мастерск|купите|оплатите|скидк|цена|цены/i,
+  );
+  // Служебную ссылку через сайт под кнопкой не показываем
+  expect(html).not.toContain("Если кнопка не работает");
 });
 
 test("validates params against the template fields", () => {
