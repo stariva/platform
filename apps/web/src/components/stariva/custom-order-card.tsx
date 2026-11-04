@@ -78,15 +78,15 @@ export function CustomOrderCard() {
       <p className="mt-5 text-xs leading-relaxed text-taupe">
         В сообщении пригодится: {tip.mention}. Пришлите фото места или пример,
         который нравится. Не знаете размеры или бюджет — так и напишите,
-        поможем.
+        помогу.
       </p>
       <ContactOptions
         source="custom_order"
         message={`Здравствуйте, Ольга! Хочу обсудить ${tip.subject} на заказ.`}
       />
       <p className="mt-4 text-xs leading-relaxed text-taupe">
-        Отвечаем в рабочее время: {CONTACTS.hours}. Стоимость, срок и доставку
-        согласуем до оплаты.
+        Отвечаю в рабочее время: {CONTACTS.hours}. Стоимость, срок и доставку
+        обсудим до оплаты.
       </p>
     </div>
   );
