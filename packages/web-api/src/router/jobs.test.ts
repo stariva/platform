@@ -72,10 +72,22 @@ const { recentRange } = await import("../services/yandex/common");
 let sweep: ReminderSweepResult = { checked: 0, delivered: 0, failed: 0 };
 let sweeps = 0;
 let npdSweeps = 0;
+let emailSyncs = 0;
 const services = {
   runNpdIssuingSweep: async () => {
     npdSweeps++;
     return { checked: 2 };
+  },
+  syncEmailEvents: async () => {
+    emailSyncs++;
+    return {
+      configured: true,
+      read: 3,
+      stored: 2,
+      rejected: 0,
+      suppressed: 1,
+      updated: 2,
+    };
   },
   runWorkshopReminderSweep: async () => {
     sweeps++;
@@ -177,6 +189,22 @@ test("NPD sweep requires the jobs secret and calls only its own service", async 
   expect(npdSweeps).toBe(1);
   expect(sweeps).toBe(before);
   expect(lastStatus()).toBe(200);
+});
+
+test("email events sync requires the jobs secret and returns its counts", async () => {
+  emailSyncs = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.emails.syncEvents());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(emailSyncs).toBe(0);
+  expect(await client(`Bearer ${secret}`).jobs.emails.syncEvents()).toEqual({
+    configured: true,
+    read: 3,
+    stored: 2,
+    rejected: 0,
+    suppressed: 1,
+    updated: 2,
+  });
+  expect(emailSyncs).toBe(1);
 });
 
 test("storage sweep requires the jobs secret and hides deleted keys", async () => {

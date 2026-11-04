@@ -48,6 +48,7 @@ export function emailLogRow(entry: EmailLogEntry) {
     attachments: entry.attachments,
     idempotencyKey: entry.idempotencyKey ?? null,
     html: entry.html ?? null,
+    messageId: delivered?.messageId ?? null,
     durationMs: entry.durationMs,
     ...emailContext(entry.idempotencyKey),
   };

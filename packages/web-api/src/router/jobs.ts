@@ -159,6 +159,11 @@ const directReport = jobs.analytics.directReport.handler(
 
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
+  emails: {
+    syncEvents: jobs.emails.syncEvents.handler(({ context }) =>
+      context.services.syncEmailEvents(),
+    ),
+  },
   reminders: { sweep },
   storage: { sweep: storageSweep },
   analytics: { metrikaGoals, metrikaLogs, directReport },

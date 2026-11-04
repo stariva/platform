@@ -213,8 +213,29 @@ export const analyticsContract = {
     ),
 };
 
+const emailEventsSyncResult = z.object({
+  configured: z.boolean(),
+  read: z.number().int().nonnegative(),
+  stored: z.number().int().nonnegative(),
+  rejected: z.number().int().nonnegative(),
+  suppressed: z.number().int().nonnegative(),
+  updated: z.number().int().nonnegative(),
+});
+
+export type EmailEventsSyncResult = z.infer<typeof emailEventsSyncResult>;
+
+export const emailsContract = {
+  /**
+   * Дочитывает поток событий Postbox (доставлено, не доставлено, жалоба) и
+   * обновляет журнал писем. Без потока в окружении сайта ничего не делает и
+   * отвечает configured: false — крон раз в минуту не должен сыпать ошибками.
+   */
+  syncEvents: jobProcedure.output(emailEventsSyncResult),
+};
+
 export const jobsContract = {
   videos: videosContract,
+  emails: emailsContract,
   reminders: remindersContract,
   storage: storageContract,
   analytics: analyticsContract,

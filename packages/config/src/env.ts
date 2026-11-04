@@ -28,6 +28,14 @@ export const env = createEnv({
     POSTBOX_ACCESS_KEY_ID: z.string().optional(),
     POSTBOX_SECRET_ACCESS_KEY: z.string().optional(),
     POSTBOX_ENDPOINT: z.url().default("https://postbox.cloud.yandex.net"),
+    // Конфигурация Postbox, с которой уходят письма: в ней подписка на
+    // события доставки в поток Data Streams
+    POSTBOX_CONFIGURATION_SET: z.string().optional(),
+    // Поток Data Streams с событиями Postbox, полным путём:
+    // /ru-central1/<каталог>/<база YDB>/<поток>. Читается тем же ключом
+    // Postbox, сервисному аккаунту нужна ещё роль yds.viewer
+    POSTBOX_EVENTS_STREAM: z.string().startsWith("/").optional(),
+    YDS_ENDPOINT: z.url().default("https://yds.serverless.yandexcloud.net"),
     EMAIL_SANDBOX_ENABLED: z.coerce.boolean().optional().default(false),
     EMAIL_SANDBOX_HOST: z.string().default("localhost"),
     EMAIL_FROM: z.string().default("Stariva <onboarding@resend.dev>"),
@@ -72,6 +80,10 @@ export const env = createEnv({
     POSTBOX_ACCESS_KEY_ID: process.env.POSTBOX_ACCESS_KEY_ID,
     POSTBOX_SECRET_ACCESS_KEY: process.env.POSTBOX_SECRET_ACCESS_KEY,
     POSTBOX_ENDPOINT: process.env.POSTBOX_ENDPOINT || undefined,
+    POSTBOX_CONFIGURATION_SET:
+      process.env.POSTBOX_CONFIGURATION_SET || undefined,
+    POSTBOX_EVENTS_STREAM: process.env.POSTBOX_EVENTS_STREAM || undefined,
+    YDS_ENDPOINT: process.env.YDS_ENDPOINT || undefined,
     EMAIL_SANDBOX_ENABLED: process.env.EMAIL_SANDBOX_ENABLED === "true",
     EMAIL_SANDBOX_HOST: process.env.EMAIL_SANDBOX_HOST,
     EMAIL_FROM: process.env.EMAIL_FROM,

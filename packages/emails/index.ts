@@ -55,6 +55,11 @@ export {
 } from "./emails/stariva-workshop-unpaid";
 export { sendOrderStatusEmail } from "./order";
 export type { OrderEmailOrder } from "./order-email";
+export {
+  type EmailEventsSyncResult,
+  isPostboxEventsConfigured,
+  syncPostboxEvents,
+} from "./postbox-sync";
 export { isEmailConfigured } from "./providers";
 export { sendReceiptEmail } from "./receipt";
 export { type EmailAttachment, sendEmail, sendEmailHtml } from "./send";

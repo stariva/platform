@@ -127,6 +127,32 @@ test("sends through the Postbox REST API when it is the default provider", async
   }
 });
 
+test("records the Postbox message id and sends with the configuration set", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  env.POSTBOX_CONFIGURATION_SET = "stariva-events";
+  try {
+    await sendEmail(email);
+    const body = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body));
+    expect(body.ConfigurationSetName).toBe("stariva-events");
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      attempts: [{ provider: "postbox", ok: true, messageId: "synthetic-id" }],
+    });
+
+    // Письмо принято, но ответ не разобрать: не ошибка, просто без id
+    resetMocks();
+    postbox.mockImplementationOnce(async () => new Response("ok"));
+    await sendEmail(email);
+    const entry = recordEmail.mock.calls[0]?.[0] as { attempts: object[] };
+    const [attempt] = entry.attempts;
+    expect(attempt).toMatchObject({ provider: "postbox", ok: true });
+    expect(attempt).not.toHaveProperty("messageId");
+  } finally {
+    env.POSTBOX_CONFIGURATION_SET = undefined;
+    restore();
+  }
+});
+
 test("passes extra headers to Postbox and Resend", async () => {
   resetMocks();
   env.EMAIL_PROVIDER = "postbox";

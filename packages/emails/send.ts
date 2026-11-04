@@ -119,10 +119,11 @@ async function deliver(email: OutgoingEmail) {
   for (const [index, provider] of chain.entries()) {
     const attemptStartedAt = Date.now();
     try {
-      await provider.send(email);
+      const messageId = await provider.send(email);
       attempts.push({
         provider: provider.name,
         ok: true,
+        ...(messageId ? { messageId } : {}),
         ms: Date.now() - attemptStartedAt,
       });
       await record();

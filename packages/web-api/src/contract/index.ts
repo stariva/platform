@@ -52,6 +52,7 @@ export {
   AnalyticsNotConfiguredError,
   AnalyticsPendingError,
   AttemptLostError,
+  type EmailEventsSyncResult,
   JobsNotConfiguredError,
   PlaylistMissingError,
   type ReminderSweepResult,
