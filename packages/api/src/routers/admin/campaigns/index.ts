@@ -138,6 +138,10 @@ const audience = adminProcedure
     return { members, workshops };
   });
 
+/** Тема письма из шаблона: её показывают список рассылок и история. */
+const templateSubject = (template: string) =>
+  campaignTemplateList().find((item) => item.id === template)?.subject ?? "";
+
 /** Готовые письма для выбора в форме: название, тема и поля под заполнение. */
 const templates = adminProcedure.handler(() => campaignTemplateList());
 
@@ -153,10 +157,7 @@ const save = adminProcedure
     if (paramsError) {
       throw new ORPCError("BAD_REQUEST", { message: paramsError });
     }
-    const template = campaignTemplateList().find(
-      (item) => item.id === content.template,
-    );
-    const values = { ...content, subject: template?.subject ?? "" };
+    const values = { ...content, subject: templateSubject(content.template) };
     if (!id) {
       const [created] = await context.db
         .insert(emailCampaigns)
@@ -236,6 +237,15 @@ const start = adminProcedure
       if (campaign.status !== "draft") {
         throw new ORPCError("CONFLICT", { message: "Рассылка уже запущена" });
       }
+      // Без нужных полей (например, ссылки на канал) письмо не соберётся, и
+      // все получатели ушли бы в «не ушло»
+      const paramsError = campaignParamsError(
+        campaign.template,
+        campaign.params,
+      );
+      if (paramsError) {
+        throw new ORPCError("BAD_REQUEST", { message: paramsError });
+      }
       const members = (
         await loadAudience(tx as unknown as Database, campaign.segment)
       ).filter((member) => !member.suppressed);
@@ -246,7 +256,12 @@ const start = adminProcedure
       }
       await tx
         .update(emailCampaigns)
-        .set({ status: "sending", startedAt: new Date() })
+        .set({
+          status: "sending",
+          startedAt: new Date(),
+          // Тема, с которой письма уходят: шаблон в коде мог поменяться
+          subject: templateSubject(campaign.template),
+        })
         .where(eq(emailCampaigns.id, campaign.id));
       await tx
         .insert(r)

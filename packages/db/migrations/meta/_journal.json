@@ -349,14 +349,14 @@
       "idx": 49,
       "version": "7",
       "when": 1793775380455,
-      "tag": "0049_email_campaigns_drop_free_text",
+      "tag": "0049_email_campaign_templates",
       "breakpoints": true
     },
     {
       "idx": 50,
       "version": "7",
       "when": 1793775387452,
-      "tag": "0050_email_campaign_templates",
+      "tag": "0050_email_campaigns_drop_free_text",
       "breakpoints": true
     }
   ]

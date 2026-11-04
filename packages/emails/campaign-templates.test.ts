@@ -43,7 +43,9 @@ test("the Telegram invite speaks as Olga and does not sell", async () => {
   );
   expect(html).toContain("это Ольга");
   expect(html).toContain("Перейти в канал");
-  expect(html).not.toContain("мастерск");
+  // Сервисное письмо участницам: без «мастерской» и без продажи
+  // («купили мастер-класс» в строке «почему пришло письмо» — не продажа)
+  expect(html).not.toMatch(/мастерск|купите|оплатите|скидк|цена|цены/i);
 });
 
 test("validates params against the template fields", () => {

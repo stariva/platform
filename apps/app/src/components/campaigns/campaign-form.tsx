@@ -14,7 +14,7 @@ import {
 import { Badge } from "@stariva/ui/reui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { orpc } from "~/orpc/react";
 import type {
   CampaignFormValues,
@@ -32,10 +32,12 @@ function TemplatePicker({
   value: CampaignTemplateId;
   onChange: (value: CampaignTemplateId) => void;
 }) {
+  const labelId = useId();
   return (
     <div className="space-y-1.5">
-      <Label>Письмо</Label>
+      <Label id={labelId}>Письмо</Label>
       <RadioGroup
+        aria-labelledby={labelId}
         value={value}
         onValueChange={(next) => onChange(next as CampaignTemplateId)}
       >
