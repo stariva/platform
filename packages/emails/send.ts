@@ -8,7 +8,12 @@ import type { ReactNode } from "react";
 import { env } from "./env";
 import { recordEmail } from "./log";
 import { errorText } from "./log-row";
-import { newOpenToken, openPixelUrl, withOpenPixel } from "./open-pixel";
+import {
+  newOpenToken,
+  openPixelUrl,
+  withOpenPixel,
+  withoutOpenPixel,
+} from "./open-pixel";
 import {
   type EmailAttachment,
   type OutgoingEmail,
@@ -78,10 +83,10 @@ export const sendEmailHtml = async (email: EmailHtml) =>
   });
 
 /**
- * Письмо готовым HTML с пикселем открытия. Отрисовываем один раз: этот же
- * HTML уходит любому провайдеру и ложится в журнал. Не отрисовалось — письмо
- * уходит как есть (провайдер скажет, что с ним не так), без тела в журнале и
- * без учёта открытий.
+ * Письмо готовым HTML с пикселем открытия. Отрисовываем один раз: этот HTML
+ * уходит любому провайдеру, а в журнал ложится он же, но с выключенным
+ * пикселем. Не отрисовалось — письмо уходит как есть (провайдер скажет, что
+ * с ним не так), без тела в журнале и без учёта открытий.
  */
 async function prepare(email: OutgoingEmail & { openToken?: string }): Promise<{
   email: OutgoingEmail;
@@ -99,13 +104,16 @@ async function prepare(email: OutgoingEmail & { openToken?: string }): Promise<{
   const { react: _react, ...rest } = outgoing as OutgoingEmail & {
     react?: unknown;
   };
-  if (given) return { email: { ...rest, html }, html, openToken: given };
-  const openToken = newOpenToken();
-  const tracked = withOpenPixel(
-    html,
-    openPixelUrl(openToken, env.STOREFRONT_URL),
-  );
-  return { email: { ...rest, html: tracked }, html: tracked, openToken };
+  // Пиксель рассылки уже в письме; остальным письмам ставим свой
+  const openToken = given ?? newOpenToken(email.idempotencyKey);
+  const tracked = given
+    ? html
+    : withOpenPixel(html, openPixelUrl(openToken, env.STOREFRONT_URL));
+  return {
+    email: { ...rest, html: tracked },
+    html: withoutOpenPixel(tracked, openToken),
+    openToken,
+  };
 }
 
 /**

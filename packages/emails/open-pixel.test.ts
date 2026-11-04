@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
 
-import { newOpenToken, openPixelUrl, withOpenPixel } from "./open-pixel";
+import {
+  newOpenToken,
+  openPixelUrl,
+  withOpenPixel,
+  withoutOpenPixel,
+} from "./open-pixel";
 
 test("puts the pixel right before the closing body tag", () => {
   const html = withOpenPixel(
@@ -29,4 +34,18 @@ test("makes tokens the pixel route accepts", () => {
   const token = newOpenToken();
   expect(token).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
   expect(newOpenToken()).not.toBe(token);
+});
+
+test("derives the token from the idempotency key, so retries match", () => {
+  const token = newOpenToken("workshop:o1:booked:email");
+  expect(token).toMatch(/^[A-Za-z0-9_-]{24}$/);
+  expect(newOpenToken("workshop:o1:booked:email")).toBe(token);
+  expect(newOpenToken("workshop:o2:booked:email")).not.toBe(token);
+});
+
+test("turns the pixel into a stub the route does not count", () => {
+  const html = withOpenPixel("<body></body>", openPixelUrl("abcdefghijklmnop"));
+  expect(withoutOpenPixel(html, "abcdefghijklmnop")).toContain(
+    'src="https://stariva.ru/api/m/o/preview"',
+  );
 });

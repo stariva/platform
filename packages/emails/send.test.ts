@@ -1,5 +1,6 @@
 import { expect, mock, spyOn, test } from "bun:test";
 import { logger } from "@stariva/config";
+import { createElement } from "react";
 
 const send = mock(async (..._args: unknown[]) => ({
   error: null as { message: string } | null,
@@ -169,24 +170,51 @@ test("adds an open pixel and logs its token, unless the email has its own", asyn
       html: string;
     };
     expect(entry.openToken).toMatch(/^[A-Za-z0-9_-]{24}$/);
-    expect(entry.html).toContain(
-      `https://stariva.ru/api/m/o/${entry.openToken}`,
-    );
     const body = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body));
-    expect(body.Content.Simple.Body.Html.Data).toBe(entry.html);
+    const sent = body.Content.Simple.Body.Html.Data as string;
+    expect(sent).toContain(`https://stariva.ru/api/m/o/${entry.openToken}`);
+    // В журнале пиксель выключен: просмотр в админке — не открытие
+    expect(entry.html).not.toContain(entry.openToken);
+    expect(entry.html).toBe(
+      sent.replace(`/api/m/o/${entry.openToken}`, "/api/m/o/preview"),
+    );
 
     // Рассылка ставит пиксель сама: второго не добавляем, токен — её
     resetMocks();
-    await sendEmail({ ...email, openToken: "recipient-token-1234" });
+    await sendEmail({
+      ...email,
+      react: createElement("img", {
+        src: "https://stariva.ru/api/m/o/recipient-token-1234",
+      }),
+      openToken: "recipient-token-1234",
+    });
     const own = recordEmail.mock.calls[0]?.[0] as {
       openToken: string;
       html: string;
     };
+    const ownSent = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body)).Content
+      .Simple.Body.Html.Data as string;
     expect(own.openToken).toBe("recipient-token-1234");
-    expect(own.html).not.toContain("/api/m/o/");
+    expect(ownSent.match(/<img[^>]*\/api\/m\/o\//g)).toHaveLength(1);
+    expect(own.html).toContain("/api/m/o/preview");
+    expect(own.html).not.toContain("recipient-token-1234");
   } finally {
     restore();
   }
+});
+
+test("a retry with the same idempotency key sends the same html", async () => {
+  resetMocks();
+  const keyed = { ...email, idempotencyKey: "workshop:o1:booked:email" };
+  await sendEmail(keyed);
+  await sendEmail(keyed);
+  await sendEmail({ ...keyed, idempotencyKey: "workshop:o2:booked:email" });
+  const [first, retry, other] = send.mock.calls.map(
+    (call) => (call[0] as { html: string }).html,
+  );
+  expect(first).toContain("/api/m/o/");
+  expect(retry).toBe(first);
+  expect(other).not.toBe(first);
 });
 
 test("passes extra headers to Postbox and Resend", async () => {

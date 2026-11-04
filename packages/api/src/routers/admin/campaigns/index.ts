@@ -10,6 +10,7 @@ import {
   emailCampaigns,
   emailLog,
   eq,
+  inArray,
   sql,
 } from "@stariva/db";
 import {
@@ -107,9 +108,10 @@ const list = adminProcedure.handler(async ({ context }) =>
 /**
  * Ушедшие письма рассылки в журнале, по одному на получателя: токен пикселя
  * у них общий с получателем. Из журнала берём то, что о письме сообщил
- * Postbox, — доставку, отказ, жалобу.
+ * Postbox, — доставку, отказ, жалобу. Только письма этой рассылки: журнал
+ * других не читаем.
  */
-function sentCampaignEmails(db: Database) {
+function sentCampaignEmails(db: Database, campaignId: string) {
   return db
     .selectDistinctOn([emailLog.openToken], {
       token: emailLog.openToken,
@@ -120,7 +122,18 @@ function sentCampaignEmails(db: Database) {
       complainedAt: emailLog.complainedAt,
     })
     .from(emailLog)
-    .where(and(eq(emailLog.kind, "campaign"), eq(emailLog.status, "sent")))
+    .where(
+      and(
+        inArray(
+          emailLog.openToken,
+          db
+            .select({ token: r.token })
+            .from(r)
+            .where(eq(r.campaignId, campaignId)),
+        ),
+        eq(emailLog.status, "sent"),
+      ),
+    )
     .orderBy(emailLog.openToken, desc(emailLog.createdAt))
     .as("sent_email");
 }
@@ -130,7 +143,7 @@ const get = adminProcedure
   .input(idInput)
   .handler(async ({ context, input }) => {
     const campaign = await findCampaign(context.db, input.id);
-    const sent = sentCampaignEmails(context.db);
+    const sent = sentCampaignEmails(context.db, input.id);
     const [stats, recipients] = await Promise.all([
       context.db
         .select(statsColumns)

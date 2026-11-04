@@ -1,17 +1,33 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 /** Куда ведёт пиксель, если адрес витрины не задан. */
 const DEFAULT_SITE_URL = "https://stariva.ru";
 
-/** Новый токен пикселя: как у получателей рассылок, 24 символа base64url. */
-export function newOpenToken(): string {
-  return randomBytes(18).toString("base64url");
+/**
+ * Токен пикселя: как у получателей рассылок, 24 символа base64url. У письма
+ * с ключом идемпотентности токен выводится из ключа: повтор того же письма
+ * должен совпадать байт в байт, иначе Resend отклонит его как другой запрос.
+ */
+export function newOpenToken(idempotencyKey?: string): string {
+  if (!idempotencyKey) return randomBytes(18).toString("base64url");
+  return createHash("sha256")
+    .update(`stariva:email-open:${idempotencyKey}`)
+    .digest("base64url")
+    .slice(0, 24);
 }
 
 /** Адрес пикселя: тот же маршрут, что у рассылок, он ищет токен в обеих таблицах. */
 export function openPixelUrl(token: string, siteUrl?: string): string {
   const base = (siteUrl ?? DEFAULT_SITE_URL).replace(/\/+$/, "");
   return `${base}/api/m/o/${token}`;
+}
+
+/**
+ * HTML письма для журнала: пиксель ведёт на заглушку, которую маршрут не
+ * засчитывает. Иначе просмотр письма в админке считался бы открытием.
+ */
+export function withoutOpenPixel(html: string, token: string): string {
+  return html.replaceAll(`/api/m/o/${token}`, "/api/m/o/preview");
 }
 
 /**

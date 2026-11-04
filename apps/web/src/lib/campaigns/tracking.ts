@@ -36,7 +36,8 @@ const loggedEmail = (token: string) =>
  * в журнале.
  */
 export async function recordOpen(token: string): Promise<void> {
-  if (!TOKEN.test(token)) return;
+  // test-<рассылка> — пробное письмо и предпросмотр в админке: не считаем
+  if (!TOKEN.test(token) || TEST_TOKEN.test(token)) return;
   await Promise.all([
     db
       .update(r)
