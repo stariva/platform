@@ -37,7 +37,7 @@ export default async function UnsubscribePage({
     return (
       <AuthCard
         title="Не получилось отписать"
-        description="Что-то сломалось на сайте. Попробуйте ещё раз чуть позже или напишите на info@stariva.ru — отпишу вручную."
+        description="На сайте что-то сломалось. Попробуйте ещё раз чуть позже или напишите на info@stariva.ru — отпишу вас сама."
         footer={homeLink}
       >
         {null}
@@ -49,7 +49,7 @@ export default async function UnsubscribePage({
     return (
       <AuthCard
         title="Это пробное письмо"
-        description="Ссылка из пробного письма ничего не меняет. В настоящем письме здесь будет кнопка «Отписаться»."
+        description="Ссылка из пробного письма ни на что не влияет. В настоящем письме здесь будет кнопка «Отписаться»."
         footer={homeLink}
       >
         {null}
@@ -62,7 +62,7 @@ export default async function UnsubscribePage({
     return (
       <AuthCard
         title="Ссылка не работает"
-        description="Не нашла такую рассылку. Если письма всё равно приходят, напишите на info@stariva.ru — отпишу вручную."
+        description="Не нашла такую рассылку. Если письма всё равно приходят, напишите на info@stariva.ru — отпишу вас сама."
         footer={homeLink}
       >
         {null}
@@ -75,7 +75,7 @@ export default async function UnsubscribePage({
     return (
       <AuthCard
         title="Вы отписались"
-        description={`Рассылки на ${recipient.email} больше не придут. Письма о заказах и доступ к мастер-классам будут приходить как раньше.`}
+        description={`Больше не буду присылать рассылки на ${recipient.email}. Письма о заказах и доступах к мастер-классам по-прежнему будут приходить.`}
         footer={homeLink}
       >
         {null}
@@ -86,7 +86,7 @@ export default async function UnsubscribePage({
   return (
     <AuthCard
       title="Отписаться от рассылки?"
-      description={`Больше не буду присылать новости и приглашения на ${recipient.email}. Письма о заказах и доступ к мастер-классам будут приходить как раньше.`}
+      description={`Перестану присылать новости и приглашения на ${recipient.email}. Письма о заказах и доступах к мастер-классам по-прежнему будут приходить.`}
       footer={homeLink}
     >
       <form method="post" action={`/api/m/u/${encodeURIComponent(token)}`}>

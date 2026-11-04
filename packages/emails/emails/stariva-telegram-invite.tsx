@@ -7,15 +7,14 @@ export interface StarivaTelegramInviteEmailProps extends CampaignEmailLinks {
   channelUrl: string;
 }
 
-export const TELEGRAM_INVITE_SUBJECT =
-  "Приглашаю в Telegram-канал для участниц мастер-классов — Stariva";
+export const TELEGRAM_INVITE_SUBJECT = "Приглашаю вас в свой Telegram-канал";
 export const TELEGRAM_INVITE_PREVIEW =
-  "Вопросы по курсу, ваши ёлки и подсказки — в одном месте";
+  "Там можно задать вопрос по урокам и показать свою ёлку";
 
 const POINTS = [
-  "спросить, если узел не получается или шнур ведёт себя не так;",
-  "показать свою ёлку и посмотреть, что получилось у других;",
-  "найти подсказки по материалам и уходу за готовой работой.",
+  "задать вопрос, если что-то не получается;",
+  "показать свою ёлку и посмотреть работы других;",
+  "получить подсказки по узлам и шнуру.",
 ];
 
 const textStyle = {
@@ -26,38 +25,45 @@ const textStyle = {
 } as const;
 
 /**
- * Приглашение покупателей мастер-классов в Telegram-канал. Письмо для тех,
- * кто уже учится, — без продажи новых курсов. Без props — пример для
- * предпросмотра.
+ * Приглашение покупателей мастер-классов в Telegram-канал Ольги. Письмо для
+ * тех, кто уже учится, — без продажи новых курсов. Говорит Ольга от себя:
+ * канал её, а не «наш». Без props — пример для предпросмотра.
  */
 export default function StarivaTelegramInviteEmail(
   props: StarivaTelegramInviteEmailProps = {
     channelUrl: "https://t.me/stariva",
-    reason: "Письмо пришло, потому что вы купили мастер-класс на stariva.ru.",
+    reason:
+      "Вы получили это письмо, потому что купили мастер-класс на stariva.ru.",
     unsubscribeUrl: "https://stariva.ru/unsubscribe/example",
   },
 ) {
   return (
     <StarivaLayout
       previewText={TELEGRAM_INVITE_PREVIEW}
-      heading="Приглашаю в наш канал"
-      intro="Здравствуйте, это Ольга. Спасибо, что плетёте вместе со мной! Я завела Telegram-канал для тех, кто проходит мои мастер-классы. Там можно:"
+      heading="Приглашаю в свой канал"
+      intro="Здравствуйте! Это Ольга. Спасибо, что выбрали мой мастер-класс."
       beforeButton={
-        <Section style={{ margin: "-16px 0 32px" }}>
+        <Section style={{ margin: "-12px 0 32px" }}>
+          <Text style={{ ...textStyle, paddingBottom: 12 }}>
+            Я завела канал в Telegram для всех, кто учится по моим урокам. Там
+            можно:
+          </Text>
           {/* Список абзацами с тире: ul почтовики рисуют по-разному */}
           {POINTS.map((point) => (
-            <Text key={point} style={{ ...textStyle, paddingBottom: 8 }}>
+            <Text key={point} style={{ ...textStyle, paddingBottom: 6 }}>
               <span style={{ color: colors.textGrey }}>—&nbsp;</span>
               {point}
             </Text>
           ))}
-          <Text style={{ ...textStyle, marginTop: 12 }}>
-            Приходите — буду рада видеть вас там.
+          <Text style={{ ...textStyle, marginTop: 16 }}>
+            Заходите, буду рада!
           </Text>
         </Section>
       }
       buttonLabel="Перейти в канал"
       buttonUrl={props.channelUrl}
+      // Под кнопкой — служебная ссылка через сайт: показывать её незачем
+      linkFallback={false}
       footnote={props.reason}
       footer={
         <CampaignFooter
