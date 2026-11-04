@@ -43,6 +43,9 @@ test("the reason line depends on where the recipient came from", async () => {
   expect(buyer).toContain("потому что купили мастер-класс");
   expect(manual).toContain("ваш адрес есть в списке рассылки Stariva");
   expect(manual).not.toContain("потому что купили мастер-класс");
+  // За покупку благодарим только покупателя
+  expect(buyer).toContain("Спасибо, что выбрали мой мастер-класс");
+  expect(manual).not.toContain("Спасибо, что выбрали");
 });
 
 test("previews and test sends follow the segment: manual-only shows its reason", async () => {

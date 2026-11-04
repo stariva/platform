@@ -57,6 +57,7 @@ export function campaignEmail(
       params: template.params.parse(campaign.params),
       clickUrl: links.click,
       reason: campaignReason(source),
+      buyer: source === "buyer",
       unsubscribeUrl: links.unsubscribe,
       openPixelUrl: links.open,
     }),

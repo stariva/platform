@@ -9,11 +9,12 @@ export interface StarivaTelegramInviteEmailProps extends CampaignEmailLinks {
 
 export const TELEGRAM_INVITE_SUBJECT = "Приглашаю вас в свой Telegram-канал";
 export const TELEGRAM_INVITE_PREVIEW =
-  "Там можно задать вопрос по урокам и показать свою ёлку";
+  "Там можно задать вопрос по урокам и показать свою работу";
 
+// Без «ёлки»: письмо уходит покупателям всех курсов
 const POINTS = [
   "задать вопрос, если что-то не получается;",
-  "показать свою ёлку и посмотреть работы других;",
+  "показать свою работу и посмотреть, что получилось у других;",
   "получить подсказки по узлам и шнуру.",
 ];
 
@@ -25,15 +26,17 @@ const textStyle = {
 } as const;
 
 /**
- * Приглашение покупателей мастер-классов в Telegram-канал Ольги. Письмо для
- * тех, кто уже учится, — без продажи новых курсов. Говорит Ольга от себя:
- * канал её, а не «наш». Без props — пример для предпросмотра.
+ * Приглашение в Telegram-канал Ольги — без продажи новых курсов. Говорит
+ * Ольга от себя: канал её, а не «наш». За покупку благодарит только
+ * покупателей: адреса из ручного списка могли ничего не покупать. Без props —
+ * пример для предпросмотра.
  */
 export default function StarivaTelegramInviteEmail(
   props: StarivaTelegramInviteEmailProps = {
     channelUrl: "https://t.me/stariva",
     reason:
       "Вы получили это письмо, потому что купили мастер-класс на stariva.ru.",
+    buyer: true,
     unsubscribeUrl: "https://stariva.ru/unsubscribe/example",
   },
 ) {
@@ -41,12 +44,16 @@ export default function StarivaTelegramInviteEmail(
     <StarivaLayout
       previewText={TELEGRAM_INVITE_PREVIEW}
       heading="Приглашаю в свой канал"
-      intro="Здравствуйте! Это Ольга. Спасибо, что выбрали мой мастер-класс."
+      intro={
+        props.buyer
+          ? "Здравствуйте! Это Ольга. Спасибо, что выбрали мой мастер-класс."
+          : "Здравствуйте! Это Ольга, я плету макраме и веду мастер-классы."
+      }
       beforeButton={
         <Section style={{ margin: "-12px 0 32px" }}>
           <Text style={{ ...textStyle, paddingBottom: 12 }}>
-            Я завела канал в Telegram для всех, кто учится по моим урокам. Там
-            можно:
+            Я завела канал в Telegram для тех, кто плетёт по моим урокам или
+            только собирается начать. Там можно:
           </Text>
           {/* Список абзацами с тире: ul почтовики рисуют по-разному */}
           {POINTS.map((point) => (

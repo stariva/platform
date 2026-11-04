@@ -13,6 +13,7 @@ const links = {
   clickUrl: "https://stariva.example.test/api/m/c/t1",
   reason:
     "Вы получили это письмо, потому что купили мастер-класс на stariva.ru.",
+  buyer: true,
   unsubscribeUrl: "https://stariva.example.test/unsubscribe/t1",
   openPixelUrl: "https://stariva.example.test/api/m/o/t1",
 };
