@@ -50,8 +50,14 @@ test("passes the deterministic key as Resend options only", async () => {
     idempotencyKey: "workshop:order:booked:email",
   };
   await sendEmail(email);
+  // Письмо уходит готовым HTML: в него уже вставлен пиксель открытия
   expect(send.mock.calls[0]).toEqual([
-    { to: email.to, from: env.EMAIL_FROM, subject: email.subject, react: null },
+    {
+      to: email.to,
+      from: env.EMAIL_FROM,
+      subject: email.subject,
+      html: expect.stringContaining("/api/m/o/"),
+    },
     { idempotencyKey: email.idempotencyKey },
   ]);
   env.EMAIL_SANDBOX_ENABLED = true;
@@ -149,6 +155,36 @@ test("records the Postbox message id and sends with the configuration set", asyn
     expect(attempt).not.toHaveProperty("messageId");
   } finally {
     env.POSTBOX_CONFIGURATION_SET = undefined;
+    restore();
+  }
+});
+
+test("adds an open pixel and logs its token, unless the email has its own", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  try {
+    await sendEmail(email);
+    const entry = recordEmail.mock.calls[0]?.[0] as {
+      openToken: string;
+      html: string;
+    };
+    expect(entry.openToken).toMatch(/^[A-Za-z0-9_-]{24}$/);
+    expect(entry.html).toContain(
+      `https://stariva.ru/api/m/o/${entry.openToken}`,
+    );
+    const body = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body));
+    expect(body.Content.Simple.Body.Html.Data).toBe(entry.html);
+
+    // Рассылка ставит пиксель сама: второго не добавляем, токен — её
+    resetMocks();
+    await sendEmail({ ...email, openToken: "recipient-token-1234" });
+    const own = recordEmail.mock.calls[0]?.[0] as {
+      openToken: string;
+      html: string;
+    };
+    expect(own.openToken).toBe("recipient-token-1234");
+    expect(own.html).not.toContain("/api/m/o/");
+  } finally {
     restore();
   }
 });
