@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const EMAIL_LOG_STATUSES = ["sent", "failed"] as const;
@@ -17,6 +18,8 @@ export interface EmailAttempt {
   ok: boolean;
   /** Ответ провайдера как есть; у удачной попытки нет. */
   error?: string;
+  /** Идентификатор письма у провайдера, если он его вернул. */
+  messageId?: string;
   ms: number;
 }
 
@@ -56,6 +59,19 @@ export const emailLog = pgTable(
     // HTML письма, как его получил адресат. Пусто у записей до появления колонки
     // и когда письмо не отрисовалось
     html: text("html"),
+    // Идентификатор письма в Postbox (ответ SendEmail): по нему события
+    // доставки из Data Streams находят свою строку. У Resend и песочницы пусто
+    messageId: text("message_id"),
+    // Что Postbox сообщил о доставке (email_events): почтовый сервер
+    // получателя принял письмо, отложил его, отказал или на письмо пожаловались
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    delayedAt: timestamp("delayed_at", { withTimezone: true }),
+    bouncedAt: timestamp("bounced_at", { withTimezone: true }),
+    // Permanent — ящика нет, Transient — временный сбой, Undetermined — неясно
+    bounceType: text("bounce_type"),
+    // Ответ почтового сервера получателя, почему не принял
+    bounceDetail: text("bounce_detail"),
+    complainedAt: timestamp("complained_at", { withTimezone: true }),
     durationMs: integer("duration_ms").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -65,6 +81,7 @@ export const emailLog = pgTable(
     index("email_log_created_idx").on(table.createdAt),
     index("email_log_status_created_idx").on(table.status, table.createdAt),
     index("email_log_workshop_order_idx").on(table.workshopOrderId),
+    uniqueIndex("email_log_message_id_uq").on(table.messageId),
   ],
 );
 

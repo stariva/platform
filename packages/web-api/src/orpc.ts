@@ -6,6 +6,7 @@ import {
   type CreatedOrder,
   type CreateOrderInput,
   type CustomOrderRequest,
+  type EmailEventsSyncResult,
   type LessonVideoResult,
   type MadeToOrderRequest,
   type MadeToOrderRequested,
@@ -27,6 +28,8 @@ export interface WebServices {
   runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
   /** Проверка зависших заявок НПД без повторного запроса в ФНС. */
   runNpdIssuingSweep: () => Promise<{ checked: number }>;
+  /** События доставки Postbox из Data Streams: @stariva/emails (postbox-sync). */
+  syncEmailEvents: () => Promise<EmailEventsSyncResult>;
   /** Токен антиспама для форм входа: секрет better-auth живёт в витрине. */
   issueFormToken: () => Promise<string>;
   /** Уведомление мастеру о подписке: apps/web/src/lib/newsletter.ts */

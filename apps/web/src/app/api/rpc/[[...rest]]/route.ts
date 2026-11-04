@@ -2,6 +2,7 @@ import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { RequestLimitHandlerPlugin } from "@orpc/server/plugins";
 import { logger } from "@stariva/config";
+import { syncPostboxEvents } from "@stariva/emails";
 import {
   createWebORPCContext,
   WEB_RPC_PATH,
@@ -35,6 +36,8 @@ export const dynamic = "force-dynamic";
 // Самый большой запрос — заявка с фото до 8 МБ; остальное намного меньше
 const MAX_BODY_BYTES = 9 * 1024 * 1024;
 
+const EMAIL_EVENTS_BUDGET_MS = 40_000;
+
 // Логика, которая пока живёт в витрине: письма, Telegram, заказы и
 // better-auth тянут за собой половину apps/web
 const services: WebServices = {
@@ -61,6 +64,9 @@ const services: WebServices = {
     };
   },
   runNpdIssuingSweep,
+  // Крон раз в минуту: читаем не дольше, чтобы прогоны не наезжали друг на друга
+  syncEmailEvents: () =>
+    syncPostboxEvents({ deadline: Date.now() + EMAIL_EVENTS_BUDGET_MS }),
   issueFormToken: async () => issueFormToken((await auth.$context).secret),
   subscribeToNewsletter,
   customOrders: createCustomOrderServices({

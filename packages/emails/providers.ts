@@ -31,7 +31,8 @@ export interface EmailProvider {
   name: EmailProviderName;
   label: string;
   isConfigured: () => boolean;
-  send: (email: OutgoingEmail) => Promise<void>;
+  /** Отправляет письмо; возвращает его идентификатор у провайдера, если тот его дал. */
+  send: (email: OutgoingEmail) => Promise<string | null>;
 }
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -44,7 +45,7 @@ const resendProvider: EmailProvider = {
     if (!resend) throw new Error("Resend is not configured");
     const body =
       "html" in email ? { html: email.html } : { react: email.react };
-    const { error } = await resend.emails.send(
+    const { data, error } = await resend.emails.send(
       {
         to: email.to,
         from: email.from,
@@ -60,6 +61,7 @@ const resendProvider: EmailProvider = {
         : undefined,
     );
     if (error) throw new Error(`Resend error: ${error.message}`);
+    return data?.id ?? null;
   },
 };
 
@@ -71,7 +73,7 @@ const POSTBOX_TIMEOUT_MS = 30_000;
 const POSTBOX_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 /** Ключ доступа сервисного аккаунта Postbox или null, если он не задан. */
-const postboxCredentials = () =>
+export const postboxCredentials = () =>
   env.POSTBOX_ACCESS_KEY_ID && env.POSTBOX_SECRET_ACCESS_KEY
     ? {
         accessKeyId: env.POSTBOX_ACCESS_KEY_ID,
@@ -148,6 +150,11 @@ const postboxProvider: EmailProvider = {
       ? await Promise.all(email.attachments.map(postboxAttachment))
       : undefined;
     const body = JSON.stringify({
+      // Конфигурация с подпиской на события доставки (Data Streams). Без неё
+      // Postbox возьмёт конфигурацию, привязанную к адресу, если она есть
+      ...(env.POSTBOX_CONFIGURATION_SET
+        ? { ConfigurationSetName: env.POSTBOX_CONFIGURATION_SET }
+        : {}),
       FromEmailAddress: email.from,
       Destination: { ToAddresses: email.to },
       Content: {
@@ -188,6 +195,12 @@ const postboxProvider: EmailProvider = {
       const details = (await res.text().catch(() => "")).slice(0, 500);
       throw new Error(`Postbox error: HTTP ${res.status} ${details}`.trim());
     }
+    // Письмо уже принято: непонятный ответ не должен превратиться в ошибку
+    // и повторную отправку, поэтому без MessageId просто не узнаем доставку
+    const reply = (await res.json().catch(() => null)) as {
+      MessageId?: unknown;
+    } | null;
+    return typeof reply?.MessageId === "string" ? reply.MessageId : null;
   },
 };
 

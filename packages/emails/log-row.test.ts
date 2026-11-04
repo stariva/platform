@@ -64,6 +64,23 @@ test("keeps the email html in the row, empty when it was not rendered", () => {
   expect(emailLogRow({ ...base, attempts }).html).toBeNull();
 });
 
+test("keeps the message id of the provider that accepted the email", () => {
+  const row = emailLogRow({
+    ...base,
+    attempts: [
+      { provider: "postbox", ok: false, error: "timeout", ms: 30000 },
+      { provider: "resend", ok: true, messageId: "re-1", ms: 300 },
+    ],
+  });
+  expect(row.messageId).toBe("re-1");
+  expect(
+    emailLogRow({
+      ...base,
+      attempts: [{ provider: "postbox", ok: false, error: "x", ms: 1 }],
+    }).messageId,
+  ).toBeNull();
+});
+
 test("cuts long provider errors", () => {
   expect(errorText(new Error("x".repeat(900)))).toHaveLength(500);
   expect(errorText("plain")).toBe("plain");

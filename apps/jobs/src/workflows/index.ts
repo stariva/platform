@@ -1,3 +1,4 @@
+import { emailEventsWorkflow } from "./email-events";
 import { npdIssuingWatchWorkflow } from "./npd-issuing-watch";
 import { workshopRemindersWorkflow } from "./workshop-reminders";
 import { workshopStorageSweepWorkflow } from "./workshop-storage-sweep";
@@ -12,4 +13,5 @@ export const workflows = [
   npdIssuingWatchWorkflow,
   workshopStorageSweepWorkflow,
   yandexAnalyticsSyncWorkflow,
+  emailEventsWorkflow,
 ];

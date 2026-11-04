@@ -365,6 +365,13 @@
       "when": 1793778416837,
       "tag": "0051_email_recipient_source",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793822190071,
+      "tag": "0052_email_delivery_events",
+      "breakpoints": true
     }
   ]
 }

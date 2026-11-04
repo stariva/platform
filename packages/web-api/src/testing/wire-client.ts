@@ -28,6 +28,14 @@ const idleServices: WebServices = {
     failed: 0,
   }),
   runNpdIssuingSweep: async () => ({ checked: 0 }),
+  syncEmailEvents: async () => ({
+    configured: false,
+    read: 0,
+    stored: 0,
+    rejected: 0,
+    suppressed: 0,
+    updated: 0,
+  }),
   issueFormToken: async () => "form-token",
   subscribeToNewsletter: async () => {},
   customOrders: {
