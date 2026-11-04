@@ -77,8 +77,7 @@ export function CustomOrderCard() {
       </fieldset>
       <p className="mt-5 text-xs leading-relaxed text-taupe">
         В сообщении пригодится: {tip.mention}. Пришлите фото места или пример,
-        который нравится. Не знаете размеры или бюджет — так и напишите,
-        помогу.
+        который нравится. Не знаете размеры или бюджет — так и напишите, помогу.
       </p>
       <ContactOptions
         source="custom_order"
