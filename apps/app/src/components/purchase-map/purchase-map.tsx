@@ -23,6 +23,7 @@ export interface MapPlace {
   lat: number;
   lng: number;
   orders: number;
+  workshops: number;
   customers: number;
   revenue: number;
   byIp: number;
@@ -41,8 +42,14 @@ const plural = (count: number, one: string, few: string, many: string) => {
   return many;
 };
 
-const ordersLabel = (count: number) =>
-  `${count} ${plural(count, "заказ", "заказа", "заказов")}`;
+const purchasesLabel = (count: number) =>
+  `${count} ${plural(count, "покупка", "покупки", "покупок")}`;
+
+/** «3 покупки, из них 1 запись на мастер-классы». */
+const breakdown = (place: MapPlace) =>
+  place.workshops > 0
+    ? `${purchasesLabel(place.orders)}, из них ${place.workshops} ${plural(place.workshops, "запись", "записи", "записей")} на мастер-классы`
+    : purchasesLabel(place.orders);
 
 /**
  * Карта России с кружком на каждом городе, где купили: площадь кружка
@@ -66,8 +73,9 @@ export function PurchaseMap({ places }: { places: MapPlace[] }) {
         <CardHeader>
           <CardTitle>Где покупают</CardTitle>
           <CardDescription>
-            Площадь кружка — число заказов. Город — по пункту выдачи или адресу
-            доставки, а если доставку согласует мастер, то по IP при оформлении.
+            Площадь кружка — число покупок: заказов товаров и записей на
+            мастер-классы. Город — по пункту выдачи или адресу доставки, а без
+            доставки — по IP при оформлении.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -103,7 +111,7 @@ export function PurchaseMap({ places }: { places: MapPlace[] }) {
                       r={radius(place.orders)}
                       tabIndex={0}
                       role="button"
-                      aria-label={`${place.city}: ${ordersLabel(place.orders)}`}
+                      aria-label={`${place.city}: ${breakdown(place)}`}
                       onMouseEnter={() => setActive(place.city)}
                       onMouseLeave={() => setActive(null)}
                       onFocus={() => setActive(place.city)}
@@ -129,8 +137,7 @@ export function PurchaseMap({ places }: { places: MapPlace[] }) {
               >
                 <div className="text-sm font-medium">{hovered.city}</div>
                 <div className="text-muted-foreground tabular-nums">
-                  {ordersLabel(hovered.orders)} ·{" "}
-                  {rubles.format(hovered.revenue)}
+                  {breakdown(hovered)} · {rubles.format(hovered.revenue)}
                 </div>
               </div>
             )}
@@ -149,8 +156,8 @@ export function PurchaseMap({ places }: { places: MapPlace[] }) {
           <CardTitle>Города</CardTitle>
           <CardDescription>
             {places.length > 0
-              ? `${places.length} ${plural(places.length, "город", "города", "городов")}, больше всего заказов — сверху`
-              : "Появятся после первых оплаченных заказов"}
+              ? `${places.length} ${plural(places.length, "город", "города", "городов")}, больше всего покупок — сверху`
+              : "Появятся после первых оплат"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -159,7 +166,7 @@ export function PurchaseMap({ places }: { places: MapPlace[] }) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Город</TableHead>
-                  <TableHead className="text-right">Заказов</TableHead>
+                  <TableHead className="text-right">Покупок</TableHead>
                   <TableHead className="text-right">Покупателей</TableHead>
                   <TableHead className="text-right">Сумма</TableHead>
                 </TableRow>
@@ -203,6 +210,14 @@ export function PurchaseMap({ places }: { places: MapPlace[] }) {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {place.orders}
+                      {place.workshops > 0 && (
+                        <span
+                          className="text-muted-foreground ml-1 text-xs"
+                          title="Из них записей на мастер-классы"
+                        >
+                          ({place.workshops})
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-right tabular-nums">
                       {place.customers}

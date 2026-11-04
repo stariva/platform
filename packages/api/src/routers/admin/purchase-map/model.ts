@@ -1,5 +1,6 @@
-/** Заказ с сайта, из которого берём место покупки. */
+/** Покупка на сайте, из которой берём место: заказ товара или запись на мастер-класс. */
 export interface PurchaseRow {
+  kind: "product" | "workshop";
   /** Сумма в копейках. */
   amountTotal: number;
   userId: string | null;
@@ -24,11 +25,14 @@ export interface Place {
 }
 
 export interface PurchasePlace extends Place {
+  /** Покупок всего: заказов товаров и записей на мастер-классы. */
   orders: number;
+  /** Из них записей на мастер-классы. */
+  workshops: number;
   customers: number;
-  /** Сумма заказов в рублях. */
+  /** Сумма покупок в рублях. */
   revenue: number;
-  /** Сколько заказов места определено по IP, а не по доставке. */
+  /** Сколько покупок места определено по IP, а не по доставке. */
   byIp: number;
   /** Место внутри России: остальные в таблице есть, на карте нет. */
   inRussia: boolean;
@@ -109,6 +113,7 @@ export function placesOf(rows: PurchaseRow[]) {
       points: number;
       revenue: number;
       orders: number;
+      workshops: number;
       byIp: number;
       abroad: boolean;
       customers: Set<string>;
@@ -130,6 +135,7 @@ export function placesOf(rows: PurchaseRow[]) {
       points: 0,
       revenue: 0,
       orders: 0,
+      workshops: 0,
       byIp: 0,
       abroad: false,
       customers: new Set<string>(),
@@ -140,6 +146,7 @@ export function placesOf(rows: PurchaseRow[]) {
     group.points += 1;
     group.revenue += row.amountTotal;
     group.orders += 1;
+    if (row.kind === "workshop") group.workshops += 1;
     if (place.source === "ip") group.byIp += 1;
     if (place.abroad) group.abroad = true;
     group.customers.add(customerKey(row));
@@ -158,6 +165,7 @@ export function placesOf(rows: PurchaseRow[]) {
         source:
           group.byIp === group.orders ? ("ip" as const) : ("delivery" as const),
         orders: group.orders,
+        workshops: group.workshops,
         customers: group.customers.size,
         revenue: group.revenue / 100,
         byIp: group.byIp,
