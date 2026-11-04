@@ -23,5 +23,6 @@ ALTER TABLE "email_log" ADD COLUMN "bounced_at" timestamp with time zone;--> sta
 ALTER TABLE "email_log" ADD COLUMN "bounce_type" text;--> statement-breakpoint
 ALTER TABLE "email_log" ADD COLUMN "bounce_detail" text;--> statement-breakpoint
 ALTER TABLE "email_log" ADD COLUMN "complained_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "email_events_created_idx" ON "email_events" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "email_events_message_idx" ON "email_events" USING btree ("message_id","occurred_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "email_log_message_id_uq" ON "email_log" USING btree ("message_id");

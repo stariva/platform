@@ -7,6 +7,7 @@ import {
   emailStreamCursors,
   emailSuppressions,
   eq,
+  type SQL,
   sql,
 } from "@stariva/db";
 
@@ -82,7 +83,11 @@ export async function syncPostboxEvents({
     if (deadline !== undefined && Date.now() >= deadline) break;
     await readShard({ db, credentials, stream, shardId, deadline, result });
   }
-  result.updated = await refreshEmailLog(db, since);
+  // Письма, строка журнала которых появилась позже их событий
+  result.updated += await refreshEmailLog(
+    db,
+    sql`created_at >= ${since.toISOString()}::timestamptz`,
+  );
   return result;
 }
 
@@ -138,9 +143,20 @@ async function readShard({
     iterator = batch.next;
     const last = batch.records.at(-1);
     if (last) {
-      await storeRecords(db, batch.records, result);
-      // Место сохраняем после записи событий: упадём между ними — пачка
-      // прочитается ещё раз, а дубли отсечёт ключ eventId
+      const messageIds = await storeRecords(db, batch.records, result);
+      // Итог в журнале — до сдвига места в потоке: иначе после сбоя между
+      // ними события лежали бы в базе, а журнал о них так и не узнал
+      if (messageIds.length > 0) {
+        result.updated += await refreshEmailLog(
+          db,
+          sql`message_id in (${sql.join(
+            messageIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`,
+        );
+      }
+      // Место сохраняем последним: упадём раньше — пачка прочитается ещё
+      // раз, а дубли отсечёт ключ eventId
       await db
         .insert(emailStreamCursors)
         .values({ stream, shardId, sequenceNumber: last.sequenceNumber })
@@ -154,11 +170,12 @@ async function readShard({
   }
 }
 
+/** Записывает события пачки и отписки по ним; возвращает письма, о которых были события. */
 async function storeRecords(
   db: Database,
   records: YdsRecord[],
   result: EmailEventsSyncResult,
-) {
+): Promise<string[]> {
   result.read += records.length;
   const events = new Map<
     string,
@@ -175,7 +192,7 @@ async function storeRecords(
     }
     for (const event of parsed.events) events.set(event.eventId, event);
   }
-  if (events.size === 0) return;
+  if (events.size === 0) return [];
 
   const stored = await db
     .insert(emailEvents)
@@ -199,14 +216,16 @@ async function storeRecords(
       .returning({ email: emailSuppressions.email });
     result.suppressed += added.length;
   }
+  return [...new Set([...events.values()].map((event) => event.messageId))];
 }
 
 /**
- * Пересчитывает итог доставки в email_log для писем, о которых недавно
- * пришли события. Берётся первое событие каждого вида; жалоба «это не спам»
- * жалобой не считается.
+ * Пересчитывает итог доставки в email_log для писем, у которых есть события,
+ * подходящие под `scope` (условие на email_events). Берётся первое событие
+ * каждого вида; жалоба «это не спам» жалобой не считается. Возвращает,
+ * сколько строк журнала изменилось.
  */
-async function refreshEmailLog(db: Database, since: Date): Promise<number> {
+async function refreshEmailLog(db: Database, scope: SQL): Promise<number> {
   // Оба драйвера (node-postgres и neon-http) отдают строки в rows
   const updated = (await db.execute(sql`
     update email_log l set
@@ -235,7 +254,7 @@ async function refreshEmailLog(db: Database, since: Date): Promise<number> {
         ) as complained_at
       from email_events
       where message_id in (
-        select message_id from email_events where created_at >= ${since.toISOString()}::timestamptz
+        select message_id from email_events where ${scope}
       )
       group by message_id
     ) e
