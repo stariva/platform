@@ -6,10 +6,8 @@ import {
   CardTitle,
 } from "@stariva/ui";
 import Link from "next/link";
-import {
-  CampaignForm,
-  emptyCampaign,
-} from "~/components/campaigns/campaign-form";
+import { CampaignForm } from "~/components/campaigns/campaign-form";
+import { emptyCampaign } from "~/components/campaigns/campaign-meta";
 import { SiteHeader } from "~/components/layout";
 import { api } from "~/orpc/server";
 

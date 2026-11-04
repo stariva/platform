@@ -1,10 +1,7 @@
 "use client";
 
 import type { EmailCampaignSegment } from "@stariva/db/schema";
-import type {
-  CampaignTemplateField,
-  CampaignTemplateId,
-} from "@stariva/emails";
+import type { CampaignTemplateId } from "@stariva/emails";
 import {
   Button,
   Checkbox,
@@ -19,37 +16,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { orpc } from "~/orpc/react";
+import type {
+  CampaignFormValues,
+  CampaignTemplateOption,
+} from "./campaign-meta";
 import { useDraftState } from "./draft-state";
-
-/** Готовое письмо из кода (@stariva/emails), как его отдаёт API. */
-export interface CampaignTemplateOption {
-  id: CampaignTemplateId;
-  label: string;
-  description: string;
-  subject: string;
-  previewText: string;
-  fields: CampaignTemplateField[];
-}
-
-export interface CampaignFormValues {
-  name: string;
-  template: CampaignTemplateId;
-  params: Record<string, string>;
-  segment: EmailCampaignSegment;
-}
-
-/** Новая рассылка: первое письмо из списка, его название и все покупатели. */
-export function emptyCampaign(
-  templates: CampaignTemplateOption[],
-): CampaignFormValues {
-  const [first] = templates;
-  return {
-    name: first?.label ?? "",
-    template: first?.id ?? "telegram-invite",
-    params: {},
-    segment: { type: "workshop_buyers", workshops: [] },
-  };
-}
 
 /** Выбор готового письма: название, о чём оно и тема во «Входящих». */
 function TemplatePicker({
