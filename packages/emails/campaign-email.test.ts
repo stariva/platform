@@ -40,9 +40,9 @@ test("the reason line depends on where the recipient came from", async () => {
   const manual = await render(
     campaignEmail(campaign, { ...options, source: "manual" }).react,
   );
-  expect(buyer).toContain("вы купили мастер-класс");
-  expect(manual).toContain("ваш адрес есть в рассылке Stariva");
-  expect(manual).not.toContain("вы купили мастер-класс");
+  expect(buyer).toContain("потому что купили мастер-класс");
+  expect(manual).toContain("ваш адрес есть в списке рассылки Stariva");
+  expect(manual).not.toContain("потому что купили мастер-класс");
 });
 
 test("previews and test sends follow the segment: manual-only shows its reason", async () => {
@@ -53,7 +53,7 @@ test("previews and test sends follow the segment: manual-only shows its reason",
     "https://stariva.example.test",
     previewSource({ buyers: false }),
   );
-  expect(html).toContain("ваш адрес есть в рассылке Stariva");
+  expect(html).toContain("ваш адрес есть в списке рассылки Stariva");
 });
 
 test("a draft without its fields previews with the template example", async () => {

@@ -25,10 +25,11 @@ export function CampaignFooter({
           color: colors.textGrey,
         }}
       >
-        Не хотите получать такие письма?{" "}
+        Если не хотите получать такие письма, можно{" "}
         <Link href={unsubscribeUrl} style={{ color: colors.darkGrey }}>
-          Отписаться
+          отписаться
         </Link>
+        .
       </Text>
       {openPixelUrl && (
         <Img
