@@ -11,6 +11,8 @@ import {
 
 const links = {
   clickUrl: "https://stariva.example.test/api/m/c/t1",
+  linkUrl: (link: string) =>
+    `https://stariva.example.test/api/m/c/t1?link=${link}`,
   reason:
     "Вы получили это письмо, потому что купили мастер-класс на stariva.ru.",
   buyer: true,
@@ -52,6 +54,59 @@ test("the Telegram invite speaks as Olga and does not sell", async () => {
   );
   // Служебную ссылку через сайт под кнопкой не показываем
   expect(html).not.toContain("Если кнопка не работает");
+});
+
+test("the tree support invite leads to the group and the channel through the site", async () => {
+  const template = campaignTemplate("elka-support-invite");
+  const params = {
+    groupUrl: "https://t.me/+group",
+    channelUrl: "https://t.me/channel",
+  };
+  const html = await render(template.render({ ...links, params }));
+  expect(html).toContain("Это Ольга");
+  expect(html).toContain("Вступить в группу");
+  expect(html).toContain(`href="${links.linkUrl("channel")}"`);
+  expect(html).not.toContain("https://t.me/+group");
+  expect(html).not.toContain("https://t.me/channel");
+  // Ольга работает одна; ёлка — макраме, а не «из макраме»; без продажи
+  expect(html).not.toMatch(
+    /наш(?:\s|[аеиу])|мастерск|из макраме|купите|оплатите|скидк|цена|цены/i,
+  );
+  expect(html).not.toContain("Если кнопка не работает");
+
+  // Ручному адресу не за что говорить спасибо
+  const manual = await render(
+    template.render({ ...links, params, buyer: false }),
+  );
+  expect(manual).toContain("Это Ольга");
+  expect(manual).not.toContain("Спасибо");
+
+  expect(campaignButtonUrl({ template: "elka-support-invite", params })).toBe(
+    params.groupUrl,
+  );
+  expect(
+    campaignButtonUrl({ template: "elka-support-invite", params }, "channel"),
+  ).toBe(params.channelUrl);
+});
+
+test("only the template's own links can be followed", () => {
+  const params = {
+    groupUrl: "https://t.me/+group",
+    channelUrl: "https://t.me/channel",
+  };
+  const follow = (link: string) =>
+    campaignButtonUrl({ template: "elka-support-invite", params }, link);
+  expect(follow("missing")).toBeNull();
+  expect(follow("constructor")).toBeNull();
+  expect(
+    campaignButtonUrl(
+      {
+        template: "telegram-invite",
+        params: { channelUrl: "https://t.me/x" },
+      },
+      "channel",
+    ),
+  ).toBeNull();
 });
 
 test("validates params against the template fields", () => {

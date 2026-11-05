@@ -2,6 +2,10 @@ import type { ReactElement } from "react";
 import { z } from "zod";
 
 import type { CampaignEmailLinks } from "./emails/campaign-footer";
+import StarivaElkaSupportInviteEmail, {
+  ELKA_SUPPORT_INVITE_PREVIEW,
+  ELKA_SUPPORT_INVITE_SUBJECT,
+} from "./emails/stariva-elka-support-invite";
 import StarivaTelegramInviteEmail, {
   TELEGRAM_INVITE_PREVIEW,
   TELEGRAM_INVITE_SUBJECT,
@@ -28,8 +32,15 @@ interface CampaignTemplate<P extends Record<string, string>> {
   example: P;
   /** Куда ведёт кнопка письма; сайт засчитывает переход и отправляет сюда. */
   buttonUrl: (params: P) => string | null;
+  /** Другие ссылки письма, кроме кнопки: имя ссылки и куда она ведёт. */
+  extraLinks?: Record<string, (params: P) => string>;
   render: (
-    props: CampaignEmailLinks & { params: P; clickUrl: string },
+    props: CampaignEmailLinks & {
+      params: P;
+      clickUrl: string;
+      /** Ссылка через сайт на одну из extraLinks. */
+      linkUrl: (link: string) => string;
+    },
   ) => ReactElement;
 }
 
@@ -53,8 +64,48 @@ const telegramInvite: CampaignTemplate<{ channelUrl: string }> = {
   params: z.object({ channelUrl: httpsUrl }),
   example: { channelUrl: "https://t.me/stariva" },
   buttonUrl: (params) => params.channelUrl,
-  render: ({ clickUrl, ...links }) =>
+  render: ({ clickUrl, linkUrl: _linkUrl, ...links }) =>
     StarivaTelegramInviteEmail({ ...links, channelUrl: clickUrl }),
+};
+
+const elkaSupportInvite: CampaignTemplate<{
+  groupUrl: string;
+  channelUrl: string;
+}> = {
+  label: "Приглашение в группу поддержки по ёлке",
+  description:
+    "Письмо от Ольги тем, кто купил мастер-класс по ёлке: зовёт в закрытую группу поддержки и в канал Stariva. В получателях отметьте курсы с ёлкой.",
+  subject: ELKA_SUPPORT_INVITE_SUBJECT,
+  previewText: ELKA_SUPPORT_INVITE_PREVIEW,
+  fields: [
+    {
+      name: "groupUrl",
+      label: "Ссылка на закрытую группу",
+      placeholder: "https://t.me/+…",
+      hint: "Ссылка-приглашение. В письме она спрятана за кнопкой «Вступить в группу».",
+      type: "url",
+    },
+    {
+      name: "channelUrl",
+      label: "Ссылка на канал",
+      placeholder: "https://t.me/…",
+      hint: "В письме она спрятана за ссылкой «Перейти в канал».",
+      type: "url",
+    },
+  ],
+  params: z.object({ groupUrl: httpsUrl, channelUrl: httpsUrl }),
+  example: {
+    groupUrl: "https://t.me/+example",
+    channelUrl: "https://t.me/stariva",
+  },
+  buttonUrl: (params) => params.groupUrl,
+  extraLinks: { channel: (params) => params.channelUrl },
+  render: ({ clickUrl, linkUrl, params: _params, ...links }) =>
+    StarivaElkaSupportInviteEmail({
+      ...links,
+      groupUrl: clickUrl,
+      channelUrl: linkUrl("channel"),
+    }),
 };
 
 /**
@@ -64,6 +115,7 @@ const telegramInvite: CampaignTemplate<{ channelUrl: string }> = {
  */
 const templates = {
   "telegram-invite": telegramInvite,
+  "elka-support-invite": elkaSupportInvite,
 };
 
 export type CampaignTemplateId = keyof typeof templates;
@@ -111,13 +163,22 @@ export function campaignParamsError(
   return field ? `Проверьте поле «${field.label}»` : "Проверьте поля письма";
 }
 
-/** Адрес кнопки рассылки; null — шаблона нет или в нём нет кнопки. */
-export function campaignButtonUrl(campaign: {
-  template: string;
-  params: Record<string, string>;
-}): string | null {
+/**
+ * Куда ведёт ссылка письма рассылки: кнопка или другая ссылка шаблона по
+ * имени. null — шаблона нет, в нём нет такой ссылки или поля не заполнены.
+ */
+export function campaignButtonUrl(
+  campaign: { template: string; params: Record<string, string> },
+  link?: string | null,
+): string | null {
   if (!isCampaignTemplateId(campaign.template)) return null;
   const template = campaignTemplate(campaign.template);
   const params = template.params.safeParse(campaign.params);
-  return params.success ? template.buttonUrl(params.data) : null;
+  if (!params.success) return null;
+  if (!link) return template.buttonUrl(params.data);
+  // hasOwn: имя приходит из адреса, constructor и прочее — не ссылки шаблона
+  const extra = template.extraLinks;
+  return extra && Object.hasOwn(extra, link)
+    ? (extra[link]?.(params.data) ?? null)
+    : null;
 }

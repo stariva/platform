@@ -56,6 +56,7 @@ export function campaignEmail(
     react: template.render({
       params: template.params.parse(campaign.params),
       clickUrl: links.click,
+      linkUrl: (link) => `${links.click}?link=${encodeURIComponent(link)}`,
       reason: campaignReason(source),
       buyer: source === "buyer",
       unsubscribeUrl: links.unsubscribe,
