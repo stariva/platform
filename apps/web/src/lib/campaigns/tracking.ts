@@ -30,11 +30,15 @@ export async function recordOpen(token: string): Promise<void> {
 }
 
 /**
- * Нажали кнопку письма: засчитываем переход (и открытие — картинки могли
- * быть выключены) и отдаём адрес кнопки. null — токен чужой или у
- * рассылки нет кнопки.
+ * Нажали кнопку или другую ссылку письма (link — её имя в шаблоне):
+ * засчитываем переход (и открытие — картинки могли быть выключены) и отдаём
+ * её адрес. Переходы по всем ссылкам письма считаются вместе. null — токен
+ * чужой или в рассылке нет такой ссылки.
  */
-export async function recordClick(token: string): Promise<string | null> {
+export async function recordClick(
+  token: string,
+  link?: string | null,
+): Promise<string | null> {
   const columns = {
     template: emailCampaigns.template,
     params: emailCampaigns.params,
@@ -46,7 +50,7 @@ export async function recordClick(token: string): Promise<string | null> {
       .from(emailCampaigns)
       .where(eq(emailCampaigns.id, test[1] as string))
       .limit(1);
-    return campaign ? campaignButtonUrl(campaign) : null;
+    return campaign ? campaignButtonUrl(campaign, link) : null;
   }
   if (!TOKEN.test(token)) return null;
   const [campaign] = await db
@@ -56,7 +60,7 @@ export async function recordClick(token: string): Promise<string | null> {
     .where(eq(r.token, token))
     .limit(1);
   // Без кнопки в письме переходить было не по чему — такой переход не считаем
-  const target = campaign ? campaignButtonUrl(campaign) : null;
+  const target = campaign ? campaignButtonUrl(campaign, link) : null;
   if (!target) return null;
   await db
     .update(r)
