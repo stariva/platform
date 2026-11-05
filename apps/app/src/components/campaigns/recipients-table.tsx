@@ -12,6 +12,11 @@ import {
 } from "@stariva/ui";
 import { Badge } from "@stariva/ui/reui";
 import { dateTime } from "~/components/crm/crm-meta";
+import {
+  type DeliveryFacts,
+  deliveryState,
+  times,
+} from "~/components/email-log/email-meta";
 import { RECIPIENT_STATUS_LABELS } from "./campaign-meta";
 
 export interface RecipientRow {
@@ -29,21 +34,15 @@ export interface RecipientRow {
   unsubscribedAt: Date | null;
 }
 
+/** Получатель и что Postbox сообщил о его письме. */
+export type RecipientWithDelivery = RecipientRow & DeliveryFacts;
+
 const STATUS_VARIANTS = {
   queued: "secondary",
   sent: "success-light",
   failed: "destructive-light",
   skipped: "warning-light",
 } as const;
-
-/** «2 раза», «5 раз», «22 раза». */
-function times(count: number) {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  return mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
-    ? "раза"
-    : "раз";
-}
 
 /** Когда и сколько раз: «3 нояб., 18:40 · 2 раза». */
 function Moment({ at, count }: { at: Date | null; count?: number }) {
@@ -61,8 +60,24 @@ function Moment({ at, count }: { at: Date | null; count?: number }) {
   );
 }
 
+/** Доставка письма по событиям Postbox: доставлено, не доставлено, жалоба. */
+function Delivery({ row }: { row: RecipientWithDelivery }) {
+  const state = row.status === "sent" ? deliveryState(row) : null;
+  if (!state) return null;
+  return (
+    <div className="mt-2">
+      <Badge variant={state.variant}>{state.label}</Badge>
+      {state.detail && (
+        <div className="text-muted-foreground mt-1 text-xs break-words">
+          {state.detail}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Получатели рассылки: ушло ли письмо, открыли ли, перешли ли, отписались ли. */
-export function RecipientsTable({ rows }: { rows: RecipientRow[] }) {
+export function RecipientsTable({ rows }: { rows: RecipientWithDelivery[] }) {
   return (
     <div className="rounded-lg border contain-inline-size">
       <Table>
@@ -112,6 +127,7 @@ export function RecipientsTable({ rows }: { rows: RecipientRow[] }) {
                     {row.error}
                   </div>
                 )}
+                <Delivery row={row} />
               </TableCell>
               <TableCell className="text-sm">
                 <Moment at={row.firstOpenedAt} count={row.openCount} />

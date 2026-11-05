@@ -9,6 +9,12 @@ import { env } from "./env";
 import { recordEmail } from "./log";
 import { errorText } from "./log-row";
 import {
+  newOpenToken,
+  openPixelUrl,
+  withOpenPixel,
+  withoutPersonalToken,
+} from "./open-pixel";
+import {
   type EmailAttachment,
   type OutgoingEmail,
   selectedEmailProviders,
@@ -18,6 +24,11 @@ export type { EmailAttachment } from "./providers";
 
 export interface Emails {
   idempotencyKey?: string;
+  /**
+   * Пиксель открытия в письме уже есть, с этим токеном (рассылки ставят свой).
+   * Без него пиксель добавит сама отправка.
+   */
+  openToken?: string;
   attachments?: EmailAttachment[];
   headers?: Record<string, string>;
   react: ReactNode;
@@ -58,6 +69,7 @@ export const sendEmail = async (email: Emails) => {
     attachments: email.attachments,
     headers: email.headers,
     idempotencyKey: email.idempotencyKey,
+    openToken: email.openToken,
   });
 };
 
@@ -70,14 +82,37 @@ export const sendEmailHtml = async (email: EmailHtml) =>
     idempotencyKey: email.idempotencyKey,
   });
 
-/** HTML письма для журнала; не отрисовался — пишем письмо без тела, а не роняем отправку. */
-async function htmlForLog(email: OutgoingEmail): Promise<string | null> {
+/**
+ * Письмо готовым HTML с пикселем открытия. Отрисовываем один раз: этот HTML
+ * уходит любому провайдеру, а в журнал ложится он же, но без личного токена. Не отрисовалось — письмо уходит как есть (провайдер скажет, что
+ * с ним не так), без тела в журнале и без учёта открытий.
+ */
+async function prepare(email: OutgoingEmail & { openToken?: string }): Promise<{
+  email: OutgoingEmail;
+  html: string | null;
+  openToken: string | null;
+}> {
+  const { openToken: given, ...outgoing } = email;
+  let html: string;
   try {
-    return "html" in email ? email.html : await render(email.react);
+    html = "html" in outgoing ? outgoing.html : await render(outgoing.react);
   } catch (error) {
     logger.error("email_log.render_failed", error, { subject: email.subject });
-    return null;
+    return { email: outgoing, html: null, openToken: given ?? null };
   }
+  const { react: _react, ...rest } = outgoing as OutgoingEmail & {
+    react?: unknown;
+  };
+  // Пиксель рассылки уже в письме; остальным письмам ставим свой
+  const openToken = given ?? newOpenToken(email.idempotencyKey);
+  const tracked = given
+    ? html
+    : withOpenPixel(html, openPixelUrl(openToken, env.STOREFRONT_URL));
+  return {
+    email: { ...rest, html: tracked },
+    html: withoutPersonalToken(tracked, openToken),
+    openToken,
+  };
 }
 
 /**
@@ -85,9 +120,10 @@ async function htmlForLog(email: OutgoingEmail): Promise<string | null> {
  * настроен или отказал — запасным (EMAIL_FALLBACK_PROVIDER). Ошибка уходит
  * наружу, только когда не отправил ни один.
  */
-async function deliver(email: OutgoingEmail) {
+async function deliver(original: OutgoingEmail & { openToken?: string }) {
   const startedAt = Date.now();
   const attempts: EmailAttempt[] = [];
+  const { email, html, openToken } = await prepare(original);
   /** Итог отправки в журнал email_log: письма видно в админке. */
   const record = async () =>
     recordEmail({
@@ -96,7 +132,8 @@ async function deliver(email: OutgoingEmail) {
       attempts,
       attachments: email.attachments?.length ?? 0,
       idempotencyKey: email.idempotencyKey,
-      html: await htmlForLog(email),
+      html,
+      openToken,
       durationMs: Date.now() - startedAt,
     });
 

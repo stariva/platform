@@ -1,7 +1,9 @@
+import { logger } from "@stariva/config";
 import { db } from "@stariva/db";
 import {
   emailCampaignRecipients,
   emailCampaigns,
+  emailLog,
   emailSuppressions,
 } from "@stariva/db/schema";
 import { campaignButtonUrl } from "@stariva/emails";
@@ -17,16 +19,43 @@ const TOKEN = /^[A-Za-z0-9_-]{16,64}$/;
 
 const r = emailCampaignRecipients;
 
-/** Открыли письмо: подгрузилась картинка-пиксель. */
+/**
+ * Строка журнала письма с этим токеном пикселя. Если строк несколько
+ * (повторы одного письма рассылки, пробные письма) — последняя ушедшая.
+ */
+const loggedEmail = (token: string) =>
+  eq(
+    emailLog.id,
+    sql`(select ${emailLog.id} from ${emailLog}
+      where ${emailLog.openToken} = ${token} and ${emailLog.status} = 'sent'
+      order by ${emailLog.createdAt} desc limit 1)`,
+  );
+
+/**
+ * Открыли письмо: подгрузилась картинка-пиксель. Токен ищем и у получателей
+ * рассылок, и в журнале писем: у рассылки он общий, у прочих писем — только
+ * в журнале.
+ */
 export async function recordOpen(token: string): Promise<void> {
-  if (!TOKEN.test(token)) return;
-  await db
-    .update(r)
-    .set({
-      openCount: sql`${r.openCount} + 1`,
-      firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
-    })
-    .where(eq(r.token, token));
+  // test-<рассылка> — пробное письмо и предпросмотр в админке: не считаем
+  if (!TOKEN.test(token) || TEST_TOKEN.test(token)) return;
+  // В одной транзакции: счётчики получателя и журнала не должны разойтись
+  await db.transaction(async (tx) => {
+    await tx
+      .update(r)
+      .set({
+        openCount: sql`${r.openCount} + 1`,
+        firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
+      })
+      .where(eq(r.token, token));
+    await tx
+      .update(emailLog)
+      .set({
+        openCount: sql`${emailLog.openCount} + 1`,
+        firstOpenedAt: sql`coalesce(${emailLog.firstOpenedAt}, now())`,
+      })
+      .where(loggedEmail(token));
+  });
 }
 
 /**
@@ -62,14 +91,26 @@ export async function recordClick(
   // Без кнопки в письме переходить было не по чему — такой переход не считаем
   const target = campaign ? campaignButtonUrl(campaign, link) : null;
   if (!target) return null;
-  await db
-    .update(r)
-    .set({
-      clickCount: sql`${r.clickCount} + 1`,
-      firstClickedAt: sql`coalesce(${r.firstClickedAt}, now())`,
-      firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
-    })
-    .where(eq(r.token, token));
+  // Адрес уже известен: сбой счётчика не должен увести человека на главную
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(r)
+        .set({
+          clickCount: sql`${r.clickCount} + 1`,
+          firstClickedAt: sql`coalesce(${r.firstClickedAt}, now())`,
+          firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
+        })
+        .where(eq(r.token, token));
+      // Нажал кнопку — значит, открыл, даже если картинки выключены
+      await tx
+        .update(emailLog)
+        .set({ firstOpenedAt: sql`coalesce(${emailLog.firstOpenedAt}, now())` })
+        .where(loggedEmail(token));
+    });
+  } catch (error) {
+    logger.error("email_campaign.click_count_failed", error);
+  }
   return target;
 }
 

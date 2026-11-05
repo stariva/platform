@@ -372,6 +372,13 @@
       "when": 1793822190071,
       "tag": "0052_email_delivery_events",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793822779429,
+      "tag": "0053_email_log_opens",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,9 @@ import {
   desc,
   emailCampaignRecipients,
   emailCampaigns,
+  emailLog,
   eq,
+  inArray,
   sql,
 } from "@stariva/db";
 import {
@@ -103,11 +105,45 @@ const list = adminProcedure.handler(async ({ context }) =>
     .orderBy(desc(emailCampaigns.createdAt)),
 );
 
+/**
+ * Ушедшие письма рассылки в журнале, по одному на получателя: токен пикселя
+ * у них общий с получателем. Из журнала берём то, что о письме сообщил
+ * Postbox, — доставку, отказ, жалобу. Только письма этой рассылки: журнал
+ * других не читаем.
+ */
+function sentCampaignEmails(db: Database, campaignId: string) {
+  return db
+    .selectDistinctOn([emailLog.openToken], {
+      token: emailLog.openToken,
+      deliveredAt: emailLog.deliveredAt,
+      delayedAt: emailLog.delayedAt,
+      bouncedAt: emailLog.bouncedAt,
+      bounceDetail: emailLog.bounceDetail,
+      complainedAt: emailLog.complainedAt,
+    })
+    .from(emailLog)
+    .where(
+      and(
+        inArray(
+          emailLog.openToken,
+          db
+            .select({ token: r.token })
+            .from(r)
+            .where(eq(r.campaignId, campaignId)),
+        ),
+        eq(emailLog.status, "sent"),
+      ),
+    )
+    .orderBy(emailLog.openToken, desc(emailLog.createdAt))
+    .as("sent_email");
+}
+
 /** Рассылка, её счётчики и все получатели с тем, что о них известно. */
 const get = adminProcedure
   .input(idInput)
   .handler(async ({ context, input }) => {
     const campaign = await findCampaign(context.db, input.id);
+    const sent = sentCampaignEmails(context.db, input.id);
     const [stats, recipients] = await Promise.all([
       context.db
         .select(statsColumns)
@@ -128,8 +164,14 @@ const get = adminProcedure
           firstClickedAt: r.firstClickedAt,
           clickCount: r.clickCount,
           unsubscribedAt: r.unsubscribedAt,
+          deliveredAt: sent.deliveredAt,
+          delayedAt: sent.delayedAt,
+          bouncedAt: sent.bouncedAt,
+          bounceDetail: sent.bounceDetail,
+          complainedAt: sent.complainedAt,
         })
         .from(r)
+        .leftJoin(sent, eq(sent.token, r.token))
         .where(eq(r.campaignId, input.id))
         .orderBy(asc(r.email)),
     ]);

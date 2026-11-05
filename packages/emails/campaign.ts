@@ -52,7 +52,12 @@ export async function sendCampaignTest(
     token: `test-${campaign.id}`,
     source: previewSource(campaign.segment),
   });
-  await sendEmail({ ...email, subject: `[Тест] ${email.subject}`, to: [to] });
+  await sendEmail({
+    ...email,
+    subject: `[Тест] ${email.subject}`,
+    to: [to],
+    openToken: `test-${campaign.id}`,
+  });
 }
 
 export interface CampaignBatchResult {
@@ -175,6 +180,8 @@ export async function sendCampaignBatch({
         }),
         to: [recipient.email],
         idempotencyKey: `campaign:${campaign.id}:${recipient.id}`,
+        // Пиксель в письме уже с токеном получателя: открытие засчитается и в журнале
+        openToken: recipient.token,
       });
     } catch (error) {
       sendError = error;
