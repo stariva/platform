@@ -65,6 +65,8 @@ test("the tree support invite leads to the group and the channel through the sit
   const html = await render(template.render({ ...links, params }));
   expect(html).toContain("Это Ольга");
   expect(html).toContain("Вступить в группу");
+  // «Открыла закрытую» режет слух
+  expect(html).toContain("Я завела закрытую группу");
   expect(html).toContain(`href="${links.linkUrl("channel")}"`);
   expect(html).not.toContain("https://t.me/+group");
   expect(html).not.toContain("https://t.me/channel");
