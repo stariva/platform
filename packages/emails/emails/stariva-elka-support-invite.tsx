@@ -10,14 +10,14 @@ export interface StarivaElkaSupportInviteEmailProps extends CampaignEmailLinks {
 }
 
 export const ELKA_SUPPORT_INVITE_SUBJECT =
-  "Приглашаю в группу поддержки по ёлке макраме";
+  "Группа поддержки для тех, кто плетёт ёлку макраме";
 export const ELKA_SUPPORT_INVITE_PREVIEW =
-  "Там можно задать вопрос по урокам и показать свою ёлку";
+  "Можно задать вопрос по урокам и показать свою ёлку";
 
 const POINTS = [
   "задать вопрос, если что-то не получается;",
   "показать свою ёлку и посмотреть, что получилось у других;",
-  "получить подсказку по узлам и шнуру.",
+  "посоветоваться по узлам и шнуру.",
 ];
 
 const textStyle = {
@@ -49,14 +49,14 @@ export default function StarivaElkaSupportInviteEmail(
       heading="Приглашаю в группу поддержки"
       intro={
         props.buyer
-          ? "Здравствуйте! Это Ольга. Спасибо, что выбрали мой мастер-класс по ёлке."
+          ? "Здравствуйте! Это Ольга. Спасибо, что выбрали мой мастер-класс по плетению ёлки."
           : "Здравствуйте! Это Ольга, я плету макраме и веду мастер-классы."
       }
       beforeButton={
         <Section style={{ margin: "-12px 0 32px" }}>
           <Text style={{ ...textStyle, paddingBottom: 12 }}>
-            Я открыла закрытую группу в Telegram для тех, кто плетёт ёлку по
-            моим урокам. Там можно:
+            Я завела закрытую группу в Telegram для тех, кто плетёт ёлку по моим
+            урокам. Там можно:
           </Text>
           {/* Список абзацами с тире: ul почтовики рисуют по-разному */}
           {POINTS.map((point) => (
@@ -83,7 +83,8 @@ export default function StarivaElkaSupportInviteEmail(
       }
     >
       <Text style={{ ...textStyle, marginTop: 28 }}>
-        А ещё у меня есть канал Stariva: там новые работы и мастер-классы.{" "}
+        А ещё у меня есть канал Stariva: там я показываю новые работы и
+        рассказываю о мастер-классах.{" "}
         <Link href={props.channelUrl} style={linkStyle}>
           Перейти в канал
         </Link>
