@@ -1,3 +1,4 @@
+import { logger } from "@stariva/config";
 import { db } from "@stariva/db";
 import {
   emailCampaignRecipients,
@@ -38,22 +39,23 @@ const loggedEmail = (token: string) =>
 export async function recordOpen(token: string): Promise<void> {
   // test-<рассылка> — пробное письмо и предпросмотр в админке: не считаем
   if (!TOKEN.test(token) || TEST_TOKEN.test(token)) return;
-  await Promise.all([
-    db
+  // В одной транзакции: счётчики получателя и журнала не должны разойтись
+  await db.transaction(async (tx) => {
+    await tx
       .update(r)
       .set({
         openCount: sql`${r.openCount} + 1`,
         firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
       })
-      .where(eq(r.token, token)),
-    db
+      .where(eq(r.token, token));
+    await tx
       .update(emailLog)
       .set({
         openCount: sql`${emailLog.openCount} + 1`,
         firstOpenedAt: sql`coalesce(${emailLog.firstOpenedAt}, now())`,
       })
-      .where(loggedEmail(token)),
-  ]);
+      .where(loggedEmail(token));
+  });
 }
 
 /**
@@ -85,19 +87,26 @@ export async function recordClick(token: string): Promise<string | null> {
   // Без кнопки в письме переходить было не по чему — такой переход не считаем
   const target = campaign ? campaignButtonUrl(campaign) : null;
   if (!target) return null;
-  await db
-    .update(r)
-    .set({
-      clickCount: sql`${r.clickCount} + 1`,
-      firstClickedAt: sql`coalesce(${r.firstClickedAt}, now())`,
-      firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
-    })
-    .where(eq(r.token, token));
-  // Нажал кнопку — значит, открыл, даже если картинки выключены
-  await db
-    .update(emailLog)
-    .set({ firstOpenedAt: sql`coalesce(${emailLog.firstOpenedAt}, now())` })
-    .where(loggedEmail(token));
+  // Адрес уже известен: сбой счётчика не должен увести человека на главную
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(r)
+        .set({
+          clickCount: sql`${r.clickCount} + 1`,
+          firstClickedAt: sql`coalesce(${r.firstClickedAt}, now())`,
+          firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
+        })
+        .where(eq(r.token, token));
+      // Нажал кнопку — значит, открыл, даже если картинки выключены
+      await tx
+        .update(emailLog)
+        .set({ firstOpenedAt: sql`coalesce(${emailLog.firstOpenedAt}, now())` })
+        .where(loggedEmail(token));
+    });
+  } catch (error) {
+    logger.error("email_campaign.click_count_failed", error);
+  }
   return target;
 }
 

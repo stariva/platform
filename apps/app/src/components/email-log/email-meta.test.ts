@@ -37,6 +37,10 @@ test("доставка: самое важное событие — жалоба,
     deliveryState({ ...none, deliveredAt: at(5), complainedAt: at(9) })?.label,
     "Жалоба на спам",
   );
+  assert.equal(
+    deliveryState({ ...none, bouncedAt: at(6), complainedAt: at(9) })?.label,
+    "Жалоба на спам",
+  );
 });
 
 test("раз, раза", () => {

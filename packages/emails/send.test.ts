@@ -203,6 +203,18 @@ test("adds an open pixel and logs its token, unless the email has its own", asyn
   }
 });
 
+test("the letter text reaches the provider along with the pixel", async () => {
+  resetMocks();
+  await sendEmail({
+    ...email,
+    react: createElement("p", null, "Текст письма"),
+  });
+  const sent = send.mock.calls[0]?.[0] as { html: string };
+  const { html } = sent;
+  expect(html).toContain("Текст письма");
+  expect(html).toContain("/api/m/o/");
+});
+
 test("a retry with the same idempotency key sends the same html", async () => {
   resetMocks();
   const keyed = { ...email, idempotencyKey: "workshop:o1:booked:email" };

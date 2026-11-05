@@ -4,7 +4,7 @@ import {
   newOpenToken,
   openPixelUrl,
   withOpenPixel,
-  withoutOpenPixel,
+  withoutPersonalToken,
 } from "./open-pixel";
 
 test("puts the pixel right before the closing body tag", () => {
@@ -43,9 +43,17 @@ test("derives the token from the idempotency key, so retries match", () => {
   expect(newOpenToken("workshop:o2:booked:email")).not.toBe(token);
 });
 
-test("turns the pixel into a stub the route does not count", () => {
-  const html = withOpenPixel("<body></body>", openPixelUrl("abcdefghijklmnop"));
-  expect(withoutOpenPixel(html, "abcdefghijklmnop")).toContain(
-    'src="https://stariva.ru/api/m/o/preview"',
+test("turns every personal link into a stub the site does not count", () => {
+  const token = "abcdefghijklmnop";
+  const html = withOpenPixel(
+    `<body><a href="https://stariva.ru/api/m/c/${token}?link=channel">x</a><a href="https://stariva.ru/unsubscribe/${token}">y</a></body>`,
+    openPixelUrl(token),
   );
+  const stub = withoutPersonalToken(html, token);
+  expect(stub).not.toContain(token);
+  expect(stub).toContain('src="https://stariva.ru/api/m/o/preview"');
+  expect(stub).toContain(
+    'href="https://stariva.ru/api/m/c/preview?link=channel"',
+  );
+  expect(stub).toContain('href="https://stariva.ru/unsubscribe/preview"');
 });

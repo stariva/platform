@@ -12,7 +12,7 @@ import {
   newOpenToken,
   openPixelUrl,
   withOpenPixel,
-  withoutOpenPixel,
+  withoutPersonalToken,
 } from "./open-pixel";
 import {
   type EmailAttachment,
@@ -84,8 +84,7 @@ export const sendEmailHtml = async (email: EmailHtml) =>
 
 /**
  * Письмо готовым HTML с пикселем открытия. Отрисовываем один раз: этот HTML
- * уходит любому провайдеру, а в журнал ложится он же, но с выключенным
- * пикселем. Не отрисовалось — письмо уходит как есть (провайдер скажет, что
+ * уходит любому провайдеру, а в журнал ложится он же, но без личного токена. Не отрисовалось — письмо уходит как есть (провайдер скажет, что
  * с ним не так), без тела в журнале и без учёта открытий.
  */
 async function prepare(email: OutgoingEmail & { openToken?: string }): Promise<{
@@ -111,7 +110,7 @@ async function prepare(email: OutgoingEmail & { openToken?: string }): Promise<{
     : withOpenPixel(html, openPixelUrl(openToken, env.STOREFRONT_URL));
   return {
     email: { ...rest, html: tracked },
-    html: withoutOpenPixel(tracked, openToken),
+    html: withoutPersonalToken(tracked, openToken),
     openToken,
   };
 }

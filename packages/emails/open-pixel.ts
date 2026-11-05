@@ -23,11 +23,13 @@ export function openPixelUrl(token: string, siteUrl?: string): string {
 }
 
 /**
- * HTML письма для журнала: пиксель ведёт на заглушку, которую маршрут не
- * засчитывает. Иначе просмотр письма в админке считался бы открытием.
+ * HTML письма для журнала: личный токен заменён заглушкой, которую сайт не
+ * считает токеном. Иначе просмотр письма в админке считался бы открытием, а
+ * нажатие на кнопку — переходом получателя. В пикселе рассылки токен тот же,
+ * что в её кнопке и ссылке отписки, поэтому меняем его везде.
  */
-export function withoutOpenPixel(html: string, token: string): string {
-  return html.replaceAll(`/api/m/o/${token}`, "/api/m/o/preview");
+export function withoutPersonalToken(html: string, token: string): string {
+  return html.replaceAll(token, "preview");
 }
 
 /**
