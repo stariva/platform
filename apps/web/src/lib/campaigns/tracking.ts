@@ -2,6 +2,7 @@ import { db } from "@stariva/db";
 import {
   emailCampaignRecipients,
   emailCampaigns,
+  emailLog,
   emailSuppressions,
 } from "@stariva/db/schema";
 import { campaignButtonUrl } from "@stariva/emails";
@@ -17,16 +18,42 @@ const TOKEN = /^[A-Za-z0-9_-]{16,64}$/;
 
 const r = emailCampaignRecipients;
 
-/** Открыли письмо: подгрузилась картинка-пиксель. */
+/**
+ * Строка журнала письма с этим токеном пикселя. Если строк несколько
+ * (повторы одного письма рассылки, пробные письма) — последняя ушедшая.
+ */
+const loggedEmail = (token: string) =>
+  eq(
+    emailLog.id,
+    sql`(select ${emailLog.id} from ${emailLog}
+      where ${emailLog.openToken} = ${token} and ${emailLog.status} = 'sent'
+      order by ${emailLog.createdAt} desc limit 1)`,
+  );
+
+/**
+ * Открыли письмо: подгрузилась картинка-пиксель. Токен ищем и у получателей
+ * рассылок, и в журнале писем: у рассылки он общий, у прочих писем — только
+ * в журнале.
+ */
 export async function recordOpen(token: string): Promise<void> {
-  if (!TOKEN.test(token)) return;
-  await db
-    .update(r)
-    .set({
-      openCount: sql`${r.openCount} + 1`,
-      firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
-    })
-    .where(eq(r.token, token));
+  // test-<рассылка> — пробное письмо и предпросмотр в админке: не считаем
+  if (!TOKEN.test(token) || TEST_TOKEN.test(token)) return;
+  await Promise.all([
+    db
+      .update(r)
+      .set({
+        openCount: sql`${r.openCount} + 1`,
+        firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
+      })
+      .where(eq(r.token, token)),
+    db
+      .update(emailLog)
+      .set({
+        openCount: sql`${emailLog.openCount} + 1`,
+        firstOpenedAt: sql`coalesce(${emailLog.firstOpenedAt}, now())`,
+      })
+      .where(loggedEmail(token)),
+  ]);
 }
 
 /**
@@ -66,6 +93,11 @@ export async function recordClick(token: string): Promise<string | null> {
       firstOpenedAt: sql`coalesce(${r.firstOpenedAt}, now())`,
     })
     .where(eq(r.token, token));
+  // Нажал кнопку — значит, открыл, даже если картинки выключены
+  await db
+    .update(emailLog)
+    .set({ firstOpenedAt: sql`coalesce(${emailLog.firstOpenedAt}, now())` })
+    .where(loggedEmail(token));
   return target;
 }
 

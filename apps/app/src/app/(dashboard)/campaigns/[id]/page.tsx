@@ -47,6 +47,13 @@ export default async function CampaignPage({
       throw error;
     });
   const draft = campaign.status === "draft";
+  // Что сообщил Postbox: доставлено, не доставлено, жалоба на спам
+  const delivery = {
+    delivered: recipients.filter((row) => row.deliveredAt && !row.bouncedAt)
+      .length,
+    bounced: recipients.filter((row) => row.bouncedAt).length,
+    complained: recipients.filter((row) => row.complainedAt).length,
+  };
   const [audience, templates] = draft
     ? await Promise.all([
         api.admin.campaigns.audience({ segment: campaign.segment }),
@@ -148,7 +155,7 @@ export default async function CampaignPage({
           </CardContent>
         </Card>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <Stat
             label="Отправлено"
             value={`${stats?.sent ?? 0} из ${stats?.recipients ?? 0}`}
@@ -156,6 +163,20 @@ export default async function CampaignPage({
               stats && stats.queued + stats.failed > 0
                 ? `В очереди ${stats.queued}, не ушло ${stats.failed}`
                 : "Почтовый сервис принял письма"
+            }
+          />
+          <Stat
+            label="Доставлено"
+            value={delivery.delivered}
+            hint={
+              delivery.bounced + delivery.complained > 0
+                ? `Не доставлено ${delivery.bounced}, жалоб ${delivery.complained}`
+                : "По данным Postbox: письмо в ящике получателя"
+            }
+            tone={
+              delivery.bounced + delivery.complained > 0
+                ? "text-red-600"
+                : undefined
             }
           />
           <Stat

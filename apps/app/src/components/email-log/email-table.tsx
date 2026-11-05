@@ -10,7 +10,13 @@ import {
 import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { dateTime } from "~/components/crm/crm-meta";
-import { duration, kindLabel, providerLabel } from "./email-meta";
+import {
+  deliveryState,
+  duration,
+  kindLabel,
+  providerLabel,
+  times,
+} from "./email-meta";
 import { EmailPreview } from "./email-preview";
 
 /** Строка журнала без тела письма: оно открывается отдельно, по кнопке. */
@@ -28,6 +34,55 @@ function StatusBadge({ row }: { row: EmailRow }) {
   );
 }
 
+/**
+ * Что было с письмом после отправки: доставка по событиям Postbox и открытие
+ * по пикселю. Открытие — «скорее всего»: почтовики грузят картинки и сами.
+ */
+function DeliveryCell({ row }: { row: EmailRow }) {
+  if (row.status === "failed") {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const delivery = deliveryState(row);
+  return (
+    <div className="space-y-1">
+      {delivery ? (
+        <div>
+          <Badge variant={delivery.variant}>{delivery.label}</Badge>
+          <div className="text-muted-foreground mt-1 text-xs">
+            {dateTime.format(delivery.at)}
+          </div>
+          {delivery.detail && (
+            <div className="text-muted-foreground text-xs break-words">
+              {delivery.detail}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-muted-foreground text-xs">
+          О доставке сведений нет
+        </div>
+      )}
+      <div className="text-xs">
+        {row.firstOpenedAt ? (
+          <>
+            Открыто {dateTime.format(row.firstOpenedAt)}
+            {row.openCount > 1 && (
+              <span className="text-muted-foreground">
+                {" "}
+                · {row.openCount} {times(row.openCount)}
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-muted-foreground">
+            {row.openToken ? "Не открывали" : "Открытия не отслеживались"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Таблица писем: когда, кому, какое, чем кончилось и что отвечал каждый провайдер. */
 export function EmailTable({ rows }: { rows: EmailRow[] }) {
   return (
@@ -39,6 +94,7 @@ export function EmailTable({ rows }: { rows: EmailRow[] }) {
             <TableHead>Кому</TableHead>
             <TableHead>Письмо</TableHead>
             <TableHead>Итог</TableHead>
+            <TableHead>Доставка и открытие</TableHead>
             <TableHead>Попытки отправки</TableHead>
           </TableRow>
         </TableHeader>
@@ -46,7 +102,7 @@ export function EmailTable({ rows }: { rows: EmailRow[] }) {
           {rows.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="text-muted-foreground py-8 text-center"
               >
                 За этот период писем нет
@@ -102,6 +158,9 @@ export function EmailTable({ rows }: { rows: EmailRow[] }) {
                       ? `Принял ${providerLabel(row.provider)}`
                       : "Письмо не принял ни один провайдер"}
                   </div>
+                </TableCell>
+                <TableCell className="max-w-[240px] text-sm whitespace-normal">
+                  <DeliveryCell row={row} />
                 </TableCell>
                 <TableCell className="max-w-[360px] text-sm whitespace-normal">
                   <ol className="space-y-1">

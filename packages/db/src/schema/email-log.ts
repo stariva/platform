@@ -31,8 +31,8 @@ export interface EmailAttempt {
  * админов.
  *
  * Статус «sent» значит, что провайдер принял письмо, а не что оно лежит в
- * ящике: о недоставке (bounce) провайдеры сообщают отдельно. Записи старше
- * года можно удалять.
+ * ящике: доставку и отказ сообщает Postbox событиями (delivered_at,
+ * bounced_at), открытие — пиксель на сайте. Записи старше года можно удалять.
  */
 export const emailLog = pgTable(
   "email_log",
@@ -72,6 +72,15 @@ export const emailLog = pgTable(
     // Ответ почтового сервера получателя, почему не принял
     bounceDetail: text("bounce_detail"),
     complainedAt: timestamp("complained_at", { withTimezone: true }),
+    // Токен пикселя открытия (/api/m/o/<токен>). У рассылки это токен
+    // получателя: пиксель в письме один, открытие засчитывается и там, и тут.
+    // Повторные попытки одного письма рассылки дают строки с тем же токеном
+    openToken: text("open_token"),
+    // Почтовик подгрузил картинку-пиксель. Это «скорее всего, открыли»:
+    // Apple Mail и антивирусы грузят картинки сами, а с выключенными
+    // картинками открытие не видно
+    firstOpenedAt: timestamp("first_opened_at", { withTimezone: true }),
+    openCount: integer("open_count").notNull().default(0),
     durationMs: integer("duration_ms").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -82,6 +91,7 @@ export const emailLog = pgTable(
     index("email_log_status_created_idx").on(table.status, table.createdAt),
     index("email_log_workshop_order_idx").on(table.workshopOrderId),
     uniqueIndex("email_log_message_id_uq").on(table.messageId),
+    index("email_log_open_token_idx").on(table.openToken),
   ],
 );
 

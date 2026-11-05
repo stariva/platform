@@ -28,6 +28,8 @@ export interface EmailLogEntry {
   idempotencyKey?: string;
   /** HTML письма; пусто, если тело в журнал не кладём. */
   html?: string | null;
+  /** Токен пикселя открытия в письме; нет — открытия не узнаем. */
+  openToken?: string | null;
   durationMs: number;
 }
 
@@ -49,6 +51,7 @@ export function emailLogRow(entry: EmailLogEntry) {
     idempotencyKey: entry.idempotencyKey ?? null,
     html: entry.html ?? null,
     messageId: delivered?.messageId ?? null,
+    openToken: entry.openToken ?? null,
     durationMs: entry.durationMs,
     ...emailContext(entry.idempotencyKey),
   };
