@@ -3,14 +3,14 @@ import { type CampaignEmailLinks, CampaignFooter } from "./campaign-footer";
 import { colors, linkStyle, StarivaLayout } from "./stariva-layout";
 
 export interface StarivaElkaSupportInviteEmailProps extends CampaignEmailLinks {
-  /** Ссылка кнопки — через сайт, чтобы засчитать переход в группу. */
+  /** Ссылка кнопки — через сайт, чтобы засчитать переход в чат. */
   groupUrl: string;
   /** Ссылка на канал — тоже через сайт. */
   channelUrl: string;
 }
 
 export const ELKA_SUPPORT_INVITE_SUBJECT =
-  "Группа поддержки для тех, кто плетёт ёлку макраме";
+  "Закрытый чат для тех, кто плетёт ёлку макраме";
 export const ELKA_SUPPORT_INVITE_PREVIEW =
   "Можно задать вопрос по урокам и показать свою ёлку";
 
@@ -28,7 +28,7 @@ const textStyle = {
 } as const;
 
 /**
- * Приглашение в закрытую группу поддержки для тех, кто купил мастер-класс по
+ * Приглашение в закрытый чат для тех, кто купил мастер-класс по
  * ёлке, и заодно в канал Stariva. Говорит Ольга от себя. За покупку благодарит
  * только покупателей: адреса из ручного списка могли ничего не покупать.
  * Без props — пример для предпросмотра.
@@ -46,7 +46,7 @@ export default function StarivaElkaSupportInviteEmail(
   return (
     <StarivaLayout
       previewText={ELKA_SUPPORT_INVITE_PREVIEW}
-      heading="Приглашаю в группу поддержки"
+      heading="Приглашаю в закрытый чат"
       intro={
         props.buyer
           ? "Здравствуйте! Это Ольга. Спасибо, что выбрали мой мастер-класс по плетению ёлки."
@@ -55,8 +55,8 @@ export default function StarivaElkaSupportInviteEmail(
       beforeButton={
         <Section style={{ margin: "-12px 0 32px" }}>
           <Text style={{ ...textStyle, paddingBottom: 12 }}>
-            Я завела закрытую группу в Telegram для тех, кто плетёт ёлку по моим
-            урокам. Там можно:
+            Я создала чат в Telegram для тех, кто плетёт ёлку по моим урокам.
+            Там можно:
           </Text>
           {/* Список абзацами с тире: ul почтовики рисуют по-разному */}
           {POINTS.map((point) => (
@@ -70,7 +70,7 @@ export default function StarivaElkaSupportInviteEmail(
           </Text>
         </Section>
       }
-      buttonLabel="Вступить в группу"
+      buttonLabel="Перейти в чат"
       buttonUrl={props.groupUrl}
       // Под кнопкой — служебная ссылка через сайт: показывать её незачем
       linkFallback={false}

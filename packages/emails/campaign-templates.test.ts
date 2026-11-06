@@ -56,7 +56,7 @@ test("the Telegram invite speaks as Olga and does not sell", async () => {
   expect(html).not.toContain("Если кнопка не работает");
 });
 
-test("the tree support invite leads to the group and the channel through the site", async () => {
+test("the tree chat invite leads to the chat and the channel through the site", async () => {
   const template = campaignTemplate("elka-support-invite");
   const params = {
     groupUrl: "https://t.me/+group",
@@ -64,9 +64,9 @@ test("the tree support invite leads to the group and the channel through the sit
   };
   const html = await render(template.render({ ...links, params }));
   expect(html).toContain("Это Ольга");
-  expect(html).toContain("Вступить в группу");
-  // «Открыла закрытую» режет слух
-  expect(html).toContain("Я завела закрытую группу");
+  expect(html).toContain("Перейти в чат");
+  expect(html).toContain("Я создала чат");
+  expect(html).not.toContain("групп");
   expect(html).toContain(`href="${links.linkUrl("channel")}"`);
   expect(html).not.toContain("https://t.me/+group");
   expect(html).not.toContain("https://t.me/channel");
