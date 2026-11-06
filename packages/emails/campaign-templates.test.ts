@@ -56,6 +56,16 @@ test("the Telegram invite speaks as Olga and does not sell", async () => {
   expect(html).not.toContain("Если кнопка не работает");
 });
 
+test("no template relies on a negative margin that mail clients drop", async () => {
+  for (const id of CAMPAIGN_TEMPLATE_IDS) {
+    const template = campaignTemplate(id);
+    const html = await render(
+      template.render({ ...links, params: template.example as never }),
+    );
+    expect(html).not.toMatch(/margin[a-z-]*:-/);
+  }
+});
+
 test("the tree chat invite leads to the chat and the channel through the site", async () => {
   const template = campaignTemplate("elka-support-invite");
   const params = {

@@ -53,7 +53,7 @@ export default function StarivaElkaSupportInviteEmail(
           : "Здравствуйте! Это Ольга, я плету макраме и веду мастер-классы."
       }
       beforeButton={
-        <Section style={{ margin: "-12px 0 32px" }}>
+        <Section>
           <Text style={{ ...textStyle, paddingBottom: 12 }}>
             Я создала чат в Telegram для тех, кто плетёт ёлку по моим урокам.
             Там можно:
@@ -65,7 +65,8 @@ export default function StarivaElkaSupportInviteEmail(
               {point}
             </Text>
           ))}
-          <Text style={{ ...textStyle, marginTop: 16 }}>
+          {/* Отступ до кнопки — padding абзаца: отрицательный margin у таблицы почтовики выбрасывают */}
+          <Text style={{ ...textStyle, marginTop: 16, paddingBottom: 36 }}>
             Заходите, буду рада!
           </Text>
         </Section>
