@@ -232,24 +232,21 @@ const save = adminProcedure
     return { id };
   });
 
-/** Удаляет черновик. Запущенная рассылка остаётся: в ней история отправки. */
+/**
+ * Удаляет рассылку любого статуса вместе с получателями (каскадом). У
+ * запущенной пропадает история отправки, а ссылки отписки и кнопки в уже
+ * ушедших письмах перестают работать: токены лежат у получателей. Если
+ * рассылка ещё отправлялась, остаток не уйдёт. Отписавшиеся остаются в
+ * email_suppressions, там только сбрасывается ссылка на рассылку.
+ */
 const remove = adminProcedure
   .input(idInput)
   .handler(async ({ context, input }) => {
     const [removed] = await context.db
       .delete(emailCampaigns)
-      .where(
-        and(
-          eq(emailCampaigns.id, input.id),
-          eq(emailCampaigns.status, "draft"),
-        ),
-      )
+      .where(eq(emailCampaigns.id, input.id))
       .returning({ id: emailCampaigns.id });
-    if (!removed) {
-      throw new ORPCError("CONFLICT", {
-        message: "Удалить можно только черновик",
-      });
-    }
+    if (!removed) throw new ORPCError("NOT_FOUND");
   });
 
 /** HTML письма, как его увидит получатель. */

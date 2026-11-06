@@ -121,7 +121,11 @@ export default async function CampaignPage({
                   recipients={willReceive}
                   disabled={willReceive === 0}
                 />
-                <RemoveCampaign id={campaign.id} name={campaign.name} />
+                <RemoveCampaign
+                  id={campaign.id}
+                  name={campaign.name}
+                  status={campaign.status}
+                />
               </CardContent>
             </Card>
           </div>
@@ -149,8 +153,14 @@ export default async function CampaignPage({
                   ` · закончилась ${dateTime.format(campaign.finishedAt)}`}
               </p>
             )}
-            <div className="max-w-xs pt-3">
+            <div className="flex max-w-md items-center gap-2 pt-3">
               <CampaignPreview id={campaign.id} subject={campaign.subject} />
+              <RemoveCampaign
+                id={campaign.id}
+                name={campaign.name}
+                status={campaign.status}
+                compact
+              />
             </div>
           </CardContent>
         </Card>
