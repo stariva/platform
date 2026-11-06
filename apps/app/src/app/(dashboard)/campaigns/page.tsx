@@ -9,6 +9,7 @@ import {
 } from "@stariva/ui";
 import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
+import { RemoveCampaign } from "~/components/campaigns/campaign-actions";
 import {
   CAMPAIGN_STATUS_LABELS,
   share,
@@ -60,13 +61,14 @@ export default async function CampaignsPage() {
                 <TableHead className="text-right">Открыли</TableHead>
                 <TableHead className="text-right">Перешли</TableHead>
                 <TableHead className="text-right">Отписались</TableHead>
+                <TableHead className="w-px" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {campaigns.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-muted-foreground py-8 text-center"
                   >
                     Рассылок пока не было
@@ -115,6 +117,14 @@ export default async function CampaignsPage() {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {campaign.unsubscribed}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <RemoveCampaign
+                      id={campaign.id}
+                      name={campaign.name}
+                      status={campaign.status}
+                      compact
+                    />
                   </TableCell>
                 </TableRow>
               ))}

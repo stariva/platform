@@ -195,28 +195,57 @@ export function StartCampaign({
   );
 }
 
-/** Удаляет черновик. */
-export function RemoveCampaign({ id, name }: { id: string; name: string }) {
+/**
+ * Удаляет рассылку. У запущенной вместе с ней пропадают получатели и история,
+ * а ссылки отписки в ушедших письмах перестают работать, поэтому текст
+ * подтверждения об этом предупреждает.
+ */
+export function RemoveCampaign({
+  id,
+  name,
+  status,
+  compact,
+}: {
+  id: string;
+  name: string;
+  status: "draft" | "sending" | "sent";
+  /** Кнопка поменьше, для строки списка. */
+  compact?: boolean;
+}) {
   const router = useRouter();
   const confirm = useConfirm();
+  const draft = status === "draft";
   const remove = useMutation({
     ...orpc.admin.campaigns.remove.mutationOptions(),
     onSuccess: () => {
-      toast.success("Черновик удалён");
+      toast.success(draft ? "Черновик удалён" : "Рассылка удалена");
       router.replace("/campaigns");
       router.refresh();
     },
-    onError: (error: Error) => toast.error(error.message || "Не удалилось"),
+    onError: (error: Error) => {
+      toast.error(error.message || "Не удалилось");
+      router.refresh();
+    },
   });
   return (
     <Button
       variant="ghost"
-      className="text-destructive w-full"
+      size={compact ? "sm" : "default"}
+      className={compact ? "text-destructive" : "text-destructive w-full"}
       disabled={remove.isPending}
       onClick={async () => {
         if (
           await confirm({
-            title: `Удалить черновик «${name}»?`,
+            title: draft
+              ? `Удалить черновик «${name}»?`
+              : `Удалить рассылку «${name}»?`,
+            description: draft
+              ? undefined
+              : `Пропадут получатели и вся статистика. Ссылки «Отписаться» и кнопки в уже ушедших письмах перестанут работать${
+                  status === "sending"
+                    ? ", а письма, которые ещё не ушли, отправлены не будут"
+                    : ""
+                }. Отменить это нельзя.`,
             confirmLabel: "Удалить",
             destructive: true,
           })
@@ -225,7 +254,7 @@ export function RemoveCampaign({ id, name }: { id: string; name: string }) {
         }
       }}
     >
-      Удалить черновик
+      {draft ? "Удалить черновик" : "Удалить"}
     </Button>
   );
 }
