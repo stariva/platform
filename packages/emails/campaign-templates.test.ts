@@ -103,6 +103,42 @@ test("the tree chat invite leads to the chat and the channel through the site", 
   ).toBe(params.channelUrl);
 });
 
+test("the photo request asks for a photo and consent, and does not sell", async () => {
+  const template = campaignTemplate("elka-photo-request");
+  const params = { contactUrl: "https://t.me/Olga_Stariva" };
+  const html = await render(template.render({ ...links, params }));
+  expect(html).toContain("Это Ольга");
+  expect(html).toContain("Прислать фото");
+  // Фото показывают только с согласия — письмо говорит об этом прямо
+  expect(html).toContain("Без вашего согласия фото я нигде не покажу");
+  // Кнопка ведёт через сайт, настоящий адрес мессенджера не светится
+  expect(html).toContain(`href="${links.clickUrl}"`);
+  expect(html).not.toContain("https://t.me/Olga_Stariva");
+  expect(html).not.toContain("Если кнопка не работает");
+  // Ольга работает одна; ёлка — макраме, а не «из макраме»; без продажи и
+  // без обещаний взамен
+  expect(html).not.toMatch(
+    /наш(?:\s|[аеиу])|мастерск|из макраме|купите|оплатите|скидк|цена|цены|подар|бонус|акци/i,
+  );
+  expect(template.subject).not.toMatch(
+    /наш(?:\s|[аеиу])|мастерск|из макраме|скидк|подар|бонус/i,
+  );
+
+  // Ручному адресу не за что говорить спасибо
+  const manual = await render(
+    template.render({ ...links, params, buyer: false }),
+  );
+  expect(manual).toContain("Это Ольга");
+  expect(manual).not.toContain("Спасибо");
+
+  expect(campaignButtonUrl({ template: "elka-photo-request", params })).toBe(
+    params.contactUrl,
+  );
+  expect(
+    campaignParamsError("elka-photo-request", { contactUrl: "t.me/x" }),
+  ).toBe("Проверьте поле «Куда присылать фото»");
+});
+
 test("only the template's own links can be followed", () => {
   const params = {
     groupUrl: "https://t.me/+group",

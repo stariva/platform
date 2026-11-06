@@ -2,6 +2,10 @@ import type { ReactElement } from "react";
 import { z } from "zod";
 
 import type { CampaignEmailLinks } from "./emails/campaign-footer";
+import StarivaElkaPhotoRequestEmail, {
+  ELKA_PHOTO_REQUEST_PREVIEW,
+  ELKA_PHOTO_REQUEST_SUBJECT,
+} from "./emails/stariva-elka-photo-request";
 import StarivaElkaSupportInviteEmail, {
   ELKA_SUPPORT_INVITE_PREVIEW,
   ELKA_SUPPORT_INVITE_SUBJECT,
@@ -108,6 +112,28 @@ const elkaSupportInvite: CampaignTemplate<{
     }),
 };
 
+const elkaPhotoRequest: CampaignTemplate<{ contactUrl: string }> = {
+  label: "Просьба прислать фото ёлки",
+  description:
+    "Письмо от Ольги тем, кто купил мастер-класс по ёлке: просит прислать фото готовой ёлки и пару слов, чтобы с согласия автора показать их на сайте. В получателях отметьте курсы с ёлкой; лучше слать через несколько дней после покупки.",
+  subject: ELKA_PHOTO_REQUEST_SUBJECT,
+  previewText: ELKA_PHOTO_REQUEST_PREVIEW,
+  fields: [
+    {
+      name: "contactUrl",
+      label: "Куда присылать фото",
+      placeholder: "https://t.me/…",
+      hint: "Ссылка на Telegram Ольги или другой мессенджер. В письме она спрятана за кнопкой «Прислать фото».",
+      type: "url",
+    },
+  ],
+  params: z.object({ contactUrl: httpsUrl }),
+  example: { contactUrl: "https://t.me/Olga_Stariva" },
+  buttonUrl: (params) => params.contactUrl,
+  render: ({ clickUrl, linkUrl: _linkUrl, params: _params, ...links }) =>
+    StarivaElkaPhotoRequestEmail({ ...links, contactUrl: clickUrl }),
+};
+
 /**
  * Готовые письма рассылок. Новое письмо — компонент в emails/ (его видно в
  * предпросмотре React Email) и запись здесь; id сохраняется в рассылке,
@@ -116,6 +142,7 @@ const elkaSupportInvite: CampaignTemplate<{
 const templates = {
   "telegram-invite": telegramInvite,
   "elka-support-invite": elkaSupportInvite,
+  "elka-photo-request": elkaPhotoRequest,
 };
 
 export type CampaignTemplateId = keyof typeof templates;
