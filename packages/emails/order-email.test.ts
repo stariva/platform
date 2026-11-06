@@ -8,6 +8,7 @@ const order = {
   number: 1042,
   status: "awaiting_deposit",
   amountTotal: 640000,
+  amountDelivery: 40000,
   depositAmount: 300000,
   leadTime: "2–3 недели",
   paymentDueAt: new Date("2026-10-16T09:00:00Z"),

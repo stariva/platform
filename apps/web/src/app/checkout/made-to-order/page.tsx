@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PickupPointPicker } from "@/components/checkout/pickup-point-picker";
 import {
   ConsentCheckbox,
   PD_CONSENT_ERROR,
@@ -32,6 +33,7 @@ import { reachGoal } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { rememberOrderPhone } from "@/lib/commerce/order-phone";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
+import type { PickupPoint } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
 import { formErrorMessage, webApi } from "@/lib/web-api";
 
@@ -44,7 +46,6 @@ const formSchema = z.object({
     .email("Некорректный email")
     .optional()
     .or(z.literal("")),
-  delivery: z.string().trim().max(1000).optional(),
   notes: z.string().trim().max(1500).optional(),
   personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
@@ -59,6 +60,9 @@ export default function MadeToOrderCheckoutPage() {
   );
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const [submitting, setSubmitting] = useState(false);
+  const [deliveryPoint, setDeliveryPoint] = useState<PickupPoint | null>(null);
+  const [pointMissing, setPointMissing] = useState(false);
+  const pointSection = useRef<HTMLElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -66,7 +70,6 @@ export default function MadeToOrderCheckoutPage() {
       name: "",
       phone: "",
       email: "",
-      delivery: "",
       notes: "",
       personalDataConsent: false,
     },
@@ -133,13 +136,22 @@ export default function MadeToOrderCheckoutPage() {
   async function onSubmit(data: FormValues) {
     // Форма уже не пропускает без согласия; здесь сужаем тип до того, что просит API
     if (data.personalDataConsent !== true) return;
+    if (!deliveryPoint) {
+      setPointMissing(true);
+      // Блок выше формы: без прокрутки кнопка выглядит так, будто не сработала
+      pointSection.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      return;
+    }
     setSubmitting(true);
     try {
       const requested = await webApi.checkout.requestMadeToOrder({
         contactName: data.name,
         contactPhone: data.phone,
         contactEmail: data.email || undefined,
-        deliveryNote: data.delivery || undefined,
+        deliveryPointId: deliveryPoint.id,
         customerNotes: data.notes || undefined,
         items: items.flatMap((item) =>
           item.options
@@ -195,13 +207,13 @@ export default function MadeToOrderCheckoutPage() {
               вами.
             </li>
             <li>
-              Вместе уточните мерки, цвет, итоговую цену и доставку. После
-              согласования на странице заказа откроется предоплата 50%.
+              Вместе уточните мерки, цвет и итоговую цену. После согласования на
+              странице заказа откроется предоплата 50%.
             </li>
             <li>
               Изделие плетётся вручную, обычно за {MADE_TO_ORDER_DAYS}. Когда
-              оно готово — доплата остатка и доставки, и мастер отправляет
-              заказ.
+              оно готово, Ozon посчитает доставку до выбранного пункта. Вы
+              вносите доплату — остаток и доставку, и мастер отправляет заказ.
             </li>
           </ol>
 
@@ -239,9 +251,35 @@ export default function MadeToOrderCheckoutPage() {
               </span>
             </div>
             <p className="text-xs text-taupe">
-              Итоговую цену и доставку согласует мастер.
+              Итоговую цену согласует мастер, доставку посчитает Ozon.
             </p>
           </div>
+
+          <section
+            ref={pointSection}
+            className="bg-white border border-espresso/10 rounded-2xl p-6 mb-8 space-y-4"
+          >
+            <div>
+              <h2 className="font-serif text-xl text-espresso mb-1">
+                Куда доставить
+              </h2>
+              <p className="text-sm text-taupe">
+                Доставка Ozon до пункта выдачи, оплачиваете её вы. Пункт можно
+                сменить, пока изделие не готово.
+              </p>
+            </div>
+            <PickupPointPicker
+              onChange={(point) => {
+                setDeliveryPoint(point);
+                if (point) setPointMissing(false);
+              }}
+            />
+            {pointMissing && (
+              <p role="alert" className="text-sm text-destructive">
+                Выберите пункт выдачи на карте или в списке
+              </p>
+            )}
+          </section>
 
           <Form {...form}>
             <form
@@ -297,23 +335,6 @@ export default function MadeToOrderCheckoutPage() {
                       <Input
                         type="email"
                         autoComplete="email"
-                        disabled={submitting}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="delivery"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Город и доставка (необязательно)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Например, Казань, пункт выдачи Ozon"
                         disabled={submitting}
                         {...field}
                       />

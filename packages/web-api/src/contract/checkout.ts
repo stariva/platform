@@ -1,6 +1,10 @@
 import { error, oc } from "@orpc/contract";
 import { z } from "zod";
-import { PaymentCreateFailedError, PaymentsUnavailableError } from "./orders";
+import {
+  DeliveryPointUnavailableError,
+  PaymentCreateFailedError,
+  PaymentsUnavailableError,
+} from "./orders";
 
 /**
  * Оформление заказа: расчёт и проверка доставки Ozon, заказ готовых изделий
@@ -131,7 +135,8 @@ export const madeToOrderRequestSchema = z.object({
   contactPhone: z.string().trim().min(5, "Укажите телефон").max(32),
   contactEmail: z.email().trim().optional(),
   customerNotes: z.string().trim().max(1500).optional(),
-  deliveryNote: z.string().trim().max(1000).optional(),
+  // Пункт выдачи Ozon, куда отправить готовое изделие.
+  deliveryPointId: z.string().trim().min(1, "Выберите пункт выдачи").max(32),
   items: z
     .array(
       z.object({
@@ -198,13 +203,15 @@ export const checkoutContract = {
 
   /**
    * Заявка на изделия под заказ, без оплаты: мастер связывается с
-   * покупателем, согласует цену, мерки и доставку и выставляет предоплату.
-   * Цены из каталога стартовые; Ozon Доставка не участвует.
+   * покупателем, согласует цену и мерки и выставляет предоплату. Цены из
+   * каталога стартовые. Покупатель сразу выбирает пункт выдачи Ozon, а
+   * стоимость доставки Ozon посчитает, когда изделие будет готово.
    */
   requestMadeToOrder: oc
     .errors({
       [ItemsUnavailableError.code]: ItemsUnavailableError,
       [OptionsUnavailableError.code]: OptionsUnavailableError,
+      [DeliveryPointUnavailableError.code]: DeliveryPointUnavailableError,
       [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
     })
     .input(madeToOrderRequestSchema)

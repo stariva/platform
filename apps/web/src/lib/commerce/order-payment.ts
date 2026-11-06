@@ -1,3 +1,5 @@
+import { madeToOrderReceiptLines } from "@/lib/commerce/made-to-order-flow";
+import { createMadeToOrderShipment } from "@/lib/commerce/made-to-order-shipment";
 import {
   notifyCustomer,
   notifyMadeToOrderPayment,
@@ -48,7 +50,7 @@ export async function applyProductOrderPayment(
   const order = await getProductOrderById(orderId);
   if (!order) return;
 
-  // Изделие под заказ оплачивается по этапам: ни Ozon, ни склада
+  // Изделие под заказ оплачивается по этапам, отправление — после доплаты
   if (order.kind === "made_to_order") {
     await handleMadeToOrderPayment(order, payment, canceled, succeeded);
     return;
@@ -221,17 +223,14 @@ async function handleMadeToOrderPayment(
     getProductOrderItems(orderId),
     listOrderPayments(orderId),
   ]);
-  const stage = row.type === "deposit" ? "предоплата" : "доплата";
   await issueNpdReceipt({
     payment,
     target: { kind: "product", orderId },
-    services: [
-      {
-        name: `${items[0]?.name ?? "Изделие на заказ"}, ${stage}`,
-        amount: row.amount,
-        quantity: 1,
-      },
-    ],
+    services: madeToOrderReceiptLines(
+      items[0]?.name ?? "Изделие на заказ",
+      row,
+      order.amountDelivery,
+    ),
     email: {
       to: await getProductOrderCustomerEmail(order),
       subject: `заказу №${order.number}`,
@@ -239,8 +238,17 @@ async function handleMadeToOrderPayment(
     expected: payments.filter((p) => p.status === "succeeded").length,
   });
 
+  // Сбой отправления не должен задержать уведомление об оплате: мастеру важны оба
+  let shipmentError: unknown;
+  if (row.type === "balance") {
+    await createMadeToOrderShipment(orderId).catch((error: unknown) => {
+      shipmentError = error;
+    });
+  }
+
   // При сбое бросает ошибку — YooKassa повторит webhook, и мы отправим снова
   await notifyMadeToOrderPayment(row.id);
+  if (shipmentError) throw shipmentError;
 }
 
 /**

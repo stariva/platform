@@ -86,14 +86,14 @@ export function MadeToOrderPayment({
       <div className="border-t border-espresso/8 pt-3 space-y-1">
         <Row label="По каталогу" value={money(terms.amountProducts)} strong />
         <p className="text-right text-xs text-taupe">
-          Итоговую цену и доставку согласует мастер
+          Итоговую цену согласует мастер, доставку посчитает Ozon
         </p>
       </div>
     );
   }
 
   const balance = terms.amountTotal - terms.depositAmount;
-  // Доплату выставляют, когда изделие готово; тогда же мастер уточняет доставку
+  // Доплату выставляют, когда изделие готово; тогда же Ozon считает доставку
   const balanceBilled = terms.status === "awaiting_balance" || terms.paid;
   const deliveryKnown = balanceBilled || terms.amountDelivery > 0;
 
@@ -127,12 +127,18 @@ export function MadeToOrderPayment({
         <Row
           label="Доставка"
           value={
-            deliveryKnown
-              ? money(terms.amountDelivery)
-              : "уточним перед доплатой"
+            !deliveryKnown
+              ? "посчитаем, когда изделие будет готово"
+              : terms.amountDelivery > 0
+                ? money(terms.amountDelivery)
+                : "бесплатно"
           }
         />
-        <Row label="Итого" value={money(terms.amountTotal)} strong />
+        <Row
+          label={deliveryKnown ? "Итого" : "Итого без доставки"}
+          value={money(terms.amountTotal)}
+          strong
+        />
       </div>
       <div className="rounded-xl bg-sand px-4 py-3 space-y-1.5">
         <Row
@@ -141,7 +147,13 @@ export function MadeToOrderPayment({
           done={terms.depositPaid}
         />
         <Row
-          label={balanceBilled ? "Доплата" : "Доплата, когда изделие готово"}
+          label={
+            balanceBilled
+              ? "Доплата"
+              : deliveryKnown
+                ? "Доплата, когда изделие готово"
+                : "Доплата без доставки, когда изделие готово"
+          }
           value={money(balance)}
           done={terms.paid}
         />

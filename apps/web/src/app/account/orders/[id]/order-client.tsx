@@ -2,8 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { type ComponentProps, useEffect } from "react";
+import { MadeToOrderDelivery } from "@/app/order/[orderId]/made-to-order-delivery";
 import { MadeToOrderDetails } from "@/app/order/[orderId]/made-to-order-details";
 import { trackPaidOrder } from "@/lib/analytics";
+
+/** Выбор пункта выдачи из кабинета: после сохранения перечитываем страницу с сервера. */
+export function AccountMadeToOrderDelivery(
+  props: Omit<ComponentProps<typeof MadeToOrderDelivery>, "onSaved">,
+) {
+  const router = useRouter();
+  return <MadeToOrderDelivery {...props} onSaved={() => router.refresh()} />;
+}
 
 /** Дополнение заявки из кабинета: после сохранения перечитываем страницу с сервера. */
 export function AccountMadeToOrderDetails(

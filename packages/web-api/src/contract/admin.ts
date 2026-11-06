@@ -38,7 +38,27 @@ export const ozonStockPushResultSchema = z.object({
 
 export type OzonStockPushResult = z.infer<typeof ozonStockPushResultSchema>;
 
+/** Расчёт доставки изделия под заказ; `reason` мастер видит в админке. */
+export const madeToOrderDeliveryQuoteSchema = z.object({
+  available: z.boolean(),
+  reason: z.string().optional(),
+  /** Стоимость доставки, копейки. */
+  deliveryPriceKopecks: z.number().int().nonnegative(),
+});
+
+export type MadeToOrderDeliveryQuote = z.infer<
+  typeof madeToOrderDeliveryQuoteSchema
+>;
+
 export const ozonContract = {
+  /**
+   * Изделие под заказ готово: ставит его в остаток Ozon, считает доставку до
+   * пункта покупателя и запоминает расчёт в заказе. Доплату выставляет админка.
+   */
+  quoteMadeToOrder: base
+    .input(z.object({ orderId: z.string().min(1).max(200) }))
+    .output(madeToOrderDeliveryQuoteSchema),
+
   /**
    * Дублирует остаток товаров на FBS-склад Ozon и скрывает готовые изделия
    * с витрины Ozon. Админка зовёт после правки остатка: ключи Seller API

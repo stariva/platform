@@ -76,6 +76,8 @@ const requestMadeToOrder = checkout.requestMadeToOrder.handler(
         });
       case "options_unavailable":
         throw errors.OPTIONS_UNAVAILABLE();
+      case "delivery_point_unavailable":
+        throw errors.DELIVERY_POINT_UNAVAILABLE();
       case "check_failed":
         throw errors.CHECKOUT_CHECK_FAILED({
           message: "Не удалось проверить заявку",

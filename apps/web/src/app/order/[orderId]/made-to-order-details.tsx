@@ -20,7 +20,6 @@ interface Props {
   phone: string;
   items: DetailsItem[];
   customerNotes: string | null;
-  deliveryNote: string | null;
   onSaved: () => Promise<void> | void;
 }
 
@@ -28,15 +27,14 @@ const isCustomSize = (size: string) =>
   size === CUSTOM_SIZE || size === OWN_SIZE;
 
 /**
- * Дополнение заявки под заказ до одобрения мастером: мерки по изделиям,
- * пожелания и куда отправить. Размер и цвет выбраны в заявке — их меняет мастер.
+ * Дополнение заявки под заказ до одобрения мастером: мерки по изделиям и
+ * пожелания. Размер и цвет выбраны в заявке — их меняет мастер.
  */
 export function MadeToOrderDetails({
   orderId,
   phone,
   items,
   customerNotes,
-  deliveryNote,
   onSaved,
 }: Props) {
   // Значения мерок по изделию и подписи: старые мерки подставляем в поля.
@@ -58,7 +56,6 @@ export function MadeToOrderDetails({
     ),
   );
   const [notes, setNotes] = useState(customerNotes ?? "");
-  const [delivery, setDelivery] = useState(deliveryNote ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -100,7 +97,6 @@ export function MadeToOrderDetails({
         phone,
         items: payloadItems,
         customerNotes: notes.trim(),
-        deliveryNote: delivery.trim(),
       });
       toast.success("Спасибо! Мастер увидит ваши уточнения.");
       await onSaved();
@@ -182,22 +178,6 @@ export function MadeToOrderDetails({
           </div>
         </fieldset>
       ))}
-
-      <div className="space-y-1">
-        <Label htmlFor="order-delivery" className="text-[12px]">
-          Куда и как отправить
-        </Label>
-        <Textarea
-          id="order-delivery"
-          rows={2}
-          placeholder="Город, адрес или пункт выдачи, удобная служба доставки"
-          value={delivery}
-          onChange={(e) => setDelivery(e.target.value)}
-        />
-        <p className="text-taupe text-[11px]">
-          Стоимость доставки мастер согласует с вами — она войдёт в доплату.
-        </p>
-      </div>
 
       <div className="space-y-1">
         <Label htmlFor="order-notes" className="text-[12px]">

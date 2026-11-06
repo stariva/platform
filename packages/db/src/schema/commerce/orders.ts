@@ -40,12 +40,13 @@ export const productOrderPaymentType = pgEnum("product_order_payment_type", [
 export const productDeliveryMethod = pgEnum("product_delivery_method", [
   "pickup",
   "courier",
-  "manual", // изделие под заказ: способ и стоимость доставки согласует мастер
+  "manual", // под заказ: покупатель ещё не выбрал пункт, или мастер отправляет сама
 ]);
 
 /**
- * Готовое изделие со склада (отправляет Ozon Доставка) или изделие под заказ
- * (плетётся после оплаты, отправляется вручную). Один заказ — один вид.
+ * Готовое изделие со склада или изделие под заказ (плетётся после предоплаты).
+ * Оба отправляет Ozon Доставка, под заказ — запасной ручной путь без Ozon.
+ * Один заказ — один вид.
  */
 export const productOrderKind = pgEnum("product_order_kind", [
   "stock",
@@ -87,8 +88,8 @@ export const productOrders = pgTable(
     checkoutSnapshot: jsonb("checkout_snapshot"),
     // Под заказ: пожелания покупателя (в заявке и до одобрения).
     customerNotes: text("customer_notes"),
-    // Под заказ: куда и как отправить — покупатель пишет в заявке,
-    // мастер согласует способ и стоимость.
+    // Под заказ, старые заявки: куда отправить, свободным текстом. Новые заявки
+    // хранят выбранный пункт Ozon в deliveryPointId и deliveryAddress.
     deliveryNote: text("delivery_note"),
     // Под заказ: предоплата в копейках, фиксируется при одобрении;
     // доплата — amountTotal минус предоплата.
@@ -121,8 +122,10 @@ export const productOrders = pgTable(
     // Заполняются после успешного v2/order/create
     ozonOrderId: text("ozon_order_id"),
     ozonPostingNumbers: text("ozon_posting_numbers").array(),
+    // stock_held — только под заказ: готовое изделие числится в остатке Ozon,
+    // чтобы Ozon посчитал доставку и принял отправление.
     ozonShipmentStatus: text("ozon_shipment_status")
-      .$type<"pending" | "creating" | "failed" | "created">()
+      .$type<"pending" | "stock_held" | "creating" | "failed" | "created">()
       .notNull()
       .default("pending"),
     ozonShipmentAttemptId: text("ozon_shipment_attempt_id"),

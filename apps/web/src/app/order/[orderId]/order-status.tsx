@@ -28,6 +28,7 @@ import {
 } from "@/lib/commerce/order-status";
 import { formatPrice } from "@/lib/products";
 import { formErrorMessage, webApi } from "@/lib/web-api";
+import { MadeToOrderDelivery } from "./made-to-order-delivery";
 import { MadeToOrderDetails } from "./made-to-order-details";
 import { MadeToOrderPayment } from "./made-to-order-payment";
 
@@ -195,13 +196,31 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         </div>
       )}
 
+      {madeToOrder && (
+        <MadeToOrderDelivery
+          orderId={orderId}
+          phone={phone}
+          point={order.deliveryPoint}
+          editable={order.deliveryPointEditable}
+          onSaved={async () => {
+            await loadOrder(phone);
+          }}
+        />
+      )}
+
+      {madeToOrder && order.deliveryNote && !order.deliveryPoint && (
+        <div className="rounded-xl bg-sand px-4 py-3 text-sm">
+          <p className="text-taupe text-xs">Вы писали, куда отправить</p>
+          <p className="text-espresso">{order.deliveryNote}</p>
+        </div>
+      )}
+
       {madeToOrder && canEditDetails && (
         <MadeToOrderDetails
           orderId={orderId}
           phone={phone}
           items={order.items}
           customerNotes={order.customerNotes}
-          deliveryNote={order.deliveryNote}
           onSaved={async () => {
             await loadOrder(phone);
           }}

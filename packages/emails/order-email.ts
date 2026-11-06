@@ -11,6 +11,7 @@ export interface OrderEmailOrder {
   number: number;
   status: string;
   amountTotal: number;
+  amountDelivery: number;
   depositAmount: number | null;
   leadTime: string | null;
   paymentDueAt: Date | null;
@@ -57,6 +58,7 @@ export function buildOrderStatusEmail({
     orderUrl: `${siteUrl.replace(/\/$/, "")}/order/${order.id}`,
     items,
     amountTotal: order.amountTotal,
+    amountDelivery: order.amountDelivery,
     depositAmount: order.depositAmount,
     leadTime: order.leadTime,
     paymentDueLabel: order.paymentDueAt ? dueLabel(order.paymentDueAt) : null,

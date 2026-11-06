@@ -10,13 +10,17 @@ import {
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import {
+  pushStorefrontStockToOzon,
+  quoteStorefrontMadeToOrderDelivery,
+} from "../../../storefront";
 import { emailCustomer } from "./customer-email";
 import { depositFor, paymentDueFrom, toKopecks } from "./stage-math";
 
 /*
  * Этапы заказа под заказ, которые двигает мастер:
  * заявка → (условия, одобрение) → предоплата → изготовление → доплата → отправка.
- * Оплаты двигает webhook YooKassa на сайте, а не админка.
+ * Оплаты и создание отправления Ozon двигает webhook YooKassa на сайте, а не админка.
  */
 
 type OrderRow = typeof productOrders.$inferSelect;
@@ -172,43 +176,89 @@ export const reopen = adminProcedure
   );
 
 /**
- * Изделие готово: мастер уточняет доставку и выставляет доплату — остаток
- * стоимости изделий плюс доставка.
+ * Изделие больше не должно числиться на Ozon: заказ отменён или мастер отправит
+ * его сама. Заказ уже сменил статус, поэтому сбой только попадает в лог, а
+ * остаток поправит следующая выгрузка.
+ */
+export async function releaseHeldOzonStock(db: Database, orderId: string) {
+  const items = await db
+    .select({ slug: productOrderItems.productSlug })
+    .from(productOrderItems)
+    .where(eq(productOrderItems.orderId, orderId));
+  await pushStorefrontStockToOzon([...new Set(items.map((item) => item.slug))]);
+}
+
+/** Выставляет доплату: остаток стоимости изделий плюс доставка в копейках. */
+async function billBalance(
+  db: Database,
+  id: string,
+  amountDelivery: number,
+  set: Partial<typeof productOrders.$inferInsert> = {},
+) {
+  const [order] = await db
+    .select({
+      amountProducts: productOrders.amountProducts,
+      depositAmount: productOrders.depositAmount,
+    })
+    .from(productOrders)
+    .where(eq(productOrders.id, id));
+  if (!order) throw new ORPCError("NOT_FOUND", { message: "Заказ не найден" });
+
+  const amountTotal = order.amountProducts + amountDelivery;
+  if (amountTotal > 2_147_483_647) {
+    throw new ORPCError("BAD_REQUEST", {
+      message:
+        "Сумма заказа слишком велика — проверьте цены и стоимость доставки",
+    });
+  }
+  if (order.depositAmount === null || amountTotal <= order.depositAmount) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Доплачивать нечего — проверьте суммы",
+    });
+  }
+  const updated = await transition(db, id, ["in_production"], {
+    ...set,
+    status: "awaiting_balance",
+    amountDelivery,
+    amountTotal,
+    paymentDueAt: paymentDueFrom(new Date()),
+  });
+  await emailCustomer(db, updated.id);
+  return updated;
+}
+
+/**
+ * Изделие готово, обычный путь: витрина ставит его в остаток Ozon и считает
+ * доставку до пункта покупателя, а эта сумма входит в доплату. Если Ozon не
+ * посчитал, заказ остаётся в изготовлении и мастер видит причину.
+ */
+export const requestBalanceWithOzon = adminProcedure
+  .input(z.object({ id: z.string().min(1) }))
+  .handler(async ({ context, input }) => {
+    const quote = await quoteStorefrontMadeToOrderDelivery(input.id);
+    if (!quote.available) {
+      throw new ORPCError("CONFLICT", {
+        message: quote.reason ?? "Ozon не посчитал доставку",
+      });
+    }
+    return billBalance(context.db, input.id, quote.deliveryPriceKopecks);
+  });
+
+/**
+ * Запасной путь: Ozon не считает доставку (например, у изделия нет товара в
+ * Ozon) или мастер отправит заказ сама и указывает стоимость вручную.
+ * Отправление в Ozon после такой доплаты не создаётся.
  */
 export const requestBalance = adminProcedure
   .input(z.object({ id: z.string().min(1), amountDelivery: rublesSchema }))
   .handler(async ({ context, input }) => {
-    const [order] = await context.db
-      .select({
-        amountProducts: productOrders.amountProducts,
-        depositAmount: productOrders.depositAmount,
-      })
-      .from(productOrders)
-      .where(eq(productOrders.id, input.id));
-    if (!order)
-      throw new ORPCError("NOT_FOUND", { message: "Заказ не найден" });
-
-    const amountDelivery = toKopecks(input.amountDelivery);
-    const amountTotal = order.amountProducts + amountDelivery;
-    if (amountTotal > 2_147_483_647) {
-      throw new ORPCError("BAD_REQUEST", {
-        message:
-          "Сумма заказа слишком велика — проверьте цены и стоимость доставки",
-      });
-    }
-    if (order.depositAmount === null || amountTotal <= order.depositAmount) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Доплачивать нечего — проверьте суммы",
-      });
-    }
-    const now = new Date();
-    const updated = await transition(context.db, input.id, ["in_production"], {
-      status: "awaiting_balance",
-      amountDelivery,
-      amountTotal,
-      paymentDueAt: paymentDueFrom(now),
-    });
-    await emailCustomer(context.db, updated.id);
+    const updated = await billBalance(
+      context.db,
+      input.id,
+      toKopecks(input.amountDelivery),
+      { checkoutSnapshot: null, ozonShipmentStatus: "pending" },
+    );
+    await releaseHeldOzonStock(context.db, updated.id);
     return updated;
   });
 
@@ -232,9 +282,15 @@ export const cancel = adminProcedure
     const updated = await transition(
       context.db,
       input.id,
-      ["in_production", "awaiting_balance", "ready_to_ship"],
+      [
+        "in_production",
+        "awaiting_balance",
+        "ready_to_ship",
+        "ozon_order_failed",
+      ],
       { status: "canceled", paymentDueAt: null },
     );
+    await releaseHeldOzonStock(context.db, updated.id);
     await emailCustomer(context.db, updated.id);
     return updated;
   });

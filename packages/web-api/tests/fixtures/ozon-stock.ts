@@ -1,6 +1,14 @@
 import { mock } from "bun:test";
 import assert from "node:assert/strict";
-import { and, inArray, isNotNull, type SQL } from "drizzle-orm";
+import {
+  and,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 
 const product = {
@@ -11,11 +19,15 @@ const product = {
   stockAvailable: 5,
 };
 let rows = [product];
+let heldRows: { slug: string; quantity: number }[] = [];
 let filters: string[] = [];
 mock.module("@stariva/db", () => ({
   and,
+  eq,
   inArray,
   isNotNull,
+  isNull,
+  sql,
   db: {
     select: () => ({
       from: () => ({
@@ -23,6 +35,9 @@ mock.module("@stariva/db", () => ({
           filters.push(new PgDialect().sqlToQuery(condition).sql);
           return rows.map((row) => ({ ...row }));
         },
+        innerJoin: () => ({
+          where: () => ({ groupBy: async () => heldRows }),
+        }),
       }),
     }),
   },
@@ -83,6 +98,21 @@ assert.deepEqual((await pushStockToOzon(["vase"])).syncedSlugs, []);
 omitted = false;
 rows = [];
 assert.deepEqual((await pushStockToOzon(["missing"])).syncedSlugs, []);
+
+// A finished made-to-order piece stays on Ozon through any later stock push,
+// and is hidden from the marketplace like ready stock.
+rows = [{ ...product, stockAvailable: 0 }];
+heldRows = [{ slug: "vase", quantity: 2 }];
+sent = [];
+const held = await pushStockToOzon(["vase"]);
+assert.deepEqual(sent, [2]);
+assert.deepEqual(held.hidden, [123]);
+assert.deepEqual(held.syncedSlugs, ["vase"]);
+rows = [product];
+sent = [];
+await pushStockToOzon(["vase"]);
+assert.deepEqual(sent, [7]);
+heldRows = [];
 
 // The older request lands after the newer request; it must repair its snapshot.
 rows = [product];

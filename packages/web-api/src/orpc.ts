@@ -8,6 +8,7 @@ import {
   type CustomOrderRequest,
   type EmailEventsSyncResult,
   type LessonVideoResult,
+  type MadeToOrderDeliveryQuote,
   type MadeToOrderRequest,
   type MadeToOrderRequested,
   type MaterialUrlResult,
@@ -89,6 +90,16 @@ export interface OrderServices {
   updateDetails: (
     input: OrderDetails & { orderId: string; phone: string },
   ) => Promise<"ok" | "not_found" | "locked">;
+  /** `locked` — доплата уже выставлена, `unavailable` — Ozon не принимает в этот пункт. */
+  updateDeliveryPoint: (input: {
+    orderId: string;
+    phone: string;
+    pointId: string;
+  }) => Promise<"ok" | "not_found" | "locked" | "unavailable">;
+  /** Зовёт админка, когда изделие готово. Причину отказа видит мастер. */
+  quoteMadeToOrderDelivery: (
+    orderId: string,
+  ) => Promise<MadeToOrderDeliveryQuote>;
   /** Заголовки нужны, чтобы собрать адрес возврата, если он не задан в окружении. */
   startPayment: (input: {
     orderId: string;
@@ -145,6 +156,7 @@ export interface CheckoutServices {
   ) => Promise<
     | { status: "ok"; request: MadeToOrderRequested }
     | { status: "options_unavailable" }
+    | { status: "delivery_point_unavailable" }
     | CheckoutRejection
   >;
 }

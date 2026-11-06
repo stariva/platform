@@ -57,6 +57,40 @@ export function madeToOrderPaymentStep(
 }
 
 /**
+ * Строки чека на оплату этапа. В доплату входит доставка: в чеке она отдельной
+ * строкой, как и у заказа со склада. Сумма строк равна сумме платежа.
+ */
+export function madeToOrderReceiptLines(
+  itemName: string,
+  payment: Pick<PaymentRow, "type" | "amount">,
+  amountDelivery: number,
+): { name: string; amount: number; quantity: number }[] {
+  if (payment.type === "deposit") {
+    return [
+      {
+        name: `${itemName}, предоплата`,
+        amount: payment.amount,
+        quantity: 1,
+      },
+    ];
+  }
+  // Оплата могла прийти не на ту сумму (старая ссылка): тогда строку не делим
+  if (amountDelivery <= 0 || payment.amount <= amountDelivery) {
+    return [
+      { name: `${itemName}, доплата`, amount: payment.amount, quantity: 1 },
+    ];
+  }
+  return [
+    {
+      name: `${itemName}, доплата`,
+      amount: payment.amount - amountDelivery,
+      quantity: 1,
+    },
+    { name: "Доставка", amount: amountDelivery, quantity: 1 },
+  ];
+}
+
+/**
  * Чем обернулась успешная оплата этапа:
  * - `applied` — заказ продвинулся благодаря ей;
  * - `duplicate` — этот этап уже оплачен другим платежом, деньги нужно вернуть;

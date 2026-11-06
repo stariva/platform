@@ -64,6 +64,39 @@ export async function pushStorefrontStockToOzon(
 }
 
 /**
+ * Просит витрину поставить готовое изделие под заказ в остаток Ozon и посчитать
+ * доставку до пункта покупателя. `reason` — что показать мастеру при отказе.
+ */
+export async function quoteStorefrontMadeToOrderDelivery(
+  orderId: string,
+): Promise<{
+  available: boolean;
+  reason?: string;
+  deliveryPriceKopecks: number;
+}> {
+  const failed = {
+    available: false,
+    reason: "Сайт не ответил. Попробуйте через пару минут",
+    deliveryPriceKopecks: 0,
+  };
+  try {
+    // Остаток в Ozon и расчёт — два запроса подряд
+    const api = storefrontApi(60_000);
+    if (!api) {
+      logger.warn("storefront.made_to_order_quote.not_configured");
+      return failed;
+    }
+    return await api.admin.ozon.quoteMadeToOrder({ orderId });
+  } catch (error) {
+    logger.warn("storefront.made_to_order_quote.failed", {
+      code: error instanceof ORPCError ? error.code : undefined,
+      error: String(error),
+    });
+    return failed;
+  }
+}
+
+/**
  * Просит витрину (stariva.ru) сбросить кэш страниц после правок каталога.
  * Без настроек или при сбое — только предупреждение: страницы товаров всё
  * равно обновятся сами в течение часа.

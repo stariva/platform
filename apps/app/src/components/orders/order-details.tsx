@@ -232,7 +232,8 @@ export function OrderDeliveryCard({ order }: { order: AdminOrderView }) {
             </div>
           )}
           <Field label="Отправление">{order.trackingNumber}</Field>
-          {order.kind === "stock" && (
+          {(order.kind === "stock" ||
+            order.ozonShipmentStatus !== "pending") && (
             <>
               <Field label="Заказ в Ozon Доставка">
                 {order.ozonOrderId ??
