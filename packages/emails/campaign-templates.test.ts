@@ -76,7 +76,9 @@ test("the tree chat invite leads to the chat and the channel through the site", 
   expect(html).toContain("Это Ольга");
   expect(html).toContain("Перейти в чат");
   expect(html).toContain("Я создала чат");
-  expect(html).not.toContain("групп");
+  // Тема в HTML не попадает, поэтому проверяем её отдельно
+  expect(html).not.toMatch(/групп/i);
+  expect(template.subject).not.toMatch(/групп/i);
   expect(html).toContain(`href="${links.linkUrl("channel")}"`);
   expect(html).not.toContain("https://t.me/+group");
   expect(html).not.toContain("https://t.me/channel");
