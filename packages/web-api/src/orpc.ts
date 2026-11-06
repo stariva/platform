@@ -9,6 +9,7 @@ import {
   type EmailEventsSyncResult,
   type LessonVideoResult,
   type MadeToOrderDeliveryQuote,
+  type MadeToOrderParcel,
   type MadeToOrderRequest,
   type MadeToOrderRequested,
   type MaterialUrlResult,
@@ -99,6 +100,7 @@ export interface OrderServices {
   /** Зовёт админка, когда изделие готово. Причину отказа видит мастер. */
   quoteMadeToOrderDelivery: (
     orderId: string,
+    parcel: MadeToOrderParcel,
   ) => Promise<MadeToOrderDeliveryQuote>;
   /** Заголовки нужны, чтобы собрать адрес возврата, если он не задан в окружении. */
   startPayment: (input: {

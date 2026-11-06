@@ -5,12 +5,17 @@ let quote: {
   reason?: string;
   deliveryPriceKopecks: number;
 } = { available: true, deliveryPriceKopecks: 45000 };
-const pushStock = mock(async () => true);
+const quoted: unknown[][] = [];
 mock.module("../../../storefront", () => ({
-  pushStorefrontStockToOzon: pushStock,
-  quoteStorefrontMadeToOrderDelivery: async () => quote,
+  pushStorefrontStockToOzon: async () => true,
+  quoteStorefrontMadeToOrderDelivery: async (...args: unknown[]) => {
+    quoted.push(args);
+    return quote;
+  },
   revalidateStorefront: async () => true,
 }));
+
+const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
 
 // Importing the router creates a pool; these tests only use the fake DB below.
 const originalUrl = process.env.POSTGRES_URL;
@@ -28,9 +33,7 @@ function fakeDb(amountProducts: number) {
   const db = {
     select: () => ({
       from: () => ({
-        where: async () => [
-          { amountProducts, depositAmount: 100, slug: "elka" },
-        ],
+        where: async () => [{ amountProducts, depositAmount: 100 }],
         // emailCustomer читает заказ вместе с почтой аккаунта. Пустой
         // результат — письма нет, и тест не уходит в реальную рассылку.
         leftJoin: () => ({ where: async () => [] }),
@@ -49,7 +52,7 @@ function requestWithOzon(amountProducts: number) {
     update,
     result: handler({
       context: { db } as unknown as Parameters<typeof handler>[0]["context"],
-      input: { id: "order" },
+      input: { id: "order", parcel },
       path: [],
       procedure: requestBalanceWithOzon,
       errors: {},
@@ -97,6 +100,7 @@ test("the Ozon quote goes into the balance", async () => {
       amountTotal: 435000,
     }),
   );
+  expect(quoted.at(-1)).toEqual(["order", parcel]);
 });
 
 test("a refused Ozon quote keeps the order in production and shows why", async () => {
@@ -113,18 +117,15 @@ test("a refused Ozon quote keeps the order in production and shows why", async (
   expect(update).not.toHaveBeenCalled();
 });
 
-test("a balance billed by hand drops the quote and frees the Ozon stock", async () => {
-  pushStock.mockClear();
+test("a balance billed by hand drops the quote, so nothing ships through Ozon", async () => {
   const { result, set } = request(390000, 450);
   await expect(result).resolves.toMatchObject({ status: "awaiting_balance" });
   expect(set).toHaveBeenCalledWith(
     expect.objectContaining({
       amountDelivery: 45000,
       checkoutSnapshot: null,
-      ozonShipmentStatus: "pending",
     }),
   );
-  expect(pushStock).toHaveBeenCalledWith(["elka"]);
 });
 
 test("requestBalance accepts the maximum integer total", async () => {

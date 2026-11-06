@@ -73,7 +73,11 @@ export const orderServices: OrderServices = {
 
     const items = await getProductOrderItems(orderId);
     const covers = await getProductCoverImages(items.map((i) => i.productSlug));
-    const postings = await getPostingStatuses(order.ozonPostingNumbers);
+    // Посылка под заказ идёт через Delivery API, Seller API её статусы не знает
+    const postings =
+      order.kind === "stock"
+        ? await getPostingStatuses(order.ozonPostingNumbers)
+        : [];
     const fields =
       order.kind === "made_to_order"
         ? await measurementFieldsBySlug(items.map((item) => item.productSlug))

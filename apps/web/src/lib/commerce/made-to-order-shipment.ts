@@ -1,22 +1,22 @@
-import {
-  isOzonSellerConfigured,
-  type MadeToOrderDeliveryQuote,
-  pushStockToOzon,
+import type {
+  MadeToOrderDeliveryQuote,
+  MadeToOrderParcel,
 } from "@stariva/web-api";
-import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
-import { checkout, createOzonDeliveryOrder } from "@/lib/ozon-delivery/client";
+import {
+  createParcelShipment,
+  isOzonBusinessDeliveryConfigured,
+  quoteParcel,
+} from "@/lib/ozon-business-delivery/client";
 import { formatPrice } from "@/lib/products";
 import { notifyOzonOrderFailed, notifyStaffAlert } from "./order-notifications";
 import {
-  attachOzonOrder,
+  attachMadeToOrderShipment,
   claimMadeToOrderShipment,
   getProductOrderById,
   getProductOrderItems,
-  getProductOzonSkus,
-  holdMadeToOrderStock,
+  type MadeToOrderDeliverySnapshot,
   markProductOrderOzonFailed,
   saveMadeToOrderQuote,
-  saveOrderCheckoutSnapshot,
 } from "./orders";
 
 const refuse = (reason: string): MadeToOrderDeliveryQuote => ({
@@ -25,25 +25,19 @@ const refuse = (reason: string): MadeToOrderDeliveryQuote => ({
   deliveryPriceKopecks: 0,
 });
 
-/** Позиции для Ozon: одно изделие разных размеров — одна строка с общим количеством. */
-function ozonLines(items: { ozonSku: number; quantity: number }[]) {
-  const quantities = new Map<number, number>();
-  for (const { ozonSku, quantity } of items) {
-    quantities.set(ozonSku, (quantities.get(ozonSku) ?? 0) + quantity);
-  }
-  return [...quantities].map(([sku, quantity]) => ({ sku, quantity }));
-}
-
 /**
- * Изделие готово: ставит его в остаток Ozon и считает доставку до пункта
- * покупателя. Причину отказа видит мастер в админке, поэтому текст про то,
- * что ей делать дальше. Ручной способ остаётся на случай отказа.
+ * Изделие готово: считает доставку посылки с весом и размерами, которые указал
+ * мастер, до пункта покупателя. Причину отказа мастер видит в админке, поэтому
+ * текст про то, что делать дальше: ручной способ остаётся на любой случай.
  */
 export async function quoteMadeToOrderDelivery(
   orderId: string,
+  parcel: MadeToOrderParcel,
 ): Promise<MadeToOrderDeliveryQuote> {
-  if (!isOzonDeliveryConfigured() || !isOzonSellerConfigured()) {
-    return refuse("Ozon не настроен — укажите стоимость доставки вручную");
+  if (!isOzonBusinessDeliveryConfigured()) {
+    return refuse(
+      "Ozon Доставка для бизнеса ещё не подключена — укажите стоимость доставки вручную",
+    );
   }
   const order = await getProductOrderById(orderId);
   if (order?.kind !== "made_to_order" || order.status !== "in_production") {
@@ -53,51 +47,24 @@ export async function quoteMadeToOrderDelivery(
     return refuse("Покупатель ещё не выбрал пункт выдачи");
   }
 
-  const items = await getProductOrderItems(orderId);
-  const slugs = [...new Set(items.map((item) => item.productSlug))];
-  const skus = await getProductOzonSkus(slugs);
-  const skuByItemId = new Map<string, number>();
-  for (const item of items) {
-    const sku = skus.get(item.productSlug);
-    if (sku === undefined) {
-      return refuse(
-        `У изделия «${item.name}» нет товара в Ozon — укажите стоимость доставки вручную`,
-      );
-    }
-    skuByItemId.set(item.id, sku);
-  }
-
   try {
-    if (!(await holdMadeToOrderStock(orderId))) {
-      return refuse("Заказ изменился, обновите страницу");
-    }
-    const pushed = await pushStockToOzon(slugs);
-    if (!slugs.every((slug) => pushed.syncedSlugs.includes(slug))) {
-      return refuse("Ozon не принял остаток. Попробуйте через пару минут");
-    }
-
-    const quote = await checkout({
-      items: ozonLines(
-        items.map((item) => ({
-          ozonSku: skuByItemId.get(item.id) as number,
-          quantity: item.quantity,
-        })),
-      ),
-      delivery: { method: "pickup", pointId: order.deliveryPointId },
-      buyerPhone: order.contactPhone,
+    const quote = await quoteParcel({
+      recipientPhone: order.contactPhone,
+      pointId: order.deliveryPointId,
+      parcel,
+      declaredValueKopecks: order.amountProducts,
     });
     if (!quote.available) {
-      // Остаток доходит до Ozon не сразу, поэтому первый отказ — обычное дело
       return refuse(
-        "Ozon пока не считает доставку: остаток обновляется не сразу, или этот пункт недоступен. Попробуйте через пару минут",
+        quote.reason ??
+          "Ozon не доставит такую посылку в этот пункт. Проверьте вес и размеры или укажите стоимость вручную",
       );
     }
-
-    await saveMadeToOrderQuote(orderId, quote, skuByItemId);
-    return {
-      available: true,
-      deliveryPriceKopecks: quote.deliveryPriceKopecks,
-    };
+    await saveMadeToOrderQuote(orderId, {
+      parcel,
+      priceKopecks: quote.priceKopecks,
+    });
+    return { available: true, deliveryPriceKopecks: quote.priceKopecks };
   } catch (error) {
     console.error(
       `[made-to-order] Не удалось посчитать доставку заказа ${orderId}:`,
@@ -108,11 +75,10 @@ export async function quoteMadeToOrderDelivery(
 }
 
 /**
- * Доплата получена: создаёт отправление Ozon. Покупатель мог платить до трёх
- * дней, слот из расчёта за это время устаревает, поэтому Ozon считаем заново.
- * Разницу в цене с покупателя уже не взять — о ней сообщаем мастеру. Заказ с
- * ручной доставкой не трогаем. Идемпотентно; сбой бросает ошибку, и YooKassa
- * повторит webhook.
+ * Доплата получена: создаёт и подтверждает отправление Ozon. Покупатель мог
+ * платить до трёх дней, поэтому Ozon считаем заново. Разницу в цене с покупателя
+ * уже не взять — о ней сообщаем мастеру. Заказ с ручной доставкой не трогаем.
+ * Идемпотентно; сбой бросает ошибку, и YooKassa повторит webhook.
  */
 export async function createMadeToOrderShipment(
   orderId: string,
@@ -122,52 +88,45 @@ export async function createMadeToOrderShipment(
 
   try {
     const order = await getProductOrderById(orderId);
-    if (!order?.deliveryPointId) throw new Error("order_without_pickup_point");
-    const delivery = {
-      method: "pickup" as const,
+    const snapshot =
+      order?.checkoutSnapshot as MadeToOrderDeliverySnapshot | null;
+    if (!order?.deliveryPointId || !snapshot?.parcel) {
+      throw new Error("order_without_parcel_or_pickup_point");
+    }
+    const request = {
+      recipientPhone: order.contactPhone,
       pointId: order.deliveryPointId,
+      parcel: snapshot.parcel,
+      declaredValueKopecks: order.amountProducts,
     };
 
-    const items = (await getProductOrderItems(orderId)).map((item) => {
-      if (item.ozonSku === null) {
-        throw new Error(`order_item_without_ozon_sku:${item.id}`);
-      }
-      return { ...item, ozonSku: item.ozonSku };
-    });
-    const quote = await checkout({
-      items: ozonLines(items),
-      delivery,
-      buyerPhone: order.contactPhone,
-    });
+    const quote = await quoteParcel(request);
     if (!quote.available) throw new Error("ozon_delivery_not_available");
-    await saveOrderCheckoutSnapshot(orderId, quote);
 
-    const ozonOrder = await createOzonDeliveryOrder({
-      items: ozonLines(items).map((line) => ({
-        ...line,
-        price: items.find((item) => item.ozonSku === line.sku)?.price ?? 0,
+    const items = await getProductOrderItems(orderId);
+    const shipment = await createParcelShipment({
+      ...request,
+      externalOrderId: orderId,
+      recipientName: order.contactName,
+      items: items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        priceKopecks: item.price,
       })),
-      delivery,
-      recipient: {
-        name: order.contactName,
-        phone: order.contactPhone,
-        email: order.contactEmail ?? undefined,
-      },
-      checkout: quote,
     });
-    await attachOzonOrder(
+    await attachMadeToOrderShipment(
       orderId,
       attemptId,
-      ozonOrder.orderId,
-      ozonOrder.postingNumbers,
+      shipment.orderId,
+      shipment.postingNumbers,
     );
 
-    if (quote.deliveryPriceKopecks !== order.amountDelivery) {
+    if (quote.priceKopecks !== order.amountDelivery) {
       await notifyStaffAlert(
         `${orderId}/delivery-price`,
         {
           title: `Заказ №${order.number}: доставка Ozon изменилась`,
-          message: `Покупатель оплатил доставку ${formatPrice(order.amountDelivery / 100)}, а Ozon посчитал ${formatPrice(quote.deliveryPriceKopecks / 100)} на момент отправки.`,
+          message: `Покупатель оплатил доставку ${formatPrice(order.amountDelivery / 100)}, а Ozon посчитал ${formatPrice(quote.priceKopecks / 100)} на момент отправки.`,
         },
         "order-delivery-price",
       );

@@ -20,6 +20,8 @@ export {
 export {
   AdminNotConfiguredError,
   type MadeToOrderDeliveryQuote,
+  type MadeToOrderParcel,
+  madeToOrderParcelSchema,
   OzonNotConfiguredError,
   OzonRequestFailedError,
   type OzonStockPushResult,

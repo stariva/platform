@@ -41,12 +41,7 @@ export interface AdminOrderView {
   paymentId: string | null;
   ozonOrderId: string | null;
   ozonPostingNumbers: string[];
-  ozonShipmentStatus:
-    | "pending"
-    | "stock_held"
-    | "creating"
-    | "failed"
-    | "created";
+  ozonShipmentStatus: "pending" | "creating" | "failed" | "created";
   staffNotifiedAt: string | null;
   createdAt: string;
   paidAt: string | null;
@@ -232,7 +227,6 @@ export const SHIPMENT_STATUS_LABELS: Record<
   string
 > = {
   pending: "ещё не создан",
-  stock_held: "изделие в остатке Ozon, ждём доплату",
   creating: "создаётся",
   failed: "не удалось создать",
   created: "создан",

@@ -40,6 +40,40 @@ function parseRubles(value: string): number | null {
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
+/** Посылка, как её просит API: все значения целые. */
+type MadeToOrderParcel = {
+  weightGrams: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+};
+
+const PARCEL_FIELDS: { key: keyof MadeToOrderParcel; label: string }[] = [
+  { key: "weightGrams", label: "Вес с упаковкой, г" },
+  { key: "lengthCm", label: "Длина, см" },
+  { key: "widthCm", label: "Ширина, см" },
+  { key: "heightCm", label: "Высота, см" },
+];
+
+/** Лимиты Ozon: до 125 кг и до 250 см. null — что-то не заполнено или не подходит. */
+function parseParcel(
+  fields: Record<keyof MadeToOrderParcel, string>,
+): MadeToOrderParcel | null {
+  const number = (value: string, max: number) => {
+    const parsed = Number(value.trim());
+    return Number.isInteger(parsed) && parsed > 0 && parsed <= max
+      ? parsed
+      : null;
+  };
+  const weightGrams = number(fields.weightGrams, 125_000);
+  const lengthCm = number(fields.lengthCm, 250);
+  const widthCm = number(fields.widthCm, 250);
+  const heightCm = number(fields.heightCm, 250);
+  return weightGrams && lengthCm && widthCm && heightCm
+    ? { weightGrams, lengthCm, widthCm, heightCm }
+    : null;
+}
+
 /** Как на сервере: половина стоимости изделий без доставки, до рубля. */
 const depositFor = (amountProducts: number) => Math.round(amountProducts / 2);
 
@@ -142,6 +176,9 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
     order.amountDelivery > 0 ? String(order.amountDelivery) : "",
   );
   const [manualDelivery, setManualDelivery] = useState(false);
+  const [parcelFields, setParcelFields] = useState<
+    Record<keyof MadeToOrderParcel, string>
+  >({ weightGrams: "", lengthCm: "", widthCm: "", heightCm: "" });
   const [leadTime, setLeadTime] = useState(order.leadTime ?? "");
   const [declining, setDeclining] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
@@ -155,6 +192,7 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
   const termsValid = parsedPrices.every((item) => item.price !== null);
   const hasDeliveryPoint =
     order.deliveryMethod === "pickup" && Boolean(order.deliveryPointId);
+  const parcel = parseParcel(parcelFields);
   const amountProducts = parsedPrices.reduce(
     (sum, item) => sum + (item.price ?? 0) * item.quantity,
     0,
@@ -323,20 +361,43 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
               Предоплата получена
               {order.depositPaidAt &&
                 ` ${dateTime.format(new Date(order.depositPaidAt))}`}
-              . Когда изделие будет готово, нажмите кнопку: сайт поставит его в
-              остаток Ozon, посчитает доставку до пункта покупателя и выставит
-              доплату.
+              . Когда изделие будет готово, упакуйте его и укажите вес и размеры
+              посылки: сайт посчитает доставку Ozon до пункта покупателя и
+              выставит доплату.
             </p>
             {hasDeliveryPoint ? (
-              <Button
-                className="w-full"
-                disabled={busy}
-                onClick={() => requestBalanceWithOzon.mutate({ id: order.id })}
-              >
-                {requestBalanceWithOzon.isPending
-                  ? "Считаем доставку…"
-                  : "Готово — посчитать доставку и выставить доплату"}
-              </Button>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {PARCEL_FIELDS.map(({ key, label }) => (
+                    <div key={key} className="space-y-1.5">
+                      <Label htmlFor={`parcel-${key}`}>{label}</Label>
+                      <Input
+                        id={`parcel-${key}`}
+                        inputMode="numeric"
+                        value={parcelFields[key]}
+                        onChange={(event) =>
+                          setParcelFields((prev) => ({
+                            ...prev,
+                            [key]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!parcel || busy}
+                  onClick={() =>
+                    parcel &&
+                    requestBalanceWithOzon.mutate({ id: order.id, parcel })
+                  }
+                >
+                  {requestBalanceWithOzon.isPending
+                    ? "Считаем доставку…"
+                    : "Готово — посчитать доставку и выставить доплату"}
+                </Button>
+              </div>
             ) : (
               <p className="rounded-lg border p-3 text-sm">
                 Покупатель ещё не выбрал пункт выдачи Ozon. Он может сделать это

@@ -18,7 +18,10 @@ const pushStock = admin.ozon.pushStock.handler(async ({ input, errors }) => {
 
 const quoteMadeToOrder = admin.ozon.quoteMadeToOrder.handler(
   ({ input, context }) =>
-    context.services.orders.quoteMadeToOrderDelivery(input.orderId),
+    context.services.orders.quoteMadeToOrderDelivery(
+      input.orderId,
+      input.parcel,
+    ),
 );
 
 const revalidate = admin.revalidate.handler(({ input, context }) => {

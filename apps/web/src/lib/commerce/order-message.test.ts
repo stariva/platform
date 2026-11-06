@@ -164,14 +164,14 @@ test("the balance message says where to ship and that Ozon takes over", () => {
       deliveryMethod: "pickup",
       deliveryPointId: "77",
       deliveryAddress: { title: "ул. Баумана, 1", address: "Казань" },
-      checkoutSnapshot: { splits: [] },
+      checkoutSnapshot: { priceKopecks: 45000 },
     },
     { type: "balance", amount: 240000 },
     "applied",
   );
 
   assert.ok(message.includes("Пункт выдачи Ozon: ул. Баумана, 1, Казань"));
-  assert.ok(message.includes("кабинете Ozon"));
+  assert.ok(message.includes("кабинете доставки Ozon"));
 });
 
 test("a balance billed by hand still asks for a tracking number", () => {

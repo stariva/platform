@@ -9,6 +9,7 @@ import {
   user,
   type VisitorInfo,
 } from "@stariva/db/schema";
+import type { MadeToOrderParcel } from "@stariva/web-api/contract";
 import {
   and,
   desc,
@@ -378,7 +379,7 @@ export async function claimMadeToOrderShipment(
         isNull(productOrders.ozonOrderId),
         isNotNull(productOrders.checkoutSnapshot),
         or(
-          inArray(productOrders.ozonShipmentStatus, ["stock_held", "failed"]),
+          inArray(productOrders.ozonShipmentStatus, ["pending", "failed"]),
           and(
             eq(productOrders.ozonShipmentStatus, "creating"),
             lt(productOrders.ozonShipmentAttemptedAt, staleBefore),
@@ -388,6 +389,34 @@ export async function claimMadeToOrderShipment(
     )
     .returning({ id: productOrders.id });
   return result.length > 0 ? attemptId : null;
+}
+
+/**
+ * Отправление заказа под заказ создано. Номер покупатель видит как номер
+ * отправления: статусы такой посылки Seller API не отдаёт.
+ */
+export async function attachMadeToOrderShipment(
+  orderId: string,
+  attemptId: string,
+  ozonOrderId: string,
+  postingNumbers: string[],
+): Promise<void> {
+  await db
+    .update(productOrders)
+    .set({
+      ozonOrderId,
+      ozonPostingNumbers: postingNumbers,
+      trackingNumber: postingNumbers.join(", ") || ozonOrderId,
+      ozonShipmentStatus: "created",
+      status: "fulfilling",
+    })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.ozonShipmentStatus, "creating"),
+        eq(productOrders.ozonShipmentAttemptId, attemptId),
+      ),
+    );
 }
 
 /** Записывает результат успешного v2/order/create и переводит заказ в сборку. */
@@ -492,72 +521,27 @@ export async function setMadeToOrderDeliveryPoint(
   return updated.length > 0;
 }
 
-/**
- * Изделие готово: с этого момента оно считается в остатке Ozon. Отметка
- * остаётся и при неудачном расчёте — повторное нажатие ничего не теряет.
- */
-export async function holdMadeToOrderStock(orderId: string): Promise<boolean> {
-  const updated = await db
+/** Расчёт доставки и посылка в заказе: посылку отправим после доплаты. */
+export interface MadeToOrderDeliverySnapshot {
+  parcel: MadeToOrderParcel;
+  priceKopecks: number;
+}
+
+/** Запоминает расчёт, пока изделие не ушло в доплату. */
+export async function saveMadeToOrderQuote(
+  orderId: string,
+  snapshot: MadeToOrderDeliverySnapshot,
+): Promise<void> {
+  await db
     .update(productOrders)
-    .set({ ozonShipmentStatus: "stock_held" })
+    .set({ checkoutSnapshot: snapshot })
     .where(
       and(
         eq(productOrders.id, orderId),
         eq(productOrders.kind, "made_to_order"),
         eq(productOrders.status, "in_production"),
-        isNull(productOrders.ozonOrderId),
       ),
-    )
-    .returning({ id: productOrders.id });
-  return updated.length > 0;
-}
-
-/** SKU Ozon по товарам каталога; товара без SKU в словаре нет. */
-export async function getProductOzonSkus(
-  slugs: string[],
-): Promise<Map<string, number>> {
-  const unique = [...new Set(slugs)];
-  if (unique.length === 0) return new Map();
-  const rows = await db
-    .select({ slug: products.slug, ozonSku: products.ozonSku })
-    .from(products)
-    .where(inArray(products.slug, unique));
-  return new Map(
-    rows.flatMap((row) =>
-      row.ozonSku === null ? [] : [[row.slug, row.ozonSku]],
-    ),
-  );
-}
-
-/** Запоминает расчёт Ozon и SKU позиций: они нужны для создания отправления. */
-export async function saveMadeToOrderQuote(
-  orderId: string,
-  quote: DeliveryCheckoutResponse,
-  skuByItemId: Map<string, number>,
-): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
-      .update(productOrders)
-      .set({ checkoutSnapshot: quote })
-      .where(eq(productOrders.id, orderId));
-    for (const [itemId, ozonSku] of skuByItemId) {
-      await tx
-        .update(productOrderItems)
-        .set({ ozonSku })
-        .where(eq(productOrderItems.id, itemId));
-    }
-  });
-}
-
-/** Свежий расчёт перед созданием отправления: даты покупатель видит на странице. */
-export async function saveOrderCheckoutSnapshot(
-  orderId: string,
-  quote: DeliveryCheckoutResponse,
-): Promise<void> {
-  await db
-    .update(productOrders)
-    .set({ checkoutSnapshot: quote })
-    .where(eq(productOrders.id, orderId));
+    );
 }
 
 export interface MadeToOrderDetailsInput {

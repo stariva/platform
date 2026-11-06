@@ -82,7 +82,8 @@ export const productOrders = pgTable(
     deliveryPointId: text("delivery_point_id"),
     // { address: string; lat: number; lng: number } — для курьерской доставки
     deliveryAddress: jsonb("delivery_address"),
-    // Точный ответ v2/delivery/checkout — состав/сроки нельзя менять после
+    // Под заказ: посылка и расчёт Delivery API (MadeToOrderDeliverySnapshot).
+    // Со склада: точный ответ v2/delivery/checkout — состав/сроки нельзя менять после
     // создания заказа в Ozon, поэтому воспроизводим ровно то, что показали
     // покупателю при оформлении.
     checkoutSnapshot: jsonb("checkout_snapshot"),
@@ -122,10 +123,8 @@ export const productOrders = pgTable(
     // Заполняются после успешного v2/order/create
     ozonOrderId: text("ozon_order_id"),
     ozonPostingNumbers: text("ozon_posting_numbers").array(),
-    // stock_held — только под заказ: готовое изделие числится в остатке Ozon,
-    // чтобы Ozon посчитал доставку и принял отправление.
     ozonShipmentStatus: text("ozon_shipment_status")
-      .$type<"pending" | "stock_held" | "creating" | "failed" | "created">()
+      .$type<"pending" | "creating" | "failed" | "created">()
       .notNull()
       .default("pending"),
     ozonShipmentAttemptId: text("ozon_shipment_attempt_id"),

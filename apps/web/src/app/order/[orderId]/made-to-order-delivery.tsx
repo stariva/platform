@@ -71,7 +71,8 @@ export function MadeToOrderDelivery({
       {editable && (
         <p className="text-taupe text-xs leading-relaxed">
           Доставку оплачиваете вы. Ozon посчитает её, когда изделие будет
-          готово, — сумма войдёт в доплату.
+          готово, — сумма войдёт в доплату. Получить заказ можно в приложении
+          Ozon: там будет штрихкод для пункта выдачи.
         </p>
       )}
       {editable && !picking && (

@@ -50,13 +50,31 @@ export type MadeToOrderDeliveryQuote = z.infer<
   typeof madeToOrderDeliveryQuoteSchema
 >;
 
+/**
+ * Посылка изделия под заказ, которую упаковал мастер. Верхние границы — лимиты
+ * Ozon Доставки для бизнеса: до 125 кг и до 250 см.
+ */
+export const madeToOrderParcelSchema = z.object({
+  weightGrams: z.number().int().positive().max(125_000),
+  lengthCm: z.number().int().positive().max(250),
+  widthCm: z.number().int().positive().max(250),
+  heightCm: z.number().int().positive().max(250),
+});
+
+export type MadeToOrderParcel = z.infer<typeof madeToOrderParcelSchema>;
+
 export const ozonContract = {
   /**
-   * Изделие под заказ готово: ставит его в остаток Ozon, считает доставку до
-   * пункта покупателя и запоминает расчёт в заказе. Доплату выставляет админка.
+   * Изделие под заказ готово: считает доставку посылки до пункта покупателя
+   * через Delivery API и запоминает расчёт в заказе. Доплату выставляет админка.
    */
   quoteMadeToOrder: base
-    .input(z.object({ orderId: z.string().min(1).max(200) }))
+    .input(
+      z.object({
+        orderId: z.string().min(1).max(200),
+        parcel: madeToOrderParcelSchema,
+      }),
+    )
     .output(madeToOrderDeliveryQuoteSchema),
 
   /**

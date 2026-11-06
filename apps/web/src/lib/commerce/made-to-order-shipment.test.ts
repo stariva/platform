@@ -5,18 +5,18 @@ import { fileURLToPath } from "node:url";
 
 // Моки заказов и Ozon не должны влиять на другие наборы тестов.
 for (const scenario of [
-  "the quote holds stock before asking Ozon for a price",
-  "two sizes of one product become one Ozon line",
-  "a buyer without a pickup point gets no quote and no stock",
-  "a product without an Ozon SKU points to the manual path",
-  "stock Ozon has not accepted stops before the price",
-  "a refused quote saves nothing and asks to retry",
+  "until the Delivery API is connected the master bills by hand",
+  "the quote uses the parcel, the point and the order value",
+  "a buyer without a pickup point gets no quote",
+  "an order out of production gets no quote",
+  "a refused quote shows the reason and saves nothing",
   "an Ozon outage becomes a reason instead of an exception",
-  "a paid order is shipped with a fresh quote",
+  "a paid order ships the saved parcel with a fresh quote",
   "an order nobody can claim is left alone",
   "a changed Ozon price is reported to the master",
   "a failed shipment is marked and retried by the webhook",
   "Ozon refusing the delivery at shipping time is a failure too",
+  "a saved order without a parcel cannot ship",
 ]) {
   test(scenario, () => {
     const result = spawnSync(

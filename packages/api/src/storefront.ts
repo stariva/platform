@@ -2,7 +2,11 @@ import { createORPCClient, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { TimeoutLinkPlugin } from "@orpc/client/plugins";
 import { env, logger } from "@stariva/config";
-import { WEB_RPC_PATH, type WebClient } from "@stariva/web-api/contract";
+import {
+  type MadeToOrderParcel,
+  WEB_RPC_PATH,
+  type WebClient,
+} from "@stariva/web-api/contract";
 
 /** Адрес витрины и общий секрет; null без настроек или не по HTTPS. */
 function storefrontTarget() {
@@ -64,11 +68,12 @@ export async function pushStorefrontStockToOzon(
 }
 
 /**
- * Просит витрину поставить готовое изделие под заказ в остаток Ozon и посчитать
- * доставку до пункта покупателя. `reason` — что показать мастеру при отказе.
+ * Просит витрину посчитать доставку посылки изделия под заказ до пункта
+ * покупателя. `reason` — что показать мастеру при отказе.
  */
 export async function quoteStorefrontMadeToOrderDelivery(
   orderId: string,
+  parcel: MadeToOrderParcel,
 ): Promise<{
   available: boolean;
   reason?: string;
@@ -80,13 +85,12 @@ export async function quoteStorefrontMadeToOrderDelivery(
     deliveryPriceKopecks: 0,
   };
   try {
-    // Остаток в Ozon и расчёт — два запроса подряд
-    const api = storefrontApi(60_000);
+    const api = storefrontApi(30_000);
     if (!api) {
       logger.warn("storefront.made_to_order_quote.not_configured");
       return failed;
     }
-    return await api.admin.ozon.quoteMadeToOrder({ orderId });
+    return await api.admin.ozon.quoteMadeToOrder({ orderId, parcel });
   } catch (error) {
     logger.warn("storefront.made_to_order_quote.failed", {
       code: error instanceof ORPCError ? error.code : undefined,

@@ -7,13 +7,11 @@ import {
   productOrderItems,
   productOrders,
 } from "@stariva/db";
+import { madeToOrderParcelSchema } from "@stariva/web-api/contract";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import {
-  pushStorefrontStockToOzon,
-  quoteStorefrontMadeToOrderDelivery,
-} from "../../../storefront";
+import { quoteStorefrontMadeToOrderDelivery } from "../../../storefront";
 import { emailCustomer } from "./customer-email";
 import { depositFor, paymentDueFrom, toKopecks } from "./stage-math";
 
@@ -175,19 +173,6 @@ export const reopen = adminProcedure
     }),
   );
 
-/**
- * Изделие больше не должно числиться на Ozon: заказ отменён или мастер отправит
- * его сама. Заказ уже сменил статус, поэтому сбой только попадает в лог, а
- * остаток поправит следующая выгрузка.
- */
-export async function releaseHeldOzonStock(db: Database, orderId: string) {
-  const items = await db
-    .select({ slug: productOrderItems.productSlug })
-    .from(productOrderItems)
-    .where(eq(productOrderItems.orderId, orderId));
-  await pushStorefrontStockToOzon([...new Set(items.map((item) => item.slug))]);
-}
-
 /** Выставляет доплату: остаток стоимости изделий плюс доставка в копейках. */
 async function billBalance(
   db: Database,
@@ -228,14 +213,17 @@ async function billBalance(
 }
 
 /**
- * Изделие готово, обычный путь: витрина ставит его в остаток Ozon и считает
- * доставку до пункта покупателя, а эта сумма входит в доплату. Если Ozon не
- * посчитал, заказ остаётся в изготовлении и мастер видит причину.
+ * Изделие готово, обычный путь: мастер указывает вес и размеры посылки, витрина
+ * считает доставку до пункта покупателя, и эта сумма входит в доплату. Если Ozon
+ * не посчитал, заказ остаётся в изготовлении и мастер видит причину.
  */
 export const requestBalanceWithOzon = adminProcedure
-  .input(z.object({ id: z.string().min(1) }))
+  .input(z.object({ id: z.string().min(1), parcel: madeToOrderParcelSchema }))
   .handler(async ({ context, input }) => {
-    const quote = await quoteStorefrontMadeToOrderDelivery(input.id);
+    const quote = await quoteStorefrontMadeToOrderDelivery(
+      input.id,
+      input.parcel,
+    );
     if (!quote.available) {
       throw new ORPCError("CONFLICT", {
         message: quote.reason ?? "Ozon не посчитал доставку",
@@ -245,22 +233,17 @@ export const requestBalanceWithOzon = adminProcedure
   });
 
 /**
- * Запасной путь: Ozon не считает доставку (например, у изделия нет товара в
- * Ozon) или мастер отправит заказ сама и указывает стоимость вручную.
- * Отправление в Ozon после такой доплаты не создаётся.
+ * Запасной путь: Ozon не считает доставку или мастер отправит заказ сама и
+ * указывает стоимость вручную. Без расчёта в заказе отправление в Ozon после
+ * такой доплаты не создаётся.
  */
 export const requestBalance = adminProcedure
   .input(z.object({ id: z.string().min(1), amountDelivery: rublesSchema }))
-  .handler(async ({ context, input }) => {
-    const updated = await billBalance(
-      context.db,
-      input.id,
-      toKopecks(input.amountDelivery),
-      { checkoutSnapshot: null, ozonShipmentStatus: "pending" },
-    );
-    await releaseHeldOzonStock(context.db, updated.id);
-    return updated;
-  });
+  .handler(({ context, input }) =>
+    billBalance(context.db, input.id, toKopecks(input.amountDelivery), {
+      checkoutSnapshot: null,
+    }),
+  );
 
 /** Ещё 3 дня на оплату — например, если срок вышел, а покупатель на связи. */
 export const extendPayment = adminProcedure
@@ -290,7 +273,6 @@ export const cancel = adminProcedure
       ],
       { status: "canceled", paymentDueAt: null },
     );
-    await releaseHeldOzonStock(context.db, updated.id);
     await emailCustomer(context.db, updated.id);
     return updated;
   });

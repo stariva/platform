@@ -5,7 +5,6 @@ import { z } from "zod";
 import { adminProcedure } from "../../../orpc";
 import { emailCustomer } from "./customer-email";
 import { isManualStatus } from "./shape";
-import { releaseHeldOzonStock } from "./stages";
 
 /**
  * Ручные статусы, о которых пишем покупателю. Остальные мастер ставит,
@@ -40,11 +39,7 @@ export const update = adminProcedure
   .handler(async ({ context, input }) => {
     const { id, status, fromStatus, masterNotes, trackingNumber } = input;
     const [order] = await context.db
-      .select({
-        kind: productOrders.kind,
-        status: productOrders.status,
-        ozonShipmentStatus: productOrders.ozonShipmentStatus,
-      })
+      .select({ kind: productOrders.kind, status: productOrders.status })
       .from(productOrders)
       .where(eq(productOrders.id, id));
     if (!order)
@@ -88,15 +83,6 @@ export const update = adminProcedure
         trackingNumber: productOrders.trackingNumber,
       });
     if (!updated) throw conflict();
-    // Мастер вывела заказ из работы вручную: зарезервированное изделие больше
-    // не должно числиться на Ozon
-    if (
-      statusChanged &&
-      (order.ozonShipmentStatus === "stock_held" ||
-        order.ozonShipmentStatus === "failed")
-    ) {
-      await releaseHeldOzonStock(context.db, updated.id);
-    }
     if (statusChanged && EMAILED_MANUAL_STATUSES.has(updated.status)) {
       await emailCustomer(context.db, updated.id);
     }

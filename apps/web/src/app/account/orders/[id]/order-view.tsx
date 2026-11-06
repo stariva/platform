@@ -248,7 +248,8 @@ export async function ProductOrderView({
   const progress = orderProgress(view.kind, order.status);
   const canEditDetails = madeToOrder && order.status === "requested";
   const [postings, measurementFields] = await Promise.all([
-    getPostingStatuses(order.ozonPostingNumbers),
+    // Посылка под заказ идёт через Delivery API, Seller API её статусы не знает
+    madeToOrder ? [] : getPostingStatuses(order.ozonPostingNumbers),
     canEditDetails
       ? measurementFieldsBySlug(view.items.map((item) => item.productSlug))
       : null,

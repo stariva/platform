@@ -26,10 +26,6 @@ export {
   upsertLessonProgress,
 } from "./services/course-access";
 export {
-  isOzonSellerConfigured,
-  pushStockToOzon,
-} from "./services/ozon-stock";
-export {
   getReadyRendition,
   MAX_RENDITION_ATTEMPTS,
 } from "./services/video-renditions";

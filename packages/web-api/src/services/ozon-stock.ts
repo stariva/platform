@@ -1,6 +1,6 @@
 import { logger } from "@stariva/config";
-import { and, db, eq, inArray, isNotNull, isNull, sql } from "@stariva/db";
-import { productOrderItems, productOrders, products } from "@stariva/db/schema";
+import { and, db, inArray, isNotNull } from "@stariva/db";
+import { products } from "@stariva/db/schema";
 import { z } from "zod";
 import type { OzonStockPushResult } from "../contract";
 import { env } from "../env";
@@ -64,66 +64,22 @@ function chunks<T>(items: T[]): T[][] {
   return result;
 }
 
-/**
- * Готовые изделия под заказ, которые уже числятся за покупателем: они не в
- * продаже на сайте, но должны быть в остатке Ozon, иначе Ozon не посчитает
- * доставку и не примет отправление. Как только отправление создано, резерв
- * ведёт сам Ozon.
- */
-async function heldStockBySlug(slugs?: string[]) {
-  const rows = await db
+function stockQuery(slugs?: string[]) {
+  return db
     .select({
-      slug: productOrderItems.productSlug,
-      quantity: sql<number>`sum(${productOrderItems.quantity})::int`,
+      slug: products.slug,
+      ozonProductId: products.ozonProductId,
+      ozonOfferId: products.ozonOfferId,
+      ozonSku: products.ozonSku,
+      stockAvailable: products.stockAvailable,
     })
-    .from(productOrderItems)
-    .innerJoin(productOrders, eq(productOrders.id, productOrderItems.orderId))
+    .from(products)
     .where(
       and(
-        eq(productOrders.kind, "made_to_order"),
-        isNull(productOrders.ozonOrderId),
-        inArray(productOrders.ozonShipmentStatus, [
-          "stock_held",
-          "creating",
-          "failed",
-        ]),
-        inArray(productOrders.status, [
-          "in_production",
-          "awaiting_balance",
-          "ready_to_ship",
-          "ozon_order_failed",
-        ]),
-        slugs ? inArray(productOrderItems.productSlug, slugs) : undefined,
+        isNotNull(products.ozonOfferId),
+        slugs ? inArray(products.slug, slugs) : undefined,
       ),
-    )
-    .groupBy(productOrderItems.productSlug);
-  return new Map(rows.map((row) => [row.slug, row.quantity]));
-}
-
-async function stockQuery(slugs?: string[]) {
-  const [rows, held] = await Promise.all([
-    db
-      .select({
-        slug: products.slug,
-        ozonProductId: products.ozonProductId,
-        ozonOfferId: products.ozonOfferId,
-        ozonSku: products.ozonSku,
-        stockAvailable: products.stockAvailable,
-      })
-      .from(products)
-      .where(
-        and(
-          isNotNull(products.ozonOfferId),
-          slugs ? inArray(products.slug, slugs) : undefined,
-        ),
-      ),
-    heldStockBySlug(slugs),
-  ]);
-  return rows.map((row) => ({
-    ...row,
-    // Сколько должно числиться на Ozon: в продаже плюс готовое под заказ
-    ozonStock: row.stockAvailable + (held.get(row.slug) ?? 0),
-  }));
+    );
 }
 
 /**
@@ -154,7 +110,7 @@ export async function pushStockToOzon(
         latest.some(
           (current) =>
             current.slug === row.slug &&
-            current.ozonStock === row.ozonStock &&
+            current.stockAvailable === row.stockAvailable &&
             current.ozonOfferId === row.ozonOfferId &&
             current.ozonSku === row.ozonSku &&
             current.ozonProductId === row.ozonProductId,
@@ -185,7 +141,7 @@ async function pushStockSnapshotToOzon(
         stocks: batch.map((row) => ({
           offer_id: row.ozonOfferId,
           ...(row.ozonProductId !== null && { product_id: row.ozonProductId }),
-          stock: row.ozonStock,
+          stock: row.stockAvailable,
           warehouse_id: env.OZON_FBS_WAREHOUSE_ID,
         })),
       },
@@ -205,7 +161,7 @@ async function pushStockSnapshotToOzon(
   }
 
   const toHide = rows
-    .filter((row) => row.ozonStock > 0 && row.ozonSku !== null)
+    .filter((row) => row.stockAvailable > 0 && row.ozonSku !== null)
     .map((row) => row.ozonSku as number);
   for (const batch of chunks(toHide)) {
     const data = await ozonSellerFetch(
@@ -234,7 +190,7 @@ async function pushStockSnapshotToOzon(
         row.ozonOfferId !== null &&
         result.updated.includes(row.ozonOfferId) &&
         !result.failed.some((failure) => failure.offerId === row.ozonOfferId) &&
-        (row.ozonStock === 0 ||
+        (row.stockAvailable === 0 ||
           (row.ozonSku !== null && result.hidden.includes(row.ozonSku))),
     )
     .map((row) => row.slug);
