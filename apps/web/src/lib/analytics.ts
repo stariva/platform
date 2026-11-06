@@ -211,10 +211,10 @@ function scrubEvent(event: CaptureResult | null): CaptureResult | null {
 }
 
 /** Блок с data-analytics-private в записи сессии виден только как звёздочки. */
-function maskReplayText(text: string, element?: HTMLElement | null) {
-  if (element?.closest?.("[data-analytics-private]"))
-    return text.replace(/\S/g, "*");
-  return maskContacts(text);
+const PRIVATE_BLOCK = "[data-analytics-private]";
+
+function maskPrivateInput(text: string, element?: HTMLElement | null) {
+  return element?.closest?.(PRIVATE_BLOCK) ? text.replace(/./g, "*") : text;
 }
 
 const IGNORE_PARAM = "ph_ignore";
@@ -278,10 +278,11 @@ function postHog(send?: (posthog: PostHog) => void) {
         capture_exceptions: true,
         before_send: scrubEvent,
         session_recording: {
-          maskAllInputs: true,
-          // Каждый текст проходит через maskReplayText: прячем контакты и приватные блоки.
-          maskTextSelector: "*",
-          maskTextFn: maskReplayText,
+          // Тексты и поля в записях видны как есть (пароли PostHog прячет сам).
+          // Исключение — блоки с data-analytics-private (кабинет, статус заказа).
+          maskAllInputs: false,
+          maskTextSelector: `${PRIVATE_BLOCK}, ${PRIVATE_BLOCK} *`,
+          maskInputFn: maskPrivateInput,
           // Применяется и к адресу страницы в записи, не только к запросам.
           maskCapturedNetworkRequestFn: (request) => ({
             ...request,
