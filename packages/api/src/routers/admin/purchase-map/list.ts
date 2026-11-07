@@ -13,7 +13,7 @@ import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
 import { moscowDay } from "../crm/model";
-import { daySchema } from "../crm/report";
+import { daySchema } from "../crm/shape";
 import { type PurchaseRow, placesOf } from "./model";
 
 const DAY = 24 * 60 * 60 * 1000;

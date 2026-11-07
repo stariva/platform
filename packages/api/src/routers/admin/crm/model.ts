@@ -13,6 +13,10 @@ const MOSCOW = "+03:00";
 /** Начало дня по Москве: «2026-10-01» → 2026-09-30T21:00Z. */
 export const moscowDay = (day: string) => new Date(`${day}T00:00:00${MOSCOW}`);
 
+/** Полдень дня по Москве — время для того, что записано только днём. */
+export const moscowNoon = (day: string) =>
+  new Date(moscowDay(day).getTime() + 12 * 3600_000);
+
 /** День по Москве для даты: 2026-09-30T22:00Z → «2026-10-01». */
 export function toMoscowDay(date: Date): string {
   return new Date(date.getTime() + 3 * 60 * 60 * 1000)
@@ -323,7 +327,7 @@ export interface Period {
   to: Date | null;
 }
 
-const within = (at: Date, { from, to }: Period) =>
+export const within = (at: Date, { from, to }: Period) =>
   (!from || at >= from) && (!to || at < to);
 
 export interface Expense {
@@ -343,17 +347,21 @@ export interface ReportRow {
   // Заказы, по которым пришли первые деньги за период
   paidDeals: number;
   revenue: number;
+  // Затраты на заказы этого источника: материалы, налог, эквайринг, доставка
+  costs: number;
 }
 
 /**
  * Сводка за период по источникам. Расход — по дням расходов, выручка — по
  * дням поступления денег, клиенты — по первому обращению и первой оплате.
+ * `costsOf` — затраты сделки, для прибыли кампании; без него затраты нулевые.
  */
 export function buildReport(
   clients: Client[],
   expenses: Expense[],
   campaignIds: string[],
   period: Period,
+  costsOf: (deal: Deal) => { at: Date; amount: number }[] = () => [],
 ): ReportRow[] {
   const rows = new Map<string, ReportRow>();
   const row = (source: ClientSource) => {
@@ -368,6 +376,7 @@ export function buildReport(
         buyers: 0,
         paidDeals: 0,
         revenue: 0,
+        costs: 0,
       };
       rows.set(key, entry);
     }
@@ -404,6 +413,9 @@ export function buildReport(
       if (first && within(first, period)) target.paidDeals += 1;
       for (const payment of deal.payments) {
         if (within(payment.at, period)) target.revenue += payment.amount;
+      }
+      for (const cost of costsOf(deal)) {
+        if (within(cost.at, period)) target.costs += cost.amount;
       }
     }
   }

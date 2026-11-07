@@ -379,6 +379,13 @@
       "when": 1793822779429,
       "tag": "0053_email_log_opens",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794034090359,
+      "tag": "0054_order_economics",
+      "breakpoints": true
     }
   ]
 }

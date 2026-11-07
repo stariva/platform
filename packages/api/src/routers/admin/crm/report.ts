@@ -1,17 +1,17 @@
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { loadCrm } from "./load";
+import { costEntries } from "./economics";
 import {
   buildReport,
+  type Deal,
   moscowDay,
   type Period,
   type ReportRow,
   toMoscowDay,
 } from "./model";
-import { byId, rubles, sourceView } from "./shape";
-
-export const daySchema = z.iso.date();
+import { loadWork } from "./orders";
+import { byId, daySchema, rubles, sourceView } from "./shape";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -30,14 +30,20 @@ const sum = (rows: ReportRow[]) =>
       buyers: total.buyers + row.buyers,
       paidDeals: total.paidDeals + row.paidDeals,
       revenue: total.revenue + row.revenue,
+      costs: total.costs + row.costs,
     }),
-    { spend: 0, leads: 0, buyers: 0, paidDeals: 0, revenue: 0 },
+    { spend: 0, leads: 0, buyers: 0, paidDeals: 0, revenue: 0, costs: 0 },
   );
 
-const inRubles = <T extends { spend: number; revenue: number }>(row: T) => ({
+const inRubles = <T extends { spend: number; revenue: number; costs: number }>(
+  row: T,
+) => ({
   ...row,
   spend: rubles(row.spend),
   revenue: rubles(row.revenue),
+  costs: rubles(row.costs),
+  // Что осталось после затрат на заказы и самой рекламы
+  profit: rubles(row.revenue - row.costs - row.spend),
 });
 
 /** С рекламы — клиенты, у которых есть метка или кампания. */
@@ -58,8 +64,17 @@ export const report = adminProcedure
     }),
   )
   .handler(async ({ context, input }) => {
-    const { campaigns, expenses, clients } = await loadCrm(context.db);
+    const { campaigns, expenses, clients, orders, rates } = await loadWork(
+      context.db,
+    );
     const campaignsById = byId(campaigns);
+    const ordersByDeal = new Map(
+      orders.map((order) => [`${order.kind}:${order.id}`, order]),
+    );
+    const costsOf = (deal: Deal) => {
+      const order = ordersByDeal.get(`${deal.kind}:${deal.id}`);
+      return order ? costEntries(order, rates) : [];
+    };
     const period: Period = {
       from: input.from ? moscowDay(input.from) : null,
       to: input.to ? new Date(moscowDay(input.to).getTime() + DAY) : null,
@@ -70,6 +85,7 @@ export const report = adminProcedure
       expenses,
       campaigns.filter((c) => !c.archived).map((c) => c.id),
       period,
+      costsOf,
     ).filter(
       (row) =>
         row.source.kind === "campaign" ||
