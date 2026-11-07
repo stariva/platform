@@ -8,6 +8,7 @@ import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { DELIVERY_POINT_ANCHOR } from "@/lib/commerce/order-status";
 import { formatPrice } from "@/lib/products";
 import { formErrorMessage, webApi } from "@/lib/web-api";
 
@@ -71,11 +72,14 @@ export function MadeToOrderPayment({
   orderId,
   phone,
   terms,
+  deliveryPointMissing = false,
   returnTo = "order",
 }: {
   orderId: string;
   phone: string;
   terms: MadeToOrderTerms;
+  /** Пункт выдачи не выбран: без него предоплату не принимаем. */
+  deliveryPointMissing?: boolean;
   /** Куда вернуть покупателя после оплаты: на гостевую страницу или в кабинет. */
   returnTo?: "order" | "account";
 }) {
@@ -119,6 +123,7 @@ export function MadeToOrderPayment({
   }
 
   const step = terms.paymentStep;
+  const pointFirst = step?.type === "deposit" && deliveryPointMissing;
 
   return (
     <div className="border-t border-espresso/8 pt-3 space-y-3">
@@ -166,10 +171,22 @@ export function MadeToOrderPayment({
 
       {step && (
         <div className="space-y-2">
+          {pointFirst && (
+            <p className="rounded-xl border border-espresso/15 px-4 py-3 text-sm text-espresso">
+              Чтобы внести предоплату,{" "}
+              <a
+                href={`#${DELIVERY_POINT_ANCHOR}`}
+                className="underline underline-offset-4"
+              >
+                выберите пункт выдачи Ozon
+              </a>
+              , куда отправить готовое изделие.
+            </p>
+          )}
           <Button
             type="button"
             onClick={pay}
-            disabled={paying}
+            disabled={paying || pointFirst}
             className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6"
           >
             {paying ? (

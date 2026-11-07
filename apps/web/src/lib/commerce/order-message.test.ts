@@ -83,6 +83,9 @@ test("request message lists the buyer, options and the approval step", () => {
     ),
   );
   assert.ok(message.includes("одобрить заявку в админке"));
+  assert.ok(
+    message.includes("Пункт выдачи Ozon: покупатель выберет перед предоплатой"),
+  );
   assert.ok(!message.includes("Email:"));
   assert.ok(!message.includes("Пожелания:"));
 });

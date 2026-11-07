@@ -3,6 +3,7 @@ import { baseEnv, env } from "@/env";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { getCachedPickupPointsInfo } from "@/lib/ozon-delivery/pickup-points-cache";
 import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
+import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { phonesMatch } from "@/lib/phone";
 import { isPaymentOverdue, madeToOrderPaymentStep } from "./made-to-order-flow";
@@ -19,8 +20,10 @@ import {
   findReusableOrderPayment,
   getProductCoverImages,
   getProductOrderById,
+  getProductOrderCustomerEmail,
   getProductOrderItems,
   isDeliveryPointEditable,
+  needsDeliveryPoint,
   setMadeToOrderDeliveryPoint,
   updateMadeToOrderDetails,
 } from "./orders";
@@ -60,6 +63,14 @@ function deliveryPointView(
   };
 }
 
+/** Ожидаемые даты доставки из расчёта Ozon при оформлении. */
+function deliveryDatesView(order: Pick<ProductOrderRow, "checkoutSnapshot">) {
+  const snapshot = order.checkoutSnapshot as DeliveryCheckoutResponse | null;
+  const method = snapshot?.splits?.[0]?.deliveryMethod;
+  if (!method?.logisticDateFrom || !method.logisticDateTo) return null;
+  return { from: method.logisticDateFrom, to: method.logisticDateTo };
+}
+
 /**
  * Гостевые заказы для процедур orders.*: подтверждение телефоном вместо
  * аккаунта, чтобы нельзя было подобрать чужой заказ, зная только id.
@@ -71,7 +82,10 @@ export const orderServices: OrderServices = {
     // Вебхук мог потеряться: оплаченный заказ не должен висеть в «ожидает оплаты»
     const order = await syncPendingProductOrder(found);
 
-    const items = await getProductOrderItems(orderId);
+    const [items, email] = await Promise.all([
+      getProductOrderItems(orderId),
+      getProductOrderCustomerEmail(order),
+    ]);
     const covers = await getProductCoverImages(items.map((i) => i.productSlug));
     // Посылка под заказ идёт через Delivery API, Seller API её статусы не знает
     const postings =
@@ -104,6 +118,8 @@ export const orderServices: OrderServices = {
       deliveryNote: order.deliveryNote,
       deliveryPoint: deliveryPointView(order),
       deliveryPointEditable: isDeliveryPointEditable(order),
+      deliveryDates: deliveryDatesView(order),
+      hasEmail: Boolean(email),
       trackingNumber: order.trackingNumber,
       items: items.map((i) => ({
         id: i.id,
@@ -179,6 +195,9 @@ export const orderServices: OrderServices = {
       return {
         status: isPaymentOverdue(order) ? "overdue" : "nothing_to_pay",
       };
+    }
+    if (step.type === "deposit" && needsDeliveryPoint(order)) {
+      return { status: "delivery_point_required" };
     }
 
     const reusable = await findReusableOrderPayment(

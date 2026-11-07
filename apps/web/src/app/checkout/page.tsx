@@ -25,6 +25,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
+import { rememberOrderPhone } from "@/lib/commerce/order-phone";
 import {
   formatDateRange,
   localDateKey,
@@ -217,6 +218,8 @@ export default function CheckoutPage() {
         offerAccepted: true,
       });
       await trackCreatedOrder(created.analytics);
+      // После оплаты ЮKassa вернёт на страницу заказа — откроем его без телефона
+      rememberOrderPhone(created.orderId, contact.phone);
       setRedirecting(true);
       clear("stock", created.orderId);
       window.location.href = created.confirmationUrl;

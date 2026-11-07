@@ -82,7 +82,7 @@ function copy(props: StarivaOrderEmailProps) {
       return {
         subject: `Заказ ${no} согласован: внесите предоплату`,
         heading: "Заказ согласован",
-        intro: `Мастер согласовал ваш заказ. Внесите предоплату ${rubles(props.depositAmount ?? 0)}${due} — и мастер начнёт плести.`,
+        intro: `Мастер согласовал ваш заказ. Выберите на странице заказа пункт выдачи Ozon и внесите предоплату ${rubles(props.depositAmount ?? 0)}${due} — и мастер начнёт плести.`,
         button: "Внести предоплату",
       };
     case "in_production":

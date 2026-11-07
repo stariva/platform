@@ -5,7 +5,53 @@ import {
   orderProgress,
   orderStatusLabel,
   orderStatusTone,
+  paymentReturnState,
 } from "./order-status";
+
+const returned = (
+  kind: "stock" | "made_to_order",
+  status: string,
+  extra: Partial<Parameters<typeof paymentReturnState>[0]> = {},
+) =>
+  paymentReturnState({
+    kind,
+    status,
+    paid: false,
+    paymentStep: null,
+    paymentOverdue: false,
+    ...extra,
+  });
+
+test("возврат с оплаты: зачтённая оплата подтверждена", () => {
+  assert.equal(returned("stock", "paid", { paid: true }), "confirmed");
+  // Оплаченный заказ из наличия тут же уходит в сборку Ozon
+  assert.equal(returned("stock", "fulfilling", { paid: true }), "confirmed");
+  assert.equal(returned("made_to_order", "in_production"), "confirmed");
+  assert.equal(
+    returned("made_to_order", "ready_to_ship", { paid: true }),
+    "confirmed",
+  );
+});
+
+test("возврат с оплаты: заказ ещё ждёт оплату — проверяем, а не радуемся", () => {
+  assert.equal(returned("stock", "pending"), "checking");
+  assert.equal(
+    returned("made_to_order", "awaiting_deposit", {
+      paymentStep: { type: "deposit", amount: 250000 },
+    }),
+    "checking",
+  );
+  assert.equal(
+    returned("made_to_order", "awaiting_balance", { paymentOverdue: true }),
+    "checking",
+  );
+});
+
+test("возврат с оплаты: отменённый платёж и старая ссылка", () => {
+  assert.equal(returned("stock", "canceled"), "failed");
+  assert.equal(returned("stock", "delivered", { paid: true }), null);
+  assert.equal(returned("made_to_order", "canceled"), null);
+});
 
 test("мастер-класс без шкалы этапов", () => {
   assert.equal(orderProgress("workshop", "paid"), null);

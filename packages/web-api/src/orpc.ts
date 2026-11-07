@@ -74,6 +74,8 @@ export type OrderPaymentResult =
   | { status: "unavailable" }
   | { status: "nothing_to_pay" }
   | { status: "overdue" }
+  // Предоплата, а пункт выдачи ещё не выбран
+  | { status: "delivery_point_required" }
   | { status: "failed" };
 
 /**

@@ -15,12 +15,17 @@ import { isPaymentOverdue } from "@/lib/commerce/made-to-order-flow";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { measurementFieldsBySlug } from "@/lib/commerce/measurement-fields";
 import {
+  DELIVERY_POINT_ANCHOR,
   madeToOrderHints,
   orderProgress,
   postingStatusLabels,
   stockOrderHints,
 } from "@/lib/commerce/order-status";
-import { isDeliveryPointEditable } from "@/lib/commerce/orders";
+import {
+  isDeliveryPointEditable,
+  needsDeliveryPoint,
+} from "@/lib/commerce/orders";
+import { pickupPointAddressLine } from "@/lib/ozon-delivery/format";
 import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { cn } from "@/lib/utils";
@@ -264,6 +269,9 @@ export async function ProductOrderView({
       : (madeToOrder ? madeToOrderHints : stockOrderHints)[order.status];
   const awaitingPayment =
     view.paymentStep !== null || order.status === "pending";
+  // Пункт выдачи нужен к предоплате; в заявке его ещё не спрашиваем
+  const pointMissing = needsDeliveryPoint(order);
+  const pointFirst = view.paymentStep?.type === "deposit" && pointMissing;
 
   return (
     <div className="space-y-6">
@@ -293,13 +301,19 @@ export async function ProductOrderView({
                   asChild
                   className="mt-4 w-full bg-espresso text-parchment hover:bg-espresso/90 lg:hidden"
                 >
-                  <a href="#payment">
-                    Оплатить{" "}
-                    {view.paymentStep.type === "deposit"
-                      ? "предоплату"
-                      : "доплату"}{" "}
-                    {money(view.paymentStep.amount)}
-                  </a>
+                  {pointFirst ? (
+                    <a href={`#${DELIVERY_POINT_ANCHOR}`}>
+                      Выбрать пункт выдачи
+                    </a>
+                  ) : (
+                    <a href="#payment">
+                      Оплатить{" "}
+                      {view.paymentStep.type === "deposit"
+                        ? "предоплату"
+                        : "доплату"}{" "}
+                      {money(view.paymentStep.amount)}
+                    </a>
+                  )}
                 </Button>
               )}
             </Card>
@@ -328,23 +342,24 @@ export async function ProductOrderView({
             </Card>
           )}
 
-          {isDeliveryPointEditable(order) && (
-            <Card title="Куда доставить">
-              {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
-              <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
-                <AccountMadeToOrderDelivery
-                  orderId={order.id}
-                  phone={order.contactPhone}
-                  point={
-                    order.deliveryPointId
-                      ? { title: delivery.title, address: delivery.address }
-                      : null
-                  }
-                  editable
-                />
-              </div>
-            </Card>
-          )}
+          {isDeliveryPointEditable(order) &&
+            !(pointMissing && order.status === "requested") && (
+              <Card title="Куда доставить">
+                {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
+                <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
+                  <AccountMadeToOrderDelivery
+                    orderId={order.id}
+                    phone={order.contactPhone}
+                    point={
+                      order.deliveryPointId
+                        ? { title: delivery.title, address: delivery.address }
+                        : null
+                    }
+                    editable
+                  />
+                </div>
+              </Card>
+            )}
         </div>
 
         <aside className="space-y-5 lg:sticky lg:top-24">
@@ -355,6 +370,7 @@ export async function ProductOrderView({
                 <MadeToOrderPayment
                   orderId={order.id}
                   phone={order.contactPhone}
+                  deliveryPointMissing={pointMissing}
                   returnTo="account"
                   terms={{
                     number: order.number,
@@ -409,9 +425,7 @@ export async function ProductOrderView({
               <p className="text-espresso">{delivery.label}</p>
               {(delivery.title || delivery.address) && (
                 <p className="text-taupe leading-relaxed">
-                  {[delivery.title, delivery.address]
-                    .filter(Boolean)
-                    .join(", ")}
+                  {pickupPointAddressLine(delivery.title, delivery.address)}
                 </p>
               )}
               {delivery.dates && !settled && (

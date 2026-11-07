@@ -23,14 +23,23 @@ import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options
 import { recallOrderPhone } from "@/lib/commerce/order-phone";
 import {
   madeToOrderHints,
+  paymentReturnState,
   postingStatusLabels,
   productOrderStatusLabels as statusLabels,
 } from "@/lib/commerce/order-status";
 import { formatPrice } from "@/lib/products";
+import { cn } from "@/lib/utils";
 import { formErrorMessage, webApi } from "@/lib/web-api";
 import { MadeToOrderDelivery } from "./made-to-order-delivery";
 import { MadeToOrderDetails } from "./made-to-order-details";
 import { MadeToOrderPayment } from "./made-to-order-payment";
+import {
+  PaymentChecking,
+  PaymentConfirmed,
+  PaymentFailed,
+  PaymentReturnLayout,
+  PaymentUnconfirmed,
+} from "./payment-return";
 
 const orderLookupSchema = z.object({
   phone: z.string().trim().min(1, "Введите телефон"),
@@ -38,11 +47,31 @@ const orderLookupSchema = z.object({
 
 type OrderLookupFormValues = z.infer<typeof orderLookupSchema>;
 
-export function OrderStatus({ orderId }: { orderId: string }) {
+/**
+ * Сколько ждём подтверждения оплаты после возврата из ЮKassa: заказ из
+ * наличия сверяется с ЮKassa при каждом запросе, заказ под заказ ждёт вебхук.
+ */
+const CHECK_INTERVAL_MS = 3000;
+const MAX_CHECKS = 10;
+
+const pageTitle = "font-serif text-3xl text-espresso mb-8 text-center";
+
+export function OrderStatus({
+  orderId,
+  paymentReturn,
+}: {
+  orderId: string;
+  /** Покупатель вернулся со страницы оплаты ЮKassa. */
+  paymentReturn: boolean;
+}) {
   const [loading, setLoading] = useState(false);
+  // Пока не знаем, запомнен ли телефон, форму не показываем: иначе она
+  // мелькнёт перед уже открытым заказом
+  const [booting, setBooting] = useState(true);
   const [order, setOrder] = useState<OrderView | null>(null);
   // Телефон нужен и для повторной загрузки заказа, и для дополнения деталей
   const [phone, setPhone] = useState("");
+  const [checks, setChecks] = useState(0);
 
   const form = useForm<OrderLookupFormValues>({
     resolver: zodResolver(orderLookupSchema),
@@ -50,7 +79,10 @@ export function OrderStatus({ orderId }: { orderId: string }) {
   });
 
   /** Загружает заказ по телефону; возвращает false, если загрузить не удалось. */
-  async function loadOrder(phoneValue: string): Promise<boolean> {
+  async function loadOrder(
+    phoneValue: string,
+    { silent = false }: { silent?: boolean } = {},
+  ): Promise<boolean> {
     try {
       const data = await webApi.orders.view({ orderId, phone: phoneValue });
       setOrder(data);
@@ -58,7 +90,9 @@ export function OrderStatus({ orderId }: { orderId: string }) {
       trackPaidOrder(orderId, data.amountTotal, data.paid);
       return true;
     } catch (error) {
-      toast.error(formErrorMessage(error, "Не удалось загрузить заказ"));
+      if (!silent) {
+        toast.error(formErrorMessage(error, "Не удалось загрузить заказ"));
+      }
       return false;
     }
   }
@@ -69,53 +103,146 @@ export function OrderStatus({ orderId }: { orderId: string }) {
     setLoading(false);
   }
 
-  // Сразу после заявки телефон уже известен — открываем заказ без формы
+  // Сразу после оформления телефон уже известен — открываем заказ без формы
   const autoLoaded = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: загружаем один раз при открытии страницы
   useEffect(() => {
     if (autoLoaded.current) return;
     autoLoaded.current = true;
     const remembered = recallOrderPhone(orderId);
-    if (!remembered) return;
-    setLoading(true);
-    void loadOrder(remembered).finally(() => setLoading(false));
+    if (!remembered) {
+      setBooting(false);
+      return;
+    }
+    void loadOrder(remembered).finally(() => setBooting(false));
   }, [orderId]);
 
+  const returnState = paymentReturn && order ? paymentReturnState(order) : null;
+  const checking = returnState === "checking" && checks < MAX_CHECKS;
+
+  // Вебхук ЮKassa может прийти позже редиректа — спрашиваем заказ повторно
+  // biome-ignore lint/correctness/useExhaustiveDependencies: новый запрос после каждой проверки
+  useEffect(() => {
+    if (!checking) return;
+    const timer = setTimeout(async () => {
+      await loadOrder(phone, { silent: true });
+      setChecks((n) => n + 1);
+    }, CHECK_INTERVAL_MS);
+    return () => clearTimeout(timer);
+  }, [checking, checks]);
+
   if (!order) {
+    if (booting) {
+      return (
+        <div className="flex justify-center py-24">
+          <Spinner className="size-6 text-espresso" />
+        </div>
+      );
+    }
     return (
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto"
-        >
-          <p className="text-taupe text-sm">
-            Введите телефон, указанный при оформлении заказа.
-          </p>
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Телефон</FormLabel>
-                <FormControl>
-                  <Input type="tel" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+      <>
+        <h1 className={pageTitle}>
+          {paymentReturn ? "Проверим оплату" : "Ваш заказ"}
+        </h1>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto"
           >
-            {loading ? <Spinner /> : "Показать заказ"}
-          </Button>
-        </form>
-      </Form>
+            <p className="text-taupe text-sm">
+              {paymentReturn
+                ? "Введите телефон, указанный при оформлении заказа, — покажем, прошла ли оплата и что будет дальше."
+                : "Введите телефон, указанный при оформлении заказа."}
+            </p>
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Телефон</FormLabel>
+                  <FormControl>
+                    <Input type="tel" autoComplete="tel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+            >
+              {loading ? <Spinner /> : "Показать заказ"}
+            </Button>
+          </form>
+        </Form>
+      </>
     );
   }
 
+  const reload = async () => {
+    await loadOrder(phone);
+  };
+
+  if (checking) return <PaymentChecking />;
+
+  if (returnState) {
+    return (
+      <PaymentReturnLayout
+        aside={
+          <OrderCard
+            orderId={orderId}
+            phone={phone}
+            order={order}
+            onChanged={reload}
+            receipt={returnState === "confirmed"}
+          />
+        }
+      >
+        {returnState === "confirmed" ? (
+          <PaymentConfirmed order={order} />
+        ) : returnState === "failed" ? (
+          <PaymentFailed order={order} />
+        ) : (
+          <PaymentUnconfirmed order={order} onRetry={() => setChecks(0)} />
+        )}
+      </PaymentReturnLayout>
+    );
+  }
+
+  return (
+    <>
+      <h1 className={pageTitle}>Ваш заказ</h1>
+      <OrderCard
+        orderId={orderId}
+        phone={phone}
+        order={order}
+        onChanged={reload}
+        className="max-w-md mx-auto"
+      />
+    </>
+  );
+}
+
+/**
+ * Карточка заказа. `receipt` — после подтверждённой оплаты: сверху крупное
+ * фото изделия, а подсказку «что дальше» заменяют этапы рядом с карточкой.
+ */
+function OrderCard({
+  orderId,
+  phone,
+  order,
+  onChanged,
+  receipt = false,
+  className,
+}: {
+  orderId: string;
+  phone: string;
+  order: OrderView;
+  onChanged: () => Promise<void>;
+  receipt?: boolean;
+  className?: string;
+}) {
   const madeToOrder = order.kind === "made_to_order";
   // После одобрения условия зафиксированы — изменения только через мастера
   const canEditDetails = order.status === "requested";
@@ -123,12 +250,32 @@ export function OrderStatus({ orderId }: { orderId: string }) {
     order.status === "declined"
       ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
       : madeToOrderHints[order.status];
+  // Пункт выдачи нужен к предоплате; в заявке его ещё не спрашиваем.
+  // Старые заявки с адресом текстом (deliveryNote) обходятся без пункта
+  const pointMissing = !order.deliveryPoint && !order.deliveryNote;
+  const showDelivery =
+    madeToOrder && !(pointMissing && order.status === "requested");
+  const cover = receipt ? order.items.find((item) => item.image) : undefined;
+  // Единственное изделие уже на большом фото — миниатюра ни к чему
+  const thumbnails = !(cover && order.items.length === 1);
 
   return (
     <div
       data-analytics-private
-      className="bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 max-w-md mx-auto"
+      className={cn(
+        "bg-white border border-espresso/10 rounded-2xl p-6 space-y-4 overflow-hidden",
+        className,
+      )}
     >
+      {cover && (
+        <ItemImage
+          src={cover.image}
+          alt={cover.name}
+          sizes="(min-width: 1024px) 400px, 100vw"
+          className="-mx-6 -mt-6 mb-6 aspect-[4/3] rounded-none lg:aspect-[4/5]"
+        />
+      )}
+
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <span className="label-caps text-terracotta text-xs">
@@ -141,7 +288,7 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         <p className="text-espresso font-medium">Заказ №{order.number}</p>
       </div>
 
-      {madeToOrder && hint && (
+      {madeToOrder && hint && !receipt && (
         <p className="rounded-xl bg-sand px-4 py-3 text-sm text-espresso leading-relaxed">
           {hint}
         </p>
@@ -150,12 +297,14 @@ export function OrderStatus({ orderId }: { orderId: string }) {
       <div className="space-y-2">
         {order.items.map((item) => (
           <div key={item.id} className="flex items-center gap-3 text-sm">
-            <ItemImage
-              src={item.image}
-              alt={item.name}
-              sizes="64px"
-              className="size-16"
-            />
+            {thumbnails && (
+              <ItemImage
+                src={item.image}
+                alt={item.name}
+                sizes="64px"
+                className="size-16"
+              />
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-espresso">
@@ -179,7 +328,12 @@ export function OrderStatus({ orderId }: { orderId: string }) {
       </div>
 
       {madeToOrder ? (
-        <MadeToOrderPayment orderId={orderId} phone={phone} terms={order} />
+        <MadeToOrderPayment
+          orderId={orderId}
+          phone={phone}
+          terms={order}
+          deliveryPointMissing={pointMissing}
+        />
       ) : (
         <div className="border-t border-espresso/8 pt-3 flex items-center justify-between font-medium">
           <span className="text-espresso">Итого</span>
@@ -196,15 +350,13 @@ export function OrderStatus({ orderId }: { orderId: string }) {
         </div>
       )}
 
-      {madeToOrder && (
+      {showDelivery && (
         <MadeToOrderDelivery
           orderId={orderId}
           phone={phone}
           point={order.deliveryPoint}
           editable={order.deliveryPointEditable}
-          onSaved={async () => {
-            await loadOrder(phone);
-          }}
+          onSaved={onChanged}
         />
       )}
 
@@ -221,9 +373,7 @@ export function OrderStatus({ orderId }: { orderId: string }) {
           phone={phone}
           items={order.items}
           customerNotes={order.customerNotes}
-          onSaved={async () => {
-            await loadOrder(phone);
-          }}
+          onSaved={onChanged}
         />
       )}
 

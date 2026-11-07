@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { PickupPointPicker } from "@/components/checkout/pickup-point-picker";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { DELIVERY_POINT_ANCHOR } from "@/lib/commerce/order-status";
+import { pickupPointAddressLine } from "@/lib/ozon-delivery/format";
 import type { PickupPoint } from "@/lib/ozon-delivery/types";
 import { formErrorMessage, webApi } from "@/lib/web-api";
 
@@ -60,12 +62,15 @@ export function MadeToOrderDelivery({
   }
 
   const address = point
-    ? [point.title, point.address].filter(Boolean).join(", ") ||
+    ? pickupPointAddressLine(point.title, point.address) ||
       "Выбран, адрес уточняется"
     : null;
 
   return (
-    <div className="border-t border-espresso/8 pt-4 space-y-3">
+    <div
+      id={DELIVERY_POINT_ANCHOR}
+      className="border-t border-espresso/8 pt-4 space-y-3 scroll-mt-24"
+    >
       <p className="label-caps text-terracotta text-xs">Пункт выдачи Ozon</p>
       {address && <p className="text-espresso text-sm">{address}</p>}
       {editable && (

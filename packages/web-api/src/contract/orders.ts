@@ -29,6 +29,11 @@ export const DeliveryPointUnavailableError = error(
   { message: "Этот пункт сейчас не принимает заказы. Выберите другой." },
 );
 
+/** Предоплату берём, когда известно, куда отправить изделие. */
+export const DeliveryPointRequiredError = error("DELIVERY_POINT_REQUIRED", {
+  message: "Сначала выберите пункт выдачи Ozon, куда отправить заказ.",
+});
+
 /** Нет ключей эквайринга. */
 export const PaymentsUnavailableError = error("PAYMENTS_UNAVAILABLE", {
   message: "Приём платежей временно недоступен",
@@ -125,6 +130,10 @@ export const orderViewSchema = z.object({
     .nullable(),
   /** Под заказ: можно ли ещё сменить пункт — да, пока не выставлена доплата. */
   deliveryPointEditable: z.boolean(),
+  /** Ожидаемые даты доставки из расчёта Ozon, ISO-строки; null — расчёта нет. */
+  deliveryDates: z.object({ from: z.string(), to: z.string() }).nullable(),
+  /** Есть ли почта, куда придут письма о заказе и чеки. Сам адрес не отдаём. */
+  hasEmail: z.boolean(),
   trackingNumber: z.string().nullable(),
   items: z.array(orderItemSchema),
   postings: z.array(
@@ -194,6 +203,7 @@ export const ordersContract = {
       [PaymentsUnavailableError.code]: PaymentsUnavailableError,
       [NothingToPayError.code]: NothingToPayError,
       [PaymentOverdueError.code]: PaymentOverdueError,
+      [DeliveryPointRequiredError.code]: DeliveryPointRequiredError,
       [PaymentCreateFailedError.code]: PaymentCreateFailedError,
     })
     .input(

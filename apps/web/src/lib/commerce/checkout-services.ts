@@ -199,18 +199,20 @@ export const checkoutServices: CheckoutServices = {
       return { status: "check_failed" };
     }
 
-    // Если Ozon не ответил, заявку не теряем: адрес пункта нужен для показа, а
-    // сам пункт ещё раз проверит расчёт доставки
-    const pointInfo = await getCachedPickupPointsInfo([
-      data.deliveryPointId,
-    ]).catch((error: unknown) => {
-      console.warn(
-        "[checkout/made-to-order] Не удалось получить адрес пункта:",
-        error,
-      );
-      return null;
-    });
-    if (pointInfo?.unavailable.includes(data.deliveryPointId)) {
+    // Пункт покупатель выбирает перед предоплатой; в заявке он приходит только
+    // из старых вкладок. Если Ozon не ответил, заявку не теряем: адрес пункта
+    // нужен для показа, а сам пункт ещё раз проверит расчёт доставки
+    const pointId = data.deliveryPointId;
+    const pointInfo = pointId
+      ? await getCachedPickupPointsInfo([pointId]).catch((error: unknown) => {
+          console.warn(
+            "[checkout/made-to-order] Не удалось получить адрес пункта:",
+            error,
+          );
+          return null;
+        })
+      : null;
+    if (pointId && pointInfo?.unavailable.includes(pointId)) {
       return { status: "delivery_point_unavailable" };
     }
 
@@ -222,7 +224,7 @@ export const checkoutServices: CheckoutServices = {
       contactPhone: data.contactPhone,
       contactEmail: data.contactEmail,
       customerNotes: data.customerNotes,
-      deliveryPointId: data.deliveryPointId,
+      deliveryPointId: pointId ?? null,
       pickupPoint: pointInfo?.points[0] ?? null,
       items,
     });

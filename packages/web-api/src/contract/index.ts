@@ -63,6 +63,7 @@ export {
   StorageNotConfiguredError,
 } from "./jobs";
 export {
+  DeliveryPointRequiredError,
   DeliveryPointUnavailableError,
   measurementEntrySchema,
   NothingToPayError,

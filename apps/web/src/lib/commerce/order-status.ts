@@ -36,12 +36,15 @@ const workshopOrderStatusLabels: Record<string, string> = {
   refunded: "Возврат",
 };
 
+/** Якорь блока выбора пункта выдачи: на него ведёт подсказка у предоплаты. */
+export const DELIVERY_POINT_ANCHOR = "delivery-point";
+
 /** Что дальше, для заказа под заказ: по статусу. */
 export const madeToOrderHints: Record<string, string> = {
   requested:
     "Оплачивать пока ничего не нужно. Мастер свяжется с вами, чтобы уточнить мерки, цвет и цену. Мерки и пожелания можно указать ниже.",
   awaiting_deposit:
-    "Мастер согласовал заказ. Внесите предоплату 50% — и мастер начнёт плести.",
+    "Мастер согласовал заказ. Выберите пункт выдачи Ozon и внесите предоплату 50% — и мастер начнёт плести.",
   in_production:
     "Предоплата получена — мастер плетёт ваше изделие. Когда оно будет готово, здесь появится доплата.",
   awaiting_balance:
@@ -105,6 +108,49 @@ export function orderStatusTone(kind: OrderKind, status: string): StatusTone {
 export function isOrderActive(kind: OrderKind, status: string): boolean {
   const tone = orderStatusTone(kind, status);
   return tone === "attention" || tone === "progress";
+}
+
+/**
+ * Что показать покупателю, вернувшемуся из ЮKassa. Адрес возврата один и для
+ * успешной, и для брошенной оплаты, поэтому судим только по заказу:
+ * - `confirmed` — оплата зачтена, заказ идёт дальше;
+ * - `checking` — заказ всё ещё ждёт оплату: вебхук опаздывает или платёж брошен;
+ * - `failed` — платёж отменён, заказ из наличия закрыт;
+ * - null — заказ ушёл дальше (старая ссылка) или закрыт иначе: обычная страница.
+ */
+export type PaymentReturnState = "confirmed" | "checking" | "failed";
+
+const PAYMENT_CONFIRMED_STATUSES: Record<"stock" | "made_to_order", string[]> =
+  {
+    stock: ["paid", "ozon_order_failed", "fulfilling"],
+    made_to_order: [
+      "in_production",
+      "ready_to_ship",
+      "ozon_order_failed",
+      "fulfilling",
+    ],
+  };
+
+export function paymentReturnState(order: {
+  kind: "stock" | "made_to_order";
+  status: string;
+  paid: boolean;
+  paymentStep: unknown;
+  paymentOverdue: boolean;
+}): PaymentReturnState | null {
+  if (
+    order.status === "pending" ||
+    order.paymentStep !== null ||
+    order.paymentOverdue
+  ) {
+    return "checking";
+  }
+  if (order.kind === "stock" && order.status === "canceled" && !order.paid) {
+    return "failed";
+  }
+  return PAYMENT_CONFIRMED_STATUSES[order.kind].includes(order.status)
+    ? "confirmed"
+    : null;
 }
 
 const STOCK_STEPS = ["Оформлен", "Оплачен", "Собирается", "В пути", "Получен"];
