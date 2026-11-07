@@ -8,8 +8,6 @@ import {
   type CustomOrderRequest,
   type EmailEventsSyncResult,
   type LessonVideoResult,
-  type MadeToOrderDeliveryQuote,
-  type MadeToOrderParcel,
   type MadeToOrderRequest,
   type MadeToOrderRequested,
   type MaterialUrlResult,
@@ -74,7 +72,7 @@ export type OrderPaymentResult =
   | { status: "unavailable" }
   | { status: "nothing_to_pay" }
   | { status: "overdue" }
-  // Предоплата, а пункт выдачи ещё не выбран
+  // Доплата, а пункт выдачи не выбран и доставка не посчитана
   | { status: "delivery_point_required" }
   | { status: "failed" };
 
@@ -93,17 +91,16 @@ export interface OrderServices {
   updateDetails: (
     input: OrderDetails & { orderId: string; phone: string },
   ) => Promise<"ok" | "not_found" | "locked">;
-  /** `locked` — доплата уже выставлена, `unavailable` — Ozon не принимает в этот пункт. */
+  /**
+   * Покупатель выбрал пункт при доплате: сохраняет его и считает доставку
+   * Ozon. `locked` — выбирать пункт сейчас нельзя, `unavailable` — Ozon не
+   * принимает в этот пункт такую посылку, `quote_failed` — расчёт не удался.
+   */
   updateDeliveryPoint: (input: {
     orderId: string;
     phone: string;
     pointId: string;
-  }) => Promise<"ok" | "not_found" | "locked" | "unavailable">;
-  /** Зовёт админка, когда изделие готово. Причину отказа видит мастер. */
-  quoteMadeToOrderDelivery: (
-    orderId: string,
-    parcel: MadeToOrderParcel,
-  ) => Promise<MadeToOrderDeliveryQuote>;
+  }) => Promise<"ok" | "not_found" | "locked" | "unavailable" | "quote_failed">;
   /** Заголовки нужны, чтобы собрать адрес возврата, если он не задан в окружении. */
   startPayment: (input: {
     orderId: string;

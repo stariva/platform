@@ -159,12 +159,16 @@ function SumLine({
 export function OrderDeliveryCard({ order }: { order: AdminOrderView }) {
   const { address, title, locality, coordinates } = order.deliveryAddress;
   const ozon = order.ozonDelivery;
-  // Заявка под заказ без пункта: покупатель выбирает его перед предоплатой
+  // Заявка под заказ без пункта: покупатель выбирает его при доплате, когда
+  // изделие готово
   const awaitingPoint =
     order.kind === "made_to_order" &&
     !order.deliveryPointId &&
     !order.deliveryNote &&
-    (order.status === "requested" || order.status === "awaiting_deposit");
+    (order.status === "requested" ||
+      order.status === "awaiting_deposit" ||
+      order.status === "in_production" ||
+      order.deliveryQuotePending);
   const ozonDates =
     ozon?.dateFrom && ozon.dateTo
       ? ozon.dateFrom.slice(0, 10) === ozon.dateTo.slice(0, 10)
@@ -181,7 +185,7 @@ export function OrderDeliveryCard({ order }: { order: AdminOrderView }) {
         <dl className="grid gap-3 sm:grid-cols-2">
           <Field label="Способ">
             {awaitingPoint
-              ? "Пункт выдачи Ozon — покупатель выберет перед предоплатой"
+              ? "Пункт выдачи Ozon — покупатель выберет при доплате"
               : DELIVERY_METHOD_LABELS[order.deliveryMethod]}
             {ozon?.type &&
               ` · ${OZON_DELIVERY_TYPE_LABELS[ozon.type] ?? ozon.type}`}

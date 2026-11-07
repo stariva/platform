@@ -85,7 +85,7 @@ test("request message lists the buyer, options and the approval step", () => {
   );
   assert.ok(message.includes("одобрить заявку в админке"));
   assert.ok(
-    message.includes("Пункт выдачи Ozon: покупатель выберет перед предоплатой"),
+    message.includes("Пункт выдачи Ozon: покупатель выберет при доплате"),
   );
   assert.ok(!message.includes("Email:"));
   assert.ok(!message.includes("Пожелания:"));
@@ -109,7 +109,9 @@ test("deposit message tells the master to start and then bill the balance", () =
   );
 
   assert.match(title, /^Получена предоплата 3\s?500/);
-  assert.ok(message.includes("выставит доплату"));
+  assert.ok(message.includes("Доплата выставится за изделие"));
+  // Доставку считает сайт, когда покупатель выберет пункт, а не админка
+  assert.ok(message.includes("выберет пункт выдачи"));
 });
 
 test("balance message tells the master to ship", () => {

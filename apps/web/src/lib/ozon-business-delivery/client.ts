@@ -36,7 +36,13 @@ export type ParcelQuote =
       /** Перевозка и страховка, копейки. */
       priceKopecks: number;
     }
-  | { available: false; reason?: string };
+  | {
+      available: false;
+      /** Для мастера: что не так и что делать. */
+      reason?: string;
+      /** `point` — не подходит выбранный пункт, покупателю достаточно выбрать другой. */
+      cause?: "point";
+    };
 
 export interface CreateParcelRequest extends ParcelRequest {
   /** Наш заказ: повтор webhook не должен создать вторую посылку. */
@@ -297,12 +303,27 @@ const REFUSALS: Record<string, string> = {
     "Кабинет Ozon Доставки заблокирован: напишите в поддержку Ozon",
 };
 
+// Отказы из-за пункта: покупатель решает их сам, выбрав другой
+const POINT_REFUSALS = new Set([
+  "DeliveryPointRestrictionsError",
+  "DeliveryPointNotFound",
+  "SameDeliveryPointError",
+  "SamePointError",
+  "DeliveryAvailabilityError",
+]);
+
 function refusal(error?: { code?: string | null; message: string } | null) {
   const reason =
     (error?.code && REFUSALS[error.code]) ||
     error?.message ||
     "Ozon не доставит такую посылку в этот пункт";
-  return { available: false as const, reason: `${reason}. ${MANUAL_HINT}` };
+  return {
+    available: false as const,
+    reason: `${reason}. ${MANUAL_HINT}`,
+    ...(error?.code && POINT_REFUSALS.has(error.code)
+      ? { cause: "point" as const }
+      : {}),
+  };
 }
 
 /**

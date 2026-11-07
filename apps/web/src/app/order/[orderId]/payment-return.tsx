@@ -292,9 +292,7 @@ function confirmedCopy(order: OrderView): {
           title: "Ольга отправляет заказ",
           text: point
             ? `В пункт выдачи: ${point}`
-            : order.deliveryPointEditable
-              ? "Пункт выдачи можно выбрать в деталях заказа."
-              : undefined,
+            : "Пункт выдачи вы выберете, когда изделие будет готово: сайт сразу посчитает доставку.",
         },
       ],
     };

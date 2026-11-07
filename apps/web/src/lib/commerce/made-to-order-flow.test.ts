@@ -1,10 +1,11 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
 import {
-  isDeliveryPointRequiredToPay,
+  isDeliveryQuoteRequiredToPay,
   isPaymentOverdue,
   madeToOrderPaymentStep,
   madeToOrderReceiptLines,
+  needsDeliveryQuote,
   paymentOutcome,
 } from "./made-to-order-flow";
 
@@ -72,26 +73,52 @@ test("a finished order asks for the rest including delivery", () => {
   );
 });
 
-test("the deposit waits for a pickup point, the balance does not", () => {
-  const nowhere = { ...approved, deliveryPointId: null, deliveryNote: null };
-  assert.equal(isDeliveryPointRequiredToPay(nowhere, now), true);
+const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
+const finished = { ...approved, status: "awaiting_balance" as const };
+
+test("the balance waits for the delivery to be priced, the deposit never does", () => {
+  // Мастер указала посылку, покупатель ещё не выбрал пункт: цены доставки нет
+  const unpriced = {
+    ...finished,
+    checkoutSnapshot: { parcel, priceKopecks: null },
+  };
+  assert.equal(needsDeliveryQuote(unpriced), true);
+  assert.equal(isDeliveryQuoteRequiredToPay(unpriced, now), true);
+
+  // Доставка посчитана — платить можно
+  const priced = {
+    ...finished,
+    checkoutSnapshot: { parcel, priceKopecks: 45000 },
+  };
+  assert.equal(needsDeliveryQuote(priced), false);
+  assert.equal(isDeliveryQuoteRequiredToPay(priced, now), false);
+
+  // Ручная доплата: расчёта нет вовсе, доставку назвала мастер
+  const manual = { ...finished, checkoutSnapshot: null };
+  assert.equal(needsDeliveryQuote(manual), false);
+  assert.equal(isDeliveryQuoteRequiredToPay(manual, now), false);
+
+  // Цена доставки 0 — тоже цена, платить можно
   assert.equal(
-    isDeliveryPointRequiredToPay({ ...nowhere, deliveryPointId: "77" }, now),
+    needsDeliveryQuote({
+      ...finished,
+      checkoutSnapshot: { parcel, priceKopecks: 0 },
+    }),
     false,
   );
-  // Старая заявка с адресом текстом вместо пункта
+});
+
+test("the deposit is never held back for a pickup point", () => {
+  const deposit = { ...approved, checkoutSnapshot: null };
+  assert.equal(needsDeliveryQuote(deposit), false);
+  assert.equal(isDeliveryQuoteRequiredToPay(deposit, now), false);
+  // Снимок с посылкой в другом статусе не делает заказ «ждущим пункта»
   assert.equal(
-    isDeliveryPointRequiredToPay(
-      { ...nowhere, deliveryNote: "Казань, СДЭК" },
-      now,
-    ),
-    false,
-  );
-  assert.equal(
-    isDeliveryPointRequiredToPay(
-      { ...nowhere, status: "awaiting_balance" },
-      now,
-    ),
+    needsDeliveryQuote({
+      ...approved,
+      status: "in_production",
+      checkoutSnapshot: { parcel, priceKopecks: null },
+    }),
     false,
   );
 });

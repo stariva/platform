@@ -256,15 +256,10 @@ function OrderCard({
   const madeToOrder = order.kind === "made_to_order";
   // После одобрения условия зафиксированы — изменения только через мастера
   const canEditDetails = order.status === "requested";
-  // Пункт выдачи нужен к предоплате; в заявке его ещё не спрашиваем.
-  // Старые заявки с адресом текстом (deliveryNote) обходятся без пункта
-  const pointMissing = !order.deliveryPoint && !order.deliveryNote;
   const hint =
     order.status === "declined"
       ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
-      : madeToOrderHint(order.status, pointMissing);
-  const showDelivery =
-    madeToOrder && !(pointMissing && order.status === "requested");
+      : madeToOrderHint(order.status, order.deliveryQuoteNeeded);
   const cover = receipt ? order.items.find((item) => item.image) : undefined;
   // Единственное изделие уже на большом фото — миниатюра ни к чему
   const thumbnails = !(cover && order.items.length === 1);
@@ -342,7 +337,7 @@ function OrderCard({
           orderId={orderId}
           phone={phone}
           terms={order}
-          deliveryPointMissing={pointMissing}
+          deliveryQuoteNeeded={order.deliveryQuoteNeeded}
         />
       ) : (
         <div className="border-t border-espresso/8 pt-3 flex items-center justify-between font-medium">
@@ -360,12 +355,13 @@ function OrderCard({
         </div>
       )}
 
-      {showDelivery && (
+      {madeToOrder && (
         <MadeToOrderDelivery
           orderId={orderId}
           phone={phone}
           point={order.deliveryPoint}
           editable={order.deliveryPointEditable}
+          quoteNeeded={order.deliveryQuoteNeeded}
           onSaved={onChanged}
         />
       )}

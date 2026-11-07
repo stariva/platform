@@ -1,26 +1,27 @@
 import { expect, mock } from "bun:test";
 
+const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
 const order = {
   id: "order-1",
   number: 42,
   kind: "made_to_order",
-  status: "in_production",
+  // Изделие готово: мастер указала посылку, покупатель ещё не выбрал пункт
+  status: "awaiting_balance",
   amountProducts: 390000,
-  amountDelivery: 45000,
-  deliveryMethod: "pickup" as string,
-  deliveryPointId: "77" as string | null,
+  amountDelivery: 0,
+  deliveryMethod: "manual" as string,
+  deliveryPointId: null as string | null,
   contactName: "Анна",
   contactPhone: "+79001234567",
   contactEmail: null,
-  checkoutSnapshot: null as unknown,
+  checkoutSnapshot: { parcel, priceKopecks: null } as unknown,
 };
-const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
 const items = [
   { id: "item-1", name: "Ёлка", price: 390000, quantity: 1, options: null },
 ];
 const quote = { available: true as const, priceKopecks: 45000 };
 
-const saveMadeToOrderQuote = mock(async () => true);
+const saveMadeToOrderDeliveryPrice = mock(async () => true);
 const claimMadeToOrderShipment = mock(
   async (): Promise<string | null> => "attempt-1",
 );
@@ -30,7 +31,7 @@ const markMadeToOrderShipmentUnapproved = mock(async () => {});
 mock.module("../../src/lib/commerce/orders", () => ({
   getProductOrderById: async () => order,
   getProductOrderItems: async () => items,
-  saveMadeToOrderQuote,
+  saveMadeToOrderDeliveryPrice,
   claimMadeToOrderShipment,
   attachMadeToOrderShipment,
   markProductOrderOzonFailed,
@@ -46,7 +47,7 @@ let configured = true;
 const quoteParcel = mock(
   async (): Promise<
     | { available: true; priceKopecks: number }
-    | { available: false; reason?: string }
+    | { available: false; reason?: string; cause?: "point" }
   > => quote,
 );
 const createParcelShipment = mock(async () => ({
@@ -62,7 +63,7 @@ mock.module("@/lib/products", () => ({
   formatPrice: (rubles: number) => `${rubles} ₽`,
 }));
 
-const { createMadeToOrderShipment, quoteMadeToOrderDelivery } = await import(
+const { createMadeToOrderShipment, priceMadeToOrderDelivery } = await import(
   "../../src/lib/commerce/made-to-order-shipment"
 );
 const { ParcelNotApprovedError } = await import(
@@ -75,81 +76,116 @@ async function test(name: string, run: () => Promise<void>) {
   if (name === scenario) await run();
 }
 
-await test("until the Delivery API is connected the master bills by hand", async () => {
-  configured = false;
-  const result = await quoteMadeToOrderDelivery(order.id, parcel);
-  expect(result.available).toBe(false);
-  expect(result.reason).toContain("вручную");
-  expect(quoteParcel).not.toHaveBeenCalled();
-});
+const pointInfo = {
+  id: "77",
+  title: "ул. Баумана, 1",
+  address: "Казань, ул. Баумана, 1",
+} as never;
 
-await test("the quote uses the parcel, the point and the order value", async () => {
-  expect(await quoteMadeToOrderDelivery(order.id, parcel)).toEqual({
-    available: true,
-    deliveryPriceKopecks: 45000,
-  });
+/** Доплата с доставкой оплачена: пункт выбран, цена Ozon сохранена. */
+function paidInFull() {
+  order.status = "ready_to_ship";
+  order.deliveryMethod = "pickup";
+  order.deliveryPointId = "77";
+  order.amountDelivery = 45000;
+  order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
+}
+
+await test("the delivery is priced for the chosen point and saved together with it", async () => {
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe("ok");
+  // Считаем посылку, которую упаковала мастер, и стоимость изделия как объявленную
   expect(quoteParcel).toHaveBeenCalledWith({
     recipientPhone: order.contactPhone,
     pointId: "77",
     parcel,
     declaredValueKopecks: 390000,
   });
-  // Расчёт привязан к пункту, до которого считали
-  expect(saveMadeToOrderQuote).toHaveBeenCalledWith(
+  expect(saveMadeToOrderDeliveryPrice).toHaveBeenCalledWith(
     order.id,
-    { parcel, priceKopecks: 45000 },
     "77",
+    pointInfo,
+    45000,
   );
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
 });
 
-await test("a quote is refused when the buyer changed the point meanwhile", async () => {
-  saveMadeToOrderQuote.mockImplementationOnce(async () => false);
-  expect(await quoteMadeToOrderDelivery(order.id, parcel)).toEqual({
-    available: false,
-    reason:
-      "Покупатель сменил пункт выдачи, пока шёл расчёт. Посчитайте доставку ещё раз",
-    deliveryPriceKopecks: 0,
-  });
-});
-
-await test("a buyer without a pickup point gets no quote", async () => {
-  order.deliveryPointId = null;
-  const result = await quoteMadeToOrderDelivery(order.id, parcel);
-  expect(result.available).toBe(false);
-  expect(result.reason).toContain("пункт выдачи");
-  expect(quoteParcel).not.toHaveBeenCalled();
-});
-
-await test("an order out of production gets no quote", async () => {
-  order.status = "awaiting_balance";
-  const result = await quoteMadeToOrderDelivery(order.id, parcel);
-  expect(result.reason).toContain("обновите страницу");
-  expect(quoteParcel).not.toHaveBeenCalled();
-});
-
-await test("a refused quote shows the reason and saves nothing", async () => {
+await test("a point Ozon refuses is for the buyer to change, the master is not bothered", async () => {
   quoteParcel.mockImplementationOnce(async () => ({
     available: false,
     reason: "Пункт не принимает такие габариты",
+    cause: "point",
   }));
-  const result = await quoteMadeToOrderDelivery(order.id, parcel);
-  expect(result.reason).toBe("Пункт не принимает такие габариты");
-  expect(saveMadeToOrderQuote).not.toHaveBeenCalled();
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "unavailable",
+  );
+  expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
 });
 
-await test("an Ozon outage becomes a reason instead of an exception", async () => {
+await test("a refusal that is not about the point alerts the master to bill by hand", async () => {
+  quoteParcel.mockImplementationOnce(async () => ({
+    available: false,
+    reason: "Покупателя с этим телефоном нет в Ozon",
+  }));
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "quote_failed",
+  );
+  expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+  const [, message] = notifyStaffAlert.mock.calls[0] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(message.title).toContain("не посчитал доставку");
+  expect(message.message).toContain("нет в Ozon");
+  expect(message.message).toContain("вручную");
+});
+
+await test("an Ozon outage asks the buyer to retry and does not alert the master", async () => {
   quoteParcel.mockImplementationOnce(async () => {
     throw new Error("timeout");
   });
-  expect(await quoteMadeToOrderDelivery(order.id, parcel)).toEqual({
-    available: false,
-    reason: "Ozon не ответил. Попробуйте через пару минут",
-    deliveryPriceKopecks: 0,
-  });
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "quote_failed",
+  );
+  expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
+});
+
+await test("until the Delivery API is connected the master is told to bill by hand", async () => {
+  configured = false;
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "quote_failed",
+  );
+  expect(quoteParcel).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+});
+
+await test("an order that no longer waits for the balance is locked", async () => {
+  order.status = "ready_to_ship";
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "locked",
+  );
+  expect(quoteParcel).not.toHaveBeenCalled();
+});
+
+await test("an order billed by hand has no parcel and asks for no point", async () => {
+  order.checkoutSnapshot = null;
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "locked",
+  );
+  expect(quoteParcel).not.toHaveBeenCalled();
+});
+
+await test("a price that lost the race to a payment is not saved as done", async () => {
+  saveMadeToOrderDeliveryPrice.mockImplementationOnce(async () => false);
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "locked",
+  );
 });
 
 await test("a paid order ships the saved parcel with a fresh quote", async () => {
-  order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
+  paidInFull();
   await createMadeToOrderShipment(order.id, "payment-1");
   expect(quoteParcel).toHaveBeenCalledTimes(1);
   expect(createParcelShipment).toHaveBeenCalledWith({
@@ -178,7 +214,7 @@ await test("an order nobody can claim is left alone", async () => {
 });
 
 await test("a changed Ozon price is reported to the master", async () => {
-  order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
+  paidInFull();
   quoteParcel.mockImplementationOnce(async () => ({
     available: true,
     priceKopecks: 52000,
@@ -189,7 +225,7 @@ await test("a changed Ozon price is reported to the master", async () => {
 });
 
 await test("a failed shipment is marked and retried by the webhook", async () => {
-  order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
+  paidInFull();
   const error = new Error("Ozon unavailable");
   createParcelShipment.mockImplementationOnce(async () => {
     throw error;
@@ -206,7 +242,7 @@ await test("a failed shipment is marked and retried by the webhook", async () =>
 });
 
 await test("a parcel Ozon created but did not approve keeps its numbers and is not retried", async () => {
-  order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
+  paidInFull();
   createParcelShipment.mockImplementationOnce(async () => {
     throw new ParcelNotApprovedError(
       { orderId: "ozon-1", postingNumbers: ["posting-1"] },
@@ -230,7 +266,7 @@ await test("a parcel Ozon created but did not approve keeps its numbers and is n
 });
 
 await test("Ozon refusing the delivery at shipping time is a failure too", async () => {
-  order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
+  paidInFull();
   quoteParcel.mockImplementationOnce(async () => ({ available: false }));
   await expect(
     createMadeToOrderShipment(order.id, "payment-1"),

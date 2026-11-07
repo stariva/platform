@@ -9,14 +9,19 @@ import {
   paymentReturnState,
 } from "./order-status";
 
-test("the deposit hint asks for a pickup point only when there is none", () => {
+test("the deposit hint never asks for a pickup point, the finished product does until the delivery is priced", () => {
+  assert.doesNotMatch(
+    madeToOrderHint("awaiting_deposit", false) ?? "",
+    /пункт выдачи/i,
+  );
+  // Пункт нужен только готовому изделию и только пока доставка не посчитана
   assert.match(
-    madeToOrderHint("awaiting_deposit", true) ?? "",
+    madeToOrderHint("awaiting_balance", true) ?? "",
     /Выберите пункт выдачи Ozon/,
   );
   assert.doesNotMatch(
-    madeToOrderHint("awaiting_deposit", false) ?? "",
-    /пункт выдачи/,
+    madeToOrderHint("awaiting_balance", false) ?? "",
+    /Выберите пункт/,
   );
   assert.equal(
     madeToOrderHint("in_production", true),

@@ -84,7 +84,16 @@ async function connect() {
     return payment.staffNotifiedAt;
   }
 
-  return { db, sql, notifiedAt, orders, seed, orderOf, noticeOf };
+  return {
+    db,
+    sql,
+    notifiedAt,
+    orders,
+    seed,
+    orderOf,
+    noticeOf,
+    productOrders,
+  };
 }
 
 test.skipIf(!DATABASE_URL)(
@@ -197,5 +206,99 @@ test.skipIf(!DATABASE_URL)(
     );
     expect((await orderOf(id)).ozonOrderId).toBe("YY-123-90YY");
     expect(await noticeOf(balanceId)).toBeNull();
+  },
+);
+
+/** Заказ, у которого изделие готово: мастер выставила доплату, посылка есть. */
+async function seedBalance(
+  connection: Awaited<ReturnType<typeof connect>>,
+  overrides: {
+    status?: "awaiting_balance" | "ready_to_ship";
+    snapshot?: unknown;
+  },
+) {
+  const id = crypto.randomUUID();
+  await connection.db.insert(connection.productOrders).values({
+    id,
+    kind: "made_to_order",
+    contactName: "Анна",
+    contactPhone: "+79001234567",
+    status: overrides.status ?? "awaiting_balance",
+    amountProducts: 390_000,
+    amountDelivery: 0,
+    amountTotal: 390_000,
+    depositAmount: 195_000,
+    deliveryMethod: "manual",
+    checkoutSnapshot:
+      "snapshot" in overrides
+        ? overrides.snapshot
+        : {
+            parcel: {
+              weightGrams: 800,
+              lengthCm: 60,
+              widthCm: 30,
+              heightCm: 20,
+            },
+            priceKopecks: null,
+          },
+  });
+  return id;
+}
+
+test.skipIf(!DATABASE_URL)(
+  "the delivery price lands in the order with the point and the parcel stays",
+  async () => {
+    const connection = await connect();
+    const { orders, orderOf } = connection;
+    const parcel = {
+      weightGrams: 800,
+      lengthCm: 60,
+      widthCm: 30,
+      heightCm: 20,
+    };
+    const id = await seedBalance(connection, {});
+
+    expect(
+      await orders.saveMadeToOrderDeliveryPrice(id, "77", null, 45_000),
+    ).toBe(true);
+    const priced = await orderOf(id);
+    expect(priced.deliveryMethod).toBe("pickup");
+    expect(priced.deliveryPointId).toBe("77");
+    expect(priced.amountDelivery).toBe(45_000);
+    expect(priced.amountTotal).toBe(435_000);
+    expect(priced.checkoutSnapshot).toEqual({ parcel, priceKopecks: 45_000 });
+
+    // Другой пункт: итог считается от изделий, а не наращивается поверх прежнего
+    expect(
+      await orders.saveMadeToOrderDeliveryPrice(id, "88", null, 50_000),
+    ).toBe(true);
+    const changed = await orderOf(id);
+    expect(changed.deliveryPointId).toBe("88");
+    expect(changed.amountTotal).toBe(440_000);
+    expect(changed.checkoutSnapshot).toEqual({ parcel, priceKopecks: 50_000 });
+  },
+);
+
+test.skipIf(!DATABASE_URL)(
+  "the delivery price is not written once the order no longer waits for the balance",
+  async () => {
+    const connection = await connect();
+    const { orders, orderOf } = connection;
+
+    // Доплата уже оплачена
+    const paid = await seedBalance(connection, { status: "ready_to_ship" });
+    expect(
+      await orders.saveMadeToOrderDeliveryPrice(paid, "77", null, 45_000),
+    ).toBe(false);
+    const untouched = await orderOf(paid);
+    expect(untouched.amountDelivery).toBe(0);
+    expect(untouched.deliveryPointId).toBeNull();
+
+    // Доплата с ручной доставкой: посылки нет, пункт у неё не спрашивают
+    const manual = await seedBalance(connection, { snapshot: null });
+    expect(
+      await orders.saveMadeToOrderDeliveryPrice(manual, "77", null, 45_000),
+    ).toBe(false);
+    expect((await orderOf(manual)).amountTotal).toBe(390_000);
   },
 );

@@ -56,6 +56,19 @@ function ozonDelivery(order: OrderRow) {
   };
 }
 
+/**
+ * Изделие готово, мастер указала посылку, а покупатель ещё не выбрал пункт:
+ * доставки в доплате пока нет. Так же считает витрина (made-to-order-flow.ts).
+ */
+function deliveryQuotePending(order: OrderRow): boolean {
+  if (order.status !== "awaiting_balance") return false;
+  const snapshot = order.checkoutSnapshot as {
+    parcel?: unknown;
+    priceKopecks?: number | null;
+  } | null;
+  return Boolean(snapshot?.parcel) && snapshot?.priceKopecks == null;
+}
+
 /** Заказ для админки: суммы в рублях, всё, что известно о заказе и доставке. */
 export function toAdminOrder(
   order: OrderRow,
@@ -88,6 +101,7 @@ export function toAdminOrder(
     deliveryPointId: order.deliveryPointId,
     deliveryAddress: deliveryAddress(order),
     ozonDelivery: ozonDelivery(order),
+    deliveryQuotePending: deliveryQuotePending(order),
     deliveryNote: order.deliveryNote,
     masterNotes: order.masterNotes,
     trackingNumber: order.trackingNumber,

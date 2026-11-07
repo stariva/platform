@@ -1,13 +1,10 @@
-import type {
-  MadeToOrderDeliveryQuote,
-  MadeToOrderParcel,
-} from "@stariva/web-api";
 import {
   createParcelShipment,
   isOzonBusinessDeliveryConfigured,
   quoteParcel,
 } from "@/lib/ozon-business-delivery/client";
 import { ParcelNotApprovedError } from "@/lib/ozon-business-delivery/errors";
+import type { PickupPoint } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
 import { notifyOzonOrderFailed, notifyStaffAlert } from "./order-notifications";
 import {
@@ -18,67 +15,83 @@ import {
   type MadeToOrderDeliverySnapshot,
   markMadeToOrderShipmentUnapproved,
   markProductOrderOzonFailed,
-  saveMadeToOrderQuote,
+  saveMadeToOrderDeliveryPrice,
 } from "./orders";
 
-const refuse = (reason: string): MadeToOrderDeliveryQuote => ({
-  available: false,
-  reason,
-  deliveryPriceKopecks: 0,
-});
+/** Чем кончился расчёт доставки: см. priceMadeToOrderDelivery. */
+export type DeliveryPricingResult =
+  | "ok"
+  | "locked"
+  | "unavailable"
+  | "quote_failed";
 
 /**
- * Изделие готово: считает доставку посылки с весом и размерами, которые указал
- * мастер, до пункта покупателя. Причину отказа мастер видит в админке, поэтому
- * текст про то, что делать дальше: ручной способ остаётся на любой случай.
+ * Покупатель выбрал пункт при доплате: считает доставку посылки, которую
+ * упаковала мастер, до этого пункта и записывает пункт и цену в заказ. Доставка
+ * входит в доплату, а после оплаты отправление создаётся в Ozon.
+ *
+ * `unavailable` — пункт не подходит, покупатель выберет другой. `quote_failed` —
+ * расчёт не вышел не по вине пункта (Ozon не ответил, не подключён, не
+ * доставляет этому покупателю): мастер получает алерт и может выставить
+ * доплату с ручной доставкой. `locked` — заказ уже не ждёт доплату.
  */
-export async function quoteMadeToOrderDelivery(
+export async function priceMadeToOrderDelivery(
   orderId: string,
-  parcel: MadeToOrderParcel,
-): Promise<MadeToOrderDeliveryQuote> {
-  if (!isOzonBusinessDeliveryConfigured()) {
-    return refuse(
-      "Ozon Доставка для бизнеса ещё не подключена — укажите стоимость доставки вручную",
-    );
-  }
+  pointId: string,
+  point: PickupPoint | null,
+): Promise<DeliveryPricingResult> {
   const order = await getProductOrderById(orderId);
-  if (order?.kind !== "made_to_order" || order.status !== "in_production") {
-    return refuse("Заказ изменился, обновите страницу");
-  }
-  if (order.deliveryMethod !== "pickup" || !order.deliveryPointId) {
-    return refuse("Покупатель ещё не выбрал пункт выдачи");
+  const snapshot =
+    order?.checkoutSnapshot as MadeToOrderDeliverySnapshot | null;
+  if (
+    order?.kind !== "made_to_order" ||
+    order.status !== "awaiting_balance" ||
+    !snapshot?.parcel
+  ) {
+    return "locked";
   }
 
+  const failed = async (reason: string): Promise<DeliveryPricingResult> => {
+    await notifyStaffAlert(
+      `${orderId}/delivery-quote`,
+      {
+        title: `Заказ №${order.number}: Ozon не посчитал доставку`,
+        message: `${reason}\nПокупатель не может оплатить доплату. Укажите стоимость доставки вручную в админке: этап «Ждёт доплату» → «Указать доставку вручную».`,
+      },
+      "order-delivery-quote",
+    );
+    return "quote_failed";
+  };
+
+  if (!isOzonBusinessDeliveryConfigured()) {
+    return failed("Ozon Доставка для бизнеса не подключена.");
+  }
   try {
     const quote = await quoteParcel({
       recipientPhone: order.contactPhone,
-      pointId: order.deliveryPointId,
-      parcel,
+      pointId,
+      parcel: snapshot.parcel,
       declaredValueKopecks: order.amountProducts,
     });
     if (!quote.available) {
-      return refuse(
-        quote.reason ??
-          "Ozon не доставит такую посылку в этот пункт. Проверьте вес и размеры или укажите стоимость вручную",
-      );
+      // Не подошёл пункт — это решает сам покупатель
+      if (quote.cause === "point") return "unavailable";
+      return failed(quote.reason ?? "Ozon отказал в расчёте доставки.");
     }
-    const saved = await saveMadeToOrderQuote(
+    const saved = await saveMadeToOrderDeliveryPrice(
       orderId,
-      { parcel, priceKopecks: quote.priceKopecks },
-      order.deliveryPointId,
+      pointId,
+      point,
+      quote.priceKopecks,
     );
-    if (!saved) {
-      return refuse(
-        "Покупатель сменил пункт выдачи, пока шёл расчёт. Посчитайте доставку ещё раз",
-      );
-    }
-    return { available: true, deliveryPriceKopecks: quote.priceKopecks };
+    return saved ? "ok" : "locked";
   } catch (error) {
     console.error(
       `[made-to-order] Не удалось посчитать доставку заказа ${orderId}:`,
       error,
     );
-    return refuse("Ozon не ответил. Попробуйте через пару минут");
+    // Сбой связи пройдёт сам: мастера не тревожим, покупатель попробует ещё раз
+    return "quote_failed";
   }
 }
 

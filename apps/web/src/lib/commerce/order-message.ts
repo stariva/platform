@@ -33,7 +33,7 @@ function customerLines(order: OrderRow): string[] {
 
 /**
  * Куда отправить: пункт Ozon, а у старых заявок — текст покупателя. Новая
- * заявка приходит без пункта: его выбирают перед предоплатой.
+ * заявка приходит без пункта: его выбирают при доплате, когда изделие готово.
  */
 function deliveryLine(order: OrderRow): string | null {
   const raw = (order.deliveryAddress ?? {}) as {
@@ -46,8 +46,10 @@ function deliveryLine(order: OrderRow): string | null {
     return `\nПункт выдачи Ozon: ${address || `№${order.deliveryPointId}`}`;
   }
   if (order.deliveryNote) return `\nДоставка: ${order.deliveryNote}`;
-  return order.status === "requested" || order.status === "awaiting_deposit"
-    ? "\nПункт выдачи Ozon: покупатель выберет перед предоплатой"
+  return order.status === "requested" ||
+    order.status === "awaiting_deposit" ||
+    order.status === "in_production"
+    ? "\nПункт выдачи Ozon: покупатель выберет при доплате"
     : null;
 }
 
@@ -152,7 +154,7 @@ export function formatMadeToOrderPaymentMessage(
         ...customerLines(order),
         "",
         payment.type === "deposit"
-          ? "Дальше: сплести изделие, упаковать и в админке указать вес и размеры посылки: сайт посчитает доставку Ozon и выставит доплату."
+          ? "Дальше: сплести изделие, упаковать и в админке указать вес и размеры посылки. Доплата выставится за изделие, а доставку Ozon посчитает сайт, когда покупатель выберет пункт выдачи."
           : order.checkoutSnapshot
             ? "Заказ оплачен полностью. Отправление создаётся в Ozon: дальше распечатайте этикетку в кабинете доставки Ozon и сдайте посылку в пункт Ozon."
             : "Заказ оплачен полностью. Дальше: отправить и указать номер отправления в админке.",

@@ -18,9 +18,22 @@ export interface OrderEmailOrder {
   approvedAt: Date | null;
   trackingNumber: string | null;
   declineReason: string | null;
-  deliveryPointId: string | null;
-  /** Старые заявки: куда отправить, текстом покупателя вместо пункта Ozon. */
-  deliveryNote: string | null;
+  /** Под заказ: посылка и расчёт доставки (priceKopecks пуст, пока покупатель не выбрал пункт). */
+  checkoutSnapshot: unknown;
+}
+
+/**
+ * Изделие готово, мастер указал параметры посылки, а покупатель ещё не выбрал
+ * пункт: доставки в доплате пока нет. Так же считает витрина
+ * (apps/web, made-to-order-flow.ts).
+ */
+function deliveryQuoteNeeded(order: OrderEmailOrder): boolean {
+  if (order.status !== "awaiting_balance") return false;
+  const snapshot = order.checkoutSnapshot as {
+    parcel?: unknown;
+    priceKopecks?: number | null;
+  } | null;
+  return Boolean(snapshot?.parcel) && snapshot?.priceKopecks == null;
 }
 
 const dueLabel = (date: Date) =>
@@ -67,10 +80,12 @@ export function buildOrderStatusEmail({
     paymentDueLabel: order.paymentDueAt ? dueLabel(order.paymentDueAt) : null,
     trackingNumber: order.trackingNumber,
     declineReason: order.declineReason,
-    deliveryPointMissing: !order.deliveryPointId && !order.deliveryNote,
+    deliveryQuoteNeeded: deliveryQuoteNeeded(order),
   };
   return {
-    idempotencyKey: `order:${order.id}:${status}:${order.approvedAt?.getTime() ?? 0}`,
+    // Доплату могут выставить заново с другой доставкой: это другое письмо,
+    // и с прежним ключом Resend отклонил бы его (409)
+    idempotencyKey: `order:${order.id}:${status}:${order.approvedAt?.getTime() ?? 0}${status === "awaiting_balance" ? `:${order.amountTotal}` : ""}`,
     to: [to],
     subject: orderEmailSubject(props),
     props,

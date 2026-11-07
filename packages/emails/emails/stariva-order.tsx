@@ -52,8 +52,8 @@ export interface StarivaOrderEmailProps {
   paymentDueLabel: string | null;
   trackingNumber: string | null;
   declineReason: string | null;
-  /** Куда отправить, ещё не известно: перед предоплатой просим выбрать пункт. */
-  deliveryPointMissing?: boolean;
+  /** Доплата без доставки: пункт выберет покупатель, и сайт посчитает доставку. */
+  deliveryQuoteNeeded?: boolean;
 }
 
 const rubles = (kopecks: number) =>
@@ -84,7 +84,7 @@ function copy(props: StarivaOrderEmailProps) {
       return {
         subject: `Заказ ${no} согласован: внесите предоплату`,
         heading: "Заказ согласован",
-        intro: `Мастер согласовал ваш заказ. ${props.deliveryPointMissing ? "Выберите на странице заказа пункт выдачи Ozon и внесите" : "Внесите"} предоплату ${rubles(props.depositAmount ?? 0)}${due} — и мастер начнёт плести.`,
+        intro: `Мастер согласовал ваш заказ. Внесите предоплату ${rubles(props.depositAmount ?? 0)}${due} — и мастер начнёт плести. Пункт выдачи Ozon и доставку выберете позже, когда изделие будет готово.`,
         button: "Внести предоплату",
       };
     case "in_production":
@@ -95,6 +95,14 @@ function copy(props: StarivaOrderEmailProps) {
         button: "Открыть заказ",
       };
     case "awaiting_balance":
+      if (props.deliveryQuoteNeeded) {
+        return {
+          subject: `Изделие по заказу ${no} готово`,
+          heading: "Изделие готово!",
+          intro: `Ваше изделие готово. Выберите на странице заказа пункт выдачи Ozon, и сайт сразу посчитает доставку. Доплата — ${rubles(balanceOf(props))} и доставка${due} — после неё мастер отправит заказ.`,
+          button: "Выбрать пункт выдачи",
+        };
+      }
       return {
         subject: `Изделие по заказу ${no} готово`,
         heading: "Изделие готово!",
@@ -183,7 +191,12 @@ function facts(props: StarivaOrderEmailProps): [string, string][] {
       if (props.amountDelivery > 0) {
         rows.push(["В том числе доставка", rubles(props.amountDelivery)]);
       }
-      rows.push(["К доплате", rubles(balanceOf(props))]);
+      rows.push([
+        "К доплате",
+        props.deliveryQuoteNeeded
+          ? `${rubles(balanceOf(props))} и доставка Ozon`
+          : rubles(balanceOf(props)),
+      ]);
       break;
     case "shipped":
       if (props.trackingNumber) {
@@ -224,7 +237,7 @@ export default function StarivaOrderEmail(
     paymentDueLabel: "16 октября",
     trackingNumber: null,
     declineReason: null,
-    deliveryPointMissing: true,
+    deliveryQuoteNeeded: false,
   },
 ) {
   const text = copy(props);

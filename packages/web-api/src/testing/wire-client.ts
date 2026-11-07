@@ -59,10 +59,6 @@ const idleServices: WebServices = {
     view: async () => null,
     updateDetails: async () => "not_found",
     updateDeliveryPoint: async () => "not_found",
-    quoteMadeToOrderDelivery: async () => ({
-      available: false,
-      deliveryPriceKopecks: 0,
-    }),
     startPayment: async () => ({ status: "not_found" }),
   },
   checkout: {
