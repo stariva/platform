@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dateTime, formatDay, rubles } from "~/components/crm/crm-meta";
+import { OrderCostsSection } from "~/components/crm/order-costs-section";
 import {
   OrderEditForm,
   OrderPayments,
@@ -86,6 +87,8 @@ export default async function CrmOrderPage({
               <OrderStageControl id={order.id} status={order.status} />
             </CardContent>
           </Card>
+
+          <OrderCostsSection kind="manual" orderId={order.id} />
 
           <Card>
             <CardHeader>

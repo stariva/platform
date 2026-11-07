@@ -6,6 +6,8 @@ import {
   crmSales,
   type Database,
   eq,
+  financeSettings,
+  orderCosts,
   orders,
   productOrderPayments,
   productOrders,
@@ -13,13 +15,15 @@ import {
   workshops,
 } from "@stariva/db";
 
+import { DEFAULT_RATES, type FinanceRates } from "./economics";
 import {
   buildClients,
   type Deal,
-  moscowDay,
+  moscowNoon,
   normalizeEmail,
   normalizePhone,
 } from "./model";
+import type { CostLine } from "./work";
 
 const emails = (...values: (string | null)[]) => [
   ...new Set(values.map(normalizeEmail).filter((v): v is string => !!v)),
@@ -39,6 +43,8 @@ export async function loadCrm(db: Database) {
     productRows,
     paymentRows,
     workshopRows,
+    costRows,
+    settingsRows,
   ] = await Promise.all([
     db.select().from(adCampaigns).orderBy(adCampaigns.createdAt),
     db.select().from(adExpenses),
@@ -55,6 +61,7 @@ export async function loadCrm(db: Database) {
         contactName: productOrders.contactName,
         contactPhone: productOrders.contactPhone,
         contactEmail: productOrders.contactEmail,
+        amountDelivery: productOrders.amountDelivery,
         amountTotal: productOrders.amountTotal,
         createdAt: productOrders.createdAt,
         paidAt: productOrders.paidAt,
@@ -92,7 +99,33 @@ export async function loadCrm(db: Database) {
       .from(orders)
       .innerJoin(user, eq(user.id, orders.userId))
       .leftJoin(workshops, eq(workshops.slug, orders.workshopSlug)),
+    db.select().from(orderCosts),
+    db.select().from(financeSettings),
   ]);
+
+  const rates: FinanceRates = settingsRows[0]
+    ? {
+        acquiring: settingsRows[0].acquiringRate,
+        tax: settingsRows[0].taxRate,
+      }
+    : DEFAULT_RATES;
+
+  // Ключ — `product:<id>` или `manual:<id>`, как у сделок
+  const costLines = new Map<string, CostLine[]>();
+  for (const row of costRows) {
+    const key = row.saleId
+      ? `manual:${row.saleId}`
+      : `product:${row.productOrderId}`;
+    const list = costLines.get(key) ?? [];
+    list.push({
+      id: row.id,
+      category: row.category,
+      spentOn: row.spentOn,
+      amount: row.amount,
+      note: row.note,
+    });
+    costLines.set(key, list);
+  }
 
   const paymentsByOrder = new Map<string, Deal["payments"]>();
   for (const payment of paymentRows) {
@@ -104,13 +137,11 @@ export async function loadCrm(db: Database) {
     paymentsByOrder.set(payment.orderId, list);
   }
 
-  // Полдень, чтобы день не съехал при переводе часовых поясов
-  const noon = (day: string) =>
-    new Date(moscowDay(day).getTime() + 12 * 3600_000);
   const paymentsBySale = new Map<string, Deal["payments"]>();
   for (const payment of salePaymentRows) {
     const list = paymentsBySale.get(payment.saleId) ?? [];
-    list.push({ at: noon(payment.paidOn), amount: payment.amount });
+    // Полдень, чтобы день не съехал при переводе часовых поясов
+    list.push({ at: moscowNoon(payment.paidOn), amount: payment.amount });
     paymentsBySale.set(payment.saleId, list);
   }
 
@@ -168,7 +199,7 @@ export async function loadCrm(db: Database) {
         id: sale.id,
         label: sale.description,
         status: sale.status,
-        createdAt: noon(sale.soldOn),
+        createdAt: moscowNoon(sale.soldOn),
         // Отменённый заказ не приносит денег: оплата считается возвращённой
         payments:
           sale.status === "canceled" ? [] : (paymentsBySale.get(sale.id) ?? []),
@@ -194,6 +225,8 @@ export async function loadCrm(db: Database) {
     productRows,
     workshopRows,
     paymentsBySale,
+    costLines,
+    rates,
   };
 }
 

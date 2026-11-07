@@ -21,7 +21,7 @@ import { Badge } from "@stariva/ui/reui";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import { MadeToOrderStage } from "./made-to-order-stage";
@@ -75,7 +75,13 @@ function deleteRisks(order: AdminOrderView): string[] {
 }
 
 /** Карточка заказа: что и кем заказано, доставка, оплаты и ведение заказа мастером. */
-export function OrderEditor({ order }: { order: AdminOrderView }) {
+export function OrderEditor({
+  order,
+  costs,
+}: {
+  order: AdminOrderView;
+  costs?: ReactNode;
+}) {
   const router = useRouter();
   const confirm = useConfirm();
   const [status, setStatus] = useState(order.status);
@@ -252,6 +258,7 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
         )}
 
         <OrderPaymentsCard order={order} />
+        {costs}
         <OrderAttributionCard order={order} />
       </div>
 

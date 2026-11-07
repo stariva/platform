@@ -11,6 +11,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { productOrders } from "./commerce/orders";
 import { customOrderRequests } from "./custom-order";
 
 /** Где крутится реклама: по каналу кампании складываются в сводке. */
@@ -254,3 +255,102 @@ export const crmSalePayments = pgTable(
     check("crm_sale_payments_amount_positive", sql`${table.amount} > 0`),
   ],
 );
+
+/**
+ * На что потрачены деньги по заказу. Эквайринг, налог и доставка считаются
+ * сами; строка такой категории заменяет посчитанную сумму.
+ */
+export type OrderCostCategory =
+  | "materials"
+  | "packaging"
+  | "shipping"
+  | "acquiring"
+  | "tax"
+  | "other";
+
+/**
+ * Затрата по заказу с сайта или заказу вне сайта. Материалы мастер вносит
+ * сама; сумма 0 значит «по этому заказу материалы не тратились».
+ */
+export const orderCosts = pgTable(
+  "order_costs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    productOrderId: text("product_order_id").references(
+      () => productOrders.id,
+      { onDelete: "cascade" },
+    ),
+    saleId: text("sale_id").references(() => crmSales.id, {
+      onDelete: "cascade",
+    }),
+    category: text("category").$type<OrderCostCategory>().notNull(),
+    // День расхода по Москве; за период в прибыль идут затраты этих дней
+    spentOn: date("spent_on", { mode: "string" }).notNull(),
+    // Копейки
+    amount: integer("amount").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("order_costs_product_order_idx").on(table.productOrderId),
+    index("order_costs_sale_idx").on(table.saleId),
+    check(
+      "order_costs_one_order",
+      sql`num_nonnulls(${table.productOrderId}, ${table.saleId}) = 1`,
+    ),
+    check("order_costs_amount_not_negative", sql`${table.amount} >= 0`),
+  ],
+);
+
+/** Статья постоянных расходов: то, что не относится к одному заказу. */
+export type BusinessExpenseCategory =
+  | "services"
+  | "equipment"
+  | "content"
+  | "education"
+  | "other";
+
+/** Постоянный расход: подписка, сервер, инструмент, фотосъёмка, обучение. */
+export const businessExpenses = pgTable(
+  "business_expenses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    category: text("category")
+      .$type<BusinessExpenseCategory>()
+      .notNull()
+      .default("other"),
+    // День расхода по Москве
+    spentOn: date("spent_on", { mode: "string" }).notNull(),
+    // Копейки
+    amount: integer("amount").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("business_expenses_spent_on_idx").on(table.spentOn),
+    check("business_expenses_amount_positive", sql`${table.amount} > 0`),
+  ],
+);
+
+/**
+ * Ставки для расчёта затрат, в сотых долях процента (350 = 3,5%). Одна строка:
+ * без неё действуют значения по умолчанию. Новая ставка пересчитывает и
+ * прошлые периоды.
+ */
+export const financeSettings = pgTable("finance_settings", {
+  id: text("id").primaryKey().default("default"),
+  acquiringRate: integer("acquiring_rate").notNull().default(350),
+  taxRate: integer("tax_rate").notNull().default(400),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .$onUpdateFn(() => new Date())
+    .notNull(),
+});

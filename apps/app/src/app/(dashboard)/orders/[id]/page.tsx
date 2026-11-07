@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { OrderCostsSection } from "~/components/crm/order-costs-section";
 import { SiteHeader } from "~/components/layout";
 import { OrderEditor } from "~/components/orders/order-editor";
 import { toOrderView } from "~/components/orders/order-meta";
@@ -32,6 +33,7 @@ export default async function OrderPage({
             order.masterNotes,
           ].join(":")}
           order={toOrderView(order)}
+          costs={<OrderCostsSection kind="product" orderId={order.id} />}
         />
         <VisitorCard visitor={order.visitor} />
       </div>

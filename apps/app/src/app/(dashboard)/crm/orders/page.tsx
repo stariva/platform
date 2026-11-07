@@ -12,7 +12,7 @@ import {
 } from "@stariva/ui";
 import Link from "next/link";
 import { z } from "zod";
-import { dateTime, rubles } from "~/components/crm/crm-meta";
+import { dateTime, profitTone, rubles } from "~/components/crm/crm-meta";
 import { first } from "~/components/crm/period";
 import { Stat } from "~/components/crm/stat";
 import {
@@ -51,6 +51,7 @@ const paramsSchema = z.object({
   channel: z.enum(CHANNELS).optional().catch(undefined),
   type: z.enum(TYPES).optional().catch(undefined),
   q: z.string().trim().max(100).optional().catch(undefined),
+  materials: z.enum(["missing"]).optional().catch(undefined),
   from: z.iso.date().optional().catch(undefined),
   to: z.iso.date().optional().catch(undefined),
   page: z.coerce.number().int().min(1).catch(1),
@@ -115,6 +116,11 @@ function Filters({ params }: { params: Params }) {
       {list && (
         <>
           <input type="hidden" name="stage" value={params.stage ?? ""} />
+          <input
+            type="hidden"
+            name="materials"
+            value={params.materials ?? ""}
+          />
           <span className="text-muted-foreground text-sm">оформлен</span>
           <Input
             type="date"
@@ -140,7 +146,8 @@ function Filters({ params }: { params: Params }) {
         params.channel ||
         params.type ||
         params.from ||
-        params.to) && (
+        params.to ||
+        (list && params.materials)) && (
         <Link
           href={href({ view: params.view, stage: params.stage })}
           className="text-muted-foreground text-sm hover:underline"
@@ -254,17 +261,20 @@ async function Board({ params }: { params: Params }) {
 
 /** Список всех заказов с переключателем этапов и страницами. */
 async function List({ params }: { params: Params }) {
-  const { items, total, stages } = await api.admin.crm.orders({
-    view: "all",
-    stage: params.stage,
-    channel: params.channel,
-    type: params.type,
-    query: params.q,
-    from: params.from,
-    to: params.to,
-    limit: PAGE_SIZE,
-    offset: (params.page - 1) * PAGE_SIZE,
-  });
+  const { items, total, stages, missingMaterials } = await api.admin.crm.orders(
+    {
+      view: "all",
+      stage: params.stage,
+      channel: params.channel,
+      type: params.type,
+      query: params.q,
+      missingMaterials: params.materials === "missing" || undefined,
+      from: params.from,
+      to: params.to,
+      limit: PAGE_SIZE,
+      offset: (params.page - 1) * PAGE_SIZE,
+    },
+  );
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const all = stages.reduce((sum, row) => sum + row.count, 0);
 
@@ -294,6 +304,22 @@ async function List({ params }: { params: Params }) {
               {STAGE_LABELS[row.stage]} · {row.count}
             </Link>
           ))}
+        {(missingMaterials > 0 || params.materials) && (
+          <Link
+            href={href({
+              ...params,
+              materials: params.materials ? undefined : "missing",
+              page: 1,
+            })}
+            aria-current={params.materials ? "page" : undefined}
+            className={buttonVariants({
+              variant: params.materials ? "default" : "outline",
+              size: "sm",
+            })}
+          >
+            Без материалов · {missingMaterials}
+          </Link>
+        )}
       </div>
 
       <div className="rounded-lg border contain-inline-size">
@@ -305,6 +331,8 @@ async function List({ params }: { params: Params }) {
               <TableHead>Клиент</TableHead>
               <TableHead>Что</TableHead>
               <TableHead className="text-right">Сумма</TableHead>
+              <TableHead className="text-right">Затраты</TableHead>
+              <TableHead className="text-right">Прибыль</TableHead>
               <TableHead className="w-40">Этап</TableHead>
             </TableRow>
           </TableHeader>
@@ -312,7 +340,7 @@ async function List({ params }: { params: Params }) {
             {items.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={8}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Заказов не найдено
@@ -359,6 +387,28 @@ async function List({ params }: { params: Params }) {
                 </TableCell>
                 <TableCell className="text-right align-top text-sm">
                   <OrderMoney order={order} />
+                </TableCell>
+                <TableCell className="text-right align-top text-sm tabular-nums">
+                  {order.costs === null ? "—" : rubles.format(order.costs)}
+                  {order.missingMaterials && (
+                    <div>
+                      <Link href={order.href}>
+                        <Badge variant="outline">внести материалы</Badge>
+                      </Link>
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell
+                  className={`text-right align-top text-sm tabular-nums ${
+                    order.profit === null ? "" : profitTone(order.profit)
+                  }`}
+                >
+                  {order.profit === null ? "—" : rubles.format(order.profit)}
+                  {order.profit !== null && order.profitExpected && (
+                    <div className="text-muted-foreground text-xs">
+                      после доплаты
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="align-top text-sm">
                   <div className="flex flex-wrap gap-1">
