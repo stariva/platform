@@ -2,11 +2,27 @@ import { test } from "bun:test";
 import assert from "node:assert/strict";
 import {
   isOrderActive,
+  madeToOrderHint,
   orderProgress,
   orderStatusLabel,
   orderStatusTone,
   paymentReturnState,
 } from "./order-status";
+
+test("the deposit hint asks for a pickup point only when there is none", () => {
+  assert.match(
+    madeToOrderHint("awaiting_deposit", true) ?? "",
+    /Выберите пункт выдачи Ozon/,
+  );
+  assert.doesNotMatch(
+    madeToOrderHint("awaiting_deposit", false) ?? "",
+    /пункт выдачи/,
+  );
+  assert.equal(
+    madeToOrderHint("in_production", true),
+    madeToOrderHint("in_production", false),
+  );
+});
 
 const returned = (
   kind: "stock" | "made_to_order",

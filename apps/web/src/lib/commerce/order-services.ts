@@ -6,7 +6,11 @@ import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { phonesMatch } from "@/lib/phone";
-import { isPaymentOverdue, madeToOrderPaymentStep } from "./made-to-order-flow";
+import {
+  isDeliveryPointRequiredToPay,
+  isPaymentOverdue,
+  madeToOrderPaymentStep,
+} from "./made-to-order-flow";
 import { quoteMadeToOrderDelivery } from "./made-to-order-shipment";
 import {
   type MeasurementField,
@@ -23,7 +27,6 @@ import {
   getProductOrderCustomerEmail,
   getProductOrderItems,
   isDeliveryPointEditable,
-  needsDeliveryPoint,
   setMadeToOrderDeliveryPoint,
   updateMadeToOrderDetails,
 } from "./orders";
@@ -210,7 +213,7 @@ export const orderServices: OrderServices = {
         status: isPaymentOverdue(order) ? "overdue" : "nothing_to_pay",
       };
     }
-    if (step.type === "deposit" && needsDeliveryPoint(order)) {
+    if (isDeliveryPointRequiredToPay(order)) {
       return { status: "delivery_point_required" };
     }
 

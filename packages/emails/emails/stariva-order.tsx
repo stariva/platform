@@ -52,6 +52,8 @@ export interface StarivaOrderEmailProps {
   paymentDueLabel: string | null;
   trackingNumber: string | null;
   declineReason: string | null;
+  /** Куда отправить, ещё не известно: перед предоплатой просим выбрать пункт. */
+  deliveryPointMissing?: boolean;
 }
 
 const rubles = (kopecks: number) =>
@@ -82,7 +84,7 @@ function copy(props: StarivaOrderEmailProps) {
       return {
         subject: `Заказ ${no} согласован: внесите предоплату`,
         heading: "Заказ согласован",
-        intro: `Мастер согласовал ваш заказ. Выберите на странице заказа пункт выдачи Ozon и внесите предоплату ${rubles(props.depositAmount ?? 0)}${due} — и мастер начнёт плести.`,
+        intro: `Мастер согласовал ваш заказ. ${props.deliveryPointMissing ? "Выберите на странице заказа пункт выдачи Ozon и внесите" : "Внесите"} предоплату ${rubles(props.depositAmount ?? 0)}${due} — и мастер начнёт плести.`,
         button: "Внести предоплату",
       };
     case "in_production":
@@ -222,6 +224,7 @@ export default function StarivaOrderEmail(
     paymentDueLabel: "16 октября",
     trackingNumber: null,
     declineReason: null,
+    deliveryPointMissing: true,
   },
 ) {
   const text = copy(props);

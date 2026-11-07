@@ -11,21 +11,21 @@ import { MadeToOrderPayment } from "@/app/order/[orderId]/made-to-order-payment"
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import type { AccountOrder, AccountReceipt } from "@/lib/account/orders";
-import { isPaymentOverdue } from "@/lib/commerce/made-to-order-flow";
+import {
+  isPaymentOverdue,
+  needsDeliveryPoint,
+} from "@/lib/commerce/made-to-order-flow";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { measurementFieldsBySlug } from "@/lib/commerce/measurement-fields";
 import { deliveryDatesView } from "@/lib/commerce/order-services";
 import {
   DELIVERY_POINT_ANCHOR,
-  madeToOrderHints,
+  madeToOrderHint,
   orderProgress,
   postingStatusLabels,
   stockOrderHints,
 } from "@/lib/commerce/order-status";
-import {
-  isDeliveryPointEditable,
-  needsDeliveryPoint,
-} from "@/lib/commerce/orders";
+import { isDeliveryPointEditable } from "@/lib/commerce/orders";
 import { pickupPointAddressLine } from "@/lib/ozon-delivery/format";
 import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
@@ -264,7 +264,9 @@ export async function ProductOrderView({
   const hint =
     order.status === "declined"
       ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
-      : (madeToOrder ? madeToOrderHints : stockOrderHints)[order.status];
+      : madeToOrder
+        ? madeToOrderHint(order.status, needsDeliveryPoint(order))
+        : stockOrderHints[order.status];
   const awaitingPayment =
     view.paymentStep !== null || order.status === "pending";
   // Пункт выдачи нужен к предоплате; в заявке его ещё не спрашиваем

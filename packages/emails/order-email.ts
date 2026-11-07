@@ -18,6 +18,9 @@ export interface OrderEmailOrder {
   approvedAt: Date | null;
   trackingNumber: string | null;
   declineReason: string | null;
+  deliveryPointId: string | null;
+  /** Старые заявки: куда отправить, текстом покупателя вместо пункта Ozon. */
+  deliveryNote: string | null;
 }
 
 const dueLabel = (date: Date) =>
@@ -64,6 +67,7 @@ export function buildOrderStatusEmail({
     paymentDueLabel: order.paymentDueAt ? dueLabel(order.paymentDueAt) : null,
     trackingNumber: order.trackingNumber,
     declineReason: order.declineReason,
+    deliveryPointMissing: !order.deliveryPointId && !order.deliveryNote,
   };
   return {
     idempotencyKey: `order:${order.id}:${status}:${order.approvedAt?.getTime() ?? 0}`,

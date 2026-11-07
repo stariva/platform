@@ -15,6 +15,8 @@ const order = {
   approvedAt,
   trackingNumber: null,
   declineReason: null,
+  deliveryPointId: null as string | null,
+  deliveryNote: null as string | null,
 };
 const send = (
   overrides: Partial<typeof order>,
@@ -40,6 +42,16 @@ test("writes about a deposit with the amount and the order link", () => {
   expect(email.idempotencyKey).toBe(
     `order:order-1:awaiting_deposit:${approvedAt.getTime()}`,
   );
+});
+
+test("asks to pick a pickup point only when the order has nowhere to ship", () => {
+  expect(send({})?.props.deliveryPointMissing).toBe(true);
+  expect(send({ deliveryPointId: "77" })?.props.deliveryPointMissing).toBe(
+    false,
+  );
+  expect(
+    send({ deliveryNote: "Казань, СДЭК" })?.props.deliveryPointMissing,
+  ).toBe(false);
 });
 
 test("skips service statuses and buyers without email", () => {

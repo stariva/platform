@@ -22,7 +22,7 @@ import { trackPaidOrder } from "@/lib/analytics";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { recallOrderPhone } from "@/lib/commerce/order-phone";
 import {
-  madeToOrderHints,
+  madeToOrderHint,
   paymentReturnState,
   postingStatusLabels,
   productOrderStatusLabels as statusLabels,
@@ -53,6 +53,8 @@ type OrderLookupFormValues = z.infer<typeof orderLookupSchema>;
  */
 const CHECK_INTERVAL_MS = 3000;
 const MAX_CHECKS = 10;
+/** Сколько ждём ответа на одну проверку. */
+const CHECK_TIMEOUT_MS = 8000;
 
 const pageTitle = "font-serif text-3xl text-espresso mb-8 text-center";
 
@@ -81,10 +83,13 @@ export function OrderStatus({
   /** Загружает заказ по телефону; возвращает false, если загрузить не удалось. */
   async function loadOrder(
     phoneValue: string,
-    { silent = false }: { silent?: boolean } = {},
+    { silent = false, signal }: { silent?: boolean; signal?: AbortSignal } = {},
   ): Promise<boolean> {
     try {
-      const data = await webApi.orders.view({ orderId, phone: phoneValue });
+      const data = await webApi.orders.view(
+        { orderId, phone: phoneValue },
+        { signal },
+      );
       setOrder(data);
       setPhone(phoneValue);
       trackPaidOrder(orderId, data.amountTotal, data.paid);
@@ -125,7 +130,12 @@ export function OrderStatus({
   useEffect(() => {
     if (!checking) return;
     const timer = setTimeout(async () => {
-      await loadOrder(phone, { silent: true });
+      // Зависший запрос обрываем: иначе счётчик не дойдёт до предела, и
+      // покупатель застрянет на экране проверки без карточки заказа
+      await loadOrder(phone, {
+        silent: true,
+        signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+      });
       setChecks((n) => n + 1);
     }, CHECK_INTERVAL_MS);
     return () => clearTimeout(timer);
@@ -246,13 +256,13 @@ function OrderCard({
   const madeToOrder = order.kind === "made_to_order";
   // После одобрения условия зафиксированы — изменения только через мастера
   const canEditDetails = order.status === "requested";
-  const hint =
-    order.status === "declined"
-      ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
-      : madeToOrderHints[order.status];
   // Пункт выдачи нужен к предоплате; в заявке его ещё не спрашиваем.
   // Старые заявки с адресом текстом (deliveryNote) обходятся без пункта
   const pointMissing = !order.deliveryPoint && !order.deliveryNote;
+  const hint =
+    order.status === "declined"
+      ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
+      : madeToOrderHint(order.status, pointMissing);
   const showDelivery =
     madeToOrder && !(pointMissing && order.status === "requested");
   const cover = receipt ? order.items.find((item) => item.image) : undefined;

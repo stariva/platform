@@ -44,7 +44,7 @@ export const madeToOrderHints: Record<string, string> = {
   requested:
     "Оплачивать пока ничего не нужно. Мастер свяжется с вами, чтобы уточнить мерки, цвет и цену. Мерки и пожелания можно указать ниже.",
   awaiting_deposit:
-    "Мастер согласовал заказ. Выберите пункт выдачи Ozon и внесите предоплату 50% — и мастер начнёт плести.",
+    "Мастер согласовал заказ. Внесите предоплату 50% — и мастер начнёт плести.",
   in_production:
     "Предоплата получена — мастер плетёт ваше изделие. Когда оно будет готово, здесь появится доплата.",
   awaiting_balance:
@@ -58,6 +58,21 @@ export const madeToOrderHints: Record<string, string> = {
   delivered: "Заказ получен. Спасибо!",
   canceled: "Заказ отменён.",
 };
+
+/**
+ * Подсказка «что дальше» для заказа под заказ. Перед предоплатой просим
+ * выбрать пункт выдачи, только если отправить ещё некуда: у старых заявок
+ * пункт или адрес уже есть.
+ */
+export function madeToOrderHint(
+  status: string,
+  deliveryPointMissing: boolean,
+): string | undefined {
+  if (status === "awaiting_deposit" && deliveryPointMissing) {
+    return "Мастер согласовал заказ. Выберите пункт выдачи Ozon и внесите предоплату 50% — и мастер начнёт плести.";
+  }
+  return madeToOrderHints[status];
+}
 
 /** Что дальше, для готового изделия: по статусу. */
 export const stockOrderHints: Record<string, string> = {

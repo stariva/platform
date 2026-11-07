@@ -500,22 +500,6 @@ export function isDeliveryPointEditable(order: {
   );
 }
 
-/**
- * Предоплату берём, когда известно, куда отправить изделие: покупатель выбрал
- * пункт Ozon или (в старых заявках) написал адрес текстом.
- */
-export function needsDeliveryPoint(order: {
-  kind: string;
-  deliveryPointId: string | null;
-  deliveryNote: string | null;
-}): boolean {
-  return (
-    order.kind === "made_to_order" &&
-    !order.deliveryPointId &&
-    !order.deliveryNote
-  );
-}
-
 /** Покупатель выбрал пункт. false — заказ уже нельзя менять. */
 export async function setMadeToOrderDeliveryPoint(
   orderId: string,
