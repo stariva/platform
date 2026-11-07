@@ -21,11 +21,14 @@ test("the Ozon business delivery client", () => {
     {
       encoding: "utf8",
       cwd: fileURLToPath(new URL("../../..", import.meta.url)),
+      env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
     },
   );
-  const output = result.stdout + result.stderr;
+  // В CI bun всё равно может раскрасить вывод: убираем управляющие коды цвета
+  const colors = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+  const output = (result.stdout + result.stderr).replace(colors, "");
   assert.equal(result.status, 0, output);
   // Если bun не нашёл тестов (например, из-за пути), он тоже завершается с 0
-  const passed = Number(/^\s*(\d+) pass$/m.exec(output)?.[1] ?? 0);
+  const passed = Number(/(\d+) pass\b/.exec(output)?.[1] ?? 0);
   assert.ok(passed > 0, `ни один тест не выполнился:\n${output}`);
 });

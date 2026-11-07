@@ -11,6 +11,10 @@ for (const scenario of [
   "Ozon failures reuse the claimed attempt",
   "receipts are still processed when a shipment needs no new attempt",
   "successful shipment remains linked to its attempt",
+  "an unapproved parcel re-sends a payment notice that already went out",
+  "an approved parcel leaves the payment notice alone",
+  "a webhook retry that finds nothing to do does not notify twice",
+  "a deposit never touches the shipment",
 ]) {
   test(scenario, () => {
     const result = spawnSync(

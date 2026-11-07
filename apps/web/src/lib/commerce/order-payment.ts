@@ -20,6 +20,7 @@ import {
   markProductOrderCanceled,
   markProductOrderOzonFailed,
   markProductOrderPaid,
+  releasePaymentNotification,
 } from "@/lib/commerce/orders";
 import { issueNpdReceipt } from "@/lib/npd/issue";
 import { createOzonDeliveryOrder } from "@/lib/ozon-delivery/client";
@@ -241,9 +242,15 @@ async function handleMadeToOrderPayment(
   // Сбой отправления не должен задержать уведомление об оплате: мастеру важны оба
   let shipmentError: unknown;
   if (row.type === "balance") {
-    await createMadeToOrderShipment(orderId).catch((error: unknown) => {
-      shipmentError = error;
-    });
+    const shipment = await createMadeToOrderShipment(orderId).catch(
+      (error: unknown) => {
+        shipmentError = error;
+      },
+    );
+    // Заказ создан в Ozon, но не подтверждён. Уведомление об оплате могло уйти
+    // ещё при прошлой попытке, когда этого не знали, и второй раз его не
+    // отправили бы: снимаем отметку, чтобы оно ушло снова — уже с предупреждением
+    if (shipment === "unapproved") await releasePaymentNotification(row.id);
   }
 
   // При сбое бросает ошибку — YooKassa повторит webhook, и мы отправим снова

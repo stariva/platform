@@ -150,7 +150,7 @@ await test("an Ozon outage becomes a reason instead of an exception", async () =
 
 await test("a paid order ships the saved parcel with a fresh quote", async () => {
   order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
-  await createMadeToOrderShipment(order.id);
+  expect(await createMadeToOrderShipment(order.id)).toBe("created");
   expect(quoteParcel).toHaveBeenCalledTimes(1);
   expect(createParcelShipment).toHaveBeenCalledWith({
     recipientPhone: order.contactPhone,
@@ -172,7 +172,7 @@ await test("a paid order ships the saved parcel with a fresh quote", async () =>
 
 await test("an order nobody can claim is left alone", async () => {
   claimMadeToOrderShipment.mockImplementationOnce(async () => null);
-  await createMadeToOrderShipment(order.id);
+  expect(await createMadeToOrderShipment(order.id)).toBe("skipped");
   expect(quoteParcel).not.toHaveBeenCalled();
   expect(createParcelShipment).not.toHaveBeenCalled();
 });
@@ -211,8 +211,9 @@ await test("a parcel Ozon created but did not approve keeps its numbers and is n
       new Error("NotEnoughBalance"),
     );
   });
-  // Не бросает: повтор webhook создал бы в Ozon второй такой же заказ
-  await createMadeToOrderShipment(order.id);
+  // Не бросает: повтор webhook создал бы в Ozon второй такой же заказ, а
+  // ответ `unapproved` говорит обработчику оплаты предупредить мастера
+  expect(await createMadeToOrderShipment(order.id)).toBe("unapproved");
   expect(markMadeToOrderShipmentUnapproved).toHaveBeenCalledWith(
     order.id,
     "attempt-1",

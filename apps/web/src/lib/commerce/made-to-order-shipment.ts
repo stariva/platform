@@ -82,17 +82,24 @@ export async function quoteMadeToOrderDelivery(
   }
 }
 
+/** Чем кончилась попытка создать отправление: см. createMadeToOrderShipment. */
+export type MadeToOrderShipmentResult = "created" | "unapproved" | "skipped";
+
 /**
  * Доплата получена: создаёт и подтверждает отправление Ozon. Покупатель мог
  * платить до трёх дней, поэтому Ozon считаем заново. Разницу в цене с покупателя
  * уже не взять — о ней сообщаем мастеру. Заказ с ручной доставкой не трогаем.
  * Идемпотентно; сбой бросает ошибку, и YooKassa повторит webhook.
+ *
+ * Чем кончилось: `created` — отправление создано и подтверждено;
+ * `unapproved` — заказ создан в Ozon, но не подтверждён, и это должна узнать
+ * мастер; `skipped` — делать было нечего (ручная доставка, чужая попытка).
  */
 export async function createMadeToOrderShipment(
   orderId: string,
-): Promise<void> {
+): Promise<MadeToOrderShipmentResult> {
   const attemptId = await claimMadeToOrderShipment(orderId);
-  if (!attemptId) return;
+  if (!attemptId) return "skipped";
 
   try {
     const order = await getProductOrderById(orderId);
@@ -139,13 +146,14 @@ export async function createMadeToOrderShipment(
         "order-delivery-price",
       );
     }
+    return "created";
   } catch (error) {
     if (error instanceof ParcelNotApprovedError) {
       // Заказ в Ozon уже есть. Повтор webhook создал бы второй, поэтому
       // номера сохраняем и ошибку не бросаем: подтверждает мастер. Сказать ей
-      // об этом должно уведомление об оплате: оно идёт следом, а при сбое
-      // отправки webhook повторяется, и это повтор не потеряет — отдельный
-      // алерт после сохранения номеров повторить было бы некому
+      // об этом должно уведомление об оплате, а чтобы оно ушло (даже если
+      // уже уходило при прошлой попытке), обработчик оплаты сам сбросит его
+      // отметку: ответ `unapproved` ему об этом и говорит
       console.error(
         `[made-to-order] Заказ ${orderId} создан в Ozon, но не подтверждён:`,
         error,
@@ -156,7 +164,7 @@ export async function createMadeToOrderShipment(
         error.parcel.orderId,
         error.parcel.postingNumbers,
       );
-      return;
+      return "unapproved";
     }
     console.error(
       `[made-to-order] КРИТИЧНО: заказ ${orderId} оплачен, но отправление Ozon не создано:`,
