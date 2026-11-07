@@ -22,6 +22,21 @@ export const env = createEnv({
     OZON_DELIVERY_REFRESH_TOKEN: z.string().min(1).optional(),
     OZON_DELIVERY_REDIRECT_URI: z.string().url().optional(),
 
+    // Ozon Доставка для бизнеса (Delivery API, api-delivery.ozon.ru): посылки
+    // изделий под заказ без карточек и остатков. Другой кабинет и другое
+    // приложение, чем OZON_DELIVERY_* выше. client_id/client_secret — из
+    // Настройки → Управление частными приложениями в кабинете Ozon Доставки;
+    // SHIPMENT_METHOD_ID — метод доставки с пунктом отгрузки, куда мастер
+    // сдаёт посылки. Пока не заданы все три, расчёт доставки у мастера
+    // отказывает и доплата выставляется с ручной стоимостью.
+    OZON_BUSINESS_DELIVERY_CLIENT_ID: z.string().min(1).optional(),
+    OZON_BUSINESS_DELIVERY_CLIENT_SECRET: z.string().min(1).optional(),
+    OZON_BUSINESS_DELIVERY_SHIPMENT_METHOD_ID: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional(),
+
     // AI-провайдер (OpenAI-совместимый роутер) — единственный провайдер AI-помощника
     AI_API_KEY: z.string().min(1).optional(),
     AI_BASE_URL: z.string().url().default("https://router.cheap/v1"),
@@ -92,6 +107,12 @@ export const env = createEnv({
     OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
     OZON_DELIVERY_REFRESH_TOKEN: process.env.OZON_DELIVERY_REFRESH_TOKEN,
     OZON_DELIVERY_REDIRECT_URI: process.env.OZON_DELIVERY_REDIRECT_URI,
+    OZON_BUSINESS_DELIVERY_CLIENT_ID:
+      process.env.OZON_BUSINESS_DELIVERY_CLIENT_ID,
+    OZON_BUSINESS_DELIVERY_CLIENT_SECRET:
+      process.env.OZON_BUSINESS_DELIVERY_CLIENT_SECRET,
+    OZON_BUSINESS_DELIVERY_SHIPMENT_METHOD_ID:
+      process.env.OZON_BUSINESS_DELIVERY_SHIPMENT_METHOD_ID,
     AI_API_KEY: process.env.AI_API_KEY,
     AI_BASE_URL: process.env.AI_BASE_URL,
     AI_MODEL: process.env.AI_MODEL,

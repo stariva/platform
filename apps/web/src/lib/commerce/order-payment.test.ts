@@ -11,6 +11,9 @@ for (const scenario of [
   "Ozon failures reuse the claimed attempt",
   "receipts are still processed when a shipment needs no new attempt",
   "successful shipment remains linked to its attempt",
+  "a balance payment gives the shipment its own id before the master is told",
+  "a shipment failure still tells the master and then rethrows",
+  "a deposit never touches the shipment",
 ]) {
   test(scenario, () => {
     const result = spawnSync(

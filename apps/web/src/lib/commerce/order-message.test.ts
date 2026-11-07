@@ -7,6 +7,7 @@ import {
   formatMadeToOrderRequestMessage,
   formatOzonFailedMessage,
   formatPaidOrderMessage,
+  paymentNoticeId,
 } from "./order-message";
 
 type OrderRow = typeof productOrders.$inferSelect;
@@ -214,4 +215,79 @@ test("Ozon failure alert is flagged as critical", () => {
 
   assert.ok(title.startsWith("КРИТИЧНО"));
   assert.ok(message.includes("Телефон: +7 999 123-45-67"));
+});
+
+test("a parcel created in Ozon but not approved asks the master to approve it", () => {
+  const { title, message } = formatOzonFailedMessage({
+    ...order,
+    ozonOrderId: "YY-123-90YY",
+    ozonPostingNumbers: ["123-90YY-1"],
+  });
+
+  assert.ok(title.includes("создан в Ozon Доставка, но не подтверждён"));
+  assert.ok(!title.startsWith("КРИТИЧНО"));
+  assert.ok(message.includes("Заказ Ozon: YY-123-90YY"));
+  assert.ok(message.includes("Отправление: 123-90YY-1"));
+  assert.ok(message.includes("Подтвердите отправление в кабинете"));
+  // Второй раз создавать не нужно — повтора YooKassa здесь нет
+  assert.ok(!message.includes("YooKassa повторит"));
+});
+
+test("the balance notice says the parcel is not approved instead of promising it is on its way", () => {
+  const unapproved = {
+    ...order,
+    status: "ozon_order_failed" as const,
+    checkoutSnapshot: { priceKopecks: 45000 },
+    ozonOrderId: "YY-123-90YY",
+    ozonPostingNumbers: ["123-90YY-1"],
+  };
+  const { title, message } = formatMadeToOrderPaymentMessage(
+    unapproved,
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+
+  assert.ok(title.includes("создан в Ozon Доставка, но не подтверждён"));
+  assert.ok(message.includes("Получена доплата"));
+  assert.ok(message.includes("Отправление: 123-90YY-1"));
+  assert.ok(!message.includes("Отправление создаётся в Ozon"));
+
+  // Предоплата и обычная доплата не меняются
+  const regular = formatMadeToOrderPaymentMessage(
+    { ...unapproved, status: "ready_to_ship", ozonOrderId: null },
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+  assert.ok(regular.message.includes("Отправление создаётся в Ozon"));
+});
+
+test("a failure with no created order tells to check the cabinet first", () => {
+  const { message } = formatOzonFailedMessage({ ...order, kind: "stock" });
+
+  assert.ok(message.includes("Сначала проверьте кабинет Ozon Доставки"));
+});
+
+test("a warning about an unapproved parcel is a different message from the earlier notice", () => {
+  const unapproved = {
+    ...order,
+    status: "ozon_order_failed" as const,
+    ozonOrderId: "YY-123-90YY",
+  };
+  const balance = { id: "payment-1", type: "balance" as const };
+
+  // Тот же ключ при другом теле: Resend в течение суток ответил бы 409
+  assert.equal(
+    paymentNoticeId(unapproved, balance, "applied"),
+    "payment-1/unapproved",
+  );
+  assert.equal(paymentNoticeId(order, balance, "applied"), "payment-1");
+  assert.equal(
+    paymentNoticeId(
+      unapproved,
+      { id: "payment-0", type: "deposit" },
+      "applied",
+    ),
+    "payment-0",
+  );
+  assert.equal(paymentNoticeId(unapproved, balance, "duplicate"), "payment-1");
 });

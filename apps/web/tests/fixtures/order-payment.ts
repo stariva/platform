@@ -25,6 +25,16 @@ const claimProductOrderShipment = mock(
 );
 const markProductOrderOzonFailed = mock(async () => {});
 const attachOzonOrder = mock(async () => {});
+// Порядок вызовов: мастеру сообщают после отправления, а не до него
+const calls: string[] = [];
+const getOrderPayment = mock(
+  async (): Promise<{
+    id: string;
+    orderId: string;
+    type: string;
+    amount: number;
+  } | null> => null,
+);
 mock.module("../../src/lib/commerce/orders", () => ({
   getProductOrderById: async () => order,
   markProductOrderPaid: async () => true,
@@ -34,19 +44,27 @@ mock.module("../../src/lib/commerce/orders", () => ({
   markProductOrderOzonFailed,
   attachOzonOrder,
   applyMadeToOrderPayment: async () => true,
-  getOrderPayment: async () => null,
+  getOrderPayment,
   listOrderPayments: async () => [],
   markOrderPaymentCanceled: async () => {},
   markOrderPaymentSucceeded: async () => false,
   markProductOrderCanceled: async () => {},
 }));
+const createMadeToOrderShipment = mock(
+  async (_orderId: string, paymentId: string) => {
+    calls.push(`ship:${paymentId}`);
+  },
+);
 mock.module("../../src/lib/commerce/made-to-order-shipment", () => ({
-  createMadeToOrderShipment: async () => {},
+  createMadeToOrderShipment,
 }));
 const notifyOzonOrderFailed = mock(async () => {});
+const notifyMadeToOrderPayment = mock(async (id: string) => {
+  calls.push(`notify:${id}`);
+});
 mock.module("../../src/lib/commerce/order-notifications", () => ({
   notifyCustomer: async () => {},
-  notifyMadeToOrderPayment: async () => {},
+  notifyMadeToOrderPayment,
   notifyOrderPaid: async () => {},
   notifyOzonOrderFailed,
 }));
@@ -137,4 +155,48 @@ await test("successful shipment remains linked to its attempt", async () => {
     ["posting-1"],
   );
   expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
+});
+
+// Доплата заказа под заказ: webhook создаёт отправление, затем сообщает мастеру
+const applyStage = (type: "deposit" | "balance") => {
+  order.kind = "made_to_order";
+  getOrderPayment.mockResolvedValueOnce({
+    id: "row-1",
+    orderId: order.id,
+    type,
+    amount: 12000,
+  });
+  return applyProductOrderPayment(order.id, {
+    id: "payment-1",
+    status: "succeeded",
+    paid: true,
+    amount: { value: "120.00", currency: "RUB" },
+    metadata: { orderPaymentId: "row-1" },
+  });
+};
+
+await test("a balance payment gives the shipment its own id before the master is told", async () => {
+  // По этому id неподтверждённый заказ снова делает уведомление об оплате
+  // неотправленным, поэтому оно должно идти после отправления
+  await applyStage("balance");
+  expect(createMadeToOrderShipment).toHaveBeenCalledWith(order.id, "row-1");
+  expect(calls).toEqual(["ship:row-1", "notify:row-1"]);
+});
+
+await test("a shipment failure still tells the master and then rethrows", async () => {
+  const error = new Error("Ozon unavailable");
+  createMadeToOrderShipment.mockImplementationOnce(
+    async (_orderId, paymentId) => {
+      calls.push(`ship:${paymentId}`);
+      throw error;
+    },
+  );
+  await expect(applyStage("balance")).rejects.toBe(error);
+  expect(calls).toEqual(["ship:row-1", "notify:row-1"]);
+});
+
+await test("a deposit never touches the shipment", async () => {
+  await applyStage("deposit");
+  expect(createMadeToOrderShipment).not.toHaveBeenCalled();
+  expect(calls).toEqual(["notify:row-1"]);
 });

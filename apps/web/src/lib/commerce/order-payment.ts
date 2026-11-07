@@ -241,7 +241,10 @@ async function handleMadeToOrderPayment(
   // Сбой отправления не должен задержать уведомление об оплате: мастеру важны оба
   let shipmentError: unknown;
   if (row.type === "balance") {
-    await createMadeToOrderShipment(orderId).catch((error: unknown) => {
+    // Заказ может оказаться созданным в Ozon, но не подтверждённым: тогда
+    // уведомление об этой оплате (оно могло уйти при прошлой попытке без этого
+    // предупреждения) снова станет неотправленным — об этом знает сама оплата
+    await createMadeToOrderShipment(orderId, row.id).catch((error: unknown) => {
       shipmentError = error;
     });
   }
