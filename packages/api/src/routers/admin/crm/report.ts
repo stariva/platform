@@ -5,6 +5,7 @@ import { costEntries } from "./economics";
 import {
   buildReport,
   type Deal,
+  hasReportData,
   moscowDay,
   type Period,
   type ReportRow,
@@ -86,11 +87,7 @@ export const report = adminProcedure
       campaigns.filter((c) => !c.archived).map((c) => c.id),
       period,
       costsOf,
-    ).filter(
-      (row) =>
-        row.source.kind === "campaign" ||
-        row.leads + row.buyers + row.revenue + row.spend > 0,
-    );
+    ).filter(hasReportData);
 
     const today = toMoscowDay(new Date());
     const months = Array.from({ length: 12 }, (_, index) => {
