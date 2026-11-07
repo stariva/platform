@@ -382,3 +382,39 @@ test.skipIf(!DATABASE_URL)(
     expect(paid.checkoutSnapshot).toBeNull();
   },
 );
+
+test.skipIf(!DATABASE_URL)(
+  "saving a new point and crediting the payment at the same time leave one consistent order",
+  async () => {
+    const connection = await connect();
+    const { orders, orderOf } = connection;
+    const parcel = {
+      weightGrams: 800,
+      lengthCm: 60,
+      widthCm: 30,
+      heightCm: 20,
+    };
+
+    // Любой порядок записей даёт одно и то же: оплата зачтена, доставка — та,
+    // что оплачена (450 ₽), итог равен предоплате плюс оплаченному остатку.
+    // Если пункт сохранился позже оплаты, запись цены отказывает (статус уже
+    // не «ждёт доплату»); если раньше — оплата принимается по правилу «покрывает
+    // изделие». Повторяем, чтобы записи пересеклись по-разному
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const id = await seedBalance(connection, {});
+      await orders.saveMadeToOrderDeliveryPrice(id, "77", null, 45_000);
+
+      await Promise.all([
+        orders.saveMadeToOrderDeliveryPrice(id, "88", null, 50_000),
+        orders.applyMadeToOrderPayment(id, "balance", 240_000),
+      ]);
+
+      const order = await orderOf(id);
+      expect(order.status).toBe("ready_to_ship");
+      expect(order.paidAt).not.toBeNull();
+      expect(order.amountDelivery).toBe(45_000);
+      expect(order.amountTotal).toBe(435_000);
+      expect(order.checkoutSnapshot).toEqual({ parcel, priceKopecks: 45_000 });
+    }
+  },
+);
