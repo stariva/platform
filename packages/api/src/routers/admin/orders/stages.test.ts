@@ -1,4 +1,6 @@
 import { expect, mock, test } from "bun:test";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 
 let quote: {
   available: boolean;
@@ -20,15 +22,24 @@ const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
 // Importing the router creates a pool; these tests only use the fake DB below.
 const originalUrl = process.env.POSTGRES_URL;
 process.env.POSTGRES_URL ??= "postgres://postgres@localhost/order_balance_test";
-const { requestBalance, requestBalanceWithOzon } = await import("./stages");
+const { cancel, requestBalance, requestBalanceWithOzon } = await import(
+  "./stages"
+);
 if (originalUrl === undefined) delete process.env.POSTGRES_URL;
 
-function fakeDb(amountProducts: number) {
-  const set = mock(() => ({
-    where: () => ({
-      returning: async () => [{ id: "order", status: "awaiting_balance" }],
-    }),
+const dialect = new PgDialect();
+/** Условие записи так, как оно уйдёт в базу. */
+const sqlOf = (condition: unknown) =>
+  dialect.sqlToQuery(condition as SQL).sql.replace(/\s+/g, " ");
+
+function fakeDb(
+  amountProducts: number,
+  updated: unknown[] = [{ id: "order", status: "awaiting_balance" }],
+) {
+  const where = mock((_condition: unknown) => ({
+    returning: async () => updated,
   }));
+  const set = mock((_values: unknown) => ({ where }));
   const update = mock(() => ({ set }));
   const db = {
     select: () => ({
@@ -41,15 +52,16 @@ function fakeDb(amountProducts: number) {
     }),
     update,
   };
-  return { db, set, update };
+  return { db, set, update, where };
 }
 
-function requestWithOzon(amountProducts: number) {
-  const { db, set, update } = fakeDb(amountProducts);
+function requestWithOzon(amountProducts: number, updated?: unknown[]) {
+  const { db, set, update, where } = fakeDb(amountProducts, updated);
   const handler = requestBalanceWithOzon["~orpc"].handler;
   return {
     set,
     update,
+    where,
     result: handler({
       context: { db } as unknown as Parameters<typeof handler>[0]["context"],
       input: { id: "order", parcel },
@@ -126,6 +138,73 @@ test("a balance billed by hand drops the quote, so nothing ships through Ozon", 
       checkoutSnapshot: null,
     }),
   );
+});
+
+test("the Ozon balance is written only while the saved quote still matches", async () => {
+  quote = { available: true, deliveryPriceKopecks: 45000 };
+  const { result, where } = requestWithOzon(390000);
+  await result;
+  const condition = sqlOf(where.mock.calls[0]?.[0]);
+  // Смена пункта стирает расчёт, и такая доплата не должна пройти
+  expect(condition).toContain('"checkout_snapshot" is not null');
+  expect(condition).toContain("->> 'priceKopecks'");
+});
+
+test("a point changed during the quote stops the balance", async () => {
+  quote = { available: true, deliveryPriceKopecks: 45000 };
+  const { result } = requestWithOzon(390000, []);
+  await expect(result).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: expect.stringContaining("сменил пункт выдачи"),
+  });
+});
+
+test("a balance billed by hand does not need a saved quote", async () => {
+  const { result, where } = (() => {
+    const { db, where } = fakeDb(390000);
+    const handler = requestBalance["~orpc"].handler;
+    return {
+      where,
+      result: handler({
+        context: { db } as unknown as Parameters<typeof handler>[0]["context"],
+        input: { id: "order", amountDelivery: 450 },
+        path: [],
+        procedure: requestBalance,
+        errors: {},
+        lastEventId: undefined,
+      }),
+    };
+  })();
+  await result;
+  expect(sqlOf(where.mock.calls[0]?.[0])).not.toContain("checkout_snapshot");
+});
+
+function cancelOrder(updated: unknown[]) {
+  const { db, where } = fakeDb(0, updated);
+  const handler = cancel["~orpc"].handler;
+  return {
+    where,
+    result: handler({
+      context: { db } as unknown as Parameters<typeof handler>[0]["context"],
+      input: { id: "order" },
+      path: [],
+      procedure: cancel,
+      errors: {},
+      lastEventId: undefined,
+    }),
+  };
+}
+
+test("an order cannot be canceled while Ozon shipment is being created", async () => {
+  const { result, where } = cancelOrder([]);
+  await expect(result).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: expect.stringContaining("создаёт отправление Ozon"),
+  });
+  // Свежая попытка блокирует отмену, брошенная (старше срока аренды) — нет
+  const condition = sqlOf(where.mock.calls[0]?.[0]);
+  expect(condition).toContain('"ozon_shipment_status" <> $');
+  expect(condition).toContain('"ozon_shipment_attempted_at" <= $');
 });
 
 test("requestBalance accepts the maximum integer total", async () => {

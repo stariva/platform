@@ -60,10 +60,16 @@ export async function quoteMadeToOrderDelivery(
           "Ozon не доставит такую посылку в этот пункт. Проверьте вес и размеры или укажите стоимость вручную",
       );
     }
-    await saveMadeToOrderQuote(orderId, {
-      parcel,
-      priceKopecks: quote.priceKopecks,
-    });
+    const saved = await saveMadeToOrderQuote(
+      orderId,
+      { parcel, priceKopecks: quote.priceKopecks },
+      order.deliveryPointId,
+    );
+    if (!saved) {
+      return refuse(
+        "Покупатель сменил пункт выдачи, пока шёл расчёт. Посчитайте доставку ещё раз",
+      );
+    }
     return { available: true, deliveryPriceKopecks: quote.priceKopecks };
   } catch (error) {
     console.error(

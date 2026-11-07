@@ -413,6 +413,9 @@ export async function attachMadeToOrderShipment(
     .where(
       and(
         eq(productOrders.id, orderId),
+        // Отменённый заказ в сборку не возвращаем, даже если отправление
+        // успело создаться
+        eq(productOrders.status, "ready_to_ship"),
         eq(productOrders.ozonShipmentStatus, "creating"),
         eq(productOrders.ozonShipmentAttemptId, attemptId),
       ),
@@ -527,12 +530,17 @@ export interface MadeToOrderDeliverySnapshot {
   priceKopecks: number;
 }
 
-/** Запоминает расчёт, пока изделие не ушло в доплату. */
+/**
+ * Запоминает расчёт, пока изделие не ушло в доплату. Считали до пункта
+ * `pointId`: если покупатель успел выбрать другой, расчёт не сохраняется и
+ * возвращается false, иначе он лёг бы поверх стёртого и описывал бы старый пункт.
+ */
 export async function saveMadeToOrderQuote(
   orderId: string,
   snapshot: MadeToOrderDeliverySnapshot,
-): Promise<void> {
-  await db
+  pointId: string,
+): Promise<boolean> {
+  const saved = await db
     .update(productOrders)
     .set({ checkoutSnapshot: snapshot })
     .where(
@@ -540,8 +548,11 @@ export async function saveMadeToOrderQuote(
         eq(productOrders.id, orderId),
         eq(productOrders.kind, "made_to_order"),
         eq(productOrders.status, "in_production"),
+        eq(productOrders.deliveryPointId, pointId),
       ),
-    );
+    )
+    .returning({ id: productOrders.id });
+  return saved.length > 0;
 }
 
 export interface MadeToOrderDetailsInput {

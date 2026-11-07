@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 for (const scenario of [
   "until the Delivery API is connected the master bills by hand",
   "the quote uses the parcel, the point and the order value",
+  "a quote is refused when the buyer changed the point meanwhile",
   "a buyer without a pickup point gets no quote",
   "an order out of production gets no quote",
   "a refused quote shows the reason and saves nothing",

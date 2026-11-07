@@ -20,7 +20,7 @@ const items = [
 ];
 const quote = { available: true as const, priceKopecks: 45000 };
 
-const saveMadeToOrderQuote = mock(async () => {});
+const saveMadeToOrderQuote = mock(async () => true);
 const claimMadeToOrderShipment = mock(
   async (): Promise<string | null> => "attempt-1",
 );
@@ -89,9 +89,21 @@ await test("the quote uses the parcel, the point and the order value", async () 
     parcel,
     declaredValueKopecks: 390000,
   });
-  expect(saveMadeToOrderQuote).toHaveBeenCalledWith(order.id, {
-    parcel,
-    priceKopecks: 45000,
+  // Расчёт привязан к пункту, до которого считали
+  expect(saveMadeToOrderQuote).toHaveBeenCalledWith(
+    order.id,
+    { parcel, priceKopecks: 45000 },
+    "77",
+  );
+});
+
+await test("a quote is refused when the buyer changed the point meanwhile", async () => {
+  saveMadeToOrderQuote.mockImplementationOnce(async () => false);
+  expect(await quoteMadeToOrderDelivery(order.id, parcel)).toEqual({
+    available: false,
+    reason:
+      "Покупатель сменил пункт выдачи, пока шёл расчёт. Посчитайте доставку ещё раз",
+    deliveryPriceKopecks: 0,
   });
 });
 
