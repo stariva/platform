@@ -25,11 +25,8 @@ const claimProductOrderShipment = mock(
 );
 const markProductOrderOzonFailed = mock(async () => {});
 const attachOzonOrder = mock(async () => {});
-// Порядок вызовов: важно, что отметку об уведомлении снимают до его отправки
+// Порядок вызовов: мастеру сообщают после отправления, а не до него
 const calls: string[] = [];
-const releasePaymentNotification = mock(async (id: string) => {
-  calls.push(`release:${id}`);
-});
 const getOrderPayment = mock(
   async (): Promise<{
     id: string;
@@ -48,14 +45,15 @@ mock.module("../../src/lib/commerce/orders", () => ({
   attachOzonOrder,
   applyMadeToOrderPayment: async () => true,
   getOrderPayment,
-  releasePaymentNotification,
   listOrderPayments: async () => [],
   markOrderPaymentCanceled: async () => {},
   markOrderPaymentSucceeded: async () => false,
   markProductOrderCanceled: async () => {},
 }));
 const createMadeToOrderShipment = mock(
-  async (): Promise<"created" | "unapproved" | "skipped"> => "created",
+  async (_orderId: string, paymentId: string) => {
+    calls.push(`ship:${paymentId}`);
+  },
 );
 mock.module("../../src/lib/commerce/made-to-order-shipment", () => ({
   createMadeToOrderShipment,
@@ -160,12 +158,12 @@ await test("successful shipment remains linked to its attempt", async () => {
 });
 
 // Доплата заказа под заказ: webhook создаёт отправление, затем сообщает мастеру
-const applyBalance = () => {
+const applyStage = (type: "deposit" | "balance") => {
   order.kind = "made_to_order";
   getOrderPayment.mockResolvedValueOnce({
     id: "row-1",
     orderId: order.id,
-    type: "balance",
+    type,
     amount: 12000,
   });
   return applyProductOrderPayment(order.id, {
@@ -177,44 +175,28 @@ const applyBalance = () => {
   });
 };
 
-await test("an unapproved parcel re-sends a payment notice that already went out", async () => {
-  // Первая попытка упала до создания заказа в Ozon, но уведомление об оплате
-  // ушло; повтор создал заказ, а подтвердить не вышло: без сброса отметки
-  // мастер не узнал бы об этом
-  createMadeToOrderShipment.mockResolvedValueOnce("unapproved");
-  await applyBalance();
-  expect(releasePaymentNotification).toHaveBeenCalledWith("row-1");
-  expect(calls).toEqual(["release:row-1", "notify:row-1"]);
+await test("a balance payment gives the shipment its own id before the master is told", async () => {
+  // По этому id неподтверждённый заказ снова делает уведомление об оплате
+  // неотправленным, поэтому оно должно идти после отправления
+  await applyStage("balance");
+  expect(createMadeToOrderShipment).toHaveBeenCalledWith(order.id, "row-1");
+  expect(calls).toEqual(["ship:row-1", "notify:row-1"]);
 });
 
-await test("an approved parcel leaves the payment notice alone", async () => {
-  await applyBalance();
-  expect(releasePaymentNotification).not.toHaveBeenCalled();
-  expect(calls).toEqual(["notify:row-1"]);
-});
-
-await test("a webhook retry that finds nothing to do does not notify twice", async () => {
-  createMadeToOrderShipment.mockResolvedValueOnce("skipped");
-  await applyBalance();
-  expect(releasePaymentNotification).not.toHaveBeenCalled();
-  expect(calls).toEqual(["notify:row-1"]);
+await test("a shipment failure still tells the master and then rethrows", async () => {
+  const error = new Error("Ozon unavailable");
+  createMadeToOrderShipment.mockImplementationOnce(
+    async (_orderId, paymentId) => {
+      calls.push(`ship:${paymentId}`);
+      throw error;
+    },
+  );
+  await expect(applyStage("balance")).rejects.toBe(error);
+  expect(calls).toEqual(["ship:row-1", "notify:row-1"]);
 });
 
 await test("a deposit never touches the shipment", async () => {
-  order.kind = "made_to_order";
-  getOrderPayment.mockResolvedValueOnce({
-    id: "row-1",
-    orderId: order.id,
-    type: "deposit",
-    amount: 12000,
-  });
-  await applyProductOrderPayment(order.id, {
-    id: "payment-1",
-    status: "succeeded",
-    paid: true,
-    amount: { value: "120.00", currency: "RUB" },
-    metadata: { orderPaymentId: "row-1" },
-  });
+  await applyStage("deposit");
   expect(createMadeToOrderShipment).not.toHaveBeenCalled();
-  expect(releasePaymentNotification).not.toHaveBeenCalled();
+  expect(calls).toEqual(["notify:row-1"]);
 });

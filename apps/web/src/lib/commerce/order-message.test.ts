@@ -7,6 +7,7 @@ import {
   formatMadeToOrderRequestMessage,
   formatOzonFailedMessage,
   formatPaidOrderMessage,
+  paymentNoticeId,
 } from "./order-message";
 
 type OrderRow = typeof productOrders.$inferSelect;
@@ -264,4 +265,29 @@ test("a failure with no created order tells to check the cabinet first", () => {
   const { message } = formatOzonFailedMessage({ ...order, kind: "stock" });
 
   assert.ok(message.includes("Сначала проверьте кабинет Ozon Доставки"));
+});
+
+test("a warning about an unapproved parcel is a different message from the earlier notice", () => {
+  const unapproved = {
+    ...order,
+    status: "ozon_order_failed" as const,
+    ozonOrderId: "YY-123-90YY",
+  };
+  const balance = { id: "payment-1", type: "balance" as const };
+
+  // Тот же ключ при другом теле: Resend в течение суток ответил бы 409
+  assert.equal(
+    paymentNoticeId(unapproved, balance, "applied"),
+    "payment-1/unapproved",
+  );
+  assert.equal(paymentNoticeId(order, balance, "applied"), "payment-1");
+  assert.equal(
+    paymentNoticeId(
+      unapproved,
+      { id: "payment-0", type: "deposit" },
+      "applied",
+    ),
+    "payment-0",
+  );
+  assert.equal(paymentNoticeId(unapproved, balance, "duplicate"), "payment-1");
 });

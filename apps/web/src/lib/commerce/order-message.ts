@@ -111,6 +111,28 @@ function unapprovedParcelMessage(
 const isParcelUnapproved = (order: OrderRow) =>
   Boolean(order.ozonOrderId) && order.status === "ozon_order_failed";
 
+/** Это уведомление об оплате доплаты неподтверждённого заказа, а не обычное. */
+const warnsUnapprovedParcel = (
+  order: OrderRow,
+  type: PaymentRow["type"],
+  outcome: PaymentOutcome,
+) => outcome === "applied" && type === "balance" && isParcelUnapproved(order);
+
+/**
+ * Ключ уведомления об оплате. Предупреждение о неподтверждённом заказе — другое
+ * сообщение, чем прежнее об этой же оплате: с тем же ключом, но другим телом
+ * Resend в течение суток ответил бы 409, и письмо не ушло бы.
+ */
+export function paymentNoticeId(
+  order: OrderRow,
+  payment: Pick<PaymentRow, "id" | "type">,
+  outcome: PaymentOutcome,
+): string {
+  return warnsUnapprovedParcel(order, payment.type, outcome)
+    ? `${payment.id}/unapproved`
+    : payment.id;
+}
+
 /** Оплата этапа заказа под заказ: в обычном случае — что делать дальше, иначе — что проверить. */
 export function formatMadeToOrderPaymentMessage(
   order: OrderRow,
@@ -120,11 +142,7 @@ export function formatMadeToOrderPaymentMessage(
   const what = `${STAGE_LABELS[payment.type]} ${money(payment.amount)} по заказу №${order.number}`;
   // Это уведомление уходит всегда и при сбое повторяется вместе с webhook,
   // поэтому предупреждение о неподтверждённом отправлении не потеряется
-  if (
-    outcome === "applied" &&
-    payment.type === "balance" &&
-    isParcelUnapproved(order)
-  ) {
+  if (warnsUnapprovedParcel(order, payment.type, outcome)) {
     return unapprovedParcelMessage(order, `Получена ${what}.`);
   }
   if (outcome === "applied") {

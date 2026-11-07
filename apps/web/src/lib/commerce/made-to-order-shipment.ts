@@ -82,24 +82,22 @@ export async function quoteMadeToOrderDelivery(
   }
 }
 
-/** Чем кончилась попытка создать отправление: см. createMadeToOrderShipment. */
-export type MadeToOrderShipmentResult = "created" | "unapproved" | "skipped";
-
 /**
  * Доплата получена: создаёт и подтверждает отправление Ozon. Покупатель мог
  * платить до трёх дней, поэтому Ozon считаем заново. Разницу в цене с покупателя
  * уже не взять — о ней сообщаем мастеру. Заказ с ручной доставкой не трогаем.
  * Идемпотентно; сбой бросает ошибку, и YooKassa повторит webhook.
  *
- * Чем кончилось: `created` — отправление создано и подтверждено;
- * `unapproved` — заказ создан в Ozon, но не подтверждён, и это должна узнать
- * мастер; `skipped` — делать было нечего (ручная доставка, чужая попытка).
+ * `balancePaymentId` — оплата доплаты, из-за которой всё началось: если заказ
+ * создан в Ozon, но не подтверждён, её уведомление мастеру отправится заново
+ * (см. markMadeToOrderShipmentUnapproved).
  */
 export async function createMadeToOrderShipment(
   orderId: string,
-): Promise<MadeToOrderShipmentResult> {
+  balancePaymentId: string,
+): Promise<void> {
   const attemptId = await claimMadeToOrderShipment(orderId);
-  if (!attemptId) return "skipped";
+  if (!attemptId) return;
 
   try {
     const order = await getProductOrderById(orderId);
@@ -146,14 +144,12 @@ export async function createMadeToOrderShipment(
         "order-delivery-price",
       );
     }
-    return "created";
   } catch (error) {
     if (error instanceof ParcelNotApprovedError) {
       // Заказ в Ozon уже есть. Повтор webhook создал бы второй, поэтому
       // номера сохраняем и ошибку не бросаем: подтверждает мастер. Сказать ей
-      // об этом должно уведомление об оплате, а чтобы оно ушло (даже если
-      // уже уходило при прошлой попытке), обработчик оплаты сам сбросит его
-      // отметку: ответ `unapproved` ему об этом и говорит
+      // об этом должно уведомление об оплате: сохранение номеров заодно
+      // снимает отметку о нём, и оно уйдёт снова, даже если уже уходило
       console.error(
         `[made-to-order] Заказ ${orderId} создан в Ozon, но не подтверждён:`,
         error,
@@ -163,8 +159,9 @@ export async function createMadeToOrderShipment(
         attemptId,
         error.parcel.orderId,
         error.parcel.postingNumbers,
+        balancePaymentId,
       );
-      return "unapproved";
+      return;
     }
     console.error(
       `[made-to-order] КРИТИЧНО: заказ ${orderId} оплачен, но отправление Ozon не создано:`,

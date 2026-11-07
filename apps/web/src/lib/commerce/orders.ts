@@ -453,28 +453,42 @@ export async function attachOzonOrder(
  * хватило баланса кабинета). Запоминаем номера: из-за них повтор не найдёт
  * свободного заказа и не создаст второй в Ozon. Подтверждает мастер в кабинете
  * Ozon Доставки. Номер отправления покупателю не показываем — оно ещё не едет.
+ *
+ * Уведомление об оплате доплаты, которое могло уйти раньше, когда о заказе
+ * ничего не знали, снова становится неотправленным — в той же транзакции, что
+ * и номера: иначе сбой между ними оставил бы заказ с номерами, о котором
+ * мастер уже не узнает (повтор webhook не найдёт, что отправлять).
  */
 export async function markMadeToOrderShipmentUnapproved(
   orderId: string,
   attemptId: string,
   ozonOrderId: string,
   postingNumbers: string[],
+  balancePaymentId: string,
 ): Promise<void> {
-  await db
-    .update(productOrders)
-    .set({
-      ozonOrderId,
-      ozonPostingNumbers: postingNumbers,
-      status: "ozon_order_failed",
-      ozonShipmentStatus: "failed",
-    })
-    .where(
-      and(
-        eq(productOrders.id, orderId),
-        eq(productOrders.ozonShipmentStatus, "creating"),
-        eq(productOrders.ozonShipmentAttemptId, attemptId),
-      ),
-    );
+  await db.transaction(async (tx) => {
+    const marked = await tx
+      .update(productOrders)
+      .set({
+        ozonOrderId,
+        ozonPostingNumbers: postingNumbers,
+        status: "ozon_order_failed",
+        ozonShipmentStatus: "failed",
+      })
+      .where(
+        and(
+          eq(productOrders.id, orderId),
+          eq(productOrders.ozonShipmentStatus, "creating"),
+          eq(productOrders.ozonShipmentAttemptId, attemptId),
+        ),
+      )
+      .returning({ id: productOrders.id });
+    if (marked.length === 0) return;
+    await tx
+      .update(productOrderPayments)
+      .set({ staffNotifiedAt: null })
+      .where(eq(productOrderPayments.id, balancePaymentId));
+  });
 }
 
 /** Помечает заказ как требующий ручной обработки — оплата прошла, но заказ в Ozon не создался. */

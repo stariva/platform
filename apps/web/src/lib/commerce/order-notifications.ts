@@ -16,6 +16,7 @@ import {
   formatOzonFailedMessage,
   formatPaidOrderMessage,
   type OrderMessage,
+  paymentNoticeId,
 } from "./order-message";
 import {
   claimPaymentNotification,
@@ -146,7 +147,8 @@ export async function notifyMadeToOrderPayment(
       payment,
     );
     const message = formatMadeToOrderPaymentMessage(order, payment, outcome);
-    if (!(await send(paymentId, message, "order-payment"))) {
+    const id = paymentNoticeId(order, payment, outcome);
+    if (!(await send(id, message, "order-payment"))) {
       throw new Error("staff_notification_failed");
     }
   } catch (error) {
