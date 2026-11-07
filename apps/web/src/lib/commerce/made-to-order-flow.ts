@@ -57,6 +57,34 @@ export function madeToOrderPaymentStep(
 }
 
 /**
+ * Отправить изделие пока некуда: покупатель не выбрал пункт Ozon, а в старых
+ * заявках ещё и не написал адрес текстом.
+ */
+export function needsDeliveryPoint(
+  order: Pick<OrderRow, "kind" | "deliveryPointId" | "deliveryNote">,
+): boolean {
+  return (
+    order.kind === "made_to_order" &&
+    !order.deliveryPointId &&
+    !order.deliveryNote
+  );
+}
+
+/**
+ * Предоплату берём, когда известно, куда отправить изделие. Доплату этим не
+ * держим: её выставляет мастер, уже договорившись о доставке.
+ */
+export function isDeliveryPointRequiredToPay(
+  order: PaymentStepOrder & Pick<OrderRow, "deliveryPointId" | "deliveryNote">,
+  now = new Date(),
+): boolean {
+  return (
+    madeToOrderPaymentStep(order, now)?.type === "deposit" &&
+    needsDeliveryPoint(order)
+  );
+}
+
+/**
  * Строки чека на оплату этапа. В доплату входит доставка: в чеке она отдельной
  * строкой, как и у заказа со склада. Сумма строк равна сумме платежа.
  */

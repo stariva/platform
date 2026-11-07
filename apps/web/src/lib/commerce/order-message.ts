@@ -3,6 +3,7 @@ import type {
   productOrderPayments,
   productOrders,
 } from "@stariva/db/schema";
+import { pickupPointAddressLine } from "@/lib/ozon-delivery/format";
 import { formatPrice } from "@/lib/products";
 import type { PaymentOutcome } from "./made-to-order-flow";
 import { describeMadeToOrderOptions } from "./made-to-order-options";
@@ -30,19 +31,24 @@ function customerLines(order: OrderRow): string[] {
   ].filter((line): line is string => Boolean(line));
 }
 
-/** Куда отправить: пункт Ozon, а у старых заявок — текст покупателя. */
+/**
+ * Куда отправить: пункт Ozon, а у старых заявок — текст покупателя. Новая
+ * заявка приходит без пункта: его выбирают перед предоплатой.
+ */
 function deliveryLine(order: OrderRow): string | null {
   const raw = (order.deliveryAddress ?? {}) as {
     address?: unknown;
     title?: unknown;
   };
-  const address = [raw.title, raw.address].filter(
-    (part): part is string => typeof part === "string" && part !== "",
-  );
+  const text = (value: unknown) => (typeof value === "string" ? value : null);
+  const address = pickupPointAddressLine(text(raw.title), text(raw.address));
   if (order.deliveryPointId) {
-    return `\nПункт выдачи Ozon: ${address.join(", ") || `№${order.deliveryPointId}`}`;
+    return `\nПункт выдачи Ozon: ${address || `№${order.deliveryPointId}`}`;
   }
-  return order.deliveryNote ? `\nДоставка: ${order.deliveryNote}` : null;
+  if (order.deliveryNote) return `\nДоставка: ${order.deliveryNote}`;
+  return order.status === "requested" || order.status === "awaiting_deposit"
+    ? "\nПункт выдачи Ozon: покупатель выберет перед предоплатой"
+    : null;
 }
 
 function itemLines(items: OrderItemRow[]): string[] {

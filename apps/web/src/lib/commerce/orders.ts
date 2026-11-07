@@ -71,7 +71,8 @@ export interface CreateMadeToOrderOrderInput {
   contactPhone: string;
   contactEmail?: string;
   customerNotes?: string;
-  deliveryPointId: string;
+  /** null — пункт покупатель выберет на странице заказа перед предоплатой. */
+  deliveryPointId: string | null;
   /** Адрес пункта; null — Ozon сейчас не ответил, заявку всё равно принимаем. */
   pickupPoint: PickupPoint | null;
   items: MadeToOrderLineInput[];
@@ -104,7 +105,7 @@ function assertValidOrderTotal(amountTotal: number) {
 /**
  * Заявка на изделия под заказ: без оплаты. Цены из каталога — стартовые,
  * мастер согласует с покупателем итог и выставляет предоплату. Покупатель
- * выбирает пункт выдачи сразу, а расчёт Ozon будет, когда изделие готово.
+ * выбирает пункт выдачи перед предоплатой, а расчёт Ozon — когда изделие готово.
  */
 export async function createMadeToOrderOrder(
   input: CreateMadeToOrderOrderInput,
@@ -132,7 +133,8 @@ export async function createMadeToOrderOrder(
       amountDelivery: 0,
       amountTotal: amountProducts,
       currency: "RUB",
-      deliveryMethod: "pickup",
+      // Без пункта — «manual», пока покупатель не выберет его на странице заказа
+      deliveryMethod: input.deliveryPointId ? "pickup" : "manual",
       deliveryPointId: input.deliveryPointId,
       deliveryAddress: pickupPointAddress(input.pickupPoint),
       customerNotes: input.customerNotes || null,

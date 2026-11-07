@@ -41,6 +41,8 @@ const pay = orders.pay.handler(async ({ input, context, errors }) => {
       throw errors.NOTHING_TO_PAY();
     case "overdue":
       throw errors.PAYMENT_OVERDUE();
+    case "delivery_point_required":
+      throw errors.DELIVERY_POINT_REQUIRED();
     case "failed":
       throw errors.PAYMENT_CREATE_FAILED();
   }

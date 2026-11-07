@@ -11,16 +11,22 @@ import { MadeToOrderPayment } from "@/app/order/[orderId]/made-to-order-payment"
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import type { AccountOrder, AccountReceipt } from "@/lib/account/orders";
-import { isPaymentOverdue } from "@/lib/commerce/made-to-order-flow";
+import {
+  isPaymentOverdue,
+  needsDeliveryPoint,
+} from "@/lib/commerce/made-to-order-flow";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { measurementFieldsBySlug } from "@/lib/commerce/measurement-fields";
+import { deliveryDatesView } from "@/lib/commerce/order-services";
 import {
-  madeToOrderHints,
+  DELIVERY_POINT_ANCHOR,
+  madeToOrderHint,
   orderProgress,
   postingStatusLabels,
   stockOrderHints,
 } from "@/lib/commerce/order-status";
 import { isDeliveryPointEditable } from "@/lib/commerce/orders";
+import { pickupPointAddressLine } from "@/lib/ozon-delivery/format";
 import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { cn } from "@/lib/utils";
@@ -205,8 +211,9 @@ function deliveryDetails(order: ProductOrderRow) {
   const snapshot = order.checkoutSnapshot as DeliveryCheckoutResponse | null;
   const method = snapshot?.splits?.[0]?.deliveryMethod;
 
-  const label =
-    order.deliveryMethod === "manual"
+  const label = needsDeliveryPoint(order)
+    ? "Пункт выдачи Ozon — выберете перед предоплатой"
+    : order.deliveryMethod === "manual"
       ? "Способ и стоимость согласует мастер"
       : order.deliveryMethod === "courier"
         ? "Курьером Ozon"
@@ -214,14 +221,10 @@ function deliveryDetails(order: ProductOrderRow) {
           ? "Постамат Ozon"
           : "Пункт выдачи Ozon";
 
-  let dates: string | null = null;
-  if (method?.logisticDateFrom && method.logisticDateTo) {
-    const from = new Date(method.logisticDateFrom);
-    const to = new Date(method.logisticDateTo);
-    if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime())) {
-      dates = deliveryDays.formatRange(from, to);
-    }
-  }
+  const range = deliveryDatesView(order);
+  const dates = range
+    ? deliveryDays.formatRange(new Date(range.from), new Date(range.to))
+    : null;
 
   const title = text(raw.title);
   return {
@@ -261,9 +264,14 @@ export async function ProductOrderView({
   const hint =
     order.status === "declined"
       ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
-      : (madeToOrder ? madeToOrderHints : stockOrderHints)[order.status];
+      : madeToOrder
+        ? madeToOrderHint(order.status, needsDeliveryPoint(order))
+        : stockOrderHints[order.status];
   const awaitingPayment =
     view.paymentStep !== null || order.status === "pending";
+  // Пункт выдачи нужен к предоплате; в заявке его ещё не спрашиваем
+  const pointMissing = needsDeliveryPoint(order);
+  const pointFirst = view.paymentStep?.type === "deposit" && pointMissing;
 
   return (
     <div className="space-y-6">
@@ -293,13 +301,19 @@ export async function ProductOrderView({
                   asChild
                   className="mt-4 w-full bg-espresso text-parchment hover:bg-espresso/90 lg:hidden"
                 >
-                  <a href="#payment">
-                    Оплатить{" "}
-                    {view.paymentStep.type === "deposit"
-                      ? "предоплату"
-                      : "доплату"}{" "}
-                    {money(view.paymentStep.amount)}
-                  </a>
+                  {pointFirst ? (
+                    <a href={`#${DELIVERY_POINT_ANCHOR}`}>
+                      Выбрать пункт выдачи
+                    </a>
+                  ) : (
+                    <a href="#payment">
+                      Оплатить{" "}
+                      {view.paymentStep.type === "deposit"
+                        ? "предоплату"
+                        : "доплату"}{" "}
+                      {money(view.paymentStep.amount)}
+                    </a>
+                  )}
                 </Button>
               )}
             </Card>
@@ -328,23 +342,24 @@ export async function ProductOrderView({
             </Card>
           )}
 
-          {isDeliveryPointEditable(order) && (
-            <Card title="Куда доставить">
-              {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
-              <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
-                <AccountMadeToOrderDelivery
-                  orderId={order.id}
-                  phone={order.contactPhone}
-                  point={
-                    order.deliveryPointId
-                      ? { title: delivery.title, address: delivery.address }
-                      : null
-                  }
-                  editable
-                />
-              </div>
-            </Card>
-          )}
+          {isDeliveryPointEditable(order) &&
+            !(pointMissing && order.status === "requested") && (
+              <Card title="Куда доставить">
+                {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
+                <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
+                  <AccountMadeToOrderDelivery
+                    orderId={order.id}
+                    phone={order.contactPhone}
+                    point={
+                      order.deliveryPointId
+                        ? { title: delivery.title, address: delivery.address }
+                        : null
+                    }
+                    editable
+                  />
+                </div>
+              </Card>
+            )}
         </div>
 
         <aside className="space-y-5 lg:sticky lg:top-24">
@@ -355,6 +370,7 @@ export async function ProductOrderView({
                 <MadeToOrderPayment
                   orderId={order.id}
                   phone={order.contactPhone}
+                  deliveryPointMissing={pointMissing}
                   returnTo="account"
                   terms={{
                     number: order.number,
@@ -409,9 +425,7 @@ export async function ProductOrderView({
               <p className="text-espresso">{delivery.label}</p>
               {(delivery.title || delivery.address) && (
                 <p className="text-taupe leading-relaxed">
-                  {[delivery.title, delivery.address]
-                    .filter(Boolean)
-                    .join(", ")}
+                  {pickupPointAddressLine(delivery.title, delivery.address)}
                 </p>
               )}
               {delivery.dates && !settled && (

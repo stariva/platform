@@ -3,6 +3,7 @@ import type { OrderPaymentResult, OrderServices } from "../orpc";
 
 const { safe } = await import("@orpc/client");
 const {
+  DeliveryPointRequiredError,
   DeliveryPointUnavailableError,
   NothingToPayError,
   OrderDeliveryLockedError,
@@ -38,6 +39,8 @@ const view = {
   deliveryNote: null,
   deliveryPoint: null,
   deliveryPointEditable: true,
+  deliveryDates: null,
+  hasEmail: true,
   trackingNumber: null,
   items: [],
   postings: [],
@@ -246,6 +249,7 @@ const failures: Array<
   ["unavailable", PaymentsUnavailableError, 503],
   ["nothing_to_pay", NothingToPayError, 409],
   ["overdue", PaymentOverdueError, 409],
+  ["delivery_point_required", DeliveryPointRequiredError, 409],
   ["failed", PaymentCreateFailedError, 502],
 ];
 

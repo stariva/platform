@@ -4,6 +4,7 @@ import {
   formatDateRange,
   formatDistance,
   holidayNotice,
+  pickupPointAddressLine,
   todayHours,
   weekSchedule,
 } from "./format";
@@ -171,6 +172,33 @@ test("date ranges collapse within one month", () => {
     "30 сентября – 2 октября",
   );
   assert.equal(formatDateRange("2026-10-05", "2026-10-05"), "5 октября");
+});
+
+test("pickup address line does not repeat the point title", () => {
+  assert.equal(
+    pickupPointAddressLine(
+      "Московская Область, Лотошинский Район, Лотошино, Центральная улица, 36",
+      "Россия, Московская Область, Лотошинский Район, Лотошино, Центральная улица, 36",
+    ),
+    "Россия, Московская Область, Лотошинский Район, Лотошино, Центральная улица, 36",
+  );
+  assert.equal(
+    pickupPointAddressLine(
+      "ул. Баумана, 1",
+      "Россия, 420111, Казань, ул. Баумана, 1",
+    ),
+    "Россия, 420111, Казань, ул. Баумана, 1",
+  );
+  assert.equal(
+    pickupPointAddressLine("ул. Баумана, 1", "Казань"),
+    "ул. Баумана, 1, Казань",
+  );
+  assert.equal(pickupPointAddressLine(null, "Казань"), "Казань");
+  assert.equal(
+    pickupPointAddressLine("ул. Баумана, 1", null),
+    "ул. Баумана, 1",
+  );
+  assert.equal(pickupPointAddressLine(null, null), "");
 });
 
 test("distance is short and human", () => {

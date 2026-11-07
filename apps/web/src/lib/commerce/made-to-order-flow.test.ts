@@ -1,6 +1,7 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
 import {
+  isDeliveryPointRequiredToPay,
   isPaymentOverdue,
   madeToOrderPaymentStep,
   madeToOrderReceiptLines,
@@ -68,6 +69,30 @@ test("a finished order asks for the rest including delivery", () => {
   assert.deepEqual(
     madeToOrderPaymentStep({ ...approved, status: "awaiting_balance" }, now),
     { type: "balance", amount: 445000 },
+  );
+});
+
+test("the deposit waits for a pickup point, the balance does not", () => {
+  const nowhere = { ...approved, deliveryPointId: null, deliveryNote: null };
+  assert.equal(isDeliveryPointRequiredToPay(nowhere, now), true);
+  assert.equal(
+    isDeliveryPointRequiredToPay({ ...nowhere, deliveryPointId: "77" }, now),
+    false,
+  );
+  // Старая заявка с адресом текстом вместо пункта
+  assert.equal(
+    isDeliveryPointRequiredToPay(
+      { ...nowhere, deliveryNote: "Казань, СДЭК" },
+      now,
+    ),
+    false,
+  );
+  assert.equal(
+    isDeliveryPointRequiredToPay(
+      { ...nowhere, status: "awaiting_balance" },
+      now,
+    ),
+    false,
   );
 });
 
