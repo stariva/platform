@@ -53,6 +53,11 @@ const suites: Suite[] = [
     database: "stariva_npd_test",
   },
   {
+    file: "apps/web/src/lib/commerce/made-to-order-unapproved.integration.test.ts",
+    env: "ORDER_SHIPMENT_TEST_DATABASE_URL",
+    database: "stariva_order_shipment_test",
+  },
+  {
     file: "packages/web-api/src/services/video-renditions.integration.test.ts",
     env: "RENDITION_TEST_DATABASE_URL",
     database: "stariva_rendition_test",
