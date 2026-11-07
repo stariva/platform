@@ -43,6 +43,7 @@ const createInput = {
 const madeToOrderInput = {
   contactName: "Анна",
   contactPhone: "+7 900 123-45-67",
+  deliveryPointId: "1234",
   items: [
     {
       productSlug: "korzina",

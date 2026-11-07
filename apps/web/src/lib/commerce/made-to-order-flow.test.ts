@@ -3,8 +3,37 @@ import assert from "node:assert/strict";
 import {
   isPaymentOverdue,
   madeToOrderPaymentStep,
+  madeToOrderReceiptLines,
   paymentOutcome,
 } from "./made-to-order-flow";
+
+test("the balance receipt shows delivery on its own line", () => {
+  assert.deepEqual(
+    madeToOrderReceiptLines("Ёлка", { type: "balance", amount: 240000 }, 45000),
+    [
+      { name: "Ёлка, доплата", amount: 195000, quantity: 1 },
+      { name: "Доставка", amount: 45000, quantity: 1 },
+    ],
+  );
+});
+
+test("the deposit and a balance without delivery take one receipt line", () => {
+  assert.deepEqual(
+    madeToOrderReceiptLines("Ёлка", { type: "deposit", amount: 195000 }, 45000),
+    [{ name: "Ёлка, предоплата", amount: 195000, quantity: 1 }],
+  );
+  assert.deepEqual(
+    madeToOrderReceiptLines("Ёлка", { type: "balance", amount: 195000 }, 0),
+    [{ name: "Ёлка, доплата", amount: 195000, quantity: 1 }],
+  );
+});
+
+test("a stale payment smaller than delivery is not split into a negative line", () => {
+  assert.deepEqual(
+    madeToOrderReceiptLines("Ёлка", { type: "balance", amount: 30000 }, 45000),
+    [{ name: "Ёлка, доплата", amount: 30000, quantity: 1 }],
+  );
+});
 
 const now = new Date("2026-10-03T12:00:00Z");
 const later = new Date("2026-10-05T12:00:00Z");

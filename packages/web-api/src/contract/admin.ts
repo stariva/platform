@@ -38,7 +38,45 @@ export const ozonStockPushResultSchema = z.object({
 
 export type OzonStockPushResult = z.infer<typeof ozonStockPushResultSchema>;
 
+/** Расчёт доставки изделия под заказ; `reason` мастер видит в админке. */
+export const madeToOrderDeliveryQuoteSchema = z.object({
+  available: z.boolean(),
+  reason: z.string().optional(),
+  /** Стоимость доставки, копейки. */
+  deliveryPriceKopecks: z.number().int().nonnegative(),
+});
+
+export type MadeToOrderDeliveryQuote = z.infer<
+  typeof madeToOrderDeliveryQuoteSchema
+>;
+
+/**
+ * Посылка изделия под заказ, которую упаковал мастер. Верхние границы — лимиты
+ * Ozon Доставки для бизнеса: до 125 кг и до 250 см.
+ */
+export const madeToOrderParcelSchema = z.object({
+  weightGrams: z.number().int().positive().max(125_000),
+  lengthCm: z.number().int().positive().max(250),
+  widthCm: z.number().int().positive().max(250),
+  heightCm: z.number().int().positive().max(250),
+});
+
+export type MadeToOrderParcel = z.infer<typeof madeToOrderParcelSchema>;
+
 export const ozonContract = {
+  /**
+   * Изделие под заказ готово: считает доставку посылки до пункта покупателя
+   * через Delivery API и запоминает расчёт в заказе. Доплату выставляет админка.
+   */
+  quoteMadeToOrder: base
+    .input(
+      z.object({
+        orderId: z.string().min(1).max(200),
+        parcel: madeToOrderParcelSchema,
+      }),
+    )
+    .output(madeToOrderDeliveryQuoteSchema),
+
   /**
    * Дублирует остаток товаров на FBS-склад Ozon и скрывает готовые изделия
    * с витрины Ozon. Админка зовёт после правки остатка: ключи Seller API

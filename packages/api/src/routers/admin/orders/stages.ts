@@ -4,19 +4,27 @@ import {
   type Database,
   eq,
   inArray,
+  isNotNull,
+  lte,
+  ne,
+  or,
   productOrderItems,
   productOrders,
+  type SQL,
+  sql,
 } from "@stariva/db";
+import { madeToOrderParcelSchema } from "@stariva/web-api/contract";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { quoteStorefrontMadeToOrderDelivery } from "../../../storefront";
 import { emailCustomer } from "./customer-email";
 import { depositFor, paymentDueFrom, toKopecks } from "./stage-math";
 
 /*
  * Этапы заказа под заказ, которые двигает мастер:
  * заявка → (условия, одобрение) → предоплата → изготовление → доплата → отправка.
- * Оплаты двигает webhook YooKassa на сайте, а не админка.
+ * Оплаты и создание отправления Ozon двигает webhook YooKassa на сайте, а не админка.
  */
 
 type OrderRow = typeof productOrders.$inferSelect;
@@ -24,15 +32,20 @@ type OrderStatus = OrderRow["status"];
 
 const rublesSchema = z.number().finite().nonnegative().max(10_000_000);
 
-const conflict = () =>
-  new ORPCError("CONFLICT", { message: "Заказ изменился, обновите страницу" });
+const conflict = (message = "Заказ изменился, обновите страницу") =>
+  new ORPCError("CONFLICT", { message });
 
-/** Переводит заказ под заказ из одного из статусов `from`; CONFLICT, если он уже в другом. */
+/**
+ * Переводит заказ под заказ из одного из статусов `from`; CONFLICT, если он уже
+ * в другом. `guard` — ещё одно условие той же записи: проверка отдельным
+ * запросом не успела бы за покупателем или вебхуком.
+ */
 async function transition(
   db: Database,
   id: string,
   from: OrderStatus[],
   set: Partial<typeof productOrders.$inferInsert>,
+  { guard, message }: { guard?: SQL; message?: string } = {},
 ) {
   const [updated] = await db
     .update(productOrders)
@@ -42,12 +55,30 @@ async function transition(
         eq(productOrders.id, id),
         eq(productOrders.kind, "made_to_order"),
         inArray(productOrders.status, from),
+        guard,
       ),
     )
     .returning({ id: productOrders.id, status: productOrders.status });
-  if (!updated) throw conflict();
+  if (!updated) throw conflict(message);
   return updated;
 }
+
+/**
+ * Расчёт доставки, сохранённый в заказе, ещё на месте и на ту же сумму.
+ * Смена пункта покупателем стирает расчёт, поэтому доплату по расчёту до
+ * старого пункта эта проверка не пропустит.
+ */
+const quoteStillValid = (amountDelivery: number) =>
+  and(
+    isNotNull(productOrders.checkoutSnapshot),
+    sql`(${productOrders.checkoutSnapshot} ->> 'priceKopecks')::int = ${amountDelivery}`,
+  );
+
+/**
+ * Сколько отправление Ozon может создаваться, прежде чем попытка считается
+ * брошенной. Столько же в claimMadeToOrderShipment (apps/web, orders.ts).
+ */
+const SHIPMENT_ATTEMPT_LEASE_MS = 15 * 60_000;
 
 /**
  * Условия заявки: цены по позициям, доставка и срок изготовления. С
@@ -171,46 +202,96 @@ export const reopen = adminProcedure
     }),
   );
 
-/**
- * Изделие готово: мастер уточняет доставку и выставляет доплату — остаток
- * стоимости изделий плюс доставка.
- */
-export const requestBalance = adminProcedure
-  .input(z.object({ id: z.string().min(1), amountDelivery: rublesSchema }))
-  .handler(async ({ context, input }) => {
-    const [order] = await context.db
-      .select({
-        amountProducts: productOrders.amountProducts,
-        depositAmount: productOrders.depositAmount,
-      })
-      .from(productOrders)
-      .where(eq(productOrders.id, input.id));
-    if (!order)
-      throw new ORPCError("NOT_FOUND", { message: "Заказ не найден" });
+/** Выставляет доплату: остаток стоимости изделий плюс доставка в копейках. */
+async function billBalance(
+  db: Database,
+  id: string,
+  amountDelivery: number,
+  set: Partial<typeof productOrders.$inferInsert> = {},
+  options: { guard?: SQL; message?: string } = {},
+) {
+  const [order] = await db
+    .select({
+      amountProducts: productOrders.amountProducts,
+      depositAmount: productOrders.depositAmount,
+    })
+    .from(productOrders)
+    .where(eq(productOrders.id, id));
+  if (!order) throw new ORPCError("NOT_FOUND", { message: "Заказ не найден" });
 
-    const amountDelivery = toKopecks(input.amountDelivery);
-    const amountTotal = order.amountProducts + amountDelivery;
-    if (amountTotal > 2_147_483_647) {
-      throw new ORPCError("BAD_REQUEST", {
-        message:
-          "Сумма заказа слишком велика — проверьте цены и стоимость доставки",
-      });
-    }
-    if (order.depositAmount === null || amountTotal <= order.depositAmount) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Доплачивать нечего — проверьте суммы",
-      });
-    }
-    const now = new Date();
-    const updated = await transition(context.db, input.id, ["in_production"], {
+  const amountTotal = order.amountProducts + amountDelivery;
+  if (amountTotal > 2_147_483_647) {
+    throw new ORPCError("BAD_REQUEST", {
+      message:
+        "Сумма заказа слишком велика — проверьте цены и стоимость доставки",
+    });
+  }
+  if (order.depositAmount === null || amountTotal <= order.depositAmount) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Доплачивать нечего — проверьте суммы",
+    });
+  }
+  const updated = await transition(
+    db,
+    id,
+    ["in_production"],
+    {
+      ...set,
       status: "awaiting_balance",
       amountDelivery,
       amountTotal,
-      paymentDueAt: paymentDueFrom(now),
-    });
-    await emailCustomer(context.db, updated.id);
-    return updated;
+      paymentDueAt: paymentDueFrom(new Date()),
+    },
+    options,
+  );
+  await emailCustomer(db, updated.id);
+  return updated;
+}
+
+/**
+ * Изделие готово, обычный путь: мастер указывает вес и размеры посылки, витрина
+ * считает доставку до пункта покупателя, и эта сумма входит в доплату. Если Ozon
+ * не посчитал, заказ остаётся в изготовлении и мастер видит причину.
+ */
+export const requestBalanceWithOzon = adminProcedure
+  .input(z.object({ id: z.string().min(1), parcel: madeToOrderParcelSchema }))
+  .handler(async ({ context, input }) => {
+    const quote = await quoteStorefrontMadeToOrderDelivery(
+      input.id,
+      input.parcel,
+    );
+    if (!quote.available) {
+      throw new ORPCError("CONFLICT", {
+        message: quote.reason ?? "Ozon не посчитал доставку",
+      });
+    }
+    // Пока шёл расчёт, покупатель мог сменить пункт: тогда расчёт стёрт, и
+    // доплата по нему оставила бы оплаченный заказ без отправления
+    return billBalance(
+      context.db,
+      input.id,
+      quote.deliveryPriceKopecks,
+      {},
+      {
+        guard: quoteStillValid(quote.deliveryPriceKopecks),
+        message:
+          "Покупатель сменил пункт выдачи или заказ изменился — обновите страницу и посчитайте доставку заново",
+      },
+    );
   });
+
+/**
+ * Запасной путь: Ozon не считает доставку или мастер отправит заказ сама и
+ * указывает стоимость вручную. Без расчёта в заказе отправление в Ozon после
+ * такой доплаты не создаётся.
+ */
+export const requestBalance = adminProcedure
+  .input(z.object({ id: z.string().min(1), amountDelivery: rublesSchema }))
+  .handler(({ context, input }) =>
+    billBalance(context.db, input.id, toKopecks(input.amountDelivery), {
+      checkoutSnapshot: null,
+    }),
+  );
 
 /** Ещё 3 дня на оплату — например, если срок вышел, а покупатель на связи. */
 export const extendPayment = adminProcedure
@@ -224,7 +305,8 @@ export const extendPayment = adminProcedure
 /**
  * Отмена заказа под заказ после предоплаты, до отправки. До предоплаты
  * заявку отклоняют (decline). Полученные деньги возвращаются вручную в
- * кабинете ЮKassa.
+ * кабинете ЮKassa. Пока сайт создаёт отправление Ozon, отменить нельзя:
+ * отправление всё равно создалось бы, а деньги мастер уже вернула бы.
  */
 export const cancel = adminProcedure
   .input(z.object({ id: z.string().min(1) }))
@@ -232,8 +314,25 @@ export const cancel = adminProcedure
     const updated = await transition(
       context.db,
       input.id,
-      ["in_production", "awaiting_balance", "ready_to_ship"],
+      [
+        "in_production",
+        "awaiting_balance",
+        "ready_to_ship",
+        "ozon_order_failed",
+      ],
       { status: "canceled", paymentDueAt: null },
+      {
+        // Брошенная попытка (сайт упал на полпути) отмене не мешает
+        guard: or(
+          ne(productOrders.ozonShipmentStatus, "creating"),
+          lte(
+            productOrders.ozonShipmentAttemptedAt,
+            new Date(Date.now() - SHIPMENT_ATTEMPT_LEASE_MS),
+          ),
+        ),
+        message:
+          "Сайт сейчас создаёт отправление Ozon — отмените заказ через пару минут",
+      },
     );
     await emailCustomer(context.db, updated.id);
     return updated;

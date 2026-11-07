@@ -20,6 +20,7 @@ import {
   postingStatusLabels,
   stockOrderHints,
 } from "@/lib/commerce/order-status";
+import { isDeliveryPointEditable } from "@/lib/commerce/orders";
 import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,11 @@ import {
   ProgressSteps,
   StatusBadge,
 } from "../order-ui";
-import { AccountMadeToOrderDetails, PaidOrderTracker } from "./order-client";
+import {
+  AccountMadeToOrderDelivery,
+  AccountMadeToOrderDetails,
+  PaidOrderTracker,
+} from "./order-client";
 
 type ProductOrderRow = typeof productOrders.$inferSelect;
 
@@ -243,7 +248,8 @@ export async function ProductOrderView({
   const progress = orderProgress(view.kind, order.status);
   const canEditDetails = madeToOrder && order.status === "requested";
   const [postings, measurementFields] = await Promise.all([
-    getPostingStatuses(order.ozonPostingNumbers),
+    // Посылка под заказ идёт через Delivery API, Seller API её статусы не знает
+    madeToOrder ? [] : getPostingStatuses(order.ozonPostingNumbers),
     canEditDetails
       ? measurementFieldsBySlug(view.items.map((item) => item.productSlug))
       : null,
@@ -318,8 +324,25 @@ export async function ProductOrderView({
                     measurementFields.get(item.productSlug) ?? [],
                 }))}
                 customerNotes={order.customerNotes}
-                deliveryNote={order.deliveryNote}
               />
+            </Card>
+          )}
+
+          {isDeliveryPointEditable(order) && (
+            <Card title="Куда доставить">
+              {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
+              <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
+                <AccountMadeToOrderDelivery
+                  orderId={order.id}
+                  phone={order.contactPhone}
+                  point={
+                    order.deliveryPointId
+                      ? { title: delivery.title, address: delivery.address }
+                      : null
+                  }
+                  editable
+                />
+              </div>
             </Card>
           )}
         </div>
@@ -397,7 +420,7 @@ export async function ProductOrderView({
                   <span className="text-espresso">{delivery.dates}</span>
                 </p>
               )}
-              {order.deliveryNote && !canEditDetails && (
+              {order.deliveryNote && !order.deliveryPointId && (
                 <p className="text-taupe leading-relaxed">
                   Куда отправить:{" "}
                   <span className="text-espresso">{order.deliveryNote}</span>

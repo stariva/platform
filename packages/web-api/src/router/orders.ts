@@ -14,6 +14,15 @@ const updateDetails = orders.updateDetails.handler(
   },
 );
 
+const updateDeliveryPoint = orders.updateDeliveryPoint.handler(
+  async ({ input, context, errors }) => {
+    const result = await context.services.orders.updateDeliveryPoint(input);
+    if (result === "not_found") throw errors.ORDER_NOT_FOUND();
+    if (result === "locked") throw errors.ORDER_DELIVERY_LOCKED();
+    if (result === "unavailable") throw errors.DELIVERY_POINT_UNAVAILABLE();
+  },
+);
+
 const pay = orders.pay.handler(async ({ input, context, errors }) => {
   const result = await context.services.orders.startPayment({
     orderId: input.orderId,
@@ -37,4 +46,4 @@ const pay = orders.pay.handler(async ({ input, context, errors }) => {
   }
 });
 
-export const ordersRouter = { view, updateDetails, pay };
+export const ordersRouter = { view, updateDetails, updateDeliveryPoint, pay };

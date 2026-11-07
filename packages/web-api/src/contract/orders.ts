@@ -17,6 +17,18 @@ export const OrderDetailsLockedError = error("ORDER_DETAILS_LOCKED", {
   message: "Мастер уже согласовал заказ — изменения обсудите с ним в Telegram.",
 });
 
+/** Изделие уже готово и доставка посчитана до этого пункта. */
+export const OrderDeliveryLockedError = error("ORDER_DELIVERY_LOCKED", {
+  message:
+    "Доставка уже посчитана до выбранного пункта — чтобы сменить его, напишите мастеру.",
+});
+
+/** Ozon сейчас не принимает заказы в этот пункт. */
+export const DeliveryPointUnavailableError = error(
+  "DELIVERY_POINT_UNAVAILABLE",
+  { message: "Этот пункт сейчас не принимает заказы. Выберите другой." },
+);
+
 /** Нет ключей эквайринга. */
 export const PaymentsUnavailableError = error("PAYMENTS_UNAVAILABLE", {
   message: "Приём платежей временно недоступен",
@@ -104,6 +116,15 @@ export const orderViewSchema = z.object({
   deliveryMethod: z.string(),
   customerNotes: z.string().nullable(),
   deliveryNote: z.string().nullable(),
+  /** Под заказ: пункт Ozon, который выбрал покупатель. */
+  deliveryPoint: z
+    .object({
+      title: z.string().nullable(),
+      address: z.string().nullable(),
+    })
+    .nullable(),
+  /** Под заказ: можно ли ещё сменить пункт — да, пока не выставлена доплата. */
+  deliveryPointEditable: z.boolean(),
   trackingNumber: z.string().nullable(),
   items: z.array(orderItemSchema),
   postings: z.array(
@@ -127,7 +148,6 @@ export const orderDetailsSchema = z.object({
     )
     .max(20),
   customerNotes: z.string().trim().max(1500).optional(),
-  deliveryNote: z.string().trim().max(1000).optional(),
 });
 
 export type OrderDetails = z.infer<typeof orderDetailsSchema>;
@@ -146,6 +166,22 @@ export const ordersContract = {
       [OrderDetailsLockedError.code]: OrderDetailsLockedError,
     })
     .input(orderDetailsSchema.extend({ orderId, phone }))
+    .output(type<void>()),
+
+  /** Покупатель выбирает пункт выдачи Ozon, пока мастер не выставила доплату. */
+  updateDeliveryPoint: oc
+    .errors({
+      [OrderNotFoundError.code]: OrderNotFoundError,
+      [OrderDeliveryLockedError.code]: OrderDeliveryLockedError,
+      [DeliveryPointUnavailableError.code]: DeliveryPointUnavailableError,
+    })
+    .input(
+      z.object({
+        orderId,
+        phone,
+        pointId: z.string().trim().min(1).max(32),
+      }),
+    )
     .output(type<void>()),
 
   /**

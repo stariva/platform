@@ -8,6 +8,7 @@ import {
   extendPayment,
   reopen,
   requestBalance,
+  requestBalanceWithOzon,
   terms,
 } from "./stages";
 import { update } from "./update";
@@ -21,6 +22,7 @@ export const adminOrdersRouter = {
   decline,
   reopen,
   requestBalance,
+  requestBalanceWithOzon,
   extendPayment,
   cancel,
   remove,

@@ -30,6 +30,21 @@ function customerLines(order: OrderRow): string[] {
   ].filter((line): line is string => Boolean(line));
 }
 
+/** Куда отправить: пункт Ozon, а у старых заявок — текст покупателя. */
+function deliveryLine(order: OrderRow): string | null {
+  const raw = (order.deliveryAddress ?? {}) as {
+    address?: unknown;
+    title?: unknown;
+  };
+  const address = [raw.title, raw.address].filter(
+    (part): part is string => typeof part === "string" && part !== "",
+  );
+  if (order.deliveryPointId) {
+    return `\nПункт выдачи Ozon: ${address.join(", ") || `№${order.deliveryPointId}`}`;
+  }
+  return order.deliveryNote ? `\nДоставка: ${order.deliveryNote}` : null;
+}
+
 function itemLines(items: OrderItemRow[]): string[] {
   return items.flatMap((item, index) => [
     `${index + 1}. ${item.name} × ${item.quantity} — ${money(item.price * item.quantity)}`,
@@ -50,8 +65,8 @@ export function formatMadeToOrderRequestMessage(
       "Изделия:",
       ...itemLines(items),
       order.customerNotes && `\nПожелания: ${order.customerNotes}`,
-      order.deliveryNote && `\nДоставка: ${order.deliveryNote}`,
-      "\nДальше: связаться с покупателем, уточнить мерки, цвет, цену и доставку,",
+      deliveryLine(order),
+      "\nДальше: связаться с покупателем, уточнить мерки, цвет и цену,",
       "затем одобрить заявку в админке — покупателю откроется предоплата.",
     ]),
   };
@@ -76,8 +91,11 @@ export function formatMadeToOrderPaymentMessage(
         ...customerLines(order),
         "",
         payment.type === "deposit"
-          ? "Дальше: сплести изделие и в админке нажать «Готово — выставить доплату»."
-          : "Заказ оплачен полностью. Дальше: отправить и указать номер отправления в админке.",
+          ? "Дальше: сплести изделие, упаковать и в админке указать вес и размеры посылки: сайт посчитает доставку Ozon и выставит доплату."
+          : order.checkoutSnapshot
+            ? "Заказ оплачен полностью. Отправление создаётся в Ozon: дальше распечатайте этикетку в кабинете доставки Ozon и сдайте посылку в пункт Ozon."
+            : "Заказ оплачен полностью. Дальше: отправить и указать номер отправления в админке.",
+        payment.type === "balance" && deliveryLine(order),
       ]),
     };
   }
@@ -136,7 +154,7 @@ export function formatDetailsUpdatedMessage(
       "Изделия:",
       ...itemLines(items),
       order.customerNotes && `\nПожелания: ${order.customerNotes}`,
-      order.deliveryNote && `\nДоставка: ${order.deliveryNote}`,
+      deliveryLine(order),
     ]),
   };
 }

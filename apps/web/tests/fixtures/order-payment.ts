@@ -40,6 +40,9 @@ mock.module("../../src/lib/commerce/orders", () => ({
   markOrderPaymentSucceeded: async () => false,
   markProductOrderCanceled: async () => {},
 }));
+mock.module("../../src/lib/commerce/made-to-order-shipment", () => ({
+  createMadeToOrderShipment: async () => {},
+}));
 const notifyOzonOrderFailed = mock(async () => {});
 mock.module("../../src/lib/commerce/order-notifications", () => ({
   notifyCustomer: async () => {},

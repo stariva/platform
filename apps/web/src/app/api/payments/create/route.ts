@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
   }
 
   const coursePath = `/account/workshops/${workshop.slug}`;
+  const amountKopecks = bundle?.priceKopecks ?? workshopPriceKopecks(workshop);
 
   // Уже куплен — повторная оплата не нужна. Гостю шлём письмо со ссылкой
   // входа: он мог купить раньше и просто забыть, как войти. Комбо считаем
@@ -109,14 +110,14 @@ export async function POST(request: NextRequest) {
           ? `На ${buyer.email} уже куплен один из мастер-классов комбо. Второй можно купить отдельно — он выйдет дешевле.`
           : session
             ? "У вас уже есть доступ к этому курсу"
-            : `Этот мастер-класс уже куплен на ${buyer.email}. Мы отправили на эту почту ссылку для входа.`,
+            : amountKopecks === 0
+              ? `Мастер-класс уже открыт для ${buyer.email}. Мы отправили на эту почту ссылку для входа.`
+              : `Этот мастер-класс уже куплен на ${buyer.email}. Мы отправили на эту почту ссылку для входа.`,
         alreadyOwned: true,
       },
       { status: 409 },
     );
   }
-
-  const amountKopecks = bundle?.priceKopecks ?? workshopPriceKopecks(workshop);
 
   // Бесплатный мастер-класс — выдаём доступ сразу, без похода в ЮKassa
   if (amountKopecks === 0) {

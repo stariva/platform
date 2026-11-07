@@ -44,6 +44,7 @@ export interface StarivaOrderEmailProps {
   items: OrderEmailItem[];
   /** Суммы в копейках. */
   amountTotal: number;
+  amountDelivery: number;
   depositAmount: number | null;
   /** Срок изготовления, который назвал мастер. */
   leadTime: string | null;
@@ -74,7 +75,7 @@ function copy(props: StarivaOrderEmailProps) {
         subject: `Заявка ${no} принята`,
         heading: "Заявка принята",
         intro:
-          "Спасибо! Оплачивать пока ничего не нужно: мастер свяжется с вами, чтобы обсудить мерки, цвет, цену и доставку. Мерки и пожелания можно сразу указать на странице заказа.",
+          "Спасибо! Оплачивать пока ничего не нужно: мастер свяжется с вами, чтобы обсудить мерки, цвет и цену. Мерки и пожелания можно сразу указать на странице заказа.",
         button: "Открыть заказ",
       };
     case "awaiting_deposit":
@@ -95,7 +96,7 @@ function copy(props: StarivaOrderEmailProps) {
       return {
         subject: `Изделие по заказу ${no} готово`,
         heading: "Изделие готово!",
-        intro: `Ваше изделие готово. Внесите доплату ${rubles(balanceOf(props))}${due} — и мастер отправит заказ.`,
+        intro: `Ваше изделие готово. Внесите доплату ${rubles(balanceOf(props))}${due}${props.amountDelivery > 0 ? `, в неё входит доставка ${rubles(props.amountDelivery)}` : ""} — и мастер отправит заказ.`,
         button: "Внести доплату",
       };
     case "paid":
@@ -169,11 +170,17 @@ function facts(props: StarivaOrderEmailProps): [string, string][] {
     case "awaiting_deposit":
       rows.push(["Стоимость заказа", rubles(props.amountTotal)]);
       rows.push(["Предоплата", rubles(props.depositAmount ?? 0)]);
+      if (props.amountDelivery === 0) {
+        rows.push(["Доставка", "посчитаем, когда изделие будет готово"]);
+      }
       if (props.leadTime) rows.push(["Срок изготовления", props.leadTime]);
       break;
     case "awaiting_balance":
       rows.push(["Стоимость заказа", rubles(props.amountTotal)]);
       rows.push(["Предоплата внесена", rubles(props.depositAmount ?? 0)]);
+      if (props.amountDelivery > 0) {
+        rows.push(["В том числе доставка", rubles(props.amountDelivery)]);
+      }
       rows.push(["К доплате", rubles(balanceOf(props))]);
       break;
     case "shipped":
@@ -209,6 +216,7 @@ export default function StarivaOrderEmail(
       },
     ],
     amountTotal: 640000,
+    amountDelivery: 40000,
     depositAmount: 300000,
     leadTime: "2–3 недели",
     paymentDueLabel: "16 октября",

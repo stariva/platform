@@ -105,7 +105,7 @@ test("deposit message tells the master to start and then bill the balance", () =
   );
 
   assert.match(title, /^Получена предоплата 3\s?500/);
-  assert.ok(message.includes("выставить доплату"));
+  assert.ok(message.includes("выставит доплату"));
 });
 
 test("balance message tells the master to ship", () => {
@@ -155,6 +155,42 @@ test("stock order message carries the buyer comment", () => {
   );
 
   assert.ok(message.includes("Комментарий: Позвоните перед доставкой"));
+});
+
+test("the balance message says where to ship and that Ozon takes over", () => {
+  const { message } = formatMadeToOrderPaymentMessage(
+    {
+      ...order,
+      deliveryMethod: "pickup",
+      deliveryPointId: "77",
+      deliveryAddress: { title: "ул. Баумана, 1", address: "Казань" },
+      checkoutSnapshot: { priceKopecks: 45000 },
+    },
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+
+  assert.ok(message.includes("Пункт выдачи Ozon: ул. Баумана, 1, Казань"));
+  assert.ok(message.includes("кабинете доставки Ozon"));
+});
+
+test("a balance billed by hand still asks for a tracking number", () => {
+  const { message } = formatMadeToOrderPaymentMessage(
+    order,
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+
+  assert.ok(message.includes("указать номер отправления"));
+});
+
+test("a pickup point without a saved address falls back to its number", () => {
+  const { message } = formatDetailsUpdatedMessage(
+    { ...order, deliveryMethod: "pickup", deliveryPointId: "77" },
+    [item],
+  );
+
+  assert.ok(message.includes("Пункт выдачи Ozon: №77"));
 });
 
 test("details-updated message carries the delivery note", () => {
