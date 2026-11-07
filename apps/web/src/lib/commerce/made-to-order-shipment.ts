@@ -7,6 +7,7 @@ import {
   isOzonBusinessDeliveryConfigured,
   quoteParcel,
 } from "@/lib/ozon-business-delivery/client";
+import { ParcelNotApprovedError } from "@/lib/ozon-business-delivery/errors";
 import { formatPrice } from "@/lib/products";
 import { notifyOzonOrderFailed, notifyStaffAlert } from "./order-notifications";
 import {
@@ -15,6 +16,7 @@ import {
   getProductOrderById,
   getProductOrderItems,
   type MadeToOrderDeliverySnapshot,
+  markMadeToOrderShipmentUnapproved,
   markProductOrderOzonFailed,
   saveMadeToOrderQuote,
 } from "./orders";
@@ -138,6 +140,22 @@ export async function createMadeToOrderShipment(
       );
     }
   } catch (error) {
+    if (error instanceof ParcelNotApprovedError) {
+      // Заказ в Ozon уже есть. Повтор webhook создал бы второй, поэтому
+      // номера сохраняем и ошибку не бросаем: подтверждает мастер
+      console.error(
+        `[made-to-order] Заказ ${orderId} создан в Ozon, но не подтверждён:`,
+        error,
+      );
+      await markMadeToOrderShipmentUnapproved(
+        orderId,
+        attemptId,
+        error.parcel.orderId,
+        error.parcel.postingNumbers,
+      );
+      await notifyOzonOrderFailed(orderId);
+      return;
+    }
     console.error(
       `[made-to-order] КРИТИЧНО: заказ ${orderId} оплачен, но отправление Ozon не создано:`,
       error,

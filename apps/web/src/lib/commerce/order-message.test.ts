@@ -215,3 +215,19 @@ test("Ozon failure alert is flagged as critical", () => {
   assert.ok(title.startsWith("КРИТИЧНО"));
   assert.ok(message.includes("Телефон: +7 999 123-45-67"));
 });
+
+test("a parcel created in Ozon but not approved asks the master to approve it", () => {
+  const { title, message } = formatOzonFailedMessage({
+    ...order,
+    ozonOrderId: "YY-123-90YY",
+    ozonPostingNumbers: ["123-90YY-1"],
+  });
+
+  assert.ok(title.includes("создан в Ozon Доставка, но не подтверждён"));
+  assert.ok(!title.startsWith("КРИТИЧНО"));
+  assert.ok(message.includes("Заказ Ozon: YY-123-90YY"));
+  assert.ok(message.includes("Отправление: 123-90YY-1"));
+  assert.ok(message.includes("Подтвердите отправление в кабинете"));
+  // Второй раз создавать не нужно — повтора YooKassa здесь нет
+  assert.ok(!message.includes("YooKassa повторит"));
+});

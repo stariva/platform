@@ -26,6 +26,7 @@ const claimMadeToOrderShipment = mock(
 );
 const attachMadeToOrderShipment = mock(async () => {});
 const markProductOrderOzonFailed = mock(async () => {});
+const markMadeToOrderShipmentUnapproved = mock(async () => {});
 mock.module("../../src/lib/commerce/orders", () => ({
   getProductOrderById: async () => order,
   getProductOrderItems: async () => items,
@@ -33,6 +34,7 @@ mock.module("../../src/lib/commerce/orders", () => ({
   claimMadeToOrderShipment,
   attachMadeToOrderShipment,
   markProductOrderOzonFailed,
+  markMadeToOrderShipmentUnapproved,
 }));
 const notifyOzonOrderFailed = mock(async () => {});
 const notifyStaffAlert = mock(async () => {});
@@ -62,6 +64,9 @@ mock.module("@/lib/products", () => ({
 
 const { createMadeToOrderShipment, quoteMadeToOrderDelivery } = await import(
   "../../src/lib/commerce/made-to-order-shipment"
+);
+const { ParcelNotApprovedError } = await import(
+  "../../src/lib/ozon-business-delivery/errors"
 );
 
 // Запускается отдельным процессом, чтобы моки не подменяли модули других тестов.
@@ -196,6 +201,27 @@ await test("a failed shipment is marked and retried by the webhook", async () =>
   );
   expect(notifyOzonOrderFailed).toHaveBeenCalledWith(order.id);
   expect(attachMadeToOrderShipment).not.toHaveBeenCalled();
+});
+
+await test("a parcel Ozon created but did not approve keeps its numbers and is not retried", async () => {
+  order.checkoutSnapshot = { parcel, priceKopecks: 45000 };
+  createParcelShipment.mockImplementationOnce(async () => {
+    throw new ParcelNotApprovedError(
+      { orderId: "ozon-1", postingNumbers: ["posting-1"] },
+      new Error("NotEnoughBalance"),
+    );
+  });
+  // Не бросает: повтор webhook создал бы в Ozon второй такой же заказ
+  await createMadeToOrderShipment(order.id);
+  expect(markMadeToOrderShipmentUnapproved).toHaveBeenCalledWith(
+    order.id,
+    "attempt-1",
+    "ozon-1",
+    ["posting-1"],
+  );
+  expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
+  expect(attachMadeToOrderShipment).not.toHaveBeenCalled();
+  expect(notifyOzonOrderFailed).toHaveBeenCalledWith(order.id);
 });
 
 await test("Ozon refusing the delivery at shipping time is a failure too", async () => {

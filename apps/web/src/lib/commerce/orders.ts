@@ -448,6 +448,35 @@ export async function attachOzonOrder(
     );
 }
 
+/**
+ * Заказ под заказ создан в Ozon, но не подтверждён к отгрузке (например, не
+ * хватило баланса кабинета). Запоминаем номера: из-за них повтор не найдёт
+ * свободного заказа и не создаст второй в Ozon. Подтверждает мастер в кабинете
+ * Ozon Доставки. Номер отправления покупателю не показываем — оно ещё не едет.
+ */
+export async function markMadeToOrderShipmentUnapproved(
+  orderId: string,
+  attemptId: string,
+  ozonOrderId: string,
+  postingNumbers: string[],
+): Promise<void> {
+  await db
+    .update(productOrders)
+    .set({
+      ozonOrderId,
+      ozonPostingNumbers: postingNumbers,
+      status: "ozon_order_failed",
+      ozonShipmentStatus: "failed",
+    })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.ozonShipmentStatus, "creating"),
+        eq(productOrders.ozonShipmentAttemptId, attemptId),
+      ),
+    );
+}
+
 /** Помечает заказ как требующий ручной обработки — оплата прошла, но заказ в Ozon не создался. */
 export async function markProductOrderOzonFailed(
   orderId: string,

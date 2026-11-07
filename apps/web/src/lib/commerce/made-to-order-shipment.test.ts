@@ -16,6 +16,7 @@ for (const scenario of [
   "an order nobody can claim is left alone",
   "a changed Ozon price is reported to the master",
   "a failed shipment is marked and retried by the webhook",
+  "a parcel Ozon created but did not approve keeps its numbers and is not retried",
   "Ozon refusing the delivery at shipping time is a failure too",
   "a saved order without a parcel cannot ship",
 ]) {

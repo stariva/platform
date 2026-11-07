@@ -137,6 +137,21 @@ export function formatPaidOrderMessage(
 
 /** Оплата прошла, а отправление в Ozon не создалось — нужна ручная обработка. */
 export function formatOzonFailedMessage(order: OrderRow): OrderMessage {
+  // Заказ под заказ создан в Ozon, но не подтверждён: второй создавать не нужно
+  if (order.ozonOrderId) {
+    return {
+      title: `Заказ №${order.number} создан в Ozon Доставка, но не подтверждён`,
+      message: joinLines([
+        ...customerLines(order),
+        `Сумма: ${money(order.amountTotal)}`,
+        `Заказ Ozon: ${order.ozonOrderId}`,
+        order.ozonPostingNumbers?.length
+          ? `Отправление: ${order.ozonPostingNumbers.join(", ")}`
+          : null,
+        "Подтвердите отправление в кабинете Ozon Доставки (скорее всего, не хватает баланса), затем отметьте заказ в админке «Отправлен» и впишите номер отправления.",
+      ]),
+    };
+  }
   return {
     title: `КРИТИЧНО: заказ №${order.number} оплачен, но не создан в Ozon Доставка`,
     message: joinLines([
