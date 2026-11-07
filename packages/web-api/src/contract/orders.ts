@@ -35,11 +35,20 @@ export const DeliveryPointRequiredError = error("DELIVERY_POINT_REQUIRED", {
     "Сначала выберите пункт выдачи Ozon: сайт посчитает доставку, и тогда можно будет оплатить.",
 });
 
-/** Ozon не ответил или не смог посчитать доставку до выбранного пункта. */
+/** Ozon не ответил: сбой временный, повтор через пару минут может помочь. */
 export const DeliveryQuoteFailedError = error("DELIVERY_QUOTE_FAILED", {
   message:
     "Не удалось посчитать доставку. Попробуйте ещё раз через пару минут.",
 });
+
+/** Ozon не может посчитать доставку этому заказу, и повтор не поможет: мастер уже знает. */
+export const DeliveryQuoteUnavailableError = error(
+  "DELIVERY_QUOTE_UNAVAILABLE",
+  {
+    message:
+      "Ozon не смог посчитать доставку для этого заказа, повторять не нужно: мастер уже знает и свяжется с вами. Можно и написать ей самим.",
+  },
+);
 
 /** Нет ключей эквайринга. */
 export const PaymentsUnavailableError = error("PAYMENTS_UNAVAILABLE", {
@@ -197,6 +206,7 @@ export const ordersContract = {
       [OrderDeliveryLockedError.code]: OrderDeliveryLockedError,
       [DeliveryPointUnavailableError.code]: DeliveryPointUnavailableError,
       [DeliveryQuoteFailedError.code]: DeliveryQuoteFailedError,
+      [DeliveryQuoteUnavailableError.code]: DeliveryQuoteUnavailableError,
     })
     .input(
       z.object({

@@ -94,13 +94,21 @@ export interface OrderServices {
   /**
    * Покупатель выбрал пункт при доплате: сохраняет его и считает доставку
    * Ozon. `locked` — выбирать пункт сейчас нельзя, `unavailable` — Ozon не
-   * принимает в этот пункт такую посылку, `quote_failed` — расчёт не удался.
+   * принимает в этот пункт такую посылку, `quote_failed` — временный сбой,
+   * повтор может помочь, `quote_unavailable` — расчёт не выйдет, мастер знает.
    */
   updateDeliveryPoint: (input: {
     orderId: string;
     phone: string;
     pointId: string;
-  }) => Promise<"ok" | "not_found" | "locked" | "unavailable" | "quote_failed">;
+  }) => Promise<
+    | "ok"
+    | "not_found"
+    | "locked"
+    | "unavailable"
+    | "quote_failed"
+    | "quote_unavailable"
+  >;
   /** Заголовки нужны, чтобы собрать адрес возврата, если он не задан в окружении. */
   startPayment: (input: {
     orderId: string;

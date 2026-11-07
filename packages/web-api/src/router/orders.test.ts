@@ -6,6 +6,7 @@ const {
   DeliveryPointRequiredError,
   DeliveryPointUnavailableError,
   DeliveryQuoteFailedError,
+  DeliveryQuoteUnavailableError,
   NothingToPayError,
   OrderDeliveryLockedError,
   OrderDetailsLockedError,
@@ -178,6 +179,19 @@ test("a delivery quote that failed asks to try again", async () => {
   );
   expect(error).toBeInstanceOf(DeliveryQuoteFailedError);
   expect(lastStatus()).toBe(502);
+});
+
+test("a delivery quote that cannot succeed tells not to retry", async () => {
+  const client = wireClient({
+    services: {
+      orders: orders({ updateDeliveryPoint: async () => "quote_unavailable" }),
+    },
+  });
+  const [error] = await safe(
+    client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" }),
+  );
+  expect(error).toBeInstanceOf(DeliveryQuoteUnavailableError);
+  expect(lastStatus()).toBe(409);
 });
 
 test("rejects a measurement that is not a positive number", async () => {

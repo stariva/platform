@@ -807,13 +807,36 @@ export async function applyMadeToOrderPayment(
           .returning({ id: productOrders.id })
       : await db
           .update(productOrders)
-          .set({ status: "ready_to_ship", paidAt: now, paymentDueAt: null })
+          .set({
+            status: "ready_to_ship",
+            paidAt: now,
+            paymentDueAt: null,
+            // Доставкой считаем то, что оплачено: ссылка могла быть создана до
+            // смены пункта, и сумма в ней — прежняя. При отправлении Ozon
+            // посчитает цену заново и скажет мастеру о разнице. Без смены
+            // пункта это те же значения, что и были в заказе
+            amountDelivery: sql`${amount}::int - (${productOrders.amountProducts} - ${productOrders.depositAmount})`,
+            amountTotal: sql`${productOrders.depositAmount} + ${amount}::int`,
+            // У ручной доплаты снимка нет: jsonb_set от NULL остаётся NULL
+            checkoutSnapshot: sql`jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${amount}::int - (${productOrders.amountProducts} - ${productOrders.depositAmount})))`,
+          })
           .where(
             and(
               eq(productOrders.id, orderId),
               eq(productOrders.kind, "made_to_order"),
               eq(productOrders.status, "awaiting_balance"),
-              sql`${productOrders.amountTotal} - ${productOrders.depositAmount} = ${amount}`,
+              or(
+                // Ровно то, что сейчас просит заказ
+                sql`${productOrders.amountTotal} - ${productOrders.depositAmount} = ${amount}`,
+                // Доставка Ozon посчитана, а покупатель позже сменил пункт и
+                // оплатил прежнюю ссылку: принимаем, если оплата покрывает изделие.
+                // Ручную доплату это не касается — у неё сумма должна совпасть
+                and(
+                  sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+                  sql`${productOrders.checkoutSnapshot} ->> 'priceKopecks' is not null`,
+                  sql`${amount}::int >= ${productOrders.amountProducts} - ${productOrders.depositAmount}`,
+                ),
+              ),
             ),
           )
           .returning({ id: productOrders.id });

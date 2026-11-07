@@ -10,6 +10,8 @@ for (const scenario of [
   "a refusal that is not about the point alerts the master to bill by hand",
   "an Ozon outage asks the buyer to retry and does not alert the master",
   "keys Ozon no longer accepts alert the master instead of asking the buyer to retry",
+  "a request Ozon rejects alerts the master with its reason",
+  "a temporary Ozon error is for the buyer to retry, the master is not bothered",
   "until the Delivery API is connected the master is told to bill by hand",
   "an order that no longer waits for the balance is locked",
   "an order billed by hand has no parcel and asks for no point",

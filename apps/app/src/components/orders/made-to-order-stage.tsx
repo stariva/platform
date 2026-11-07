@@ -415,13 +415,12 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
             <Button className="w-full" variant="outline" onClick={copyMessage}>
               Скопировать сообщение со ссылкой
             </Button>
-            {order.deliveryQuotePending && (
+            {order.status === "awaiting_balance" && (
               <div className="space-y-3 rounded-lg border p-3">
                 <p className="text-muted-foreground text-sm">
-                  Покупатель выбирает пункт выдачи на странице заказа, и сайт
-                  считает доставку Ozon. Если Ozon её не посчитает (например,
-                  покупателя нет в Ozon), укажите стоимость вручную: доплата
-                  выставится заново, а отправление вы оформите сами.
+                  {order.deliveryQuotePending
+                    ? "Покупатель выбирает пункт выдачи на странице заказа, и сайт считает доставку Ozon. Если Ozon её не посчитает (например, покупателя нет в Ozon), укажите стоимость вручную: доплата выставится заново, а отправление вы оформите сами."
+                    : "Если покупатель сменил пункт, а Ozon не смог посчитать доставку до него, или стоимость нужно поменять, укажите её вручную: доплата выставится заново, а отправление вы оформите сами."}
                 </p>
                 {manualBalanceForm}
               </div>

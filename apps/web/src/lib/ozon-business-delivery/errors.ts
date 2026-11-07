@@ -69,6 +69,21 @@ export function isOzonBusinessAccessError(error: unknown): boolean {
 }
 
 /**
+ * Ozon отклонил сам запрос (400, 404, 422 и т. п.): повтор с теми же данными
+ * вернёт то же. Не относится к доступу, `408` и `429` — они временные.
+ */
+export function isOzonBusinessRejection(
+  error: unknown,
+): error is OzonBusinessDeliveryError {
+  return (
+    error instanceof OzonBusinessDeliveryError &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    ![401, 403, 408, 429].includes(error.status)
+  );
+}
+
+/**
  * Заказ в Ozon создан, но отправление не подтверждено к отгрузке (чаще всего
  * не хватило баланса кабинета). Заказ уже существует, поэтому его номера
  * нужно сохранить: повтор создал бы второй такой же.

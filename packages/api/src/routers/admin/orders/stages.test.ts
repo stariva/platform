@@ -105,13 +105,22 @@ test("the Ozon balance is the products without delivery and keeps only the parce
   );
 });
 
-test("there is nothing to bill when the deposit already covers the products", async () => {
-  const { result, update } = requestWithOzon(100);
+test("a balance billed by hand has nothing to bill when the deposit covers the products", async () => {
+  const { result, update } = request(100, 0);
   await expect(result).rejects.toMatchObject({
     code: "BAD_REQUEST",
     message: "Доплачивать нечего — проверьте суммы",
   });
   expect(update).not.toHaveBeenCalled();
+});
+
+test("the Ozon balance may be zero before the buyer adds the delivery", async () => {
+  // Предоплата равна цене изделия (например, 1 ₽): платить будет доставка Ozon
+  const { result, set } = requestWithOzon(100);
+  await expect(result).resolves.toMatchObject({ status: "awaiting_balance" });
+  expect(set).toHaveBeenCalledWith(
+    expect.objectContaining({ amountDelivery: 0, amountTotal: 100 }),
+  );
 });
 
 test("a balance billed by hand drops the quote, so nothing ships through Ozon", async () => {

@@ -194,7 +194,13 @@ async function billBalance(
   id: string,
   amountDelivery: number,
   set: Partial<typeof productOrders.$inferInsert> = {},
-  options: { guard?: SQL; message?: string; from?: OrderStatus[] } = {},
+  options: {
+    guard?: SQL;
+    message?: string;
+    from?: OrderStatus[];
+    /** Доставку добавит покупатель, выбрав пункт: остаток без неё может быть нулевым. */
+    deliveryToCome?: boolean;
+  } = {},
 ) {
   const [order] = await db
     .select({
@@ -212,7 +218,15 @@ async function billBalance(
         "Сумма заказа слишком велика — проверьте цены и стоимость доставки",
     });
   }
-  if (order.depositAmount === null || amountTotal <= order.depositAmount) {
+  if (order.depositAmount === null) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Доплачивать нечего — проверьте суммы",
+    });
+  }
+  // С доставкой Ozon остаток за изделие может быть нулевым (предоплата равна
+  // его цене, например у изделия за 1 ₽): платить будет доставка, которую
+  // покупатель добавит, выбрав пункт
+  if (!options.deliveryToCome && amountTotal <= order.depositAmount) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Доплачивать нечего — проверьте суммы",
     });
@@ -244,11 +258,17 @@ async function billBalance(
 export const requestBalanceWithOzon = adminProcedure
   .input(z.object({ id: z.string().min(1), parcel: madeToOrderParcelSchema }))
   .handler(({ context, input }) =>
-    billBalance(context.db, input.id, 0, {
-      // Посылка есть, цены доставки нет: priceKopecks появится, когда покупатель
-      // выберет пункт (apps/web, priceMadeToOrderDelivery)
-      checkoutSnapshot: { parcel: input.parcel, priceKopecks: null },
-    }),
+    billBalance(
+      context.db,
+      input.id,
+      0,
+      {
+        // Посылка есть, цены доставки нет: priceKopecks появится, когда покупатель
+        // выберет пункт (apps/web, priceMadeToOrderDelivery)
+        checkoutSnapshot: { parcel: input.parcel, priceKopecks: null },
+      },
+      { deliveryToCome: true },
+    ),
   );
 
 /**

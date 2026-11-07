@@ -65,6 +65,7 @@ export {
   DeliveryPointRequiredError,
   DeliveryPointUnavailableError,
   DeliveryQuoteFailedError,
+  DeliveryQuoteUnavailableError,
   measurementEntrySchema,
   NothingToPayError,
   OrderDeliveryLockedError,

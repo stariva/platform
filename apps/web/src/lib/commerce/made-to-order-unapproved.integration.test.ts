@@ -215,6 +215,8 @@ async function seedBalance(
   overrides: {
     status?: "awaiting_balance" | "ready_to_ship";
     snapshot?: unknown;
+    amountDelivery?: number;
+    amountTotal?: number;
   },
 ) {
   const id = crypto.randomUUID();
@@ -225,8 +227,8 @@ async function seedBalance(
     contactPhone: "+79001234567",
     status: overrides.status ?? "awaiting_balance",
     amountProducts: 390_000,
-    amountDelivery: 0,
-    amountTotal: 390_000,
+    amountDelivery: overrides.amountDelivery ?? 0,
+    amountTotal: overrides.amountTotal ?? 390_000,
     depositAmount: 195_000,
     deliveryMethod: "manual",
     checkoutSnapshot:
@@ -300,5 +302,83 @@ test.skipIf(!DATABASE_URL)(
       await orders.saveMadeToOrderDeliveryPrice(manual, "77", null, 45_000),
     ).toBe(false);
     expect((await orderOf(manual)).amountTotal).toBe(390_000);
+  },
+);
+
+test.skipIf(!DATABASE_URL)(
+  "a balance paid on a link issued before a change of point is credited with the delivery that was paid",
+  async () => {
+    const connection = await connect();
+    const { orders, orderOf } = connection;
+    const parcel = {
+      weightGrams: 800,
+      lengthCm: 60,
+      widthCm: 30,
+      heightCm: 20,
+    };
+    const id = await seedBalance(connection, {});
+
+    // Ссылку создали на 2 400 ₽ (доплата 1 950 + доставка 450), потом покупатель
+    // выбрал другой пункт, и доставка стала дороже
+    await orders.saveMadeToOrderDeliveryPrice(id, "77", null, 45_000);
+    await orders.saveMadeToOrderDeliveryPrice(id, "88", null, 50_000);
+    expect((await orderOf(id)).amountTotal).toBe(440_000);
+
+    expect(await orders.applyMadeToOrderPayment(id, "balance", 240_000)).toBe(
+      true,
+    );
+    const paid = await orderOf(id);
+    expect(paid.status).toBe("ready_to_ship");
+    expect(paid.paidAt).not.toBeNull();
+    // Доставка — то, что оплачено; Ozon пересчитает при отправлении и скажет о разнице
+    expect(paid.amountDelivery).toBe(45_000);
+    expect(paid.amountTotal).toBe(435_000);
+    expect(paid.checkoutSnapshot).toEqual({ parcel, priceKopecks: 45_000 });
+  },
+);
+
+test.skipIf(!DATABASE_URL)(
+  "a balance that does not cover the products is not credited",
+  async () => {
+    const connection = await connect();
+    const { orders, orderOf } = connection;
+    const id = await seedBalance(connection, {});
+    await orders.saveMadeToOrderDeliveryPrice(id, "77", null, 45_000);
+
+    // Изделие стоит 3 900 ₽, предоплата 1 950 ₽: меньше остатка принять нельзя
+    expect(await orders.applyMadeToOrderPayment(id, "balance", 100_000)).toBe(
+      false,
+    );
+    const untouched = await orderOf(id);
+    expect(untouched.status).toBe("awaiting_balance");
+    expect(untouched.amountTotal).toBe(435_000);
+  },
+);
+
+test.skipIf(!DATABASE_URL)(
+  "a balance billed by hand is credited only for the exact amount",
+  async () => {
+    const connection = await connect();
+    const { orders, orderOf } = connection;
+    // Ручная доплата: доставку 300 ₽ назвала мастер, снимка Ozon нет
+    const id = await seedBalance(connection, {
+      snapshot: null,
+      amountDelivery: 30_000,
+      amountTotal: 420_000,
+    });
+
+    expect(await orders.applyMadeToOrderPayment(id, "balance", 240_000)).toBe(
+      false,
+    );
+    expect((await orderOf(id)).status).toBe("awaiting_balance");
+
+    expect(await orders.applyMadeToOrderPayment(id, "balance", 225_000)).toBe(
+      true,
+    );
+    const paid = await orderOf(id);
+    expect(paid.status).toBe("ready_to_ship");
+    expect(paid.amountDelivery).toBe(30_000);
+    expect(paid.amountTotal).toBe(420_000);
+    expect(paid.checkoutSnapshot).toBeNull();
   },
 );

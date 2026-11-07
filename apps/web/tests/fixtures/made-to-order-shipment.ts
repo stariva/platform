@@ -66,9 +66,11 @@ mock.module("@/lib/products", () => ({
 const { createMadeToOrderShipment, priceMadeToOrderDelivery } = await import(
   "../../src/lib/commerce/made-to-order-shipment"
 );
-const { OzonBusinessAccessError, ParcelNotApprovedError } = await import(
-  "../../src/lib/ozon-business-delivery/errors"
-);
+const {
+  OzonBusinessAccessError,
+  OzonBusinessDeliveryError,
+  ParcelNotApprovedError,
+} = await import("../../src/lib/ozon-business-delivery/errors");
 
 // Запускается отдельным процессом, чтобы моки не подменяли модули других тестов.
 const scenario = process.argv[2];
@@ -128,7 +130,7 @@ await test("a refusal that is not about the point alerts the master to bill by h
     reason: "Покупателя с этим телефоном нет в Ozon",
   }));
   expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
-    "quote_failed",
+    "quote_unavailable",
   );
   expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
   expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
@@ -157,7 +159,7 @@ await test("keys Ozon no longer accepts alert the master instead of asking the b
     throw new OzonBusinessAccessError(401, "invalid_client");
   });
   expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
-    "quote_failed",
+    "quote_unavailable",
   );
   expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
   expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
@@ -169,10 +171,48 @@ await test("keys Ozon no longer accepts alert the master instead of asking the b
   expect(message.message).toContain("вручную");
 });
 
+await test("a request Ozon rejects alerts the master with its reason", async () => {
+  quoteParcel.mockImplementationOnce(async () => {
+    throw new OzonBusinessDeliveryError(
+      "/v1/order/checkout",
+      400,
+      "OtherError",
+      "Недопустимые габариты",
+    );
+  });
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "quote_unavailable",
+  );
+  expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+  const [, message] = notifyStaffAlert.mock.calls[0] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(message.message).toContain("HTTP 400");
+  expect(message.message).toContain("Недопустимые габариты");
+  expect(message.message).toContain("вес и размеры");
+});
+
+await test("a temporary Ozon error is for the buyer to retry, the master is not bothered", async () => {
+  quoteParcel.mockImplementationOnce(async () => {
+    throw new OzonBusinessDeliveryError(
+      "/v1/order/checkout",
+      503,
+      undefined,
+      "busy",
+    );
+  });
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "quote_failed",
+  );
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
+});
+
 await test("until the Delivery API is connected the master is told to bill by hand", async () => {
   configured = false;
   expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
-    "quote_failed",
+    "quote_unavailable",
   );
   expect(quoteParcel).not.toHaveBeenCalled();
   expect(notifyStaffAlert).toHaveBeenCalledTimes(1);

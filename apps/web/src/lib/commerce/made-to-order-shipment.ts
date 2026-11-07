@@ -5,6 +5,7 @@ import {
 } from "@/lib/ozon-business-delivery/client";
 import {
   isOzonBusinessAccessError,
+  isOzonBusinessRejection,
   ParcelNotApprovedError,
 } from "@/lib/ozon-business-delivery/errors";
 import type { PickupPoint } from "@/lib/ozon-delivery/types";
@@ -26,17 +27,19 @@ export type DeliveryPricingResult =
   | "ok"
   | "locked"
   | "unavailable"
-  | "quote_failed";
+  | "quote_failed"
+  | "quote_unavailable";
 
 /**
  * Покупатель выбрал пункт при доплате: считает доставку посылки, которую
  * упаковала мастер, до этого пункта и записывает пункт и цену в заказ. Доставка
  * входит в доплату, а после оплаты отправление создаётся в Ozon.
  *
- * `unavailable` — пункт не подходит, покупатель выберет другой. `quote_failed` —
- * расчёт не вышел не по вине пункта (Ozon не ответил, не подключён, не
- * доставляет этому покупателю): мастер получает алерт и может выставить
- * доплату с ручной доставкой. `locked` — заказ уже не ждёт доплату.
+ * `unavailable` — пункт не подходит, покупатель выберет другой.
+ * `quote_unavailable` — расчёт не выйдет и повтор не поможет (Ozon не подключён,
+ * не принял ключи или запрос, не доставляет этому покупателю): мастер получает
+ * алерт и может выставить доплату с ручной доставкой. `quote_failed` — временный
+ * сбой, покупатель попробует ещё раз. `locked` — заказ уже не ждёт доплату.
  */
 export async function priceMadeToOrderDelivery(
   orderId: string,
@@ -54,6 +57,7 @@ export async function priceMadeToOrderDelivery(
     return "locked";
   }
 
+  /** Расчёт не выйдет сам: сообщаем мастеру, покупателю — что повторять не нужно. */
   const failed = async (reason: string): Promise<DeliveryPricingResult> => {
     await notifyStaffAlert(
       `${orderId}/delivery-quote`,
@@ -63,7 +67,7 @@ export async function priceMadeToOrderDelivery(
       },
       "order-delivery-quote",
     );
-    return "quote_failed";
+    return "quote_unavailable";
   };
 
   if (!isOzonBusinessDeliveryConfigured()) {
@@ -98,6 +102,13 @@ export async function priceMadeToOrderDelivery(
     if (isOzonBusinessAccessError(error)) {
       return failed(
         "Ozon не принял ключи Ozon Доставки для бизнеса: они неверны или отозваны, либо у приложения нет нужных доступов.",
+      );
+    }
+    // Ozon отклонил сам запрос (например, неподходящие вес и размеры): тот же
+    // запрос даст тот же ответ, и мастер должна это увидеть
+    if (isOzonBusinessRejection(error)) {
+      return failed(
+        `Ozon отклонил запрос расчёта (HTTP ${error.status}${error.code ? `, ${error.code}` : ""}): ${error.detail}. Проверьте вес и размеры посылки.`,
       );
     }
     // Сбой связи пройдёт сам: мастера не тревожим, покупатель попробует ещё раз
