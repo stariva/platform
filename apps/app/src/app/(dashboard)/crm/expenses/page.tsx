@@ -59,6 +59,7 @@ export default async function CrmExpensesPage({
             <BusinessExpenses
               expenses={expenses.items}
               total={expenses.total}
+              range={range}
             />
           </div>
 

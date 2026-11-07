@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dateTime, formatDay, rubles } from "~/components/crm/crm-meta";
-import { OrderCosts } from "~/components/crm/order-costs";
+import { OrderCostsSection } from "~/components/crm/order-costs-section";
 import {
   OrderEditForm,
   OrderPayments,
@@ -39,7 +39,6 @@ export default async function CrmOrderPage({
     if ((error as { code?: string }).code === "NOT_FOUND") notFound();
     throw error;
   });
-  const economics = await api.admin.crm.orderCosts({ kind: "manual", id });
   const label = [CHANNEL_LABELS[order.channel], order.externalNumber]
     .filter(Boolean)
     .join(" №");
@@ -89,7 +88,7 @@ export default async function CrmOrderPage({
             </CardContent>
           </Card>
 
-          <OrderCosts kind="manual" orderId={order.id} economics={economics} />
+          <OrderCostsSection kind="manual" orderId={order.id} />
 
           <Card>
             <CardHeader>

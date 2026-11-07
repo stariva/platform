@@ -192,7 +192,10 @@ export const addBusinessExpense = adminProcedure
     z.object({
       category: z.enum(EXPENSE_CATEGORIES),
       spentOn: daySchema,
-      amount: z.number().positive().max(MAX_RUBLES),
+      amount: z
+        .number()
+        .max(MAX_RUBLES)
+        .refine((amount) => toKopecks(amount) > 0, "Укажите сумму больше нуля"),
       note,
     }),
   )
@@ -236,7 +239,8 @@ export const saveFinanceSettings = adminProcedure
       .insert(financeSettingsTable)
       .values(values)
       .onConflictDoUpdate({ target: financeSettingsTable.id, set: values });
-    return input;
+    // Записанное значение: ставка хранится с точностью до сотых процента
+    return ratesView({ acquiring: values.acquiringRate, tax: values.taxRate });
   });
 
 /** Строка разбивки в рублях: выручка, затраты, что осталось. */

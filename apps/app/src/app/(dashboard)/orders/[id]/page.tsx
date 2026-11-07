@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { OrderCosts } from "~/components/crm/order-costs";
+import { OrderCostsSection } from "~/components/crm/order-costs-section";
 import { SiteHeader } from "~/components/layout";
 import { OrderEditor } from "~/components/orders/order-editor";
 import { toOrderView } from "~/components/orders/order-meta";
@@ -18,7 +18,6 @@ export default async function OrderPage({
     if ((error as { code?: string }).code === "NOT_FOUND") notFound();
     throw error;
   });
-  const economics = await api.admin.crm.orderCosts({ kind: "product", id });
 
   return (
     <>
@@ -34,13 +33,7 @@ export default async function OrderPage({
             order.masterNotes,
           ].join(":")}
           order={toOrderView(order)}
-          costs={
-            <OrderCosts
-              kind="product"
-              orderId={order.id}
-              economics={economics}
-            />
-          }
+          costs={<OrderCostsSection kind="product" orderId={order.id} />}
         />
         <VisitorCard visitor={order.visitor} />
       </div>

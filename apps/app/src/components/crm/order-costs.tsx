@@ -26,7 +26,7 @@ import {
 import { Alert, AlertDescription } from "@stariva/ui/reui";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import type { api } from "~/orpc/server";
@@ -85,6 +85,8 @@ export function OrderCosts({
   const [spentOn, setSpentOn] = useState(todayInMoscow);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  // Кнопка отключается не сразу: двойной клик записал бы затрату дважды
+  const submitting = useRef(false);
 
   const add = useMutation({
     ...orpc.admin.crm.addOrderCost.mutationOptions(),
@@ -95,6 +97,9 @@ export function OrderCosts({
       router.refresh();
     },
     onError,
+    onSettled: () => {
+      submitting.current = false;
+    },
   });
   const remove = useMutation({
     ...orpc.admin.crm.removeOrderCost.mutationOptions(),
@@ -223,10 +228,12 @@ export function OrderCosts({
           className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
+            if (submitting.current) return;
             if (parsed === null) {
               toast.error("Проверьте сумму");
               return;
             }
+            submitting.current = true;
             add.mutate({
               kind,
               orderId,

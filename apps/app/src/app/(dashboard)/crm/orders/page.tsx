@@ -146,7 +146,8 @@ function Filters({ params }: { params: Params }) {
         params.channel ||
         params.type ||
         params.from ||
-        params.to) && (
+        params.to ||
+        (list && params.materials)) && (
         <Link
           href={href({ view: params.view, stage: params.stage })}
           className="text-muted-foreground text-sm hover:underline"

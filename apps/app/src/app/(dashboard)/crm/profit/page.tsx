@@ -294,6 +294,9 @@ export default async function CrmProfitPage({
 
           <section className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold tracking-tight">По месяцам</h2>
+            <p className="text-muted-foreground text-sm">
+              Последние 12 месяцев: выбранный период на таблицу не влияет.
+            </p>
             <div className="rounded-lg border contain-inline-size">
               <Table>
                 <TableHeader>

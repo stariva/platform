@@ -208,6 +208,17 @@ test("заказы без материалов считаются по меся�
   expect(result.missingRevenue).toBe(1_000_000);
 });
 
+test("выручка заказа без материалов считается только за выбранный период", () => {
+  const target = order({
+    payments: [paid("2026-10-05", 300_000), paid("2026-11-02", 700_000)],
+  });
+  const first = periodEconomics([target], RATES, october);
+  expect(first.missingOrders).toBe(1);
+  expect(first.missingRevenue).toBe(300_000);
+  // Остаток пришёл позже: заказ считается в месяце первой оплаты
+  expect(periodEconomics([target], RATES, november).missingOrders).toBe(0);
+});
+
 test("чистая прибыль: выручка − затраты − реклама − постоянные расходы", () => {
   const result = profitReport(
     [order({ costLines: [line("materials", 100_000)] })],
@@ -273,4 +284,50 @@ test("прибыль изделий считается только по опл�
   expect(workshop?.countedCosts).toBe(
     Math.round(99_000 * 0.035) + Math.round(99_000 * 0.04),
   );
+});
+
+test("предоплата входит в выручку изделия, но не в его прибыль", () => {
+  const [panno] = itemMargins(
+    [
+      order({
+        items: [
+          { name: "Панно", quantity: 1, price: 750_000 },
+          { name: "Кашпо", quantity: 1, price: 250_000 },
+        ],
+        payments: [paid("2026-10-05", 300_000)],
+        costLines: [line("materials", 125_000)],
+      }),
+    ],
+    RATES,
+    october,
+  );
+  expect(panno?.revenue).toBe(225_000);
+  expect(panno?.countedOrders).toBe(0);
+  expect(panno?.countedRevenue).toBe(0);
+  expect(panno?.countedCosts).toBe(0);
+});
+
+test("два варианта одного изделия в заказе считаются одним заказом", () => {
+  const rows = itemMargins(
+    [
+      order({
+        items: [
+          { name: "Панно", quantity: 1, price: 600_000 },
+          { name: "Панно", quantity: 1, price: 400_000 },
+        ],
+        costLines: [line("materials", 100_000)],
+      }),
+    ],
+    RATES,
+    october,
+  );
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({
+    orders: 1,
+    countedOrders: 1,
+    quantity: 2,
+    revenue: 1_000_000,
+    countedRevenue: 1_000_000,
+    countedCosts: 175_000,
+  });
 });

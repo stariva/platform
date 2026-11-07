@@ -21,7 +21,7 @@ import {
 } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import {
@@ -40,6 +40,7 @@ const onError = (error: Error) =>
 export function BusinessExpenses({
   expenses,
   total,
+  range,
 }: {
   expenses: {
     id: string;
@@ -49,6 +50,8 @@ export function BusinessExpenses({
     note: string | null;
   }[];
   total: number;
+  /** Выбранный период: расход вне его в списке не появится. */
+  range: { from?: string; to?: string };
 }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -56,16 +59,27 @@ export function BusinessExpenses({
   const [spentOn, setSpentOn] = useState(todayInMoscow);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  // Кнопка отключается не сразу: двойной клик записал бы расход дважды
+  const submitting = useRef(false);
 
   const add = useMutation({
     ...orpc.admin.crm.addBusinessExpense.mutationOptions(),
-    onSuccess: () => {
-      toast.success("Расход добавлен");
+    onSuccess: (_, { spentOn: day }) => {
+      const outside =
+        (range.from && day < range.from) || (range.to && day > range.to);
+      toast.success(
+        outside
+          ? `Расход записан на ${formatDay(day)}. Эта дата вне выбранного периода, поэтому в списке его нет.`
+          : "Расход добавлен",
+      );
       setAmount("");
       setNote("");
       router.refresh();
     },
     onError,
+    onSettled: () => {
+      submitting.current = false;
+    },
   });
   const remove = useMutation({
     ...orpc.admin.crm.removeBusinessExpense.mutationOptions(),
@@ -83,10 +97,12 @@ export function BusinessExpenses({
         className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px_120px] sm:items-end"
         onSubmit={(event) => {
           event.preventDefault();
+          if (submitting.current) return;
           if (parsed === null || parsed <= 0) {
             toast.error("Укажите сумму больше нуля");
             return;
           }
+          submitting.current = true;
           add.mutate({ category, spentOn, amount: parsed, note });
         }}
       >
@@ -228,10 +244,20 @@ export function BusinessExpenses({
   );
 }
 
-/** Запятая и точка равноправны; вне 0–100% — null. */
+/** Обычная десятичная запись, запятая и точка равноправны; вне 0–100% — null. */
 function parsePercent(value: string): number | null {
-  const parsed = Number(value.trim().replace(",", "."));
-  return value.trim() && parsed >= 0 && parsed <= 100 ? parsed : null;
+  const trimmed = value.trim();
+  if (!/^\d+(?:[.,]\d+)?$/.test(trimmed)) return null;
+  const parsed = Number(trimmed.replace(",", "."));
+  return parsed <= 100 ? parsed : null;
+}
+
+function RateError() {
+  return (
+    <p className="text-destructive text-xs">
+      Укажите число от 0 до 100, например 3,5
+    </p>
+  );
 }
 
 /** Ставки эквайринга и налога. */
@@ -245,8 +271,11 @@ export function FinanceRatesForm({
   const [tax, setTax] = useState(String(rates.tax));
   const save = useMutation({
     ...orpc.admin.crm.saveFinanceSettings.mutationOptions(),
-    onSuccess: () => {
+    onSuccess: (saved) => {
       toast.success("Ставки сохранены");
+      // Сервер округляет до сотых: показываем то, что записано на самом деле
+      setAcquiring(String(saved.acquiring));
+      setTax(String(saved.tax));
       router.refresh();
     },
     onError,
@@ -268,9 +297,11 @@ export function FinanceRatesForm({
         <Input
           id="rate-acquiring"
           inputMode="decimal"
+          aria-invalid={nextAcquiring === null}
           value={acquiring}
           onChange={(event) => setAcquiring(event.target.value)}
         />
+        {nextAcquiring === null && <RateError />}
         <p className="text-muted-foreground text-xs">
           С оплат на сайте. Проверьте по договору с ЮKassa.
         </p>
@@ -280,9 +311,11 @@ export function FinanceRatesForm({
         <Input
           id="rate-tax"
           inputMode="decimal"
+          aria-invalid={nextTax === null}
           value={tax}
           onChange={(event) => setTax(event.target.value)}
         />
+        {nextTax === null && <RateError />}
         <p className="text-muted-foreground text-xs">
           4% с физлиц. Для заказа от юрлица запишите в нём строку «Налог» на 6%.
         </p>

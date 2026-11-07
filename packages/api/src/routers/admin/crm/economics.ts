@@ -142,7 +142,7 @@ export interface PeriodEconomics {
   totalCosts: number;
   // Заказы, по которым первые деньги пришли за период
   paidOrders: number;
-  // Из них без внесённых материалов, и сколько за них получено
+  // Из них без внесённых материалов, и сколько за них получено за период
   missingOrders: number;
   missingRevenue: number;
 }
@@ -170,9 +170,10 @@ function addOrder(
   rates: FinanceRates,
   period: Period,
 ) {
-  for (const payment of order.payments) {
-    if (within(payment.at, period)) row.revenue += payment.amount;
-  }
+  const received = sumOf(
+    order.payments.filter((payment) => within(payment.at, period)),
+  );
+  row.revenue += received;
   for (const entry of costEntries(order, rates)) {
     if (!within(entry.at, period)) continue;
     row.costs[entry.category] += entry.amount;
@@ -183,7 +184,7 @@ function addOrder(
     row.paidOrders += 1;
     if (needsMaterials(order)) {
       row.missingOrders += 1;
-      row.missingRevenue += paidSum(order);
+      row.missingRevenue += received;
     }
   }
 }
@@ -277,6 +278,8 @@ export function itemMargins(
     const paid = paidSum(order);
     const counted = !needsMaterials(order) && paid >= order.amount;
     const costs = sumOf(costEntries(order, rates));
+    // Два варианта одного изделия в заказе — это один заказ, а не два
+    const seen = new Set<string>();
     for (const item of items) {
       const share = (item.price * item.quantity) / whole;
       const row = rows.get(item.name) ?? {
@@ -288,11 +291,14 @@ export function itemMargins(
         countedRevenue: 0,
         countedCosts: 0,
       };
-      row.orders += 1;
+      if (!seen.has(item.name)) {
+        seen.add(item.name);
+        row.orders += 1;
+        if (counted) row.countedOrders += 1;
+      }
       row.quantity += item.quantity;
       row.revenue += paid * share;
       if (counted) {
-        row.countedOrders += 1;
         row.countedRevenue += paid * share;
         row.countedCosts += costs * share;
       }
