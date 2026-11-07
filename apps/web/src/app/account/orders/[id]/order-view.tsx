@@ -14,6 +14,7 @@ import type { AccountOrder, AccountReceipt } from "@/lib/account/orders";
 import { isPaymentOverdue } from "@/lib/commerce/made-to-order-flow";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { measurementFieldsBySlug } from "@/lib/commerce/measurement-fields";
+import { deliveryDatesView } from "@/lib/commerce/order-services";
 import {
   DELIVERY_POINT_ANCHOR,
   madeToOrderHints,
@@ -210,8 +211,9 @@ function deliveryDetails(order: ProductOrderRow) {
   const snapshot = order.checkoutSnapshot as DeliveryCheckoutResponse | null;
   const method = snapshot?.splits?.[0]?.deliveryMethod;
 
-  const label =
-    order.deliveryMethod === "manual"
+  const label = needsDeliveryPoint(order)
+    ? "Пункт выдачи Ozon — выберете перед предоплатой"
+    : order.deliveryMethod === "manual"
       ? "Способ и стоимость согласует мастер"
       : order.deliveryMethod === "courier"
         ? "Курьером Ozon"
@@ -219,14 +221,10 @@ function deliveryDetails(order: ProductOrderRow) {
           ? "Постамат Ozon"
           : "Пункт выдачи Ozon";
 
-  let dates: string | null = null;
-  if (method?.logisticDateFrom && method.logisticDateTo) {
-    const from = new Date(method.logisticDateFrom);
-    const to = new Date(method.logisticDateTo);
-    if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime())) {
-      dates = deliveryDays.formatRange(from, to);
-    }
-  }
+  const range = deliveryDatesView(order);
+  const dates = range
+    ? deliveryDays.formatRange(new Date(range.from), new Date(range.to))
+    : null;
 
   const title = text(raw.title);
   return {

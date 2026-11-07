@@ -63,12 +63,26 @@ function deliveryPointView(
   };
 }
 
-/** Ожидаемые даты доставки из расчёта Ozon при оформлении. */
-function deliveryDatesView(order: Pick<ProductOrderRow, "checkoutSnapshot">) {
+/**
+ * Ожидаемые даты доставки из расчёта Ozon при оформлении. Если заказ разбит
+ * на несколько отправлений, ориентируемся на самое позднее — как форма
+ * оформления, чтобы не обещать после оплаты срок раньше показанного до неё.
+ */
+export function deliveryDatesView(
+  order: Pick<ProductOrderRow, "checkoutSnapshot">,
+) {
   const snapshot = order.checkoutSnapshot as DeliveryCheckoutResponse | null;
-  const method = snapshot?.splits?.[0]?.deliveryMethod;
-  if (!method?.logisticDateFrom || !method.logisticDateTo) return null;
-  return { from: method.logisticDateFrom, to: method.logisticDateTo };
+  const methods = (snapshot?.splits ?? []).map((split) => split.deliveryMethod);
+  const latest = (dates: (string | undefined)[]) =>
+    dates
+      .filter((iso): iso is string => typeof iso === "string")
+      .filter((iso) => !Number.isNaN(new Date(iso).getTime()))
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+      .at(-1);
+  const from = latest(methods.map((method) => method?.logisticDateFrom));
+  const to = latest(methods.map((method) => method?.logisticDateTo));
+  if (!from || !to) return null;
+  return { from, to };
 }
 
 /**

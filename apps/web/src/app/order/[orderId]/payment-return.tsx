@@ -326,14 +326,10 @@ function confirmedCopy(order: OrderView): {
             },
       {
         ...receive,
-        text: (
-          <Lines
-            lines={[
-              point && `Пункт выдачи: ${point}`,
-              order.status === "fulfilling" ? null : ozonTracking,
-            ]}
-          />
-        ),
+        // Об отслеживании в Ozon говорит шаг выше, когда заказ передан в Ozon
+        // Доставку. В ready_to_ship посылку отправляет Ольга, и не обязательно
+        // через Ozon: обещать там отслеживание нельзя
+        text: point ? `Пункт выдачи: ${point}` : undefined,
       },
     ],
   };
