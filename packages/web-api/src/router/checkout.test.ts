@@ -43,6 +43,7 @@ const createInput = {
 const madeToOrderInput = {
   contactName: "Анна",
   contactPhone: "+7 900 123-45-67",
+  contactEmail: "anna@example.com",
   deliveryPointId: "1234",
   items: [
     {
@@ -318,6 +319,16 @@ test("made-to-order failures keep their own texts", async () => {
   );
   expect(failed).toBeInstanceOf(CheckoutCheckFailedError);
   expect((failed as Error).message).toBe("Не удалось проверить заявку");
+});
+
+test("made-to-order requires an email", async () => {
+  const client = wireClient({ services: { checkout: checkout() } });
+  const { contactEmail: _, ...withoutEmail } = madeToOrderInput;
+  const [error] = await safe(
+    // @ts-expect-error email обязателен в контракте
+    client.checkout.requestMadeToOrder(withoutEmail),
+  );
+  expect(error).toMatchObject({ code: "BAD_REQUEST" });
 });
 
 test("made-to-order limits the size and colour to a short text", async () => {

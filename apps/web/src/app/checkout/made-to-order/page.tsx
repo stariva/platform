@@ -40,12 +40,7 @@ import { formErrorMessage, webApi } from "@/lib/web-api";
 const formSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(120),
   phone: z.string().trim().min(5, "Введите телефон").max(32),
-  email: z
-    .string()
-    .trim()
-    .email("Некорректный email")
-    .optional()
-    .or(z.literal("")),
+  email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
   notes: z.string().trim().max(1500).optional(),
   personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
@@ -150,7 +145,7 @@ export default function MadeToOrderCheckoutPage() {
       const requested = await webApi.checkout.requestMadeToOrder({
         contactName: data.name,
         contactPhone: data.phone,
-        contactEmail: data.email || undefined,
+        contactEmail: data.email,
         deliveryPointId: deliveryPoint.id,
         customerNotes: data.notes || undefined,
         items: items.flatMap((item) =>
@@ -332,7 +327,7 @@ export default function MadeToOrderCheckoutPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (необязательно)</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"

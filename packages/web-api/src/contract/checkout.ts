@@ -133,7 +133,7 @@ export type CreatedOrder = z.infer<typeof createdOrderSchema>;
 export const madeToOrderRequestSchema = z.object({
   contactName: z.string().trim().min(1).max(120),
   contactPhone: z.string().trim().min(5, "Укажите телефон").max(32),
-  contactEmail: z.email().trim().optional(),
+  contactEmail: z.email("Укажите email").trim(),
   customerNotes: z.string().trim().max(1500).optional(),
   // Пункт выдачи Ozon, куда отправить готовое изделие.
   deliveryPointId: z.string().trim().min(1, "Выберите пункт выдачи").max(32),
