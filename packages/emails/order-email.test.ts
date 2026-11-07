@@ -85,6 +85,26 @@ test("a balance billed again with other delivery is a new letter", () => {
   expect(first?.idempotencyKey).toContain(":435000");
 });
 
+test("a manual delivery of zero keeps the total but is a new letter", () => {
+  const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
+  const waiting = send({
+    status: "awaiting_balance",
+    amountTotal: 390000,
+    checkoutSnapshot: { parcel, priceKopecks: null },
+  });
+  // Мастер выставила доплату заново с бесплатной доставкой: итог тот же
+  const manual = send({
+    status: "awaiting_balance",
+    amountTotal: 390000,
+    checkoutSnapshot: null,
+  });
+
+  expect(waiting?.props.deliveryQuoteNeeded).toBe(true);
+  expect(manual?.props.deliveryQuoteNeeded).toBe(false);
+  // Другой текст письма — другой ключ, иначе Resend ответил бы 409
+  expect(waiting?.idempotencyKey).not.toBe(manual?.idempotencyKey);
+});
+
 test("skips service statuses and buyers without email", () => {
   expect(send({ status: "fulfilling" })).toBeNull();
   expect(send({ status: "pending" })).toBeNull();

@@ -84,8 +84,10 @@ export function buildOrderStatusEmail({
   };
   return {
     // Доплату могут выставить заново с другой доставкой: это другое письмо,
-    // и с прежним ключом Resend отклонил бы его (409)
-    idempotencyKey: `order:${order.id}:${status}:${order.approvedAt?.getTime() ?? 0}${status === "awaiting_balance" ? `:${order.amountTotal}` : ""}`,
+    // и с прежним ключом Resend отклонил бы его (409). Ручная доставка за 0 ₽
+    // не меняет итог, но меняет текст (оплатить вместо «выберите пункт»), поэтому
+    // в ключ входит и признак ожидания расчёта
+    idempotencyKey: `order:${order.id}:${status}:${order.approvedAt?.getTime() ?? 0}${status === "awaiting_balance" ? `:${order.amountTotal}:${props.deliveryQuoteNeeded ? "quote" : "ready"}` : ""}`,
     to: [to],
     subject: orderEmailSubject(props),
     props,

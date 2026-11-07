@@ -12,9 +12,12 @@ const {
   quoteParcel,
   resetOzonBusinessSession,
 } = await import("../../src/lib/ozon-business-delivery/client");
-const { OzonBusinessDeliveryError, ParcelNotApprovedError } = await import(
-  "../../src/lib/ozon-business-delivery/errors"
-);
+const {
+  isOzonBusinessAccessError,
+  OzonBusinessAccessError,
+  OzonBusinessDeliveryError,
+  ParcelNotApprovedError,
+} = await import("../../src/lib/ozon-business-delivery/errors");
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -321,4 +324,26 @@ test("a page that is not JSON is kept as the detail", () => {
 
   expect(error.code).toBeUndefined();
   expect(error.detail).toBe("<html>Bad gateway</html>");
+});
+
+test("keys Ozon refuses are an access error, an outage of Ozon is not", async () => {
+  fetchSpy.mockResolvedValueOnce(json({ error: "invalid_client" }, 401));
+  const refused = await quoteParcel(request).catch((e: unknown) => e);
+  expect(refused).toBeInstanceOf(OzonBusinessAccessError);
+  expect(isOzonBusinessAccessError(refused)).toBe(true);
+
+  resetOzonBusinessSession();
+  fetchSpy.mockResolvedValueOnce(json({ error: "unavailable" }, 503));
+  const outage = await quoteParcel(request).catch((e: unknown) => e);
+  expect(outage).not.toBeInstanceOf(OzonBusinessAccessError);
+  expect(isOzonBusinessAccessError(outage)).toBe(false);
+});
+
+test("an app without the needed scope is an access error too", async () => {
+  fetchSpy
+    .mockResolvedValueOnce(tokenResponse())
+    .mockResolvedValueOnce(json({ error: { message: "forbidden" } }, 403));
+  const error = await quoteParcel(request).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(OzonBusinessDeliveryError);
+  expect(isOzonBusinessAccessError(error)).toBe(true);
 });

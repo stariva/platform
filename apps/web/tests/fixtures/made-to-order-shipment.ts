@@ -66,7 +66,7 @@ mock.module("@/lib/products", () => ({
 const { createMadeToOrderShipment, priceMadeToOrderDelivery } = await import(
   "../../src/lib/commerce/made-to-order-shipment"
 );
-const { ParcelNotApprovedError } = await import(
+const { OzonBusinessAccessError, ParcelNotApprovedError } = await import(
   "../../src/lib/ozon-business-delivery/errors"
 );
 
@@ -150,6 +150,23 @@ await test("an Ozon outage asks the buyer to retry and does not alert the master
   );
   expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
   expect(notifyStaffAlert).not.toHaveBeenCalled();
+});
+
+await test("keys Ozon no longer accepts alert the master instead of asking the buyer to retry", async () => {
+  quoteParcel.mockImplementationOnce(async () => {
+    throw new OzonBusinessAccessError(401, "invalid_client");
+  });
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
+    "quote_failed",
+  );
+  expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+  const [, message] = notifyStaffAlert.mock.calls[0] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(message.message).toContain("ключи");
+  expect(message.message).toContain("вручную");
 });
 
 await test("until the Delivery API is connected the master is told to bill by hand", async () => {

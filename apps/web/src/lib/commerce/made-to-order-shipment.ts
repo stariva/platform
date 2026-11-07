@@ -3,7 +3,10 @@ import {
   isOzonBusinessDeliveryConfigured,
   quoteParcel,
 } from "@/lib/ozon-business-delivery/client";
-import { ParcelNotApprovedError } from "@/lib/ozon-business-delivery/errors";
+import {
+  isOzonBusinessAccessError,
+  ParcelNotApprovedError,
+} from "@/lib/ozon-business-delivery/errors";
 import type { PickupPoint } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
 import { notifyOzonOrderFailed, notifyStaffAlert } from "./order-notifications";
@@ -90,6 +93,13 @@ export async function priceMadeToOrderDelivery(
       `[made-to-order] Не удалось посчитать доставку заказа ${orderId}:`,
       error,
     );
+    // Ключи или права приложения сами не починятся: повторы покупателя не
+    // помогут, мастер должна знать и выставить доплату с ручной доставкой
+    if (isOzonBusinessAccessError(error)) {
+      return failed(
+        "Ozon не принял ключи Ozon Доставки для бизнеса: они неверны или отозваны, либо у приложения нет нужных доступов.",
+      );
+    }
     // Сбой связи пройдёт сам: мастера не тревожим, покупатель попробует ещё раз
     return "quote_failed";
   }

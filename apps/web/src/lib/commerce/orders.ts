@@ -560,18 +560,10 @@ export async function saveMadeToOrderDeliveryPrice(
   point: PickupPoint | null,
   priceKopecks: number,
 ): Promise<boolean> {
-  const [order] = await db
-    .select({
-      kind: productOrders.kind,
-      status: productOrders.status,
-      amountProducts: productOrders.amountProducts,
-      checkoutSnapshot: productOrders.checkoutSnapshot,
-    })
-    .from(productOrders)
-    .where(eq(productOrders.id, orderId));
-  if (!order || !isDeliveryPointEditable(order)) return false;
-  const { parcel } = order.checkoutSnapshot as MadeToOrderDeliverySnapshot;
-
+  // Одна запись без предварительного чтения: между чтением и записью мастер
+  // успела бы перейти на ручную доставку (она стирает снимок), а чужое
+  // прочитанное значение затёрло бы её стоимость и вернуло отправление в Ozon.
+  // Итог и снимок считает сама база от тех значений, что лежат в строке сейчас.
   const saved = await db
     .update(productOrders)
     .set({
@@ -579,15 +571,16 @@ export async function saveMadeToOrderDeliveryPrice(
       deliveryPointId: pointId,
       deliveryAddress: pickupPointAddress(point),
       amountDelivery: priceKopecks,
-      amountTotal: order.amountProducts + priceKopecks,
-      checkoutSnapshot: { parcel, priceKopecks },
+      amountTotal: sql`${productOrders.amountProducts} + ${priceKopecks}::int`,
+      checkoutSnapshot: sql`jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${priceKopecks}::int))`,
     })
     .where(
       and(
         eq(productOrders.id, orderId),
         eq(productOrders.kind, "made_to_order"),
         eq(productOrders.status, "awaiting_balance"),
-        eq(productOrders.amountProducts, order.amountProducts),
+        // Есть посылка для Ozon: у ручной доплаты снимка нет
+        sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
       ),
     )
     .returning({ id: productOrders.id });
