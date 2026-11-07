@@ -1,3 +1,16 @@
+import { z } from "zod";
+
+// Тело ошибки Ozon: `{ error: { code?, message }, details? }`. Если поля
+// пришли другого типа, в сообщение попадёт начало тела, а не «[object Object]»
+const errorBodySchema = z.object({
+  error: z
+    .object({
+      code: z.string().nullish(),
+      message: z.string().optional(),
+    })
+    .optional(),
+});
+
 /** Ответ Ozon Delivery API с ошибкой: код и описание из тела `{ error }`. */
 export class OzonBusinessDeliveryError extends Error {
   constructor(
@@ -20,11 +33,11 @@ export class OzonBusinessDeliveryError extends Error {
     let code: string | undefined;
     let detail = body.slice(0, 500);
     try {
-      const parsed = JSON.parse(body) as {
-        error?: { code?: string | null; message?: string };
-      };
-      code = parsed.error?.code ?? undefined;
-      detail = parsed.error?.message ?? detail;
+      const parsed = errorBodySchema.safeParse(JSON.parse(body));
+      if (parsed.success) {
+        code = parsed.data.error?.code ?? undefined;
+        detail = parsed.data.error?.message ?? detail;
+      }
     } catch {
       // Тело не JSON (например, страница прокси) — оставляем текст как есть
     }

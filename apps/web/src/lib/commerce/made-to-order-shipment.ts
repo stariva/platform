@@ -142,7 +142,10 @@ export async function createMadeToOrderShipment(
   } catch (error) {
     if (error instanceof ParcelNotApprovedError) {
       // Заказ в Ozon уже есть. Повтор webhook создал бы второй, поэтому
-      // номера сохраняем и ошибку не бросаем: подтверждает мастер
+      // номера сохраняем и ошибку не бросаем: подтверждает мастер. Сказать ей
+      // об этом должно уведомление об оплате: оно идёт следом, а при сбое
+      // отправки webhook повторяется, и это повтор не потеряет — отдельный
+      // алерт после сохранения номеров повторить было бы некому
       console.error(
         `[made-to-order] Заказ ${orderId} создан в Ozon, но не подтверждён:`,
         error,
@@ -153,7 +156,6 @@ export async function createMadeToOrderShipment(
         error.parcel.orderId,
         error.parcel.postingNumbers,
       );
-      await notifyOzonOrderFailed(orderId);
       return;
     }
     console.error(

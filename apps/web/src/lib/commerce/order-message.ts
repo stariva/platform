@@ -83,6 +83,34 @@ const STAGE_LABELS: Record<PaymentRow["type"], string> = {
   balance: "доплата",
 };
 
+/**
+ * Заказ под заказ создан в Ozon, но не подтверждён к отгрузке: второй создавать
+ * не нужно, подтверждает мастер. `received` — с чего начать, если это
+ * уведомление об оплате.
+ */
+function unapprovedParcelMessage(
+  order: OrderRow,
+  received?: string,
+): OrderMessage {
+  return {
+    title: `Заказ №${order.number} создан в Ozon Доставка, но не подтверждён`,
+    message: joinLines([
+      ...customerLines(order),
+      `Сумма: ${money(order.amountTotal)}`,
+      received,
+      `Заказ Ozon: ${order.ozonOrderId}`,
+      order.ozonPostingNumbers?.length
+        ? `Отправление: ${order.ozonPostingNumbers.join(", ")}`
+        : null,
+      "Подтвердите отправление в кабинете Ozon Доставки (скорее всего, не хватает баланса), затем отметьте заказ в админке «Отправлен» и впишите номер отправления.",
+    ]),
+  };
+}
+
+/** Заказ под заказ оплачен, но его отправление в Ozon осталось неподтверждённым. */
+const isParcelUnapproved = (order: OrderRow) =>
+  Boolean(order.ozonOrderId) && order.status === "ozon_order_failed";
+
 /** Оплата этапа заказа под заказ: в обычном случае — что делать дальше, иначе — что проверить. */
 export function formatMadeToOrderPaymentMessage(
   order: OrderRow,
@@ -90,6 +118,15 @@ export function formatMadeToOrderPaymentMessage(
   outcome: PaymentOutcome,
 ): OrderMessage {
   const what = `${STAGE_LABELS[payment.type]} ${money(payment.amount)} по заказу №${order.number}`;
+  // Это уведомление уходит всегда и при сбое повторяется вместе с webhook,
+  // поэтому предупреждение о неподтверждённом отправлении не потеряется
+  if (
+    outcome === "applied" &&
+    payment.type === "balance" &&
+    isParcelUnapproved(order)
+  ) {
+    return unapprovedParcelMessage(order, `Получена ${what}.`);
+  }
   if (outcome === "applied") {
     return {
       title: `Получена ${what}`,
@@ -137,27 +174,15 @@ export function formatPaidOrderMessage(
 
 /** Оплата прошла, а отправление в Ozon не создалось — нужна ручная обработка. */
 export function formatOzonFailedMessage(order: OrderRow): OrderMessage {
-  // Заказ под заказ создан в Ozon, но не подтверждён: второй создавать не нужно
-  if (order.ozonOrderId) {
-    return {
-      title: `Заказ №${order.number} создан в Ozon Доставка, но не подтверждён`,
-      message: joinLines([
-        ...customerLines(order),
-        `Сумма: ${money(order.amountTotal)}`,
-        `Заказ Ozon: ${order.ozonOrderId}`,
-        order.ozonPostingNumbers?.length
-          ? `Отправление: ${order.ozonPostingNumbers.join(", ")}`
-          : null,
-        "Подтвердите отправление в кабинете Ozon Доставки (скорее всего, не хватает баланса), затем отметьте заказ в админке «Отправлен» и впишите номер отправления.",
-      ]),
-    };
-  }
+  if (order.ozonOrderId) return unapprovedParcelMessage(order);
   return {
     title: `КРИТИЧНО: заказ №${order.number} оплачен, но не создан в Ozon Доставка`,
     message: joinLines([
       ...customerLines(order),
       `Сумма: ${money(order.amountTotal)}`,
       "Нужна ручная обработка: отправление не создалось, YooKassa повторит попытку.",
+      // Если ответ Ozon потерялся, заказ мог создаться, а мы об этом не знаем
+      "Сначала проверьте кабинет Ozon Доставки: заказ мог создаться, если Ozon не успел ответить, — тогда второй оформлять не нужно.",
     ]),
   };
 }

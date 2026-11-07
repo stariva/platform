@@ -221,7 +221,8 @@ await test("a parcel Ozon created but did not approve keeps its numbers and is n
   );
   expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
   expect(attachMadeToOrderShipment).not.toHaveBeenCalled();
-  expect(notifyOzonOrderFailed).toHaveBeenCalledWith(order.id);
+  // Мастеру скажет уведомление об оплате: оно повторяется вместе с webhook
+  expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
 });
 
 await test("Ozon refusing the delivery at shipping time is a failure too", async () => {

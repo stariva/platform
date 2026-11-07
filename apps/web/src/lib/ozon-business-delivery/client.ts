@@ -190,6 +190,7 @@ async function call<T>(
     // Токен могли отозвать раньше срока: один раз берём новый
     if (res.status === 401 && attempt === 0) {
       token = null;
+      await res.body?.cancel().catch(() => {});
       continue;
     }
     const text = await res.text();
@@ -221,6 +222,9 @@ const checkoutSchema = z.object({
     }),
   ),
 });
+// У подтверждения в спецификации нет тела ответа: успех — это 200, а любой
+// объект (в том числе пустой) принимаем, остальное считаем сбоем
+const approveSchema = z.object({});
 const createSchema = z.object({
   order_number: z.string().min(1),
   postings: z.array(z.object({ posting_number: z.string().min(1) })),
@@ -410,7 +414,7 @@ export async function createParcelShipment(
       await call(
         "/v1/posting/approve",
         { posting_number: postingNumber },
-        z.unknown(),
+        approveSchema,
       );
     }
   } catch (error) {
