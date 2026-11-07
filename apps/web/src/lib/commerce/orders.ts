@@ -521,79 +521,66 @@ export async function listUserProductOrders(userId: string) {
  */
 const DETAILS_EDITABLE_STATUSES = ["requested"] as const;
 
-/**
- * Пункт выдачи можно менять дольше: изделие плетётся неделями. Когда доплата
- * выставлена, в ней уже посчитана доставка до этого пункта.
- */
-const DELIVERY_POINT_EDITABLE_STATUSES = [
-  "requested",
-  "awaiting_deposit",
-  "in_production",
-] as const;
+/** Посылка заказа под заказ и расчёт доставки Ozon: посылку отправим после доплаты. */
+export interface MadeToOrderDeliverySnapshot {
+  parcel: MadeToOrderParcel;
+  /** Доставка со страховкой, копейки; null — покупатель ещё не выбрал пункт. */
+  priceKopecks: number | null;
+}
 
-export function isDeliveryPointEditable(order: {
-  kind: string;
-  status: string;
-}): boolean {
+/**
+ * Пункт выбирают при доплате, пока мастер указала посылку для Ozon, а
+ * покупатель ещё не заплатил: сайт считает доставку до выбранного пункта.
+ * Заказ с ручной доставкой (посылки нет) пункта не просит.
+ */
+export function isDeliveryPointEditable(
+  order: Pick<
+    typeof productOrders.$inferSelect,
+    "kind" | "status" | "checkoutSnapshot"
+  >,
+): boolean {
   return (
     order.kind === "made_to_order" &&
-    (DELIVERY_POINT_EDITABLE_STATUSES as readonly string[]).includes(
-      order.status,
+    order.status === "awaiting_balance" &&
+    Boolean(
+      (order.checkoutSnapshot as MadeToOrderDeliverySnapshot | null)?.parcel,
     )
   );
 }
 
-/** Покупатель выбрал пункт. false — заказ уже нельзя менять. */
-export async function setMadeToOrderDeliveryPoint(
+/**
+ * Покупатель выбрал пункт, и Ozon посчитал доставку до него: пункт и цена
+ * ложатся в заказ вместе, и доставка входит в доплату. Пишет, только пока заказ
+ * ждёт доплату по той же посылке: если он уже оплачен или изменился, возвращает
+ * false и ничего не меняет.
+ */
+export async function saveMadeToOrderDeliveryPrice(
   orderId: string,
   pointId: string,
   point: PickupPoint | null,
+  priceKopecks: number,
 ): Promise<boolean> {
-  const updated = await db
+  // Одна запись без предварительного чтения: между чтением и записью мастер
+  // успела бы перейти на ручную доставку (она стирает снимок), а чужое
+  // прочитанное значение затёрло бы её стоимость и вернуло отправление в Ozon.
+  // Итог и снимок считает сама база от тех значений, что лежат в строке сейчас.
+  const saved = await db
     .update(productOrders)
     .set({
       deliveryMethod: "pickup",
       deliveryPointId: pointId,
       deliveryAddress: pickupPointAddress(point),
-      // Расчёт был до старого пункта; новый посчитает кнопка мастера
-      checkoutSnapshot: null,
+      amountDelivery: priceKopecks,
+      amountTotal: sql`${productOrders.amountProducts} + ${priceKopecks}::int`,
+      checkoutSnapshot: sql`jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${priceKopecks}::int))`,
     })
     .where(
       and(
         eq(productOrders.id, orderId),
         eq(productOrders.kind, "made_to_order"),
-        inArray(productOrders.status, [...DELIVERY_POINT_EDITABLE_STATUSES]),
-      ),
-    )
-    .returning({ id: productOrders.id });
-  return updated.length > 0;
-}
-
-/** Расчёт доставки и посылка в заказе: посылку отправим после доплаты. */
-export interface MadeToOrderDeliverySnapshot {
-  parcel: MadeToOrderParcel;
-  priceKopecks: number;
-}
-
-/**
- * Запоминает расчёт, пока изделие не ушло в доплату. Считали до пункта
- * `pointId`: если покупатель успел выбрать другой, расчёт не сохраняется и
- * возвращается false, иначе он лёг бы поверх стёртого и описывал бы старый пункт.
- */
-export async function saveMadeToOrderQuote(
-  orderId: string,
-  snapshot: MadeToOrderDeliverySnapshot,
-  pointId: string,
-): Promise<boolean> {
-  const saved = await db
-    .update(productOrders)
-    .set({ checkoutSnapshot: snapshot })
-    .where(
-      and(
-        eq(productOrders.id, orderId),
-        eq(productOrders.kind, "made_to_order"),
-        eq(productOrders.status, "in_production"),
-        eq(productOrders.deliveryPointId, pointId),
+        eq(productOrders.status, "awaiting_balance"),
+        // Есть посылка для Ozon: у ручной доплаты снимка нет
+        sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
       ),
     )
     .returning({ id: productOrders.id });
@@ -820,13 +807,36 @@ export async function applyMadeToOrderPayment(
           .returning({ id: productOrders.id })
       : await db
           .update(productOrders)
-          .set({ status: "ready_to_ship", paidAt: now, paymentDueAt: null })
+          .set({
+            status: "ready_to_ship",
+            paidAt: now,
+            paymentDueAt: null,
+            // Доставкой считаем то, что оплачено: ссылка могла быть создана до
+            // смены пункта, и сумма в ней — прежняя. При отправлении Ozon
+            // посчитает цену заново и скажет мастеру о разнице. Без смены
+            // пункта это те же значения, что и были в заказе
+            amountDelivery: sql`${amount}::int - (${productOrders.amountProducts} - ${productOrders.depositAmount})`,
+            amountTotal: sql`${productOrders.depositAmount} + ${amount}::int`,
+            // У ручной доплаты снимка нет: jsonb_set от NULL остаётся NULL
+            checkoutSnapshot: sql`jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${amount}::int - (${productOrders.amountProducts} - ${productOrders.depositAmount})))`,
+          })
           .where(
             and(
               eq(productOrders.id, orderId),
               eq(productOrders.kind, "made_to_order"),
               eq(productOrders.status, "awaiting_balance"),
-              sql`${productOrders.amountTotal} - ${productOrders.depositAmount} = ${amount}`,
+              or(
+                // Ровно то, что сейчас просит заказ
+                sql`${productOrders.amountTotal} - ${productOrders.depositAmount} = ${amount}`,
+                // Доставка Ozon посчитана, а покупатель позже сменил пункт и
+                // оплатил прежнюю ссылку: принимаем, если оплата покрывает изделие.
+                // Ручную доплату это не касается — у неё сумма должна совпасть
+                and(
+                  sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+                  sql`${productOrders.checkoutSnapshot} ->> 'priceKopecks' is not null`,
+                  sql`${amount}::int >= ${productOrders.amountProducts} - ${productOrders.depositAmount}`,
+                ),
+              ),
             ),
           )
           .returning({ id: productOrders.id });

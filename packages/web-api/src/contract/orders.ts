@@ -17,10 +17,10 @@ export const OrderDetailsLockedError = error("ORDER_DETAILS_LOCKED", {
   message: "Мастер уже согласовал заказ — изменения обсудите с ним в Telegram.",
 });
 
-/** Изделие уже готово и доставка посчитана до этого пункта. */
+/** Пункт выбирают при доплате: до неё или после неё менять его уже нельзя. */
 export const OrderDeliveryLockedError = error("ORDER_DELIVERY_LOCKED", {
   message:
-    "Доставка уже посчитана до выбранного пункта — чтобы сменить его, напишите мастеру.",
+    "Пункт выдачи сейчас выбрать нельзя — он нужен при доплате. Если что-то не так, напишите мастеру.",
 });
 
 /** Ozon сейчас не принимает заказы в этот пункт. */
@@ -29,10 +29,26 @@ export const DeliveryPointUnavailableError = error(
   { message: "Этот пункт сейчас не принимает заказы. Выберите другой." },
 );
 
-/** Предоплату берём, когда известно, куда отправить изделие. */
+/** Доплату берём, когда выбран пункт и посчитана доставка до него. */
 export const DeliveryPointRequiredError = error("DELIVERY_POINT_REQUIRED", {
-  message: "Сначала выберите пункт выдачи Ozon, куда отправить заказ.",
+  message:
+    "Сначала выберите пункт выдачи Ozon: сайт посчитает доставку, и тогда можно будет оплатить.",
 });
+
+/** Ozon не ответил: сбой временный, повтор через пару минут может помочь. */
+export const DeliveryQuoteFailedError = error("DELIVERY_QUOTE_FAILED", {
+  message:
+    "Не удалось посчитать доставку. Попробуйте ещё раз через пару минут.",
+});
+
+/** Ozon не может посчитать доставку этому заказу, и повтор не поможет: мастер уже знает. */
+export const DeliveryQuoteUnavailableError = error(
+  "DELIVERY_QUOTE_UNAVAILABLE",
+  {
+    message:
+      "Ozon не смог посчитать доставку для этого заказа, повторять не нужно: мастер уже знает и свяжется с вами. Можно и написать ей самим.",
+  },
+);
 
 /** Нет ключей эквайринга. */
 export const PaymentsUnavailableError = error("PAYMENTS_UNAVAILABLE", {
@@ -124,12 +140,15 @@ export const orderViewSchema = z.object({
   /** Под заказ: пункт Ozon, который выбрал покупатель. */
   deliveryPoint: z
     .object({
+      id: z.string(),
       title: z.string().nullable(),
       address: z.string().nullable(),
     })
     .nullable(),
-  /** Под заказ: можно ли ещё сменить пункт — да, пока не выставлена доплата. */
+  /** Под заказ: можно ли выбрать или сменить пункт — да, пока ждём доплату с доставкой Ozon. */
   deliveryPointEditable: z.boolean(),
+  /** Под заказ: доплата ждёт, пока покупатель выберет пункт и сайт посчитает доставку. */
+  deliveryQuoteNeeded: z.boolean(),
   /** Ожидаемые даты доставки из расчёта Ozon, ISO-строки; null — расчёта нет. */
   deliveryDates: z.object({ from: z.string(), to: z.string() }).nullable(),
   /** Есть ли почта, куда придут письма о заказе и чеки. Сам адрес не отдаём. */
@@ -177,12 +196,17 @@ export const ordersContract = {
     .input(orderDetailsSchema.extend({ orderId, phone }))
     .output(type<void>()),
 
-  /** Покупатель выбирает пункт выдачи Ozon, пока мастер не выставила доплату. */
+  /**
+   * Покупатель выбирает пункт выдачи Ozon при доплате: сайт сразу считает
+   * доставку до него, и она входит в доплату.
+   */
   updateDeliveryPoint: oc
     .errors({
       [OrderNotFoundError.code]: OrderNotFoundError,
       [OrderDeliveryLockedError.code]: OrderDeliveryLockedError,
       [DeliveryPointUnavailableError.code]: DeliveryPointUnavailableError,
+      [DeliveryQuoteFailedError.code]: DeliveryQuoteFailedError,
+      [DeliveryQuoteUnavailableError.code]: DeliveryQuoteUnavailableError,
     })
     .input(
       z.object({
@@ -195,7 +219,8 @@ export const ordersContract = {
 
   /**
    * Оплата текущего этапа заказа под заказ: предоплата после одобрения
-   * мастером или доплата после изготовления. Сумму берём из заказа.
+   * мастером или доплата после изготовления (когда выбран пункт и посчитана
+   * доставка). Сумму берём из заказа.
    */
   pay: oc
     .errors({

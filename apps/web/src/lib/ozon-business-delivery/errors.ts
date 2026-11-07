@@ -46,6 +46,44 @@ export class OzonBusinessDeliveryError extends Error {
 }
 
 /**
+ * Ozon не принял ключи (неверные или отозванные) или не выдал токен с нужными
+ * доступами. Само это не пройдёт, в отличие от сбоя связи: нужен человек.
+ */
+export class OzonBusinessAccessError extends Error {
+  constructor(
+    readonly status: number,
+    detail: string,
+  ) {
+    super(`ozon_business_delivery_oauth_failed_${status}: ${detail}`);
+    this.name = "OzonBusinessAccessError";
+  }
+}
+
+/** Ошибка доступа, а не временный сбой: ключи, права приложения, токен. */
+export function isOzonBusinessAccessError(error: unknown): boolean {
+  return (
+    error instanceof OzonBusinessAccessError ||
+    (error instanceof OzonBusinessDeliveryError &&
+      (error.status === 401 || error.status === 403))
+  );
+}
+
+/**
+ * Ozon отклонил сам запрос (400, 404, 422 и т. п.): повтор с теми же данными
+ * вернёт то же. Не относится к доступу, `408` и `429` — они временные.
+ */
+export function isOzonBusinessRejection(
+  error: unknown,
+): error is OzonBusinessDeliveryError {
+  return (
+    error instanceof OzonBusinessDeliveryError &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    ![401, 403, 408, 429].includes(error.status)
+  );
+}
+
+/**
  * Заказ в Ozon создан, но отправление не подтверждено к отгрузке (чаще всего
  * не хватило баланса кабинета). Заказ уже существует, поэтому его номера
  * нужно сохранить: повтор создал бы второй такой же.

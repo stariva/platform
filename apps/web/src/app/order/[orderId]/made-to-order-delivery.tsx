@@ -14,21 +14,25 @@ interface Props {
   orderId: string;
   phone: string;
   /** Выбранный пункт; адреса нет, если Ozon тогда не ответил. */
-  point: { title: string | null; address: string | null } | null;
-  /** Можно ли ещё выбрать другой: после выставления доплаты нельзя. */
+  point: { id: string; title: string | null; address: string | null } | null;
+  /** Можно ли выбрать пункт: при доплате, пока она не оплачена. */
   editable: boolean;
+  /** Доставка ещё не посчитана: без неё доплату не оплатить. */
+  quoteNeeded: boolean;
   onSaved: () => Promise<void> | void;
 }
 
 /**
- * Куда отправить изделие под заказ: покупатель выбирает пункт выдачи Ozon,
- * пока мастер не выставила доплату с посчитанной до него доставкой.
+ * Куда отправить изделие под заказ: когда оно готово, покупатель выбирает
+ * пункт выдачи Ozon, и сайт сразу считает доставку до него. Она входит в
+ * доплату.
  */
 export function MadeToOrderDelivery({
   orderId,
   phone,
   point,
   editable,
+  quoteNeeded,
   onSaved,
 }: Props) {
   const [picking, setPicking] = useState(point === null);
@@ -37,23 +41,19 @@ export function MadeToOrderDelivery({
 
   if (!editable && !point) return null;
 
-  async function save() {
-    if (!selected) return;
+  /** Сохраняет пункт и считает доставку до него. */
+  async function save(pointId: string) {
     setSaving(true);
     try {
-      await webApi.orders.updateDeliveryPoint({
-        orderId,
-        phone,
-        pointId: selected.id,
-      });
-      toast.success("Пункт выдачи сохранён");
+      await webApi.orders.updateDeliveryPoint({ orderId, phone, pointId });
+      toast.success("Доставка посчитана");
       await onSaved();
       setPicking(false);
     } catch (error) {
       toast.error(
         formErrorMessage(
           error,
-          "Не удалось сохранить пункт. Попробуйте ещё раз.",
+          "Не удалось посчитать доставку. Попробуйте ещё раз.",
         ),
       );
     } finally {
@@ -75,10 +75,20 @@ export function MadeToOrderDelivery({
       {address && <p className="text-espresso text-sm">{address}</p>}
       {editable && (
         <p className="text-taupe text-xs leading-relaxed">
-          Доставку оплачиваете вы. Ozon посчитает её, когда изделие будет
-          готово, — сумма войдёт в доплату. Получить заказ можно в приложении
-          Ozon: там будет штрихкод для пункта выдачи.
+          Доставку оплачиваете вы. Выберите пункт: сайт сразу посчитает доставку
+          Ozon до него, и она войдёт в доплату. Получить заказ можно в
+          приложении Ozon: там будет штрихкод для пункта выдачи.
         </p>
+      )}
+      {editable && !picking && quoteNeeded && point && (
+        <Button
+          type="button"
+          onClick={() => save(point.id)}
+          disabled={saving}
+          className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
+        >
+          {saving ? <Spinner /> : "Посчитать доставку до этого пункта"}
+        </Button>
       )}
       {editable && !picking && (
         <Button
@@ -95,11 +105,11 @@ export function MadeToOrderDelivery({
           <PickupPointPicker onChange={setSelected} />
           <Button
             type="button"
-            onClick={save}
+            onClick={() => selected && save(selected.id)}
             disabled={!selected || saving}
             className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark"
           >
-            {saving ? <Spinner /> : "Сохранить пункт выдачи"}
+            {saving ? <Spinner /> : "Посчитать доставку"}
           </Button>
         </div>
       )}

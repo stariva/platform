@@ -4,20 +4,17 @@ import {
   type Database,
   eq,
   inArray,
-  isNotNull,
   lte,
   ne,
   or,
   productOrderItems,
   productOrders,
   type SQL,
-  sql,
 } from "@stariva/db";
 import { madeToOrderParcelSchema } from "@stariva/web-api/contract";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { quoteStorefrontMadeToOrderDelivery } from "../../../storefront";
 import { emailCustomer } from "./customer-email";
 import { depositFor, paymentDueFrom, toKopecks } from "./stage-math";
 
@@ -62,17 +59,6 @@ async function transition(
   if (!updated) throw conflict(message);
   return updated;
 }
-
-/**
- * Расчёт доставки, сохранённый в заказе, ещё на месте и на ту же сумму.
- * Смена пункта покупателем стирает расчёт, поэтому доплату по расчёту до
- * старого пункта эта проверка не пропустит.
- */
-const quoteStillValid = (amountDelivery: number) =>
-  and(
-    isNotNull(productOrders.checkoutSnapshot),
-    sql`(${productOrders.checkoutSnapshot} ->> 'priceKopecks')::int = ${amountDelivery}`,
-  );
 
 /**
  * Сколько отправление Ozon может создаваться, прежде чем попытка считается
@@ -208,7 +194,13 @@ async function billBalance(
   id: string,
   amountDelivery: number,
   set: Partial<typeof productOrders.$inferInsert> = {},
-  options: { guard?: SQL; message?: string } = {},
+  options: {
+    guard?: SQL;
+    message?: string;
+    from?: OrderStatus[];
+    /** Доставку добавит покупатель, выбрав пункт: остаток без неё может быть нулевым. */
+    deliveryToCome?: boolean;
+  } = {},
 ) {
   const [order] = await db
     .select({
@@ -226,7 +218,15 @@ async function billBalance(
         "Сумма заказа слишком велика — проверьте цены и стоимость доставки",
     });
   }
-  if (order.depositAmount === null || amountTotal <= order.depositAmount) {
+  if (order.depositAmount === null) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Доплачивать нечего — проверьте суммы",
+    });
+  }
+  // С доставкой Ozon остаток за изделие может быть нулевым (предоплата равна
+  // его цене, например у изделия за 1 ₽): платить будет доставка, которую
+  // покупатель добавит, выбрав пункт
+  if (!options.deliveryToCome && amountTotal <= order.depositAmount) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Доплачивать нечего — проверьте суммы",
     });
@@ -234,7 +234,7 @@ async function billBalance(
   const updated = await transition(
     db,
     id,
-    ["in_production"],
+    options.from ?? ["in_production"],
     {
       ...set,
       status: "awaiting_balance",
@@ -249,48 +249,45 @@ async function billBalance(
 }
 
 /**
- * Изделие готово, обычный путь: мастер указывает вес и размеры посылки, витрина
- * считает доставку до пункта покупателя, и эта сумма входит в доплату. Если Ozon
- * не посчитал, заказ остаётся в изготовлении и мастер видит причину.
+ * Изделие готово, обычный путь: мастер указывает вес и размеры посылки и
+ * выставляет доплату за изделие без доставки. Пункт выбирает покупатель на
+ * странице заказа, и сайт сразу считает доставку Ozon до него: она добавится к
+ * доплате, а после оплаты отправление создастся в Ozon. Расчёта у Ozon здесь нет:
+ * доставка зависит от пункта, которого мастер ещё не знает.
  */
 export const requestBalanceWithOzon = adminProcedure
   .input(z.object({ id: z.string().min(1), parcel: madeToOrderParcelSchema }))
-  .handler(async ({ context, input }) => {
-    const quote = await quoteStorefrontMadeToOrderDelivery(
-      input.id,
-      input.parcel,
-    );
-    if (!quote.available) {
-      throw new ORPCError("CONFLICT", {
-        message: quote.reason ?? "Ozon не посчитал доставку",
-      });
-    }
-    // Пока шёл расчёт, покупатель мог сменить пункт: тогда расчёт стёрт, и
-    // доплата по нему оставила бы оплаченный заказ без отправления
-    return billBalance(
+  .handler(({ context, input }) =>
+    billBalance(
       context.db,
       input.id,
-      quote.deliveryPriceKopecks,
-      {},
+      0,
       {
-        guard: quoteStillValid(quote.deliveryPriceKopecks),
-        message:
-          "Покупатель сменил пункт выдачи или заказ изменился — обновите страницу и посчитайте доставку заново",
+        // Посылка есть, цены доставки нет: priceKopecks появится, когда покупатель
+        // выберет пункт (apps/web, priceMadeToOrderDelivery)
+        checkoutSnapshot: { parcel: input.parcel, priceKopecks: null },
       },
-    );
-  });
+      { deliveryToCome: true },
+    ),
+  );
 
 /**
  * Запасной путь: Ozon не считает доставку или мастер отправит заказ сама и
  * указывает стоимость вручную. Без расчёта в заказе отправление в Ozon после
- * такой доплаты не создаётся.
+ * такой доплаты не создаётся. Можно и из «ждёт доплату», пока она не оплачена:
+ * так мастер выходит, если покупатель не может получить цену Ozon (например, его
+ * нет в Ozon) и застрял на выборе пункта.
  */
 export const requestBalance = adminProcedure
   .input(z.object({ id: z.string().min(1), amountDelivery: rublesSchema }))
   .handler(({ context, input }) =>
-    billBalance(context.db, input.id, toKopecks(input.amountDelivery), {
-      checkoutSnapshot: null,
-    }),
+    billBalance(
+      context.db,
+      input.id,
+      toKopecks(input.amountDelivery),
+      { checkoutSnapshot: null },
+      { from: ["in_production", "awaiting_balance"] },
+    ),
   );
 
 /** Ещё 3 дня на оплату — например, если срок вышел, а покупатель на связи. */

@@ -5,6 +5,8 @@ const { safe } = await import("@orpc/client");
 const {
   DeliveryPointRequiredError,
   DeliveryPointUnavailableError,
+  DeliveryQuoteFailedError,
+  DeliveryQuoteUnavailableError,
   NothingToPayError,
   OrderDeliveryLockedError,
   OrderDetailsLockedError,
@@ -39,6 +41,7 @@ const view = {
   deliveryNote: null,
   deliveryPoint: null,
   deliveryPointEditable: true,
+  deliveryQuoteNeeded: false,
   deliveryDates: null,
   hasEmail: true,
   trackingNumber: null,
@@ -51,10 +54,6 @@ function orders(overrides: Partial<OrderServices> = {}): OrderServices {
     view: async () => view,
     updateDetails: async () => "ok",
     updateDeliveryPoint: async () => "ok",
-    quoteMadeToOrderDelivery: async () => ({
-      available: false,
-      deliveryPriceKopecks: 0,
-    }),
     startPayment: async () => ({
       status: "ok",
       confirmationUrl: "https://yookassa.example.test/pay/1",
@@ -167,6 +166,32 @@ test("a closed pickup point asks for another one", async () => {
   );
   expect(error).toBeInstanceOf(DeliveryPointUnavailableError);
   expect(lastStatus()).toBe(400);
+});
+
+test("a delivery quote that failed asks to try again", async () => {
+  const client = wireClient({
+    services: {
+      orders: orders({ updateDeliveryPoint: async () => "quote_failed" }),
+    },
+  });
+  const [error] = await safe(
+    client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" }),
+  );
+  expect(error).toBeInstanceOf(DeliveryQuoteFailedError);
+  expect(lastStatus()).toBe(502);
+});
+
+test("a delivery quote that cannot succeed tells not to retry", async () => {
+  const client = wireClient({
+    services: {
+      orders: orders({ updateDeliveryPoint: async () => "quote_unavailable" }),
+    },
+  });
+  const [error] = await safe(
+    client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" }),
+  );
+  expect(error).toBeInstanceOf(DeliveryQuoteUnavailableError);
+  expect(lastStatus()).toBe(409);
 });
 
 test("rejects a measurement that is not a positive number", async () => {

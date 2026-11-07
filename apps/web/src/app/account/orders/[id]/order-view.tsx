@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import type { AccountOrder, AccountReceipt } from "@/lib/account/orders";
 import {
   isPaymentOverdue,
-  needsDeliveryPoint,
+  needsDeliveryQuote,
 } from "@/lib/commerce/made-to-order-flow";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { measurementFieldsBySlug } from "@/lib/commerce/measurement-fields";
@@ -211,8 +211,8 @@ function deliveryDetails(order: ProductOrderRow) {
   const snapshot = order.checkoutSnapshot as DeliveryCheckoutResponse | null;
   const method = snapshot?.splits?.[0]?.deliveryMethod;
 
-  const label = needsDeliveryPoint(order)
-    ? "Пункт выдачи Ozon — выберете перед предоплатой"
+  const label = needsDeliveryQuote(order)
+    ? "Пункт выдачи Ozon — выберете, и посчитаем доставку"
     : order.deliveryMethod === "manual"
       ? "Способ и стоимость согласует мастер"
       : order.deliveryMethod === "courier"
@@ -250,6 +250,7 @@ export async function ProductOrderView({
   const madeToOrder = order.kind === "made_to_order";
   const progress = orderProgress(view.kind, order.status);
   const canEditDetails = madeToOrder && order.status === "requested";
+  const quoteNeeded = needsDeliveryQuote(order);
   const [postings, measurementFields] = await Promise.all([
     // Посылка под заказ идёт через Delivery API, Seller API её статусы не знает
     madeToOrder ? [] : getPostingStatuses(order.ozonPostingNumbers),
@@ -265,13 +266,12 @@ export async function ProductOrderView({
     order.status === "declined"
       ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
       : madeToOrder
-        ? madeToOrderHint(order.status, needsDeliveryPoint(order))
+        ? madeToOrderHint(order.status, quoteNeeded)
         : stockOrderHints[order.status];
   const awaitingPayment =
     view.paymentStep !== null || order.status === "pending";
-  // Пункт выдачи нужен к предоплате; в заявке его ещё не спрашиваем
-  const pointMissing = needsDeliveryPoint(order);
-  const pointFirst = view.paymentStep?.type === "deposit" && pointMissing;
+  // Пункт выбирают при доплате, пока доставка не посчитана
+  const pointFirst = view.paymentStep?.type === "balance" && quoteNeeded;
 
   return (
     <div className="space-y-6">
@@ -342,24 +342,28 @@ export async function ProductOrderView({
             </Card>
           )}
 
-          {isDeliveryPointEditable(order) &&
-            !(pointMissing && order.status === "requested") && (
-              <Card title="Куда доставить">
-                {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
-                <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
-                  <AccountMadeToOrderDelivery
-                    orderId={order.id}
-                    phone={order.contactPhone}
-                    point={
-                      order.deliveryPointId
-                        ? { title: delivery.title, address: delivery.address }
-                        : null
-                    }
-                    editable
-                  />
-                </div>
-              </Card>
-            )}
+          {isDeliveryPointEditable(order) && (
+            <Card title="Куда доставить">
+              {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
+              <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
+                <AccountMadeToOrderDelivery
+                  orderId={order.id}
+                  phone={order.contactPhone}
+                  point={
+                    order.deliveryPointId
+                      ? {
+                          id: order.deliveryPointId,
+                          title: delivery.title,
+                          address: delivery.address,
+                        }
+                      : null
+                  }
+                  editable
+                  quoteNeeded={quoteNeeded}
+                />
+              </div>
+            </Card>
+          )}
         </div>
 
         <aside className="space-y-5 lg:sticky lg:top-24">
@@ -370,7 +374,7 @@ export async function ProductOrderView({
                 <MadeToOrderPayment
                   orderId={order.id}
                   phone={order.contactPhone}
-                  deliveryPointMissing={pointMissing}
+                  deliveryQuoteNeeded={quoteNeeded}
                   returnTo="account"
                   terms={{
                     number: order.number,

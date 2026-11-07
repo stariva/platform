@@ -2,7 +2,11 @@ import type { MadeToOrderParcel } from "@stariva/web-api/contract";
 import { z } from "zod";
 import { env } from "@/env";
 import { normalizePhoneDigits } from "@/lib/phone";
-import { OzonBusinessDeliveryError, ParcelNotApprovedError } from "./errors";
+import {
+  OzonBusinessAccessError,
+  OzonBusinessDeliveryError,
+  ParcelNotApprovedError,
+} from "./errors";
 
 /**
  * Ozon Доставка для бизнеса (Delivery API): посылка без карточки товара и
@@ -36,7 +40,13 @@ export type ParcelQuote =
       /** Перевозка и страховка, копейки. */
       priceKopecks: number;
     }
-  | { available: false; reason?: string };
+  | {
+      available: false;
+      /** Для мастера: что не так и что делать. */
+      reason?: string;
+      /** `point` — не подходит выбранный пункт, покупателю достаточно выбрать другой. */
+      cause?: "point";
+    };
 
 export interface CreateParcelRequest extends ParcelRequest {
   /** Наш заказ: повтор webhook не должен создать вторую посылку. */
@@ -152,9 +162,13 @@ async function fetchToken(): Promise<string> {
     }),
   );
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
+    const detail = (await res.text().catch(() => "")).slice(0, 300);
+    // Отказ по ключам не пройдёт сам; 5xx и 429 — временные
+    if (res.status === 400 || res.status === 401 || res.status === 403) {
+      throw new OzonBusinessAccessError(res.status, detail);
+    }
     throw new Error(
-      `ozon_business_delivery_oauth_failed_${res.status}: ${detail.slice(0, 300)}`,
+      `ozon_business_delivery_oauth_failed_${res.status}: ${detail}`,
     );
   }
   const data = tokenSchema.parse(await res.json());
@@ -297,12 +311,27 @@ const REFUSALS: Record<string, string> = {
     "Кабинет Ozon Доставки заблокирован: напишите в поддержку Ozon",
 };
 
+// Отказы из-за пункта: покупатель решает их сам, выбрав другой
+const POINT_REFUSALS = new Set([
+  "DeliveryPointRestrictionsError",
+  "DeliveryPointNotFound",
+  "SameDeliveryPointError",
+  "SamePointError",
+  "DeliveryAvailabilityError",
+]);
+
 function refusal(error?: { code?: string | null; message: string } | null) {
   const reason =
     (error?.code && REFUSALS[error.code]) ||
     error?.message ||
     "Ozon не доставит такую посылку в этот пункт";
-  return { available: false as const, reason: `${reason}. ${MANUAL_HINT}` };
+  return {
+    available: false as const,
+    reason: `${reason}. ${MANUAL_HINT}`,
+    ...(error?.code && POINT_REFUSALS.has(error.code)
+      ? { cause: "point" as const }
+      : {}),
+  };
 }
 
 /**

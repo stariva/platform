@@ -7,11 +7,12 @@ import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { phonesMatch } from "@/lib/phone";
 import {
-  isDeliveryPointRequiredToPay,
+  isDeliveryQuoteRequiredToPay,
   isPaymentOverdue,
   madeToOrderPaymentStep,
+  needsDeliveryQuote,
 } from "./made-to-order-flow";
-import { quoteMadeToOrderDelivery } from "./made-to-order-shipment";
+import { priceMadeToOrderDelivery } from "./made-to-order-shipment";
 import {
   type MeasurementField,
   measurementFieldsBySlug,
@@ -27,7 +28,6 @@ import {
   getProductOrderCustomerEmail,
   getProductOrderItems,
   isDeliveryPointEditable,
-  setMadeToOrderDeliveryPoint,
   updateMadeToOrderDetails,
 } from "./orders";
 
@@ -61,6 +61,7 @@ function deliveryPointView(
     title?: unknown;
   };
   return {
+    id: order.deliveryPointId,
     title: typeof raw.title === "string" ? raw.title : null,
     address: typeof raw.address === "string" ? raw.address : null,
   };
@@ -135,6 +136,7 @@ export const orderServices: OrderServices = {
       deliveryNote: order.deliveryNote,
       deliveryPoint: deliveryPointView(order),
       deliveryPointEditable: isDeliveryPointEditable(order),
+      deliveryQuoteNeeded: needsDeliveryQuote(order),
       deliveryDates: deliveryDatesView(order),
       hasEmail: Boolean(email),
       trackingNumber: order.trackingNumber,
@@ -174,8 +176,8 @@ export const orderServices: OrderServices = {
     }
     if (!isDeliveryPointEditable(order)) return "locked";
 
-    // Если Ozon не ответил, пункт всё равно запоминаем: выбор важнее адреса,
-    // а расчёт доставки проверит пункт ещё раз
+    // Если Ozon не ответил, адрес пункта просто не покажем: выбор важнее
+    // адреса, а расчёт доставки ниже проверит пункт ещё раз
     const info = await getCachedPickupPointsInfo([pointId]).catch(
       (error: unknown) => {
         console.warn("[orders] Не удалось получить адрес пункта:", error);
@@ -184,17 +186,16 @@ export const orderServices: OrderServices = {
     );
     if (info?.unavailable.includes(pointId)) return "unavailable";
 
-    const saved = await setMadeToOrderDeliveryPoint(
+    // Доставка до пункта входит в доплату: считаем её сразу, пока покупатель на странице
+    const priced = await priceMadeToOrderDelivery(
       orderId,
       pointId,
       info?.points[0] ?? null,
     );
-    if (!saved) return "locked";
+    if (priced !== "ok") return priced;
     await notifyMadeToOrderDetailsUpdated(orderId);
     return "ok";
   },
-
-  quoteMadeToOrderDelivery,
 
   async startPayment({ orderId, phone, returnTo, headers }) {
     if (!isYooKassaConfigured()) return { status: "unavailable" };
@@ -213,7 +214,7 @@ export const orderServices: OrderServices = {
         status: isPaymentOverdue(order) ? "overdue" : "nothing_to_pay",
       };
     }
-    if (isDeliveryPointRequiredToPay(order)) {
+    if (isDeliveryQuoteRequiredToPay(order)) {
       return { status: "delivery_point_required" };
     }
 

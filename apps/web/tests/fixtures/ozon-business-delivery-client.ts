@@ -12,9 +12,13 @@ const {
   quoteParcel,
   resetOzonBusinessSession,
 } = await import("../../src/lib/ozon-business-delivery/client");
-const { OzonBusinessDeliveryError, ParcelNotApprovedError } = await import(
-  "../../src/lib/ozon-business-delivery/errors"
-);
+const {
+  isOzonBusinessAccessError,
+  isOzonBusinessRejection,
+  OzonBusinessAccessError,
+  OzonBusinessDeliveryError,
+  ParcelNotApprovedError,
+} = await import("../../src/lib/ozon-business-delivery/errors");
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -321,4 +325,40 @@ test("a page that is not JSON is kept as the detail", () => {
 
   expect(error.code).toBeUndefined();
   expect(error.detail).toBe("<html>Bad gateway</html>");
+});
+
+test("keys Ozon refuses are an access error, an outage of Ozon is not", async () => {
+  fetchSpy.mockResolvedValueOnce(json({ error: "invalid_client" }, 401));
+  const refused = await quoteParcel(request).catch((e: unknown) => e);
+  expect(refused).toBeInstanceOf(OzonBusinessAccessError);
+  expect(isOzonBusinessAccessError(refused)).toBe(true);
+
+  resetOzonBusinessSession();
+  fetchSpy.mockResolvedValueOnce(json({ error: "unavailable" }, 503));
+  const outage = await quoteParcel(request).catch((e: unknown) => e);
+  expect(outage).not.toBeInstanceOf(OzonBusinessAccessError);
+  expect(isOzonBusinessAccessError(outage)).toBe(false);
+});
+
+test("an app without the needed scope is an access error too", async () => {
+  fetchSpy
+    .mockResolvedValueOnce(tokenResponse())
+    .mockResolvedValueOnce(json({ error: { message: "forbidden" } }, 403));
+  const error = await quoteParcel(request).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(OzonBusinessDeliveryError);
+  expect(isOzonBusinessAccessError(error)).toBe(true);
+});
+
+test("only a request Ozon refuses for good is a rejection, not access or a temporary error", () => {
+  const error = (status: number) =>
+    new OzonBusinessDeliveryError("/v1/order/checkout", status, undefined, "x");
+
+  expect(isOzonBusinessRejection(error(400))).toBe(true);
+  expect(isOzonBusinessRejection(error(404))).toBe(true);
+  expect(isOzonBusinessRejection(error(422))).toBe(true);
+  // Доступ, таймаут и лимит запросов — другие случаи
+  for (const status of [401, 403, 408, 429, 500, 503]) {
+    expect(isOzonBusinessRejection(error(status))).toBe(false);
+  }
+  expect(isOzonBusinessRejection(new Error("timeout"))).toBe(false);
 });

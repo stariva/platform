@@ -20,6 +20,10 @@ const updateDeliveryPoint = orders.updateDeliveryPoint.handler(
     if (result === "not_found") throw errors.ORDER_NOT_FOUND();
     if (result === "locked") throw errors.ORDER_DELIVERY_LOCKED();
     if (result === "unavailable") throw errors.DELIVERY_POINT_UNAVAILABLE();
+    if (result === "quote_failed") throw errors.DELIVERY_QUOTE_FAILED();
+    if (result === "quote_unavailable") {
+      throw errors.DELIVERY_QUOTE_UNAVAILABLE();
+    }
   },
 );
 

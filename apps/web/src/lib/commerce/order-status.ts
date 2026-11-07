@@ -36,7 +36,7 @@ const workshopOrderStatusLabels: Record<string, string> = {
   refunded: "Возврат",
 };
 
-/** Якорь блока выбора пункта выдачи: на него ведёт подсказка у предоплаты. */
+/** Якорь блока выбора пункта выдачи: на него ведёт подсказка у кнопки доплаты. */
 export const DELIVERY_POINT_ANCHOR = "delivery-point";
 
 /** Что дальше, для заказа под заказ: по статусу. */
@@ -60,16 +60,15 @@ export const madeToOrderHints: Record<string, string> = {
 };
 
 /**
- * Подсказка «что дальше» для заказа под заказ. Перед предоплатой просим
- * выбрать пункт выдачи, только если отправить ещё некуда: у старых заявок
- * пункт или адрес уже есть.
+ * Подсказка «что дальше» для заказа под заказ. Когда изделие готово, а доставка
+ * ещё не посчитана, просим выбрать пункт выдачи: сайт считает доставку сам.
  */
 export function madeToOrderHint(
   status: string,
-  deliveryPointMissing: boolean,
+  deliveryQuoteNeeded: boolean,
 ): string | undefined {
-  if (status === "awaiting_deposit" && deliveryPointMissing) {
-    return "Мастер согласовал заказ. Выберите пункт выдачи Ozon и внесите предоплату 50% — и мастер начнёт плести.";
+  if (status === "awaiting_balance" && deliveryQuoteNeeded) {
+    return "Изделие готово! Выберите пункт выдачи Ozon: сайт сразу посчитает доставку, и вы сможете внести доплату — мастер отправит заказ.";
   }
   return madeToOrderHints[status];
 }

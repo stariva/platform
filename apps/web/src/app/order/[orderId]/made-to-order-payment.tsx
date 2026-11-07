@@ -72,14 +72,14 @@ export function MadeToOrderPayment({
   orderId,
   phone,
   terms,
-  deliveryPointMissing = false,
+  deliveryQuoteNeeded = false,
   returnTo = "order",
 }: {
   orderId: string;
   phone: string;
   terms: MadeToOrderTerms;
-  /** Пункт выдачи не выбран: без него предоплату не принимаем. */
-  deliveryPointMissing?: boolean;
+  /** Доставка ещё не посчитана: пока пункт не выбран, доплату не оплатить. */
+  deliveryQuoteNeeded?: boolean;
   /** Куда вернуть покупателя после оплаты: на гостевую страницу или в кабинет. */
   returnTo?: "order" | "account";
 }) {
@@ -97,9 +97,11 @@ export function MadeToOrderPayment({
   }
 
   const balance = terms.amountTotal - terms.depositAmount;
-  // Доплату выставляют, когда изделие готово; тогда же Ozon считает доставку
+  // Доплату выставляют, когда изделие готово; доставку считает сайт, когда
+  // покупатель выберет пункт (или мастер назвала её сама)
   const balanceBilled = terms.status === "awaiting_balance" || terms.paid;
-  const deliveryKnown = balanceBilled || terms.amountDelivery > 0;
+  const deliveryKnown =
+    (balanceBilled && !deliveryQuoteNeeded) || terms.amountDelivery > 0;
 
   async function pay() {
     setPaying(true);
@@ -123,7 +125,7 @@ export function MadeToOrderPayment({
   }
 
   const step = terms.paymentStep;
-  const pointFirst = step?.type === "deposit" && deliveryPointMissing;
+  const pointFirst = step?.type === "balance" && deliveryQuoteNeeded;
 
   return (
     <div className="border-t border-espresso/8 pt-3 space-y-3">
@@ -133,7 +135,9 @@ export function MadeToOrderPayment({
           label="Доставка"
           value={
             !deliveryKnown
-              ? "посчитаем, когда изделие будет готово"
+              ? balanceBilled
+                ? "выберите пункт — посчитаем"
+                : "посчитаем, когда изделие будет готово"
               : terms.amountDelivery > 0
                 ? money(terms.amountDelivery)
                 : "бесплатно"
@@ -154,7 +158,9 @@ export function MadeToOrderPayment({
         <Row
           label={
             balanceBilled
-              ? "Доплата"
+              ? deliveryKnown
+                ? "Доплата"
+                : "Доплата без доставки"
               : deliveryKnown
                 ? "Доплата, когда изделие готово"
                 : "Доплата без доставки, когда изделие готово"
@@ -173,14 +179,14 @@ export function MadeToOrderPayment({
         <div className="space-y-2">
           {pointFirst && (
             <p className="rounded-xl border border-espresso/15 px-4 py-3 text-sm text-espresso">
-              Чтобы внести предоплату,{" "}
+              Чтобы внести доплату,{" "}
               <a
                 href={`#${DELIVERY_POINT_ANCHOR}`}
                 className="underline underline-offset-4"
               >
                 выберите пункт выдачи Ozon
               </a>
-              , куда отправить готовое изделие.
+              : сайт посчитает доставку, и она войдёт в доплату.
             </p>
           )}
           <Button

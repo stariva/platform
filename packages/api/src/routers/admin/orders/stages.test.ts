@@ -2,18 +2,8 @@ import { expect, mock, test } from "bun:test";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 
-let quote: {
-  available: boolean;
-  reason?: string;
-  deliveryPriceKopecks: number;
-} = { available: true, deliveryPriceKopecks: 45000 };
-const quoted: unknown[][] = [];
 mock.module("../../../storefront", () => ({
   pushStorefrontStockToOzon: async () => true,
-  quoteStorefrontMadeToOrderDelivery: async (...args: unknown[]) => {
-    quoted.push(args);
-    return quote;
-  },
   revalidateStorefront: async () => true,
 }));
 
@@ -101,32 +91,36 @@ test("requestBalance rejects integer overflow before writing", async () => {
   expect(update).not.toHaveBeenCalled();
 });
 
-test("the Ozon quote goes into the balance", async () => {
-  quote = { available: true, deliveryPriceKopecks: 45000 };
+test("the Ozon balance is the products without delivery and keeps only the parcel", async () => {
   const { result, set } = requestWithOzon(390000);
   await expect(result).resolves.toMatchObject({ status: "awaiting_balance" });
   expect(set).toHaveBeenCalledWith(
     expect.objectContaining({
       status: "awaiting_balance",
-      amountDelivery: 45000,
-      amountTotal: 435000,
+      // Доставку добавит покупатель, когда выберет пункт и сайт её посчитает
+      amountDelivery: 0,
+      amountTotal: 390000,
+      checkoutSnapshot: { parcel, priceKopecks: null },
     }),
   );
-  expect(quoted.at(-1)).toEqual(["order", parcel]);
 });
 
-test("a refused Ozon quote keeps the order in production and shows why", async () => {
-  quote = {
-    available: false,
-    reason: "Покупатель ещё не выбрал пункт выдачи",
-    deliveryPriceKopecks: 0,
-  };
-  const { result, update } = requestWithOzon(390000);
+test("a balance billed by hand has nothing to bill when the deposit covers the products", async () => {
+  const { result, update } = request(100, 0);
   await expect(result).rejects.toMatchObject({
-    code: "CONFLICT",
-    message: "Покупатель ещё не выбрал пункт выдачи",
+    code: "BAD_REQUEST",
+    message: "Доплачивать нечего — проверьте суммы",
   });
   expect(update).not.toHaveBeenCalled();
+});
+
+test("the Ozon balance may be zero before the buyer adds the delivery", async () => {
+  // Предоплата равна цене изделия (например, 1 ₽): платить будет доставка Ozon
+  const { result, set } = requestWithOzon(100);
+  await expect(result).resolves.toMatchObject({ status: "awaiting_balance" });
+  expect(set).toHaveBeenCalledWith(
+    expect.objectContaining({ amountDelivery: 0, amountTotal: 100 }),
+  );
 });
 
 test("a balance billed by hand drops the quote, so nothing ships through Ozon", async () => {
@@ -138,45 +132,6 @@ test("a balance billed by hand drops the quote, so nothing ships through Ozon", 
       checkoutSnapshot: null,
     }),
   );
-});
-
-test("the Ozon balance is written only while the saved quote still matches", async () => {
-  quote = { available: true, deliveryPriceKopecks: 45000 };
-  const { result, where } = requestWithOzon(390000);
-  await result;
-  const condition = sqlOf(where.mock.calls[0]?.[0]);
-  // Смена пункта стирает расчёт, и такая доплата не должна пройти
-  expect(condition).toContain('"checkout_snapshot" is not null');
-  expect(condition).toContain("->> 'priceKopecks'");
-});
-
-test("a point changed during the quote stops the balance", async () => {
-  quote = { available: true, deliveryPriceKopecks: 45000 };
-  const { result } = requestWithOzon(390000, []);
-  await expect(result).rejects.toMatchObject({
-    code: "CONFLICT",
-    message: expect.stringContaining("сменил пункт выдачи"),
-  });
-});
-
-test("a balance billed by hand does not need a saved quote", async () => {
-  const { result, where } = (() => {
-    const { db, where } = fakeDb(390000);
-    const handler = requestBalance["~orpc"].handler;
-    return {
-      where,
-      result: handler({
-        context: { db } as unknown as Parameters<typeof handler>[0]["context"],
-        input: { id: "order", amountDelivery: 450 },
-        path: [],
-        procedure: requestBalance,
-        errors: {},
-        lastEventId: undefined,
-      }),
-    };
-  })();
-  await result;
-  expect(sqlOf(where.mock.calls[0]?.[0])).not.toContain("checkout_snapshot");
 });
 
 function cancelOrder(updated: unknown[]) {

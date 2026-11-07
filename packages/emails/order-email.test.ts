@@ -15,8 +15,7 @@ const order = {
   approvedAt,
   trackingNumber: null,
   declineReason: null,
-  deliveryPointId: null as string | null,
-  deliveryNote: null as string | null,
+  checkoutSnapshot: null as unknown,
 };
 const send = (
   overrides: Partial<typeof order>,
@@ -44,14 +43,66 @@ test("writes about a deposit with the amount and the order link", () => {
   );
 });
 
-test("asks to pick a pickup point only when the order has nowhere to ship", () => {
-  expect(send({})?.props.deliveryPointMissing).toBe(true);
-  expect(send({ deliveryPointId: "77" })?.props.deliveryPointMissing).toBe(
-    false,
-  );
+test("the deposit letter does not ask for a pickup point", () => {
+  const email = send({});
+  expect(email?.props.deliveryQuoteNeeded).toBe(false);
+  expect(email?.props.status).toBe("awaiting_deposit");
+});
+
+test("a finished product asks to pick a pickup point only while the delivery is not priced", () => {
+  const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
+  const finished = { status: "awaiting_balance", amountDelivery: 0 };
+
+  // Мастер указала посылку, покупатель ещё не выбрал пункт
   expect(
-    send({ deliveryNote: "Казань, СДЭК" })?.props.deliveryPointMissing,
+    send({ ...finished, checkoutSnapshot: { parcel, priceKopecks: null } })
+      ?.props.deliveryQuoteNeeded,
+  ).toBe(true);
+  // Доставка посчитана — просим только оплатить
+  expect(
+    send({ ...finished, checkoutSnapshot: { parcel, priceKopecks: 45000 } })
+      ?.props.deliveryQuoteNeeded,
   ).toBe(false);
+  // Ручная доплата: расчёта нет вовсе, доставка названа мастером
+  expect(
+    send({ ...finished, amountDelivery: 45000 })?.props.deliveryQuoteNeeded,
+  ).toBe(false);
+  // Другой статус с тем же снимком — не повод просить пункт
+  expect(
+    send({ checkoutSnapshot: { parcel, priceKopecks: null } })?.props
+      .deliveryQuoteNeeded,
+  ).toBe(false);
+});
+
+test("a balance billed again with other delivery is a new letter", () => {
+  const first = send({ status: "awaiting_balance", amountTotal: 435000 });
+  const second = send({ status: "awaiting_balance", amountTotal: 470000 });
+  const same = send({ status: "awaiting_balance", amountTotal: 435000 });
+
+  // Тот же счёт при повторе webhook не дублируется, другой — уходит заново
+  expect(first?.idempotencyKey).toBe(same?.idempotencyKey);
+  expect(first?.idempotencyKey).not.toBe(second?.idempotencyKey);
+  expect(first?.idempotencyKey).toContain(":435000");
+});
+
+test("a manual delivery of zero keeps the total but is a new letter", () => {
+  const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
+  const waiting = send({
+    status: "awaiting_balance",
+    amountTotal: 390000,
+    checkoutSnapshot: { parcel, priceKopecks: null },
+  });
+  // Мастер выставила доплату заново с бесплатной доставкой: итог тот же
+  const manual = send({
+    status: "awaiting_balance",
+    amountTotal: 390000,
+    checkoutSnapshot: null,
+  });
+
+  expect(waiting?.props.deliveryQuoteNeeded).toBe(true);
+  expect(manual?.props.deliveryQuoteNeeded).toBe(false);
+  // Другой текст письма — другой ключ, иначе Resend ответил бы 409
+  expect(waiting?.idempotencyKey).not.toBe(manual?.idempotencyKey);
 });
 
 test("skips service statuses and buyers without email", () => {

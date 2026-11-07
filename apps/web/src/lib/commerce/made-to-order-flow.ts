@@ -57,30 +57,32 @@ export function madeToOrderPaymentStep(
 }
 
 /**
- * Отправить изделие пока некуда: покупатель не выбрал пункт Ozon, а в старых
- * заявках ещё и не написал адрес текстом.
+ * Доплата ждёт доставку: мастер указала параметры посылки, а покупатель ещё не
+ * выбрал пункт, и Ozon не посчитал стоимость. Пока так, доплата — это только
+ * изделие, платить её рано. Заказ с ручной доставкой (расчёта нет вовсе) и
+ * предоплата сюда не относятся.
  */
-export function needsDeliveryPoint(
-  order: Pick<OrderRow, "kind" | "deliveryPointId" | "deliveryNote">,
+export function needsDeliveryQuote(
+  order: Pick<OrderRow, "kind" | "status" | "checkoutSnapshot">,
 ): boolean {
-  return (
-    order.kind === "made_to_order" &&
-    !order.deliveryPointId &&
-    !order.deliveryNote
-  );
+  if (order.kind !== "made_to_order" || order.status !== "awaiting_balance") {
+    return false;
+  }
+  const snapshot = order.checkoutSnapshot as {
+    parcel?: unknown;
+    priceKopecks?: number | null;
+  } | null;
+  return Boolean(snapshot?.parcel) && snapshot?.priceKopecks == null;
 }
 
-/**
- * Предоплату берём, когда известно, куда отправить изделие. Доплату этим не
- * держим: её выставляет мастер, уже договорившись о доставке.
- */
-export function isDeliveryPointRequiredToPay(
-  order: PaymentStepOrder & Pick<OrderRow, "deliveryPointId" | "deliveryNote">,
+/** Доплату берём, когда выбран пункт и посчитана доставка до него. */
+export function isDeliveryQuoteRequiredToPay(
+  order: PaymentStepOrder & Pick<OrderRow, "checkoutSnapshot">,
   now = new Date(),
 ): boolean {
   return (
-    madeToOrderPaymentStep(order, now)?.type === "deposit" &&
-    needsDeliveryPoint(order)
+    madeToOrderPaymentStep(order, now)?.type === "balance" &&
+    needsDeliveryQuote(order)
   );
 }
 

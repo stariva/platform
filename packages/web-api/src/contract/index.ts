@@ -19,7 +19,6 @@ export {
 } from "./account";
 export {
   AdminNotConfiguredError,
-  type MadeToOrderDeliveryQuote,
   type MadeToOrderParcel,
   madeToOrderParcelSchema,
   OzonNotConfiguredError,
@@ -65,6 +64,8 @@ export {
 export {
   DeliveryPointRequiredError,
   DeliveryPointUnavailableError,
+  DeliveryQuoteFailedError,
+  DeliveryQuoteUnavailableError,
   measurementEntrySchema,
   NothingToPayError,
   OrderDeliveryLockedError,

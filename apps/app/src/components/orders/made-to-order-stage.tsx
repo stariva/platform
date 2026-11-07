@@ -92,6 +92,13 @@ function paymentMessage(order: AdminOrderView): string {
       : "";
   if (order.status === "awaiting_balance") {
     const balance = order.amountTotal - (order.depositAmount ?? 0);
+    if (order.deliveryQuotePending) {
+      return [
+        `Здравствуйте, ${order.contactName}! Ваше изделие по заказу №${order.number} готово.`,
+        `Откройте заказ и выберите пункт выдачи Ozon: сайт посчитает доставку. Доплата — ${rubles.format(balance)} и доставка. Оплатить до ${due}:`,
+        link,
+      ].join("\n");
+    }
     return [
       `Здравствуйте, ${order.contactName}! Ваше изделие по заказу №${order.number} готово.`,
       `Доплата — ${rubles.format(balance)}${order.amountDelivery > 0 ? `, включая доставку ${rubles.format(order.amountDelivery)}` : ""}. Оплатить до ${due}:`,
@@ -190,8 +197,6 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
   }));
   const parsedDelivery = delivery.trim() === "" ? null : parseRubles(delivery);
   const termsValid = parsedPrices.every((item) => item.price !== null);
-  const hasDeliveryPoint =
-    order.deliveryMethod === "pickup" && Boolean(order.deliveryPointId);
   const parcel = parseParcel(parcelFields);
   const amountProducts = parsedPrices.reduce(
     (sum, item) => sum + (item.price ?? 0) * item.quantity,
@@ -226,6 +231,66 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
     order.status === "awaiting_deposit" || order.status === "awaiting_balance";
   const balance = order.amountTotal - (order.depositAmount ?? 0);
 
+  /**
+   * Доплата с доставкой, которую назвала мастер: Ozon её не считает, а
+   * отправление она оформит сама.
+   */
+  const manualBalanceForm = (
+    <>
+      {manualDelivery ? (
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="balance-delivery">Доставка, ₽</Label>
+            <Input
+              id="balance-delivery"
+              inputMode="decimal"
+              value={delivery}
+              placeholder="0 — если доставка бесплатная"
+              onChange={(event) => setDelivery(event.target.value)}
+            />
+            <p className="text-muted-foreground text-xs">
+              Отправление в Ozon не создастся: отправьте заказ сами и укажите
+              номер отправления.
+            </p>
+          </div>
+          {parsedDelivery !== null && (
+            <div className="rounded-lg border p-3">
+              <Line label="Доплата">
+                {rubles.format(
+                  order.amountProducts -
+                    (order.depositAmount ?? 0) +
+                    parsedDelivery,
+                )}
+              </Line>
+            </div>
+          )}
+          <Button
+            className="w-full"
+            variant="outline"
+            disabled={parsedDelivery === null || busy}
+            onClick={() =>
+              parsedDelivery !== null &&
+              requestBalance.mutate({
+                id: order.id,
+                amountDelivery: parsedDelivery,
+              })
+            }
+          >
+            Выставить доплату с этой доставкой
+          </Button>
+        </div>
+      ) : (
+        <Button
+          className="w-full"
+          variant="ghost"
+          onClick={() => setManualDelivery(true)}
+        >
+          Указать доставку вручную…
+        </Button>
+      )}
+    </>
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -236,8 +301,8 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
           <div className="space-y-4">
             <p className="text-muted-foreground text-sm">
               Свяжитесь с покупателем, согласуйте цену и мерки. После одобрения
-              покупателю откроется предоплата 50%. Доставку Ozon посчитает,
-              когда изделие будет готово.
+              покупателю откроется предоплата 50%. Пункт выдачи и доставку
+              выберет покупатель, когда изделие будет готово.
             </p>
             {order.items.map((item) => (
               <div key={item.id} className="space-y-1.5">
@@ -314,9 +379,25 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
                 </>
               ) : (
                 <>
-                  <Line label="Доплата">{rubles.format(balance)}</Line>
-                  <Line label="В том числе доставка">
-                    {rubles.format(order.amountDelivery)}
+                  <Line
+                    label={
+                      order.deliveryQuotePending
+                        ? "Доплата без доставки"
+                        : "Доплата"
+                    }
+                  >
+                    {rubles.format(balance)}
+                  </Line>
+                  <Line
+                    label={
+                      order.deliveryQuotePending
+                        ? "Доставка"
+                        : "В том числе доставка"
+                    }
+                  >
+                    {order.deliveryQuotePending
+                      ? "ждём пункт покупателя"
+                      : rubles.format(order.amountDelivery)}
                   </Line>
                 </>
               )}
@@ -334,6 +415,16 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
             <Button className="w-full" variant="outline" onClick={copyMessage}>
               Скопировать сообщение со ссылкой
             </Button>
+            {order.status === "awaiting_balance" && (
+              <div className="space-y-3 rounded-lg border p-3">
+                <p className="text-muted-foreground text-sm">
+                  {order.deliveryQuotePending
+                    ? "Покупатель выбирает пункт выдачи на странице заказа, и сайт считает доставку Ozon. Если Ozon её не посчитает (например, покупателя нет в Ozon), укажите стоимость вручную: доплата выставится заново, а отправление вы оформите сами."
+                    : "Если покупатель сменил пункт, а Ozon не смог посчитать доставку до него, или стоимость нужно поменять, укажите её вручную: доплата выставится заново, а отправление вы оформите сами."}
+                </p>
+                {manualBalanceForm}
+              </div>
+            )}
             <Button
               className="w-full"
               variant="outline"
@@ -362,99 +453,43 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
               {order.depositPaidAt &&
                 ` ${dateTime.format(new Date(order.depositPaidAt))}`}
               . Когда изделие будет готово, упакуйте его и укажите вес и размеры
-              посылки: сайт посчитает доставку Ozon до пункта покупателя и
-              выставит доплату.
+              посылки: доплата выставится за изделие. Покупатель сам выберет
+              пункт выдачи, и сайт посчитает доставку Ozon и добавит её к
+              доплате.
             </p>
-            {hasDeliveryPoint ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  {PARCEL_FIELDS.map(({ key, label }) => (
-                    <div key={key} className="space-y-1.5">
-                      <Label htmlFor={`parcel-${key}`}>{label}</Label>
-                      <Input
-                        id={`parcel-${key}`}
-                        inputMode="numeric"
-                        value={parcelFields[key]}
-                        onChange={(event) =>
-                          setParcelFields((prev) => ({
-                            ...prev,
-                            [key]: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  className="w-full"
-                  disabled={!parcel || busy}
-                  onClick={() =>
-                    parcel &&
-                    requestBalanceWithOzon.mutate({ id: order.id, parcel })
-                  }
-                >
-                  {requestBalanceWithOzon.isPending
-                    ? "Считаем доставку…"
-                    : "Готово — посчитать доставку и выставить доплату"}
-                </Button>
-              </div>
-            ) : (
-              <p className="rounded-lg border p-3 text-sm">
-                Покупатель ещё не выбрал пункт выдачи Ozon. Он может сделать это
-                на странице заказа: {orderPageUrl(order.id)}
-              </p>
-            )}
-            {manualDelivery ? (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="balance-delivery">Доставка, ₽</Label>
-                  <Input
-                    id="balance-delivery"
-                    inputMode="decimal"
-                    value={delivery}
-                    placeholder="0 — если доставка бесплатная"
-                    onChange={(event) => setDelivery(event.target.value)}
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Отправление в Ozon не создастся: отправьте заказ сами и
-                    укажите номер отправления.
-                  </p>
-                </div>
-                {parsedDelivery !== null && (
-                  <div className="rounded-lg border p-3">
-                    <Line label="Доплата">
-                      {rubles.format(
-                        order.amountProducts -
-                          (order.depositAmount ?? 0) +
-                          parsedDelivery,
-                      )}
-                    </Line>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {PARCEL_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="space-y-1.5">
+                    <Label htmlFor={`parcel-${key}`}>{label}</Label>
+                    <Input
+                      id={`parcel-${key}`}
+                      inputMode="numeric"
+                      value={parcelFields[key]}
+                      onChange={(event) =>
+                        setParcelFields((prev) => ({
+                          ...prev,
+                          [key]: event.target.value,
+                        }))
+                      }
+                    />
                   </div>
-                )}
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  disabled={parsedDelivery === null || busy}
-                  onClick={() =>
-                    parsedDelivery !== null &&
-                    requestBalance.mutate({
-                      id: order.id,
-                      amountDelivery: parsedDelivery,
-                    })
-                  }
-                >
-                  Выставить доплату с этой доставкой
-                </Button>
+                ))}
               </div>
-            ) : (
               <Button
                 className="w-full"
-                variant="ghost"
-                onClick={() => setManualDelivery(true)}
+                disabled={!parcel || busy}
+                onClick={() =>
+                  parcel &&
+                  requestBalanceWithOzon.mutate({ id: order.id, parcel })
+                }
               >
-                Указать доставку вручную…
+                {requestBalanceWithOzon.isPending
+                  ? "Выставляем доплату…"
+                  : "Готово — выставить доплату"}
               </Button>
-            )}
+            </div>
+            {manualBalanceForm}
           </div>
         )}
 

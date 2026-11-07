@@ -24,6 +24,8 @@ export interface AdminOrderView {
   requestNumber: number | null;
   deliveryMethod: "pickup" | "courier" | "manual";
   deliveryPointId: string | null;
+  /** Доплата ждёт, пока покупатель выберет пункт и сайт посчитает доставку. */
+  deliveryQuotePending: boolean;
   deliveryAddress: {
     address: string | null;
     title: string | null;
