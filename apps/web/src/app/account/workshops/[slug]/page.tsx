@@ -4,11 +4,13 @@ import { getWorkshopReview, hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CommunityNote } from "@/components/stariva/community-invite";
+import { SupportChatCard } from "@/components/stariva/support-chat";
 import {
   getCourseProgressMap,
   getCourseProgressSummary,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { supportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   getWorkshopLessons,
@@ -62,6 +64,7 @@ export default async function AccountCoursePage({
   const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
 
+  const supportChat = supportChatUrl(slug);
   const materialFiles = workshop.materialFiles ?? [];
   const brief =
     workshop.materials.length > 0 ||
@@ -102,6 +105,13 @@ export default async function AccountCoursePage({
         <PreorderNotice workshop={workshop} releaseAt={workshop.releaseAt} />
         {/* Материалы лучше купить заранее — до старта уроков */}
         {brief}
+        {supportChat ? (
+          <SupportChatCard
+            href={supportChat}
+            text="Вопросы про материалы и подготовку — в чат: Ольга и другие участницы подскажут. После старта там же можно показать, что получилось."
+            className="mt-6 border border-espresso/10"
+          />
+        ) : null}
         <CommunityNote
           source="account_preorder"
           title="Пока ждёте старта"
@@ -306,6 +316,13 @@ export default async function AccountCoursePage({
       </section>
 
       {!reviewOnTop && reviewBlock && <div className="mt-8">{reviewBlock}</div>}
+
+      {supportChat ? (
+        <SupportChatCard
+          href={supportChat}
+          className="mt-8 border border-espresso/10"
+        />
+      ) : null}
 
       <CommunityNote
         source="account_course"
