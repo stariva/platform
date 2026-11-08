@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectImageType, productImageKey } from "./catalog";
+import { detectImageType, productImageKey, reviewImageKey } from "./catalog";
 
 const bytes = (...parts: (number[] | string)[]) =>
   new Uint8Array(
@@ -42,4 +42,14 @@ test("image key depends on content", () => {
   const key = productImageKey("p", bytes([1, 2, 3]), "image/png");
   assert.match(key, /^products\/p\/[0-9a-f]{16}\.png$/);
   assert.equal(productImageKey("p", bytes([1, 2, 3]), "image/png"), key);
+});
+
+test("review photo keys differ per upload when a nonce is given", () => {
+  const photo = bytes([0xff, 0xd8, 0xff, 0xe0]);
+  const plain = reviewImageKey("r-1", photo, "image/jpeg");
+  assert.match(plain, /^reviews\/r-1\/[0-9a-f]{16}\.jpg$/);
+  const first = reviewImageKey("r-1", photo, "image/jpeg", "aaaa1111");
+  const second = reviewImageKey("r-1", photo, "image/jpeg", "bbbb2222");
+  assert.notEqual(first, second);
+  assert.match(first, /^reviews\/r-1\/[0-9a-f]{16}-aaaa1111\.jpg$/);
 });

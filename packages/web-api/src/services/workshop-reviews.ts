@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { logger } from "@stariva/config";
-import { and, db, eq } from "@stariva/db";
+import { and, db, eq, sql } from "@stariva/db";
 import { type ReviewRow, reviews, workshops } from "@stariva/db/schema";
 import {
   deletePublicObjects,
@@ -79,7 +79,7 @@ export const REVIEW_NOTIFY_INTERVAL_MS = 10 * 60 * 1000;
 
 /**
  * Сохраняет отзыв о мастер-классе: новые фото кладёт в публичный бакет под
- * ключом от содержимого, убранные автором — удаляет. Отзыв всегда уходит на
+ * уникальным ключом, убранные автором — удаляет. Отзыв всегда уходит на
  * проверку: на сайте его покажут только после неё.
  */
 export async function saveWorkshopReview(
@@ -109,19 +109,21 @@ export async function saveWorkshopReview(
     return { status: "unavailable" };
   }
 
-  // Фото грузим до транзакции: держать блокировку строки, пока идёт загрузка
-  // в бакет, незачем. Id нужен только как папка для файлов.
+  // Фото грузим до транзакции: держать блокировку, пока идёт загрузка в
+  // бакет, незачем. Id нужен только как папка для файлов.
   const known = await findReviewRow(input.userId, input.workshopSlug);
   const id = known?.id ?? randomUUID();
-  // Файлы, на которые уже ссылается отзыв: при откате их не трогаем, даже
-  // если автор загрузил тот же снимок ещё раз (ключ зависит от содержимого)
-  const referenced = new Set(known?.photos ?? []);
-  const discardUploads = (urls: string[]) =>
-    removePhotos(urls.filter((url) => !referenced.has(url)));
+  // У каждой загрузки свой ключ, даже у того же снимка: эти файлы ещё ни на
+  // что не ссылаются, и при откате их можно удалить, не задев чужие ссылки
+  const discardUploads = (urls: string[]) => removePhotos(urls);
 
   const uploads = await Promise.allSettled(
     files.map(({ bytes, type }) =>
-      uploadPublicObject(reviewImageKey(id, bytes, type), bytes, type),
+      uploadPublicObject(
+        reviewImageKey(id, bytes, type, randomUUID().slice(0, 8)),
+        bytes,
+        type,
+      ),
     ),
   );
   const uploaded = uploads.flatMap((u) =>
@@ -139,8 +141,12 @@ export async function saveWorkshopReview(
   let saved: { row: ReviewRow; before: ReviewRow | undefined };
   try {
     saved = await db.transaction(async (tx) => {
-      // Строку перечитываем под блокировкой: два сохранения из разных вкладок
-      // идут по очереди, и каждое видит фото, записанные предыдущим
+      // Сохранения одного отзыва идут по очереди, и каждое видит версию,
+      // записанную предыдущим. Блокировка по ключу, а не по строке: её
+      // берёт и первое сохранение, когда строки ещё нет
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${`workshop-review:${input.userId}:${input.workshopSlug}`}, 0))`,
+      );
       const [before] = await tx
         .select()
         .from(reviews)
@@ -150,14 +156,12 @@ export async function saveWorkshopReview(
             eq(reviews.workshopSlug, input.workshopSlug),
           ),
         )
-        .limit(1)
-        .for("update");
+        .limit(1);
 
       // Оставить можно только свои прежние фото: чужой адрес в отзыв не попадёт
       const kept = input.keepPhotos.filter((url) =>
         before?.photos.includes(url),
       );
-      // Одно и то же фото дважды — один файл: ключ зависит от содержимого
       const photos = [...new Set([...kept, ...uploaded])];
 
       const fields = {
@@ -199,8 +203,9 @@ export async function saveWorkshopReview(
     return { status: "unavailable" };
   }
 
-  // Удаляем только то, чего нет в записанной версии, и только после записи:
-  // список фото взят под той же блокировкой, устареть он не мог
+  // Удаляем только то, чего нет в записанной версии, и только после записи.
+  // Снова сослаться на эти файлы никто не сможет: следующее сохранение
+  // увидит версию без них, а свежие загрузки получают новые ключи
   const { row, before } = saved;
   await removePhotos(
     (before?.photos ?? []).filter((url) => !row.photos.includes(url)),

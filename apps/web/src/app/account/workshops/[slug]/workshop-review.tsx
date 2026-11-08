@@ -173,16 +173,28 @@ function ReviewForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Превью живут в памяти браузера, пока их не отпустить
-  const previews = useRef(newPhotos);
-  previews.current = newPhotos;
+  // Превью живут в памяти браузера, пока их не отпустить. Адреса учитываем
+  // сразу при создании, а не через состояние: форма может закрыться раньше,
+  // чем новые превью попадут в рендер
+  const liveUrls = useRef(new Set<string>());
+  const makePreview = (file: File) => {
+    const url = URL.createObjectURL(file);
+    liveUrls.current.add(url);
+    return url;
+  };
+  const dropPreview = (url: string) => {
+    URL.revokeObjectURL(url);
+    liveUrls.current.delete(url);
+  };
   // Сжатие идёт дольше, чем форма может прожить: «Отмена» во время него
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
+    const urls = liveUrls.current;
     return () => {
       mounted.current = false;
-      for (const photo of previews.current) URL.revokeObjectURL(photo.preview);
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls.clear();
     };
   }, []);
 
@@ -210,7 +222,7 @@ function ReviewForm({
       if (!mounted.current) return;
       const added = compressed.map((file) => ({
         file,
-        preview: URL.createObjectURL(file),
+        preview: makePreview(file),
       }));
       setNewPhotos((current) => [...current, ...added]);
       if (files.length > room) {
@@ -223,7 +235,7 @@ function ReviewForm({
   }
 
   function removeNewPhoto(photo: NewPhoto) {
-    URL.revokeObjectURL(photo.preview);
+    dropPreview(photo.preview);
     setNewPhotos((current) => current.filter((p) => p !== photo));
   }
 
@@ -248,7 +260,7 @@ function ReviewForm({
         photos: newPhotos.map((photo) => photo.file),
         publishConsent: true,
       });
-      for (const photo of newPhotos) URL.revokeObjectURL(photo.preview);
+      for (const photo of newPhotos) dropPreview(photo.preview);
       setNewPhotos([]);
       reachGoal(review ? "workshop_review_edit" : "workshop_review_sent", {
         workshop: slug,

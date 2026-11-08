@@ -20,6 +20,7 @@ import {
   reviewsHref,
 } from "@/lib/reviews-listing";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -211,6 +212,13 @@ export default async function ReviewsPage({
   for (const p of await getProducts()) {
     productHrefs.set(p.id, productHref(p));
   }
+  // Ссылка на мастер-класс — только пока он продаётся: у архивного страницы нет
+  const workshopHrefs = new Map(
+    (await fetchPublishedWorkshops()).map((w) => [
+      w.slug,
+      `/workshops/${w.slug}`,
+    ]),
+  );
 
   return (
     <div className="bg-parchment text-espresso pt-[60px] lg:pt-[68px]">
@@ -270,7 +278,7 @@ export default async function ReviewsPage({
                     index={i}
                     productHref={
                       review.workshopSlug
-                        ? `/workshops/${review.workshopSlug}`
+                        ? workshopHrefs.get(review.workshopSlug)
                         : productHrefs.get(review.productIds[0] ?? "")
                     }
                   />

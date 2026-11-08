@@ -102,18 +102,20 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
       notify: false,
     });
 
-    // Две вкладки: одна убирает второе фото, другая оставляет оба. Какая бы
-    // ни записала последней, в отзыве не должно остаться удалённого файла
+    // Две вкладки: одна убирает второе фото, другая оставляет оба и заново
+    // загружает уже бывший в отзыве снимок. Какая бы ни записала последней,
+    // в отзыве не должно остаться удалённого файла
     for (let round = 0; round < 5; round++) {
       const current = (await row()).photos;
-      await Promise.all([save([current[0] as string]), save(current)]);
+      await Promise.all([
+        save([current[0] as string]),
+        save(current, [photo(1)]),
+      ]);
       const after = await row();
       expect(after.photos.length).toBeGreaterThan(0);
       for (const src of after.photos) expect(isStored(src)).toBe(true);
-      // Вернуть второе фото для следующего раунда
-      if (after.photos.length === 1) {
-        await save(after.photos, [photo(10 + round)]);
-      }
+      // Оставить два фото для следующего раунда
+      await save(after.photos.slice(0, 1), [photo(10 + round)]);
     }
 
     // Сбой одной загрузки: остальные новые файлы убираются, отзыв прежний
@@ -144,5 +146,41 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
     // Фото убраны из отзыва — и из бакета
     expect(stored.size).toBe(0);
     expect(deleted).toContain(p1.slice(CDN.length));
+
+    // Два первых сохранения разом, строки ещё нет: второе ждёт первое и
+    // видит его версию — отзыв один, лишних файлов в бакете не остаётся
+    const secondUser = crypto.randomUUID();
+    await db.insert(user).values({
+      id: secondUser,
+      name: "Мария",
+      email: `${secondUser}@example.test`,
+    });
+    const results = await Promise.all([
+      saveWorkshopReview({
+        ...base,
+        userId: secondUser,
+        keepPhotos: [],
+        photos: [photo(70)],
+      }),
+      saveWorkshopReview({
+        ...base,
+        userId: secondUser,
+        keepPhotos: [],
+        photos: [photo(71)],
+      }),
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["ok", "ok"]);
+    // Ровно одно из них создало отзыв, второе его изменило
+    expect(results.filter((r) => r.status === "ok" && r.created)).toHaveLength(
+      1,
+    );
+    const rows = await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.userId, secondUser));
+    expect(rows).toHaveLength(1);
+    expect(
+      new Set(rows[0]?.photos.map((src) => src.slice(CDN.length))),
+    ).toEqual(stored);
   },
 );
