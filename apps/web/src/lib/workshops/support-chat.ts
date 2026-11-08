@@ -1,14 +1,25 @@
+import { db, eq } from "@stariva/db";
+import { workshops } from "@stariva/db/schema";
+import { cache } from "react";
+
 /**
- * Чат поддержки для тех, кто купил мастер-класс по ёлке. Приглашение закрытое,
- * поэтому модуль подключают только серверные страницы кабинета и «Вы записаны»:
- * в клиентский код ссылка не попадает.
+ * Ссылка на закрытый чат поддержки курса (поле «Чат поддержки» в админке) или
+ * null, если у курса его нет.
+ *
+ * Приглашение видят только купившие, поэтому его нет в `Workshop`: этот тип
+ * уходит на витрину и в клиентские компоненты. Вызывают только серверные
+ * страницы кабинета и «Вы записаны», уже проверив доступ.
+ *
+ * Ошибку базы не глотаем: страница кабинета и так упала бы на соседних
+ * запросах, а молча пропавший чат выглядел бы как «у курса его нет».
  */
-const TREE_SUPPORT_CHAT_URL = "https://t.me/+nzXZQ0mgbok1ZjZi";
-
-/** Мастер-классы по ёлке: у каждого купившего есть доступ в чат. */
-const TREE_WORKSHOP_SLUGS = new Set(["elka-makrame", "elka-makrame-bolshaya"]);
-
-/** Ссылка на чат поддержки курса или null, если у курса его нет. */
-export function supportChatUrl(workshopSlug: string): string | null {
-  return TREE_WORKSHOP_SLUGS.has(workshopSlug) ? TREE_SUPPORT_CHAT_URL : null;
-}
+export const getSupportChatUrl = cache(
+  async (workshopSlug: string): Promise<string | null> => {
+    const [row] = await db
+      .select({ supportChatUrl: workshops.supportChatUrl })
+      .from(workshops)
+      .where(eq(workshops.slug, workshopSlug))
+      .limit(1);
+    return row?.supportChatUrl || null;
+  },
+);

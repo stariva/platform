@@ -18,7 +18,7 @@ import {
 } from "@/lib/workshops/order-cookie";
 import { syncPendingWorkshopOrder } from "@/lib/workshops/order-payment";
 import { earnsPreorderBonus } from "@/lib/workshops/preorder-bonus";
-import { supportChatUrl } from "@/lib/workshops/support-chat";
+import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   formatReleaseDateTime,
@@ -132,7 +132,7 @@ const secondaryButton =
  * Показывает подтверждение оплаты, способы входа в кабинет и подготовки к
  * старту; подарок отображается, если заказ оформлен до выхода основного курса.
  */
-function Paid({
+async function Paid({
   workshop,
   order,
   isOwner,
@@ -161,7 +161,7 @@ function Paid({
   });
   const bundle = getBundle(order.bundleSlug);
   const bundleExtra = bundleExtraFor(order.bundleSlug);
-  const supportChat = supportChatUrl(workshop.slug);
+  const supportChat = await getSupportChatUrl(workshop.slug);
 
   return (
     <div className="flex flex-col gap-5">

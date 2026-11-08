@@ -10,7 +10,7 @@ import {
   getCourseProgressSummary,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { supportChatUrl } from "@/lib/workshops/support-chat";
+import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   getWorkshopLessons,
@@ -64,7 +64,6 @@ export default async function AccountCoursePage({
   const workshop = await getWorkshopBySlug(slug, "owned");
   if (!workshop) notFound();
 
-  const supportChat = supportChatUrl(slug);
   const materialFiles = workshop.materialFiles ?? [];
   const brief =
     workshop.materials.length > 0 ||
@@ -86,6 +85,8 @@ export default async function AccountCoursePage({
   if (!admin && !(await hasAccess(session.user.id, slug))) {
     redirect(`/workshops/${slug}`);
   }
+
+  const supportChat = await getSupportChatUrl(slug);
 
   if (!admin && isPreorder(workshop) && workshop.releaseAt) {
     return (

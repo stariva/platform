@@ -60,6 +60,7 @@ export const EMPTY_WORKSHOP: WorkshopFormValues = {
   materialFiles: [],
   brief: EMPTY_WORKSHOP_BRIEF_VALUES,
   ozonUrl: "",
+  supportChatUrl: "",
   featured: false,
   sortOrder: 0,
   testimonialText: "",
@@ -456,6 +457,18 @@ export function WorkshopForm({
               error={errors.ozonUrl?.message}
             >
               <Input id="ozonUrl" {...register("ozonUrl")} />
+            </FieldRow>
+            <FieldRow
+              label="Чат поддержки"
+              htmlFor="supportChatUrl"
+              hint="Ссылка-приглашение в Telegram для купивших. Видна только им — в кабинете и после оплаты. Пусто — чата нет."
+              error={errors.supportChatUrl?.message}
+            >
+              <Input
+                id="supportChatUrl"
+                placeholder="https://t.me/+…"
+                {...register("supportChatUrl")}
+              />
             </FieldRow>
           </CardContent>
         </Card>
