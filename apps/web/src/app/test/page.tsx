@@ -6,7 +6,7 @@ export default function SynoroBooking() {
     function handleMessage(e) {
       if (!e.data || e.data.type !== "synoro:height") return;
 
-      document.querySelectorAll("iframe[data-synoro]").forEach((frame) => {
+      document.querySelectorAll("iframe[data-synoro]").forEach((frame: any) => {
         if (frame.contentWindow === e.source) {
           frame.style.height = `${e.data.height}px`;
         }
