@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 export default function SynoroBooking() {
   useEffect(() => {
-    function handleMessage(e) {
+    function handleMessage(e: any) {
       if (!e.data || e.data.type !== "synoro:height") return;
 
       document.querySelectorAll("iframe[data-synoro]").forEach((frame: any) => {
