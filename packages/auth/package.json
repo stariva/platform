@@ -25,7 +25,7 @@
   "devDependencies": {
     "@better-auth/cli": "1.4.21",
     "@stariva/tsconfig": "workspace:*",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "typescript": "7.1.0-beta"
   }
 }
