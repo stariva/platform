@@ -127,7 +127,10 @@ export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
 
   const byDate = (a: Review, b: Review) => b.date.localeCompare(a.date);
   if (productId) {
-    return all.filter((r) => r.productIds.includes(productId)).sort(byDate);
+    // Отзыв о мастер-классе на карточке изделия исказил бы его рейтинг
+    return all
+      .filter((r) => !r.workshopSlug && r.productIds.includes(productId))
+      .sort(byDate);
   }
 
   const score = (r: Review) =>

@@ -8,6 +8,7 @@ import {
   isPublicStorageConfigured,
   publicObjectKey,
   reviewImageKey,
+  stripImageMetadata,
   uploadPublicObject,
 } from "@stariva/storage";
 import type { WorkshopReview } from "../contract";
@@ -65,8 +66,16 @@ export type SaveWorkshopReviewResult =
       created: boolean;
       /** До правки отзыв был на сайте — страницы с ним нужно обновить */
       wasPublished: boolean;
+      /**
+       * Сообщить мастеру: отзыв новый, был на сайте или давно не менялся.
+       * Серия правок подряд — одно сообщение, отзыв она прочитает последним.
+       */
+      notify: boolean;
     }
   | { status: "not_found" | "unavailable" | "photo_invalid" };
+
+/** Правки чаще этого не будят мастера новым сообщением. */
+export const REVIEW_NOTIFY_INTERVAL_MS = 10 * 60 * 1000;
 
 /**
  * Сохраняет отзыв о мастер-классе: новые фото кладёт в публичный бакет под
@@ -86,10 +95,14 @@ export async function saveWorkshopReview(
 
   const files: { bytes: Uint8Array; type: string }[] = [];
   for (const file of input.photos) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    const raw = new Uint8Array(await file.arrayBuffer());
     // Заголовку от браузера не верим — тип по сигнатуре файла
-    const type = detectImageType(bytes);
+    const type = detectImageType(raw);
     if (!type) return { status: "photo_invalid" };
+    // Фото уйдёт на публичный сайт: координаты съёмки и прочий EXIF убираем
+    // и здесь, даже если запрос пришёл мимо формы, которая уже перекодировала
+    const bytes = stripImageMetadata(raw, type);
+    if (!bytes) return { status: "photo_invalid" };
     files.push({ bytes, type });
   }
   if (files.length > 0 && !isPublicStorageConfigured()) {
@@ -155,6 +168,9 @@ export async function saveWorkshopReview(
         productTitle: workshop.title,
         reviewedAt: now,
         publishConsentAt: now,
+        // Версия отзыва: админка публикует только ту, что видела. При вставке
+        // и при ON CONFLICT ставим сами — $onUpdateFn тут не срабатывает
+        updatedAt: now,
         // Изменённый отзыв снова проверяют, прежде чем показать
         published: false,
       };
@@ -196,6 +212,10 @@ export async function saveWorkshopReview(
     workshopTitle: workshop.title,
     created: !before,
     wasPublished: before?.published ?? false,
+    notify:
+      !before ||
+      before.published ||
+      now.getTime() - before.updatedAt.getTime() >= REVIEW_NOTIFY_INTERVAL_MS,
   };
 }
 

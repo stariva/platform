@@ -32,6 +32,8 @@ export interface AdminReview {
   productIds: string[];
   photos: string[];
   reviewedAt: string;
+  /** Версия отзыва: публикуем только ту, что видна в таблице */
+  updatedAt: string;
   published: boolean;
   showPhotos: boolean;
   /** Отзыв участницы о мастер-классе из кабинета */
@@ -104,7 +106,12 @@ export function ReviewsTable({
       setReviews((current) =>
         current.map((r) =>
           r.id === review.id
-            ? { ...r, ...review, reviewedAt: review.reviewedAt.toISOString() }
+            ? {
+                ...r,
+                ...review,
+                reviewedAt: review.reviewedAt.toISOString(),
+                updatedAt: review.updatedAt.toISOString(),
+              }
             : r,
         ),
       );
@@ -270,7 +277,11 @@ export function ReviewsTable({
                     disabled={update.isPending}
                     aria-label="Показывать отзыв на сайте"
                     onCheckedChange={(published) =>
-                      update.mutate({ id: review.id, published })
+                      update.mutate({
+                        id: review.id,
+                        published,
+                        expectedUpdatedAt: review.updatedAt,
+                      })
                     }
                   />
                 </TableCell>

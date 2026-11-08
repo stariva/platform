@@ -129,13 +129,15 @@ const saveWorkshopReview = account.saveWorkshopReview.handler(
     if (result.wasPublished) {
       context.services.revalidatePaths(workshopReviewPages(input.slug));
     }
-    context.services.notifyWorkshopReview({
-      workshopSlug: input.slug,
-      workshopTitle: result.workshopTitle,
-      email: user.email,
-      created: result.created,
-      review: result.review,
-    });
+    // Серия правок подряд — одно сообщение мастеру, а не по одному на каждую
+    if (result.notify)
+      context.services.notifyWorkshopReview({
+        workshopSlug: input.slug,
+        workshopTitle: result.workshopTitle,
+        email: user.email,
+        created: result.created,
+        review: result.review,
+      });
     return result.review;
   },
 );

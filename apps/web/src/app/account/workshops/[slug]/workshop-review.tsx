@@ -176,12 +176,15 @@ function ReviewForm({
   // Превью живут в памяти браузера, пока их не отпустить
   const previews = useRef(newPhotos);
   previews.current = newPhotos;
-  useEffect(
-    () => () => {
+  // Сжатие идёт дольше, чем форма может прожить: «Отмена» во время него
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       for (const photo of previews.current) URL.revokeObjectURL(photo.preview);
-    },
-    [],
-  );
+    };
+  }, []);
 
   const photoCount = keptPhotos.length + newPhotos.length;
   const canAddPhoto = photoCount < MAX_REVIEW_PHOTOS;
@@ -193,20 +196,22 @@ function ReviewForm({
     setPreparing(true);
     setError(null);
     try {
-      const added: NewPhoto[] = [];
+      const compressed: File[] = [];
       for (const file of picked) {
         try {
-          const compressed = await compressReviewPhoto(file);
-          added.push({
-            file: compressed,
-            preview: URL.createObjectURL(compressed),
-          });
+          compressed.push(await compressReviewPhoto(file));
         } catch {
           setError(
             "Не получилось открыть одно из фото. Выберите снимок в формате JPG или PNG",
           );
         }
       }
+      // Форму закрыли, пока шло сжатие: превью некому показать и освободить
+      if (!mounted.current) return;
+      const added = compressed.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+      }));
       setNewPhotos((current) => [...current, ...added]);
       if (files.length > room) {
         toast.info(`Можно приложить не больше ${MAX_REVIEW_PHOTOS} фото`);
@@ -286,20 +291,25 @@ function ReviewForm({
         <fieldset>
           <legend className="text-sm text-espresso mb-2">Оценка</legend>
           <div className="flex items-center gap-3">
-            <div className="flex gap-1" role="radiogroup" aria-label="Оценка">
+            {/* Нативные радиокнопки: одна остановка Tab на группу, выбор
+                стрелками — клавиатура работает без своей обвязки */}
+            <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((value) => (
-                // biome-ignore lint/a11y/useSemanticElements: звёзды — кнопки с ролью radio, как у рейтингов
-                <button
+                <label
                   key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={rating === value}
-                  aria-label={`${value} из 5 — ${RATING_LABELS[value]}`}
-                  onClick={() => setRating(value)}
-                  className="p-0.5 text-terracotta transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/50 rounded"
+                  className="cursor-pointer p-0.5 text-terracotta transition-transform hover:scale-110 rounded has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-terracotta/50"
                 >
+                  <input
+                    type="radio"
+                    name={`${id}-rating`}
+                    value={value}
+                    checked={rating === value}
+                    onChange={() => setRating(value)}
+                    aria-label={`${value} из 5 — ${RATING_LABELS[value]}`}
+                    className="sr-only"
+                  />
                   <StarIcon filled={value <= rating} className="size-7" />
-                </button>
+                </label>
               ))}
             </div>
             {rating > 0 && (

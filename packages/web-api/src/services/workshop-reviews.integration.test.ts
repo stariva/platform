@@ -21,7 +21,8 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
       uploadPublicObject: async (key: string, bytes: Uint8Array) => {
         // Медленная загрузка, чтобы сохранения из «двух вкладок» пересекались
         await Bun.sleep(5);
-        if (bytes[3] === failUploadOf) throw new Error("s3 is down");
+        if (bytes[6] === failUploadOf) throw new Error("s3 is down");
+        uploadedBytes.push(bytes);
         stored.add(key);
         return `${CDN}${key}`;
       },
@@ -51,11 +52,21 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
       .insert(user)
       .values({ id: userId, name: "Анна", email: `${userId}@example.test` });
 
-    // JPEG по сигнатуре; четвёртый байт отличает снимки друг от друга
+    // Минимальный JPEG: APP0 с номером снимка, EXIF с «координатами», данные.
+    // Номер (седьмой байт) отличает снимки друг от друга
     const photo = (n: number) =>
-      new File([new Uint8Array([0xff, 0xd8, 0xff, n, 1, 2, 3])], `${n}.jpg`, {
-        type: "image/jpeg",
-      });
+      new File(
+        [
+          new Uint8Array([
+            ...[0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, n, 0x00],
+            ...[0xff, 0xe1, 0x00, 0x05, 0x47, 0x50, 0x53],
+            ...[0xff, 0xda, 0x00, 0x02, 0x01, 0x02, 0xff, 0xd9],
+          ]),
+        ],
+        `${n}.jpg`,
+        { type: "image/jpeg" },
+      );
+    const uploadedBytes: Uint8Array[] = [];
     const base = {
       userId,
       workshopSlug,
@@ -77,9 +88,19 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
 
     const first = await save([], [photo(1), photo(2)]);
     expect(first).toMatchObject({ status: "ok", created: true });
+    expect(first).toMatchObject({ notify: true });
     const [p1, p2] = (await row()).photos;
     if (!p1 || !p2) throw new Error("photos were not saved");
     expect((await row()).source).toBe("site");
+    // В бакет ушли файлы без EXIF: APP1 с «GPS» вырезан
+    for (const sent of uploadedBytes) {
+      expect(Buffer.from(sent).includes(Buffer.from("GPS"))).toBe(false);
+    }
+    // Правка сразу следом — без нового сообщения мастеру
+    expect(await save([p1, p2])).toMatchObject({
+      status: "ok",
+      notify: false,
+    });
 
     // Две вкладки: одна убирает второе фото, другая оставляет оба. Какая бы
     // ни записала последней, в отзыве не должно остаться удалённого файла

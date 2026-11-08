@@ -34,6 +34,7 @@ export default async function ReviewsPage() {
           initialReviews={reviews.map((review) => ({
             ...review,
             reviewedAt: review.reviewedAt.toISOString(),
+            updatedAt: review.updatedAt.toISOString(),
           }))}
           products={products.map(({ id, name, ozonOfferId }) => ({
             id,

@@ -33,6 +33,7 @@ let reviewResult: ReviewResult = {
   workshopTitle: "Ёлка макраме",
   created: true,
   wasPublished: false,
+  notify: true,
 };
 let reviewCalls: ReviewInput[] = [];
 mock.module("../services/workshop-reviews", () => ({
@@ -321,6 +322,7 @@ test("editing a published review takes it off the pages", async () => {
     workshopTitle: "Ёлка макраме",
     created: false,
     wasPublished: true,
+    notify: true,
   };
   const revalidatePaths = mock((_paths: string[]) => {});
   await wireClient({
@@ -331,6 +333,24 @@ test("editing a published review takes it off the pages", async () => {
     "/workshops/elka-makrame",
     "/reviews",
   ]);
+});
+
+test("a quick series of edits does not ping Olga again", async () => {
+  reviewResult = {
+    status: "ok",
+    review: savedReview,
+    workshopTitle: "Ёлка макраме",
+    created: false,
+    wasPublished: false,
+    notify: false,
+  };
+  const notifyWorkshopReview = mock(() => {});
+  const result = await wireClient({
+    session: reviewSession,
+    services: { notifyWorkshopReview },
+  }).account.saveWorkshopReview(reviewRequest);
+  expect(result).toEqual(savedReview);
+  expect(notifyWorkshopReview).not.toHaveBeenCalled();
 });
 
 test("review refusals become typed errors", async () => {

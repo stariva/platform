@@ -207,6 +207,22 @@ test("workshop reviews stay out of store-wide product reviews", async () => {
   );
 });
 
+test("a workshop review never reaches a product card, even if linked", async () => {
+  fetchReviews.mockResolvedValueOnce([
+    review({ id: "belt", productIds: ["belt-cream"] }),
+    review({
+      id: "mk",
+      source: "site",
+      workshopSlug: "elka-makrame",
+      productIds: ["belt-cream"],
+    }),
+  ]);
+  assert.deepEqual(
+    (await getReviews({ productId: "belt-cream" })).map((r) => r.id),
+    ["belt"],
+  );
+});
+
 test("workshop reviews: only this workshop, photo reviews first", async () => {
   fetchReviews.mockResolvedValueOnce([
     review({
