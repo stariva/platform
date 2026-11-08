@@ -41,7 +41,7 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
       },
     }));
 
-    const { db, eq } = await import("@stariva/db");
+    const { db, eq, sql } = await import("@stariva/db");
     const { reviews, user, workshops } = await import("@stariva/db/schema");
     const { saveWorkshopReview } = await import("./workshop-reviews");
 
@@ -171,7 +171,19 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
     });
     await adminHasRow;
     const racing = save(keep);
-    await Bun.sleep(100);
+    // Отпускаем публикацию, только когда сохранение точно ждёт строку:
+    // Postgres сам показывает запрос, вставший на блокировке
+    const deadline = Date.now() + 5000;
+    for (;;) {
+      const { rows } = (await db.execute(
+        sql`select count(*)::int as waiting from pg_stat_activity
+            where datname = current_database() and wait_event_type = 'Lock'`,
+      )) as { rows: { waiting: number }[] };
+      if ((rows[0]?.waiting ?? 0) > 0) break;
+      if (Date.now() > deadline)
+        throw new Error("save never waited for the row");
+      await Bun.sleep(10);
+    }
     releaseAdmin();
     await admin;
     expect(await racing).toMatchObject({ status: "ok", wasPublished: true });
