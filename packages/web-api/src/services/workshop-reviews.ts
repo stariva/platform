@@ -156,7 +156,12 @@ export async function saveWorkshopReview(
             eq(reviews.workshopSlug, input.workshopSlug),
           ),
         )
-        .limit(1);
+        .limit(1)
+        // Админка advisory-блокировку не берёт: строку держим, чтобы её
+        // публикация не проскочила между чтением и записью. Публикация, что
+        // успела раньше, будет видна здесь (wasPublished), а поздняя дождётся
+        // записи и не пройдёт сверку версии
+        .for("update");
 
       // Оставить можно только свои прежние фото: чужой адрес в отзыв не попадёт
       const kept = input.keepPhotos.filter((url) =>

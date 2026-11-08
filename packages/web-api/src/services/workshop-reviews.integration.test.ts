@@ -14,6 +14,8 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
     const stored = new Set<string>();
     const deleted: string[] = [];
     let failUploadOf: number | null = null;
+    // Вклиниться между коммитом сохранения и удалением его старых файлов
+    let beforeDelete: (() => Promise<void>) | null = null;
     const storage = await import("@stariva/storage");
     mock.module("@stariva/storage", () => ({
       ...storage,
@@ -29,6 +31,9 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
       publicObjectKey: (src: string) =>
         src.startsWith(CDN) ? src.slice(CDN.length) : null,
       deletePublicObjects: async (keys: string[]) => {
+        const hook = beforeDelete;
+        beforeDelete = null;
+        if (hook) await hook();
         for (const key of keys) {
           stored.delete(key);
           deleted.push(key);
@@ -117,6 +122,60 @@ test.skipIf(!process.env.WORKSHOP_REVIEW_TEST_DATABASE_URL)(
       // Оставить два фото для следующего раунда
       await save(after.photos.slice(0, 1), [photo(10 + round)]);
     }
+
+    // Порядок задан хуком: A записал версию без снимка, затем B загрузил тот
+    // же снимок заново и записался, и только потом A удаляет свой старый файл
+    await save([], [photo(90), photo(91)]);
+    const [x90, x91] = (await row()).photos;
+    if (!x90 || !x91) throw new Error("photos were not saved");
+    beforeDelete = async () => {
+      expect(await save([x90], [photo(91)])).toMatchObject({ status: "ok" });
+    };
+    await save([x90]);
+    expect(beforeDelete).toBeNull();
+    const afterForced = await row();
+    expect(afterForced.photos).toHaveLength(2);
+    for (const src of afterForced.photos) expect(isStored(src)).toBe(true);
+    expect(isStored(x91)).toBe(false);
+
+    // Параллельно: одно сохранение кладёт снимок, другое с тем же снимком
+    // падает на загрузке — сохранённое фото остаётся в бакете
+    failUploadOf = 99;
+    const [okSave, failedSave] = await Promise.all([
+      save([x90], [photo(92)]),
+      save([x90], [photo(92), photo(99)]),
+    ]);
+    failUploadOf = null;
+    expect(okSave).toMatchObject({ status: "ok" });
+    expect(failedSave).toEqual({ status: "unavailable" });
+    for (const src of (await row()).photos) expect(isStored(src)).toBe(true);
+
+    // Админка публикует и держит строку, пока сохранение уже ждёт её: оно
+    // дожидается коммита публикации и видит отзыв опубликованным
+    const keep = (await row()).photos;
+    let releaseAdmin = () => {};
+    const adminGate = new Promise<void>((resolve) => {
+      releaseAdmin = resolve;
+    });
+    let adminLocked = () => {};
+    const adminHasRow = new Promise<void>((resolve) => {
+      adminLocked = resolve;
+    });
+    const admin = db.transaction(async (tx) => {
+      await tx
+        .update(reviews)
+        .set({ published: true })
+        .where(eq(reviews.userId, userId));
+      adminLocked();
+      await adminGate;
+    });
+    await adminHasRow;
+    const racing = save(keep);
+    await Bun.sleep(100);
+    releaseAdmin();
+    await admin;
+    expect(await racing).toMatchObject({ status: "ok", wasPublished: true });
+    expect((await row()).published).toBe(false);
 
     // Сбой одной загрузки: остальные новые файлы убираются, отзыв прежний
     const beforeFailure = await row();
