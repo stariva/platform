@@ -393,6 +393,13 @@
       "when": 1794138543776,
       "tag": "0055_workshop_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794167881604,
+      "tag": "0056_workshop_support_chat",
+      "breakpoints": true
     }
   ]
 }

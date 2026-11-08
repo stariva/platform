@@ -31,6 +31,7 @@ export function formToRow(values: WorkshopFormValues) {
     materialFiles: values.materialFiles,
     brief: values.brief,
     ozonUrl: nullIfEmpty(values.ozonUrl),
+    supportChatUrl: nullIfEmpty(values.supportChatUrl),
     testimonialText: nullIfEmpty(values.testimonialText),
     testimonialAuthor: nullIfEmpty(values.testimonialAuthor),
     featured: values.featured,
@@ -61,6 +62,7 @@ export function rowToForm(row: WorkshopRow): WorkshopFormValues {
     // Колонка появилась позже: у старых строк ключей может не быть
     brief: { ...EMPTY_WORKSHOP_BRIEF_VALUES, ...row.brief },
     ozonUrl: row.ozonUrl ?? "",
+    supportChatUrl: row.supportChatUrl ?? "",
     featured: row.featured,
     sortOrder: row.sortOrder,
     testimonialText: row.testimonialText ?? "",

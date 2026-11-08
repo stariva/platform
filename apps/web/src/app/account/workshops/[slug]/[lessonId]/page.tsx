@@ -6,7 +6,7 @@ import { CommunityLinks } from "@/components/stariva/community-invite";
 import { getCourseProgressMap } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
 import { COMMUNITY_LINKS } from "@/lib/community";
-import { supportChatUrl } from "@/lib/workshops/support-chat";
+import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
 import { VideoPlayer } from "./video-player";
@@ -33,7 +33,7 @@ export default async function LessonPlayerPage({
   // Предзаказ: до старта уроки закрыты, в кабинете — дата и подготовка
   if (!admin && isPreorder(workshop)) redirect(`/account/workshops/${slug}`);
 
-  const supportChat = supportChatUrl(slug);
+  const supportChat = await getSupportChatUrl(slug);
   const lessons = getWorkshopLessons(workshop);
   const index = lessons.findIndex((l) => l.id === lessonId);
   if (index === -1) notFound();
@@ -81,16 +81,16 @@ export default async function LessonPlayerPage({
 
           {supportChat ? (
             <p className="mt-3 text-sm text-taupe">
-              Что-то не получается? Напишите в{" "}
+              Обсуждайте мастер-класс, показывайте свои работы и спрашивайте в{" "}
               <a
                 href={supportChat}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-espresso underline underline-offset-4 hover:text-terracotta"
               >
-                чат поддержки
-              </a>{" "}
-              — Ольга подскажет.
+                чате участниц
+              </a>
+              . Если что-то не получается, Ольга подскажет.
             </p>
           ) : COMMUNITY_LINKS.length > 0 ? (
             <p className="mt-3 text-sm text-taupe">

@@ -133,6 +133,10 @@ export const workshops = pgTable(
       .default(sql`'{"howTo":"","shops":[],"outro":"","image":""}'::jsonb`),
 
     ozonUrl: text("ozon_url"),
+    // Закрытый чат поддержки покупателей (приглашение в Telegram). Ссылку
+    // видят только купившие, поэтому на витрину она не попадает. null — у
+    // курса нет чата.
+    supportChatUrl: text("support_chat_url"),
     testimonialText: text("testimonial_text"),
     testimonialAuthor: text("testimonial_author"),
 
