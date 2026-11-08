@@ -81,16 +81,16 @@ export default async function LessonPlayerPage({
 
           {supportChat ? (
             <p className="mt-3 text-sm text-taupe">
-              Что-то не получается? Напишите в{" "}
+              Обсуждайте мастер-класс, показывайте свои работы и спрашивайте в{" "}
               <a
                 href={supportChat}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-espresso underline underline-offset-4 hover:text-terracotta"
               >
-                чат поддержки
-              </a>{" "}
-              — Ольга подскажет.
+                чате участниц
+              </a>
+              . Если что-то не получается, Ольга подскажет.
             </p>
           ) : COMMUNITY_LINKS.length > 0 ? (
             <p className="mt-3 text-sm text-taupe">
