@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { CommunityInvite } from "@/components/stariva/community-invite";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
+import { SupportChatCard } from "@/components/stariva/support-chat";
 import { getSession } from "@/lib/auth/session";
 import { getOrderById } from "@/lib/payments/orders";
 import { clientBotStartUrl } from "@/lib/telegram/client-bot";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/workshops/order-cookie";
 import { syncPendingWorkshopOrder } from "@/lib/workshops/order-payment";
 import { earnsPreorderBonus } from "@/lib/workshops/preorder-bonus";
+import { supportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   formatReleaseDateTime,
@@ -159,6 +161,7 @@ function Paid({
   });
   const bundle = getBundle(order.bundleSlug);
   const bundleExtra = bundleExtraFor(order.bundleSlug);
+  const supportChat = supportChatUrl(workshop.slug);
 
   return (
     <div className="flex flex-col gap-5">
@@ -341,6 +344,8 @@ function Paid({
           </ul>
         </Card>
       ) : null}
+
+      {supportChat ? <SupportChatCard href={supportChat} /> : null}
 
       <CommunityInvite
         source="workshop_booked"
