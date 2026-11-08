@@ -15,6 +15,7 @@ import {
 } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import {
   type ReviewProductOption,
@@ -134,6 +135,20 @@ export function ReviewsTable({
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
   });
 
+  const confirm = useConfirm();
+  const remove = useMutation({
+    ...orpc.admin.reviews.remove.mutationOptions(),
+    onSuccess: ({ id, revalidated }) => {
+      toast.success(
+        revalidated
+          ? "Отзыв удалён, сайт обновлён"
+          : "Отзыв удалён. На сайте он пропадёт в течение часа",
+      );
+      setReviews((current) => current.filter((r) => r.id !== id));
+    },
+    onError: (error: Error) => toast.error(error.message || "Не удалилось"),
+  });
+
   const visible = reviews.filter((r) => matchesFilter(r, filter));
   const publishedCount = reviews.filter((r) => r.published).length;
 
@@ -165,13 +180,16 @@ export function ReviewsTable({
               <TableHead className="w-44">Подпись</TableHead>
               <TableHead className="w-24 text-center">На сайте</TableHead>
               <TableHead className="w-28 text-center">Фото на сайте</TableHead>
+              <TableHead className="w-28">
+                <span className="sr-only">Действия</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visible.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Отзывов нет
@@ -294,6 +312,29 @@ export function ReviewsTable({
                       update.mutate({ id: review.id, showPhotos })
                     }
                   />
+                </TableCell>
+                <TableCell className="text-right align-top">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    aria-label={`Удалить отзыв: ${review.reviewerName}, ${dateFormat.format(new Date(review.reviewedAt))}`}
+                    disabled={remove.isPending}
+                    onClick={async () => {
+                      if (
+                        !(await confirm({
+                          title: "Удалить отзыв?",
+                          description: `Отзыв от ${review.reviewerName} будет удалён безвозвратно. Чтобы просто убрать его с сайта, снимите переключатель «На сайте».`,
+                          confirmLabel: "Удалить",
+                          destructive: true,
+                        }))
+                      ) {
+                        return;
+                      }
+                      remove.mutate({ id: review.id });
+                    }}
+                  >
+                    Удалить
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
