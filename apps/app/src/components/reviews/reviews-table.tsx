@@ -180,7 +180,9 @@ export function ReviewsTable({
               <TableHead className="w-44">Подпись</TableHead>
               <TableHead className="w-24 text-center">На сайте</TableHead>
               <TableHead className="w-28 text-center">Фото на сайте</TableHead>
-              <TableHead className="w-28" />
+              <TableHead className="w-28">
+                <span className="sr-only">Действия</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -315,6 +317,7 @@ export function ReviewsTable({
                   <Button
                     size="sm"
                     variant="outline"
+                    aria-label={`Удалить отзыв: ${review.reviewerName}, ${dateFormat.format(new Date(review.reviewedAt))}`}
                     disabled={remove.isPending}
                     onClick={async () => {
                       if (
