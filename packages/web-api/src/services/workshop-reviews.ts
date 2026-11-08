@@ -106,6 +106,11 @@ export async function saveWorkshopReview(
     files.push({ bytes, type });
   }
   if (files.length > 0 && !isPublicStorageConfigured()) {
+    logger.error(
+      "workshop_review.public_storage_not_configured",
+      new Error("AWS_S3_PUBLIC_BUCKET is not configured"),
+      { workshopSlug: input.workshopSlug },
+    );
     return { status: "unavailable" };
   }
 
