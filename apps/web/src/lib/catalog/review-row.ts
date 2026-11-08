@@ -17,5 +17,6 @@ export function reviewRowToReview(
     productIds,
     photos: row.showPhotos ? row.photos : [],
     source: row.source,
+    ...(row.workshopSlug ? { workshopSlug: row.workshopSlug } : {}),
   };
 }

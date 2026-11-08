@@ -13,6 +13,8 @@ export interface Review {
   productIds: string[];
   photos: string[];
   source: "ozon" | "avito" | "site";
+  /** Отзыв участницы о мастер-классе, оставленный в кабинете после покупки */
+  workshopSlug?: string;
 }
 
 // ─── Internal Product Types ───────────────────────────────────────────────────

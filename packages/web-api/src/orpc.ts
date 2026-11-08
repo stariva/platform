@@ -16,6 +16,7 @@ import {
   type PhoneCheck,
   type QuoteInput,
   type ReminderSweepResult,
+  type WorkshopReview,
   webContract,
 } from "./contract";
 
@@ -40,6 +41,20 @@ export interface WebServices {
   checkout: CheckoutServices;
   /** Сброс кэша страниц Next: revalidatePath живёт в витрине. */
   revalidatePaths: (paths: string[]) => void;
+  /**
+   * Мастеру: покупатель оставил или изменил отзыв о мастер-классе, его пора
+   * проверить. Уходит после ответа, сбой — только в лог.
+   */
+  notifyWorkshopReview: (notice: WorkshopReviewNotice) => void;
+}
+
+export interface WorkshopReviewNotice {
+  workshopSlug: string;
+  workshopTitle: string;
+  email: string;
+  /** false — автор изменил уже оставленный отзыв */
+  created: boolean;
+  review: WorkshopReview;
 }
 
 /**

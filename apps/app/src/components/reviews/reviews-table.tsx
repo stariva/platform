@@ -34,14 +34,17 @@ export interface AdminReview {
   reviewedAt: string;
   published: boolean;
   showPhotos: boolean;
+  /** Отзыв участницы о мастер-классе из кабинета */
+  workshopSlug: string | null;
 }
 
-type Filter = "all" | "published" | "hidden" | "unlinked";
+type Filter = "all" | "published" | "hidden" | "workshops" | "unlinked";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Все" },
   { id: "published", label: "На сайте" },
   { id: "hidden", label: "Скрытые" },
+  { id: "workshops", label: "Мастер-классы" },
   { id: "unlinked", label: "Без товара" },
 ];
 
@@ -57,8 +60,10 @@ function matchesFilter(review: AdminReview, filter: Filter) {
       return review.published;
     case "hidden":
       return !review.published;
+    case "workshops":
+      return review.workshopSlug !== null;
     case "unlinked":
-      return review.productIds.length === 0;
+      return review.workshopSlug === null && review.productIds.length === 0;
     default:
       return true;
   }
@@ -214,6 +219,9 @@ export function ReviewsTable({
                         {SOURCE_LABELS[review.source]}
                       </Badge>
                     )}
+                    {review.workshopSlug && (
+                      <Badge variant="secondary">Мастер-класс</Badge>
+                    )}
                     {review.productTitle && (
                       <span className="text-muted-foreground text-xs">
                         {review.productTitle}
@@ -226,6 +234,11 @@ export function ReviewsTable({
                   </p>
                 </TableCell>
                 <TableCell className="align-top whitespace-normal">
+                  {review.workshopSlug ? (
+                    <span className="text-muted-foreground text-xs">
+                      На странице мастер-класса и в общих отзывах
+                    </span>
+                  ) : (
                   <ReviewProductsPicker
                     products={products}
                     selected={review.productIds}
@@ -234,6 +247,7 @@ export function ReviewsTable({
                       setProducts.mutate({ id: review.id, productIds })
                     }
                   />
+                  )}
                 </TableCell>
                 <TableCell className="align-top">
                   <Input

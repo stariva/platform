@@ -201,7 +201,8 @@ export default async function ReviewsPage({
     ratingCounts.set(review.rating, (ratingCounts.get(review.rating) ?? 0) + 1);
   }
 
-  const summary = summarizeRatings(all);
+  // Подпись к рейтингу называет маркетплейсы — считаем по их отзывам
+  const summary = summarizeRatings(all.filter((r) => !r.workshopSlug));
   const sourceProfiles = (summary?.sources ?? []).flatMap(
     (source) => SOURCE_PROFILES[source] ?? [],
   );
@@ -267,7 +268,11 @@ export default async function ReviewsPage({
                     key={review.id}
                     review={review}
                     index={i}
-                    productHref={productHrefs.get(review.productIds[0] ?? "")}
+                    productHref={
+                      review.workshopSlug
+                        ? `/workshops/${review.workshopSlug}`
+                        : productHrefs.get(review.productIds[0] ?? "")
+                    }
                   />
                 ))}
               </div>

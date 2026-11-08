@@ -1,5 +1,5 @@
 import { isAdminUser } from "@stariva/auth";
-import { hasAccess } from "@stariva/web-api";
+import { getWorkshopReview, hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CommunityNote } from "@/components/stariva/community-invite";
@@ -16,6 +16,12 @@ import {
 } from "@/lib/workshops-data";
 import { PreorderNotice } from "./preorder-notice";
 import { WorkshopBrief } from "./workshop-brief";
+import { WorkshopReview } from "./workshop-review";
+
+/** Имя без фамилии — подпись отзыва по умолчанию. */
+function firstName(name: string | null | undefined): string {
+  return name?.trim().split(/\s+/)[0] ?? "";
+}
 
 export const dynamic = "force-dynamic";
 
@@ -83,10 +89,26 @@ export default async function AccountCoursePage({
   }
 
   const lessons = getWorkshopLessons(workshop);
-  const [progress, summary] = await Promise.all([
+  const [progress, summary, owned] = await Promise.all([
     getCourseProgressMap(session.user.id, slug),
     getCourseProgressSummary(session.user.id, workshop),
+    // Админ без покупки смотрит уроки, но отзыв не оставляет
+    admin ? hasAccess(session.user.id, slug) : true,
   ]);
+  const review = owned
+    ? await getWorkshopReview(session.user.id, slug).catch(() => undefined)
+    : undefined;
+  const reviewBlock =
+    review === undefined ? null : (
+      <WorkshopReview
+        slug={slug}
+        initialReview={review}
+        defaultName={firstName(session.user.name)}
+        courseComplete={summary.isComplete}
+      />
+    );
+  // Досмотрела и ещё не написала — просим показать работу сразу под прогрессом
+  const reviewOnTop = summary.isComplete && review === null;
 
   return (
     <div>
@@ -123,6 +145,8 @@ export default async function AccountCoursePage({
           </Link>
         )}
       </div>
+
+      {reviewOnTop && <div className="mb-6">{reviewBlock}</div>}
 
       {/* PDF курса — внутри брифа, рядом со списком материалов */}
       {brief}
@@ -248,6 +272,8 @@ export default async function AccountCoursePage({
           })}
         </ol>
       </section>
+
+      {!reviewOnTop && reviewBlock && <div className="mt-8">{reviewBlock}</div>}
 
       <CommunityNote
         source="account_course"

@@ -10,6 +10,7 @@ export {
   type WebORPCContext,
   type WebServices,
   type WorkshopFileServices,
+  type WorkshopReviewNotice,
 } from "./orpc";
 export { type WebRouter, webRouter } from "./router";
 export {
@@ -25,6 +26,7 @@ export {
   type UpsertProgressInput,
   upsertLessonProgress,
 } from "./services/course-access";
+export { getWorkshopReview } from "./services/workshop-reviews";
 export {
   getReadyRendition,
   MAX_RENDITION_ATTEMPTS,
