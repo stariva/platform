@@ -77,7 +77,10 @@ export const reviews = pgTable(
     index("reviews_listing_idx").on(table.published, table.reviewedAt),
     index("reviews_product_offer_id_idx").on(table.productOfferId),
     // NULL не совпадают: отзывы без автора (с маркетплейсов) не мешают друг другу
-    uniqueIndex("reviews_user_workshop_uq").on(table.userId, table.workshopSlug),
+    uniqueIndex("reviews_user_workshop_uq").on(
+      table.userId,
+      table.workshopSlug,
+    ),
     check("reviews_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
   ],
 );

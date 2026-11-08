@@ -533,18 +533,20 @@ export default async function WorkshopDetailPage({
                   </Link>
                 )}
               </section>
-            ) : workshop.testimonial && (
-              <section className="mb-10">
-                <h2 className="font-serif text-2xl mb-5">Отзыв</h2>
-                <blockquote className="bg-sand rounded-2xl border border-espresso/6 p-6">
-                  <p className="font-serif italic text-lg text-espresso leading-relaxed mb-4 text-pretty">
-                    &laquo;{workshop.testimonial.text}&raquo;
-                  </p>
-                  <footer className="text-sm text-taupe">
-                    {workshop.testimonial.author}
-                  </footer>
-                </blockquote>
-              </section>
+            ) : (
+              workshop.testimonial && (
+                <section className="mb-10">
+                  <h2 className="font-serif text-2xl mb-5">Отзыв</h2>
+                  <blockquote className="bg-sand rounded-2xl border border-espresso/6 p-6">
+                    <p className="font-serif italic text-lg text-espresso leading-relaxed mb-4 text-pretty">
+                      &laquo;{workshop.testimonial.text}&raquo;
+                    </p>
+                    <footer className="text-sm text-taupe">
+                      {workshop.testimonial.author}
+                    </footer>
+                  </blockquote>
+                </section>
+              )
             )}
 
             {/* До покупки — посмотреть работы участниц и спросить Ольгу */}

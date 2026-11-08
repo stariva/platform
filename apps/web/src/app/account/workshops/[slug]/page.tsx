@@ -1,4 +1,5 @@
 import { isAdminUser } from "@stariva/auth";
+import { logger } from "@stariva/config";
 import { getWorkshopReview, hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -17,6 +18,29 @@ import {
 import { PreorderNotice } from "./preorder-notice";
 import { WorkshopBrief } from "./workshop-brief";
 import { WorkshopReview } from "./workshop-review";
+
+/** Отзыв не загрузился: форма с пустыми полями сбила бы с толку. */
+function ReviewUnavailable({ slug }: { slug: string }) {
+  return (
+    <section
+      id="review"
+      className="bg-white border border-espresso/10 rounded-2xl p-6"
+    >
+      <p className="label-caps text-[11px] text-taupe mb-2">Ваш отзыв</p>
+      <p className="text-sm text-taupe">
+        Сейчас не получилось загрузить отзыв.{" "}
+        {/* Обычная ссылка, не Link: страница кабинета соберётся на сервере заново */}
+        <a
+          href={`/account/workshops/${slug}`}
+          className="text-terracotta hover:underline"
+        >
+          Обновите страницу
+        </a>{" "}
+        через пару минут.
+      </p>
+    </section>
+  );
+}
 
 /** Имя без фамилии — подпись отзыва по умолчанию. */
 function firstName(name: string | null | undefined): string {
@@ -95,18 +119,26 @@ export default async function AccountCoursePage({
     // Админ без покупки смотрит уроки, но отзыв не оставляет
     admin ? hasAccess(session.user.id, slug) : true,
   ]);
+  // undefined — отзыв не загрузился: пустую форму поверх уже оставленного
+  // отзыва не показываем, только объясняем, что случилось
   const review = owned
-    ? await getWorkshopReview(session.user.id, slug).catch(() => undefined)
+    ? await getWorkshopReview(session.user.id, slug).catch((error) => {
+        logger.error("workshop_review.load_failed", error, {
+          workshopSlug: slug,
+        });
+        return undefined;
+      })
     : undefined;
-  const reviewBlock =
-    review === undefined ? null : (
-      <WorkshopReview
-        slug={slug}
-        initialReview={review}
-        defaultName={firstName(session.user.name)}
-        courseComplete={summary.isComplete}
-      />
-    );
+  const reviewBlock = !owned ? null : review === undefined ? (
+    <ReviewUnavailable slug={slug} />
+  ) : (
+    <WorkshopReview
+      slug={slug}
+      initialReview={review}
+      defaultName={firstName(session.user.name)}
+      courseComplete={summary.isComplete}
+    />
+  );
   // Досмотрела и ещё не написала — просим показать работу сразу под прогрессом
   const reviewOnTop = summary.isComplete && review === null;
 

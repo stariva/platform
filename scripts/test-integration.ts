@@ -64,6 +64,11 @@ const suites: Suite[] = [
     // Тест ждёт пустой каталог мастер-классов, а 0007 его засевает
     prepare: "TRUNCATE workshops CASCADE",
   },
+  {
+    file: "packages/web-api/src/services/workshop-reviews.integration.test.ts",
+    env: "WORKSHOP_REVIEW_TEST_DATABASE_URL",
+    database: "stariva_workshop_review_test",
+  },
 ];
 
 function serverUrl(): URL {

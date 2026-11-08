@@ -239,14 +239,14 @@ export function ReviewsTable({
                       На странице мастер-класса и в общих отзывах
                     </span>
                   ) : (
-                  <ReviewProductsPicker
-                    products={products}
-                    selected={review.productIds}
-                    disabled={setProducts.isPending}
-                    onChange={(productIds) =>
-                      setProducts.mutate({ id: review.id, productIds })
-                    }
-                  />
+                    <ReviewProductsPicker
+                      products={products}
+                      selected={review.productIds}
+                      disabled={setProducts.isPending}
+                      onChange={(productIds) =>
+                        setProducts.mutate({ id: review.id, productIds })
+                      }
+                    />
                   )}
                 </TableCell>
                 <TableCell className="align-top">

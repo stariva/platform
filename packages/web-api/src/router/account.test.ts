@@ -15,7 +15,8 @@ mock.module("../services/course-access", () => ({
   },
 }));
 
-type ReviewInput = import("../services/workshop-reviews").SaveWorkshopReviewInput;
+type ReviewInput =
+  import("../services/workshop-reviews").SaveWorkshopReviewInput;
 type ReviewResult =
   import("../services/workshop-reviews").SaveWorkshopReviewResult;
 
@@ -215,9 +216,11 @@ const reviewRequest = {
   text: "Сплела ёлку за вечер, всё понятно",
   reviewerName: "Анна",
   keepPhotos: [],
-  photos: [new File([new Uint8Array([0xff, 0xd8, 0xff])], "elka.jpg", {
-    type: "image/jpeg",
-  })],
+  photos: [
+    new File([new Uint8Array([0xff, 0xd8, 0xff])], "elka.jpg", {
+      type: "image/jpeg",
+    }),
+  ],
   publishConsent: true as const,
 };
 const reviewSession = {
@@ -265,8 +268,14 @@ test("a review takes at most three photos, kept and new together", async () => {
   const [error] = await safe(
     wireClient({ session: reviewSession }).account.saveWorkshopReview({
       ...reviewRequest,
-      keepPhotos: ["https://cdn.example.test/1.jpg", "https://cdn.example.test/2.jpg"],
-      photos: [reviewRequest.photos[0] as File, reviewRequest.photos[0] as File],
+      keepPhotos: [
+        "https://cdn.example.test/1.jpg",
+        "https://cdn.example.test/2.jpg",
+      ],
+      photos: [
+        reviewRequest.photos[0] as File,
+        reviewRequest.photos[0] as File,
+      ],
     }),
   );
   expect(error).toMatchObject({ code: "BAD_REQUEST" });

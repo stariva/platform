@@ -30,7 +30,14 @@ interface NewPhoto {
   preview: string;
 }
 
-const RATING_LABELS = ["", "Плохо", "Так себе", "Нормально", "Хорошо", "Отлично"];
+const RATING_LABELS = [
+  "",
+  "Плохо",
+  "Так себе",
+  "Нормально",
+  "Хорошо",
+  "Отлично",
+];
 
 /** Отзыв о мастер-классе в кабинете: форма или уже оставленный отзыв. */
 export function WorkshopReview({
@@ -269,115 +276,133 @@ function ReviewForm({
         новичок.
       </p>
 
-      <fieldset>
-        <legend className="text-sm text-espresso mb-2">Оценка</legend>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1" role="radiogroup" aria-label="Оценка">
-            {[1, 2, 3, 4, 5].map((value) => (
-              // biome-ignore lint/a11y/useSemanticElements: звёзды — кнопки с ролью radio, как у рейтингов
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={rating === value}
-                aria-label={`${value} из 5 — ${RATING_LABELS[value]}`}
-                onClick={() => setRating(value)}
-                className="p-0.5 text-terracotta transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/50 rounded"
-              >
-                <StarIcon filled={value <= rating} className="size-7" />
-              </button>
-            ))}
-          </div>
-          {rating > 0 && (
-            <span className="text-sm text-taupe">{RATING_LABELS[rating]}</span>
-          )}
-        </div>
-      </fieldset>
-
-      <div>
-        <label htmlFor={`${id}-text`} className="block text-sm text-espresso mb-2">
-          Отзыв
-        </label>
-        <Textarea
-          id={`${id}-text`}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={3000}
-          rows={5}
-          placeholder="Что понравилось, что было сложно, кому подарили или где повесили"
-          className="min-h-32 bg-white"
-        />
-      </div>
-
-      <div>
-        <p className="text-sm text-espresso mb-2">
-          Фото работы{" "}
-          <span className="text-taupe">· до {MAX_REVIEW_PHOTOS}, по желанию</span>
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {keptPhotos.map((src) => (
-            <PhotoThumb
-              key={src}
-              src={src}
-              onRemove={() =>
-                setKeptPhotos((current) => current.filter((p) => p !== src))
-              }
-            />
-          ))}
-          {newPhotos.map((photo) => (
-            <PhotoThumb
-              key={photo.preview}
-              src={photo.preview}
-              onRemove={() => removeNewPhoto(photo)}
-            />
-          ))}
-          {canAddPhoto && (
-            <button
-              type="button"
-              onClick={() => fileInput.current?.click()}
-              disabled={preparing}
-              className="size-24 rounded-xl border border-dashed border-espresso/25 text-taupe hover:border-terracotta hover:text-terracotta transition-colors flex flex-col items-center justify-center gap-1 text-xs disabled:opacity-60"
-            >
-              <span aria-hidden="true" className="text-2xl leading-none">
-                +
+      {/* Пока запрос в пути, править нечего: сервер сохранит то, что ушло,
+          а форма после ответа закроется и потеряла бы новые правки */}
+      <fieldset
+        disabled={saving}
+        aria-busy={saving}
+        className="space-y-5 min-w-0 transition-opacity disabled:opacity-60"
+      >
+        <fieldset>
+          <legend className="text-sm text-espresso mb-2">Оценка</legend>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1" role="radiogroup" aria-label="Оценка">
+              {[1, 2, 3, 4, 5].map((value) => (
+                // biome-ignore lint/a11y/useSemanticElements: звёзды — кнопки с ролью radio, как у рейтингов
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={rating === value}
+                  aria-label={`${value} из 5 — ${RATING_LABELS[value]}`}
+                  onClick={() => setRating(value)}
+                  className="p-0.5 text-terracotta transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/50 rounded"
+                >
+                  <StarIcon filled={value <= rating} className="size-7" />
+                </button>
+              ))}
+            </div>
+            {rating > 0 && (
+              <span className="text-sm text-taupe">
+                {RATING_LABELS[rating]}
               </span>
-              {preparing ? "Готовим…" : "Добавить фото"}
-            </button>
-          )}
+            )}
+          </div>
+        </fieldset>
+
+        <div>
+          <label
+            htmlFor={`${id}-text`}
+            className="block text-sm text-espresso mb-2"
+          >
+            Отзыв
+          </label>
+          <Textarea
+            id={`${id}-text`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={3000}
+            rows={5}
+            placeholder="Что понравилось, что было сложно, кому подарили или где повесили"
+            className="min-h-32 bg-white"
+          />
         </div>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-          multiple
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden="true"
-          onChange={(e) => addPhotos(e.target.files)}
-        />
-      </div>
 
-      <div className="max-w-xs">
-        <label htmlFor={`${id}-name`} className="block text-sm text-espresso mb-2">
-          Подпись
-        </label>
-        <Input
-          id={`${id}-name`}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={80}
-          placeholder="Например, Анна"
-          className="bg-white"
-        />
-        <p className="mt-1 text-xs text-taupe">
-          Так отзыв будет подписан на сайте. Достаточно имени.
-        </p>
-      </div>
+        <div>
+          <p className="text-sm text-espresso mb-2">
+            Фото работы{" "}
+            <span className="text-taupe">
+              · до {MAX_REVIEW_PHOTOS}, по желанию
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {keptPhotos.map((src) => (
+              <PhotoThumb
+                key={src}
+                src={src}
+                onRemove={() =>
+                  setKeptPhotos((current) => current.filter((p) => p !== src))
+                }
+              />
+            ))}
+            {newPhotos.map((photo) => (
+              <PhotoThumb
+                key={photo.preview}
+                src={photo.preview}
+                onRemove={() => removeNewPhoto(photo)}
+              />
+            ))}
+            {canAddPhoto && (
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={preparing}
+                className="size-24 rounded-xl border border-dashed border-espresso/25 text-taupe hover:border-terracotta hover:text-terracotta transition-colors flex flex-col items-center justify-center gap-1 text-xs disabled:opacity-60"
+              >
+                <span aria-hidden="true" className="text-2xl leading-none">
+                  +
+                </span>
+                {preparing ? "Готовим…" : "Добавить фото"}
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            multiple
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={(e) => addPhotos(e.target.files)}
+          />
+        </div>
 
-      <ConsentCheckbox checked={consent} onCheckedChange={setConsent}>
-        Разрешаю опубликовать на сайте stariva.ru мой отзыв, подпись и фото.
-        Убрать отзыв можно в любой момент — достаточно написать Ольге.
-      </ConsentCheckbox>
+        <div className="max-w-xs">
+          <label
+            htmlFor={`${id}-name`}
+            className="block text-sm text-espresso mb-2"
+          >
+            Подпись
+          </label>
+          <Input
+            id={`${id}-name`}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+            placeholder="Например, Анна"
+            className="bg-white"
+          />
+          <p className="mt-1 text-xs text-taupe">
+            Так отзыв будет подписан на сайте. Достаточно имени.
+          </p>
+        </div>
+
+        <ConsentCheckbox checked={consent} onCheckedChange={setConsent}>
+          Разрешаю опубликовать на сайте stariva.ru мой отзыв, подпись и фото.
+          Убрать отзыв можно в любой момент — достаточно написать Ольге.
+        </ConsentCheckbox>
+      </fieldset>
 
       {error && (
         <p role="alert" className="text-sm text-destructive">
@@ -391,7 +416,11 @@ function ReviewForm({
           disabled={saving || preparing}
           className="bg-terracotta text-parchment hover:bg-terracotta-dark"
         >
-          {saving ? "Отправляем…" : review ? "Сохранить отзыв" : "Отправить отзыв"}
+          {saving
+            ? "Отправляем…"
+            : review
+              ? "Сохранить отзыв"
+              : "Отправить отзыв"}
         </Button>
         {onCancel && (
           <Button

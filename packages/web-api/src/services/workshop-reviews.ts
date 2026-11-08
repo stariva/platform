@@ -84,14 +84,6 @@ export async function saveWorkshopReview(
     .limit(1);
   if (!workshop) return { status: "not_found" };
 
-  const existing = await findReviewRow(input.userId, input.workshopSlug);
-  const id = existing?.id ?? randomUUID();
-
-  // Оставить можно только свои прежние фото: чужой адрес в отзыв не попадёт
-  const kept = input.keepPhotos.filter((url) =>
-    existing?.photos.includes(url),
-  );
-
   const files: { bytes: Uint8Array; type: string }[] = [];
   for (const file of input.photos) {
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -100,64 +92,110 @@ export async function saveWorkshopReview(
     if (!type) return { status: "photo_invalid" };
     files.push({ bytes, type });
   }
-
-  let uploaded: string[] = [];
-  if (files.length > 0) {
-    if (!isPublicStorageConfigured()) return { status: "unavailable" };
-    try {
-      uploaded = await Promise.all(
-        files.map(({ bytes, type }) =>
-          uploadPublicObject(reviewImageKey(id, bytes, type), bytes, type),
-        ),
-      );
-    } catch (error) {
-      logger.error("workshop_review.photo_upload_failed", error, {
-        workshopSlug: input.workshopSlug,
-      });
-      return { status: "unavailable" };
-    }
+  if (files.length > 0 && !isPublicStorageConfigured()) {
+    return { status: "unavailable" };
   }
-  // Одно и то же фото дважды — один файл: ключ зависит от содержимого
-  const photos = [...new Set([...kept, ...uploaded])];
 
-  const fields = {
-    rating: input.rating,
-    text: input.text,
-    reviewerName: input.reviewerName,
-    photos,
-    productTitle: workshop.title,
-    reviewedAt: now,
-    publishConsentAt: now,
-    // Изменённый отзыв снова проверяют, прежде чем показать
-    published: false,
-  };
-  const [row] = await db
-    .insert(reviews)
-    .values({
-      id,
-      source: "site",
-      workshopSlug: input.workshopSlug,
-      userId: input.userId,
-      ...fields,
-    })
-    .onConflictDoUpdate({
-      target: [reviews.userId, reviews.workshopSlug],
-      set: fields,
-    })
-    .returning();
-  if (!row) return { status: "unavailable" };
+  // Фото грузим до транзакции: держать блокировку строки, пока идёт загрузка
+  // в бакет, незачем. Id нужен только как папка для файлов.
+  const known = await findReviewRow(input.userId, input.workshopSlug);
+  const id = known?.id ?? randomUUID();
+  // Файлы, на которые уже ссылается отзыв: при откате их не трогаем, даже
+  // если автор загрузил тот же снимок ещё раз (ключ зависит от содержимого)
+  const referenced = new Set(known?.photos ?? []);
+  const discardUploads = (urls: string[]) =>
+    removePhotos(urls.filter((url) => !referenced.has(url)));
 
-  const removed = (existing?.photos ?? []).filter(
-    (url) => !photos.includes(url),
+  const uploads = await Promise.allSettled(
+    files.map(({ bytes, type }) =>
+      uploadPublicObject(reviewImageKey(id, bytes, type), bytes, type),
+    ),
   );
-  await removePhotos(removed);
+  const uploaded = uploads.flatMap((u) =>
+    u.status === "fulfilled" ? [u.value] : [],
+  );
+  const failedUpload = uploads.find((u) => u.status === "rejected");
+  if (failedUpload) {
+    logger.error("workshop_review.photo_upload_failed", failedUpload.reason, {
+      workshopSlug: input.workshopSlug,
+    });
+    await discardUploads(uploaded);
+    return { status: "unavailable" };
+  }
+
+  let saved: { row: ReviewRow; before: ReviewRow | undefined };
+  try {
+    saved = await db.transaction(async (tx) => {
+      // Строку перечитываем под блокировкой: два сохранения из разных вкладок
+      // идут по очереди, и каждое видит фото, записанные предыдущим
+      const [before] = await tx
+        .select()
+        .from(reviews)
+        .where(
+          and(
+            eq(reviews.userId, input.userId),
+            eq(reviews.workshopSlug, input.workshopSlug),
+          ),
+        )
+        .limit(1)
+        .for("update");
+
+      // Оставить можно только свои прежние фото: чужой адрес в отзыв не попадёт
+      const kept = input.keepPhotos.filter((url) =>
+        before?.photos.includes(url),
+      );
+      // Одно и то же фото дважды — один файл: ключ зависит от содержимого
+      const photos = [...new Set([...kept, ...uploaded])];
+
+      const fields = {
+        rating: input.rating,
+        text: input.text,
+        reviewerName: input.reviewerName,
+        photos,
+        productTitle: workshop.title,
+        reviewedAt: now,
+        publishConsentAt: now,
+        // Изменённый отзыв снова проверяют, прежде чем показать
+        published: false,
+      };
+      const [row] = await tx
+        .insert(reviews)
+        .values({
+          id,
+          source: "site",
+          workshopSlug: input.workshopSlug,
+          userId: input.userId,
+          ...fields,
+        })
+        .onConflictDoUpdate({
+          target: [reviews.userId, reviews.workshopSlug],
+          set: fields,
+        })
+        .returning();
+      if (!row) throw new Error("review_upsert_returned_nothing");
+      return { row, before };
+    });
+  } catch (error) {
+    logger.error("workshop_review.save_failed", error, {
+      workshopSlug: input.workshopSlug,
+    });
+    await discardUploads(uploaded);
+    return { status: "unavailable" };
+  }
+
+  // Удаляем только то, чего нет в записанной версии, и только после записи:
+  // список фото взят под той же блокировкой, устареть он не мог
+  const { row, before } = saved;
+  await removePhotos(
+    (before?.photos ?? []).filter((url) => !row.photos.includes(url)),
+  );
 
   return {
     status: "ok",
     review: toWorkshopReview(row),
     workshopTitle: workshop.title,
-    created: !existing,
-    wasPublished: existing?.published ?? false,
+    created: !before,
+    wasPublished: before?.published ?? false,
   };
 }
 
