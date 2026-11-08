@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CommunityNote } from "@/components/stariva/community-invite";
+import { ReviewCard } from "@/components/stariva/review-card";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -18,6 +19,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { getWorkshopReviews } from "@/lib/catalog/service";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { preorderBonusFor } from "@/lib/workshops/preorder-bonus";
 import {
@@ -42,6 +44,15 @@ import { WorkshopPurchase } from "./workshop-purchase";
 // при сохранении. Старт уроков меняет цену и кнопку без сохранения в админке,
 // поэтому кэш короткий: дольше пяти минут старая цена на странице не висит.
 export const revalidate = 300;
+
+/** «1 отзыв», «3 отзыва», «12 отзывов» */
+function pluralReviews(n: number) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "отзыв";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "отзыва";
+  return "отзывов";
+}
 
 export function generateStaticParams() {
   return [];
@@ -139,7 +150,11 @@ export default async function WorkshopDetailPage({
   const workshop = await getWorkshopBySlug(slug);
   if (!workshop) notFound();
 
-  const related = (await fetchPublishedWorkshops())
+  const [published, reviews] = await Promise.all([
+    fetchPublishedWorkshops(),
+    getWorkshopReviews(workshop.slug),
+  ]);
+  const related = published
     .filter((w) => w.slug !== workshop.slug && w.category === workshop.category)
     .slice(0, 3);
 
@@ -495,19 +510,43 @@ export default async function WorkshopDetailPage({
               </ul>
             </section>
 
-            {/* Единственный отзыв к этому мастер-классу (без общей ленты Ozon) */}
-            {workshop.testimonial && (
-              <section className="mb-10">
-                <h2 className="font-serif text-2xl mb-5">Отзыв</h2>
-                <blockquote className="bg-sand rounded-2xl border border-espresso/6 p-6">
-                  <p className="font-serif italic text-lg text-espresso leading-relaxed mb-4 text-pretty">
-                    &laquo;{workshop.testimonial.text}&raquo;
-                  </p>
-                  <footer className="text-sm text-taupe">
-                    {workshop.testimonial.author}
-                  </footer>
-                </blockquote>
+            {/* Отзывы участниц из кабинета; пока их нет — отзыв из карточки курса */}
+            {reviews.length > 0 ? (
+              <section id="reviews" className="mb-10 scroll-mt-24">
+                <div className="flex items-baseline justify-between gap-4 mb-5">
+                  <h2 className="font-serif text-2xl">Отзывы участниц</h2>
+                  <span className="text-sm text-taupe">
+                    {reviews.length} {pluralReviews(reviews.length)}
+                  </span>
+                </div>
+                <div className="columns-1 sm:columns-2 gap-6">
+                  {reviews.slice(0, 6).map((review, i) => (
+                    <ReviewCard key={review.id} review={review} index={i} />
+                  ))}
+                </div>
+                {reviews.length > 6 && (
+                  <Link
+                    href="/reviews"
+                    className="text-sm text-terracotta hover:underline"
+                  >
+                    Все отзывы →
+                  </Link>
+                )}
               </section>
+            ) : (
+              workshop.testimonial && (
+                <section className="mb-10">
+                  <h2 className="font-serif text-2xl mb-5">Отзыв</h2>
+                  <blockquote className="bg-sand rounded-2xl border border-espresso/6 p-6">
+                    <p className="font-serif italic text-lg text-espresso leading-relaxed mb-4 text-pretty">
+                      &laquo;{workshop.testimonial.text}&raquo;
+                    </p>
+                    <footer className="text-sm text-taupe">
+                      {workshop.testimonial.author}
+                    </footer>
+                  </blockquote>
+                </section>
+              )
             )}
 
             {/* До покупки — посмотреть работы участниц и спросить Ольгу */}

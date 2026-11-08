@@ -6,6 +6,7 @@ import {
   lessonExists,
   upsertLessonProgress,
 } from "../services/course-access";
+import { saveWorkshopReview as saveReview } from "../services/workshop-reviews";
 
 const workshopAccess = account.workshopAccess.handler(
   async ({ input, context }) => {
@@ -92,9 +93,59 @@ const materialUrl = account.materialUrl.handler(
   },
 );
 
+/** Страницы, где виден опубликованный отзыв о мастер-классе. */
+function workshopReviewPages(slug: string): string[] {
+  return [`/workshops/${slug}`, "/reviews"];
+}
+
+const saveWorkshopReview = account.saveWorkshopReview.handler(
+  async ({ input, context, errors }) => {
+    const user = context.session?.user;
+    if (!user) throw new ORPCError("UNAUTHORIZED");
+    // Отзыв оставляет только купивший: админ без покупки — тоже нет
+    if (!(await hasAccess(user.id, input.slug))) {
+      throw new ORPCError("FORBIDDEN");
+    }
+
+    const result = await saveReview({
+      userId: user.id,
+      workshopSlug: input.slug,
+      rating: input.rating,
+      text: input.text,
+      reviewerName: input.reviewerName,
+      keepPhotos: input.keepPhotos,
+      photos: input.photos,
+    });
+    switch (result.status) {
+      case "not_found":
+        throw new ORPCError("FORBIDDEN");
+      case "photo_invalid":
+        throw errors.REVIEW_PHOTO_INVALID();
+      case "unavailable":
+        throw errors.REVIEW_UNAVAILABLE();
+    }
+
+    // Правка снимает отзыв с сайта до проверки — убираем его со страниц
+    if (result.wasPublished) {
+      context.services.revalidatePaths(workshopReviewPages(input.slug));
+    }
+    // Серия правок подряд — одно сообщение мастеру, а не по одному на каждую
+    if (result.notify)
+      context.services.notifyWorkshopReview({
+        workshopSlug: input.slug,
+        workshopTitle: result.workshopTitle,
+        email: user.email,
+        created: result.created,
+        review: result.review,
+      });
+    return result.review;
+  },
+);
+
 export const accountRouter = {
   workshopAccess,
   saveLessonProgress,
   lessonVideo,
   materialUrl,
+  saveWorkshopReview,
 };

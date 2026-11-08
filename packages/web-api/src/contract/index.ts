@@ -12,10 +12,15 @@ export {
   LessonNotReleasedError,
   type LessonVideo,
   type LessonVideoResult,
+  MAX_REVIEW_PHOTO_BYTES,
+  MAX_REVIEW_PHOTOS,
   MaterialNotFoundError,
   type MaterialUrlResult,
+  ReviewPhotoInvalidError,
+  ReviewUnavailableError,
   VideoNotUploadedError,
   VideoRateLimitedError,
+  type WorkshopReview,
 } from "./account";
 export {
   AdminNotConfiguredError,

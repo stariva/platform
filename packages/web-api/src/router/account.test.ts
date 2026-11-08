@@ -15,6 +15,35 @@ mock.module("../services/course-access", () => ({
   },
 }));
 
+type ReviewInput =
+  import("../services/workshop-reviews").SaveWorkshopReviewInput;
+type ReviewResult =
+  import("../services/workshop-reviews").SaveWorkshopReviewResult;
+
+const savedReview = {
+  rating: 5,
+  text: "Сплела ёлку за вечер, всё понятно",
+  reviewerName: "Анна",
+  photos: ["https://cdn.example.test/reviews/r-1/a.jpg"],
+  status: "pending" as const,
+};
+let reviewResult: ReviewResult = {
+  status: "ok",
+  review: savedReview,
+  workshopTitle: "Ёлка макраме",
+  created: true,
+  wasPublished: false,
+  notify: true,
+};
+let reviewCalls: ReviewInput[] = [];
+mock.module("../services/workshop-reviews", () => ({
+  getWorkshopReview: async () => null,
+  saveWorkshopReview: async (input: ReviewInput) => {
+    reviewCalls.push(input);
+    return reviewResult;
+  },
+}));
+
 const { safe } = await import("@orpc/client");
 const { LessonNotFoundError } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
@@ -180,4 +209,167 @@ test("material link is passed through and refusals are typed", async () => {
   );
   expect(error).toMatchObject({ code: "UNAUTHORIZED" });
   expect(lastStatus()).toBe(401);
+});
+
+const reviewRequest = {
+  slug: "elka-makrame",
+  rating: 5,
+  text: "Сплела ёлку за вечер, всё понятно",
+  reviewerName: "Анна",
+  keepPhotos: [],
+  photos: [
+    new File([new Uint8Array([0xff, 0xd8, 0xff])], "elka.jpg", {
+      type: "image/jpeg",
+    }),
+  ],
+  publishConsent: true as const,
+};
+const reviewSession = {
+  user: { id: "user-1", email: "anna@example.test" },
+} as Session;
+
+test("a review requires a session", async () => {
+  reviewCalls = [];
+  const [error] = await safe(
+    wireClient().account.saveWorkshopReview(reviewRequest),
+  );
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(lastStatus()).toBe(401);
+  expect(reviewCalls).toEqual([]);
+});
+
+test("only a buyer of the workshop can review it", async () => {
+  reviewCalls = [];
+  owned = false;
+  const [error] = await safe(
+    wireClient({ session: reviewSession }).account.saveWorkshopReview(
+      reviewRequest,
+    ),
+  );
+  owned = true;
+  expect(error).toMatchObject({ code: "FORBIDDEN" });
+  expect(lastStatus()).toBe(403);
+  expect(reviewCalls).toEqual([]);
+});
+
+test("a review is not accepted without consent to publish it", async () => {
+  reviewCalls = [];
+  const [error] = await safe(
+    wireClient({ session: reviewSession }).account.saveWorkshopReview({
+      ...reviewRequest,
+      publishConsent: false as unknown as true,
+    }),
+  );
+  expect(error).toMatchObject({ code: "BAD_REQUEST" });
+  expect(reviewCalls).toEqual([]);
+});
+
+test("a review takes at most three photos, kept and new together", async () => {
+  reviewCalls = [];
+  const [error] = await safe(
+    wireClient({ session: reviewSession }).account.saveWorkshopReview({
+      ...reviewRequest,
+      keepPhotos: [
+        "https://cdn.example.test/1.jpg",
+        "https://cdn.example.test/2.jpg",
+      ],
+      photos: [
+        reviewRequest.photos[0] as File,
+        reviewRequest.photos[0] as File,
+      ],
+    }),
+  );
+  expect(error).toMatchObject({ code: "BAD_REQUEST" });
+  expect(reviewCalls).toEqual([]);
+});
+
+test("buyer's review is saved with the photo and Olga is told", async () => {
+  reviewCalls = [];
+  const notifyWorkshopReview = mock(() => {});
+  const revalidatePaths = mock((_paths: string[]) => {});
+  const result = await wireClient({
+    session: reviewSession,
+    services: { notifyWorkshopReview, revalidatePaths },
+  }).account.saveWorkshopReview(reviewRequest);
+
+  expect(result).toEqual(savedReview);
+  expect(reviewCalls).toHaveLength(1);
+  const [call] = reviewCalls;
+  expect(call).toMatchObject({
+    userId: "user-1",
+    workshopSlug: "elka-makrame",
+    rating: 5,
+    reviewerName: "Анна",
+    keepPhotos: [],
+  });
+  expect(call?.photos).toHaveLength(1);
+  expect(call?.photos[0]?.name).toBe("elka.jpg");
+  expect(notifyWorkshopReview).toHaveBeenCalledWith({
+    workshopSlug: "elka-makrame",
+    workshopTitle: "Ёлка макраме",
+    email: "anna@example.test",
+    created: true,
+    review: savedReview,
+  });
+  // Новый отзыв скрыт до проверки — страницы сбрасывать незачем
+  expect(revalidatePaths).not.toHaveBeenCalled();
+});
+
+test("editing a published review takes it off the pages", async () => {
+  reviewResult = {
+    status: "ok",
+    review: savedReview,
+    workshopTitle: "Ёлка макраме",
+    created: false,
+    wasPublished: true,
+    notify: true,
+  };
+  const revalidatePaths = mock((_paths: string[]) => {});
+  await wireClient({
+    session: reviewSession,
+    services: { revalidatePaths },
+  }).account.saveWorkshopReview(reviewRequest);
+  expect(revalidatePaths).toHaveBeenCalledWith([
+    "/workshops/elka-makrame",
+    "/reviews",
+  ]);
+});
+
+test("a quick series of edits does not ping Olga again", async () => {
+  reviewResult = {
+    status: "ok",
+    review: savedReview,
+    workshopTitle: "Ёлка макраме",
+    created: false,
+    wasPublished: false,
+    notify: false,
+  };
+  const notifyWorkshopReview = mock(() => {});
+  const result = await wireClient({
+    session: reviewSession,
+    services: { notifyWorkshopReview },
+  }).account.saveWorkshopReview(reviewRequest);
+  expect(result).toEqual(savedReview);
+  expect(notifyWorkshopReview).not.toHaveBeenCalled();
+});
+
+test("review refusals become typed errors", async () => {
+  const cases = [
+    ["photo_invalid", "REVIEW_PHOTO_INVALID", 400],
+    ["unavailable", "REVIEW_UNAVAILABLE", 503],
+    ["not_found", "FORBIDDEN", 403],
+  ] as const;
+  for (const [status, code, http] of cases) {
+    reviewResult = { status };
+    const notifyWorkshopReview = mock(() => {});
+    const [error] = await safe(
+      wireClient({
+        session: reviewSession,
+        services: { notifyWorkshopReview },
+      }).account.saveWorkshopReview(reviewRequest),
+    );
+    expect(error).toMatchObject({ code });
+    expect(lastStatus()).toBe(http);
+    expect(notifyWorkshopReview).not.toHaveBeenCalled();
+  }
 });

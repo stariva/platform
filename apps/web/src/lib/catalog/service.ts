@@ -127,14 +127,20 @@ export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
 
   const byDate = (a: Review, b: Review) => b.date.localeCompare(a.date);
   if (productId) {
-    return all.filter((r) => r.productIds.includes(productId)).sort(byDate);
+    // Отзыв о мастер-классе на карточке изделия исказил бы его рейтинг
+    return all
+      .filter((r) => !r.workshopSlug && r.productIds.includes(productId))
+      .sort(byDate);
   }
 
   const score = (r: Review) =>
     (r.rating === 5 ? 2 : 0) +
     (r.photos.length > 0 ? 2 : 0) +
     (r.text.length >= 80 ? 1 : 0);
-  const ranked = [...all].sort((a, b) => score(b) - score(a) || byDate(a, b));
+  // Отзывы о мастер-классах — на их страницах, а не среди отзывов об изделиях
+  const ranked = all
+    .filter((r) => !r.workshopSlug)
+    .sort((a, b) => score(b) - score(a) || byDate(a, b));
 
   // Сначала по одному отзыву на вид товара, чтобы в блоке не было пяти поясов подряд
   const seenProducts = new Set<string>();
@@ -153,17 +159,42 @@ export async function getReviews(filter: ReviewFilter = {}): Promise<Review[]> {
   return [...firstPerProduct, ...rest];
 }
 
+/**
+ * Опубликованные отзывы участниц о мастер-классе: сначала с фото работы,
+ * внутри — новые сверху.
+ */
+export async function getWorkshopReviews(slug: string): Promise<Review[]> {
+  const all = await getPublishedReviews();
+  const hasPhotos = (r: Review) => (r.photos.length > 0 ? 1 : 0);
+  return all
+    .filter((r) => r.workshopSlug === slug)
+    .sort(
+      (a, b) => hasPhotos(b) - hasPhotos(a) || b.date.localeCompare(a.date),
+    );
+}
+
 /** Все опубликованные отзывы магазина, новые сверху — для страницы /reviews. */
 export async function getAllReviews({
   verifiedOnly = false,
 }: {
-  /** Только отзывы с маркетплейсов (Ozon, Авито), без оставленных на сайте */
+  /**
+   * Только отзывы после покупки: с маркетплейсов (Ozon, Авито) и от
+   * участниц мастер-классов из кабинета
+   */
   verifiedOnly?: boolean;
 } = {}): Promise<Review[]> {
   const all = await getPublishedReviews();
   return all
-    .filter((review) => !verifiedOnly || review.source !== "site")
+    .filter((review) => !verifiedOnly || isVerifiedReview(review))
     .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/**
+ * Отзыв оставлен после покупки: на маркетплейсе или участницей мастер-класса
+ * в кабинете — туда пускают только купивших.
+ */
+export function isVerifiedReview(review: Review): boolean {
+  return review.source !== "site" || Boolean(review.workshopSlug);
 }
 
 export interface RatingSummary {

@@ -68,6 +68,7 @@ const idleServices: WebServices = {
     requestMadeToOrder: async () => ({ status: "check_failed" }),
   },
   revalidatePaths: () => {},
+  notifyWorkshopReview: () => {},
 };
 
 let lastResponseStatus = 0;

@@ -37,7 +37,33 @@ export const MaterialNotFoundError = error("MATERIAL_NOT_FOUND", {
   message: "Материал не найден",
 });
 
+/** Хранилище фото не настроено или не ответило — отзыв не сохранён. */
+export const ReviewUnavailableError = error("REVIEW_UNAVAILABLE", {
+  message: "Не получилось сохранить отзыв. Попробуйте позже",
+});
+
+/** Файл назван картинкой, но по содержимому это не JPG, PNG или WebP. */
+export const ReviewPhotoInvalidError = error("REVIEW_PHOTO_INVALID", {
+  message: "Одно из фото не открылось. Выберите снимок в формате JPG или PNG",
+});
+
 const workshopSlug = z.string().min(1).max(200);
+
+export const MAX_REVIEW_PHOTOS = 3;
+/** Браузер сжимает снимок до ~1 МБ, запас — на случай, если сжать не вышло. */
+export const MAX_REVIEW_PHOTO_BYTES = 2.5 * 1024 * 1024;
+
+/** Отзыв покупателя о мастер-классе, как его видит автор в кабинете. */
+export const workshopReviewSchema = z.object({
+  rating: z.number().int(),
+  text: z.string(),
+  reviewerName: z.string(),
+  photos: z.array(z.string()),
+  /** pending — ждёт проверки, published — виден на сайте. */
+  status: z.enum(["pending", "published"]),
+});
+
+export type WorkshopReview = z.infer<typeof workshopReviewSchema>;
 
 /** Откуда плеер берёт видео: нарезка через сайт или исходный MP4. */
 export const lessonVideoSchema = z.object({
@@ -101,6 +127,69 @@ export const accountContract = {
     })
     .input(z.object({ slug: workshopSlug, key: z.string().min(1).max(1024) }))
     .output(z.object({ url: z.string() })),
+
+  /**
+   * Отзыв купившего о мастер-классе: один на курс, повторная отправка его
+   * заменяет. На сайт попадает только после проверки, правка опубликованного
+   * отправляет его на проверку снова. Не купившим — FORBIDDEN.
+   */
+  saveWorkshopReview: oc
+    .errors({
+      [ReviewUnavailableError.code]: ReviewUnavailableError,
+      [ReviewPhotoInvalidError.code]: ReviewPhotoInvalidError,
+    })
+    .input(
+      z
+        .object({
+          slug: workshopSlug,
+          rating: z
+            .number()
+            .int()
+            .min(1, "Поставьте оценку")
+            .max(5, "Поставьте оценку"),
+          text: z
+            .string()
+            .trim()
+            .min(10, "Напишите хотя бы пару предложений")
+            .max(
+              3000,
+              "Отзыв получился длинным — сократите его до 3000 знаков",
+            ),
+          reviewerName: z
+            .string()
+            .trim()
+            .min(1, "Укажите, как подписать отзыв")
+            .max(80),
+          /** Уже загруженные фото отзыва, которые автор оставил. */
+          keepPhotos: z.array(z.string().max(1024)).max(MAX_REVIEW_PHOTOS),
+          photos: z
+            .array(
+              z
+                .file()
+                .max(
+                  MAX_REVIEW_PHOTO_BYTES,
+                  "Фото слишком большое. Выберите другой снимок",
+                )
+                .mime(
+                  ["image/jpeg", "image/png", "image/webp"],
+                  "Выберите снимок в формате JPG или PNG",
+                ),
+            )
+            .max(MAX_REVIEW_PHOTOS),
+          publishConsent: z.literal(true, {
+            error: "Нужно согласие на публикацию отзыва",
+          }),
+        })
+        .refine(
+          (input) =>
+            input.keepPhotos.length + input.photos.length <= MAX_REVIEW_PHOTOS,
+          {
+            message: `Можно приложить не больше ${MAX_REVIEW_PHOTOS} фото`,
+            path: ["photos"],
+          },
+        ),
+    )
+    .output(workshopReviewSchema),
 };
 
 /** Ответ витрины на запрос ссылки на видео: процедура переводит его в ошибки. */

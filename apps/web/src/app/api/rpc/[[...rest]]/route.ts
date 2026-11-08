@@ -17,6 +17,7 @@ import { issueFormToken } from "@/lib/auth/antispam";
 import { auth } from "@/lib/auth/server";
 import { runCampaignSweep } from "@/lib/campaigns/sweep";
 import { checkoutServices } from "@/lib/commerce/checkout-services";
+import { notifyStaffAlert } from "@/lib/commerce/order-notifications";
 import { orderServices } from "@/lib/commerce/order-services";
 import {
   dispatchRequest,
@@ -27,13 +28,15 @@ import { createCustomOrderServices } from "@/lib/custom-order/services";
 import { subscribeToNewsletter } from "@/lib/newsletter";
 import { runNpdIssuingSweep } from "@/lib/npd/issuing-sweep";
 import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
+import { formatWorkshopReviewMessage } from "@/lib/workshops/review-message";
 import { workshopFileServices } from "@/lib/workshops/signed-media";
 import { runUnpaidOrderSweep } from "@/lib/workshops/unpaid-reminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Самый большой запрос — заявка с фото до 8 МБ; остальное намного меньше
+// Самые большие запросы — заявка с фото до 8 МБ и отзыв с тремя фото по
+// 2,5 МБ; остальное намного меньше
 const MAX_BODY_BYTES = 9 * 1024 * 1024;
 
 const EMAIL_EVENTS_BUDGET_MS = 40_000;
@@ -78,6 +81,16 @@ const services: WebServices = {
   workshopFiles: workshopFileServices,
   orders: orderServices,
   checkout: checkoutServices,
+  notifyWorkshopReview(notice) {
+    after(() =>
+      notifyStaffAlert(
+        // Каждая отправка — отдельное сообщение: правка тоже требует проверки
+        `review/${notice.workshopSlug}/${notice.email}/${Date.now()}`,
+        formatWorkshopReviewMessage(notice),
+        "workshop-review",
+      ),
+    );
+  },
   revalidatePaths(paths) {
     for (const path of paths) {
       // Шаблон маршрута вроде /catalog/[category]/[slug] сбрасывает все его страницы
