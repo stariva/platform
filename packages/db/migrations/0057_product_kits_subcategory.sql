@@ -1,1 +1,1 @@
-ALTER TYPE "public"."product_subcategory" ADD VALUE 'kits';
+ALTER TYPE "public"."product_subcategory" ADD VALUE IF NOT EXISTS 'kits';
