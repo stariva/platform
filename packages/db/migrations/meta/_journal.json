@@ -400,6 +400,13 @@
       "when": 1794167881604,
       "tag": "0056_workshop_support_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1794207288998,
+      "tag": "0057_product_kits_subcategory",
+      "breakpoints": true
     }
   ]
 }

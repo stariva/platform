@@ -27,6 +27,7 @@ export const PRODUCT_CATEGORIES = {
       placemats: "Плейсматы",
       planters: "Декор и прочее",
       trees: "Ёлки",
+      kits: "Наборы для творчества",
     },
   },
 } as const;
@@ -53,6 +54,7 @@ const subcategoryIds = [
   "placemats",
   "planters",
   "trees",
+  "kits",
 ] as const;
 
 /** Максимум для integer в PostgreSQL, цена хранится в копейках. */

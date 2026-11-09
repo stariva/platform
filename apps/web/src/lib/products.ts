@@ -67,6 +67,11 @@ export const categories: Category[] = [
       { slug: "placemats", name: "Плейсматы", categorySlug: "interior" },
       { slug: "planters", name: "Декор и прочее", categorySlug: "interior" },
       { slug: "trees", name: "Ёлки", categorySlug: "interior" },
+      {
+        slug: "kits",
+        name: "Наборы для творчества",
+        categorySlug: "interior",
+      },
     ],
   },
 ];
