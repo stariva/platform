@@ -31,9 +31,13 @@ BEGIN
 	IF EXISTS (
 		SELECT 1 FROM "products"
 		WHERE "id" <> kit_id
-			AND ("ozon_product_id" = 6912818632 OR "ozon_offer_id" = 'ELKA_KIT_001')
+			AND (
+				"ozon_product_id" = 6912818632
+				OR "ozon_offer_id" = 'ELKA_KIT_001'
+				OR "ozon_sku" = 6289493274
+			)
 	) THEN
-		RAISE WARNING 'Ozon link skipped: Ozon product id 6912818632 or offer id ELKA_KIT_001 is already used by another product. Free them, then run: UPDATE products SET ozon_product_id = 6912818632, ozon_offer_id = ''ELKA_KIT_001'', ozon_sku = 6289493274 WHERE slug = ''nabor-makrame-elka'';';
+		RAISE WARNING 'Ozon link skipped: Ozon product id 6912818632, offer id ELKA_KIT_001 or sku 6289493274 is already used by another product. Free them, then run: UPDATE products SET ozon_product_id = 6912818632, ozon_offer_id = ''ELKA_KIT_001'', ozon_sku = 6289493274 WHERE slug = ''nabor-makrame-elka'';';
 		RETURN;
 	END IF;
 
@@ -46,6 +50,6 @@ BEGIN
 			"ozon_sku" = 6289493274
 		WHERE "id" = kit_id;
 	EXCEPTION WHEN unique_violation THEN
-		RAISE WARNING 'Ozon link skipped: unique violation on Ozon ids. Free them, then run: UPDATE products SET ozon_product_id = 6912818632, ozon_offer_id = ''ELKA_KIT_001'', ozon_sku = 6289493274 WHERE slug = ''nabor-makrame-elka'';';
+		RAISE WARNING 'Ozon link skipped: unique violation on Ozon product id, offer id or sku. Free them, then run: UPDATE products SET ozon_product_id = 6912818632, ozon_offer_id = ''ELKA_KIT_001'', ozon_sku = 6289493274 WHERE slug = ''nabor-makrame-elka'';';
 	END;
 END $$;
