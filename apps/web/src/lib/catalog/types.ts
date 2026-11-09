@@ -33,7 +33,8 @@ export type ProductSubcategory =
   | "baskets"
   | "totes"
   | "crossbody"
-  | "trees";
+  | "trees"
+  | "kits";
 
 export interface Product {
   id: string;
