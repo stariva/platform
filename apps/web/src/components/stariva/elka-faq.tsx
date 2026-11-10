@@ -11,9 +11,12 @@ export function ElkaFaq({
   message,
   source,
   community = false,
+  note,
 }: {
   items: FAQItem[];
   title: string;
+  /** Свой текст под заголовком вместо «Не нашли ответ?». */
+  note?: string;
   /** Первое сообщение в WhatsApp при «Написать мастеру». */
   message: string;
   /** Откуда клик — источник заявки и префикс целей Метрики (`${source}_telegram`). */
@@ -34,7 +37,7 @@ export function ElkaFaq({
             {title}
           </h2>
           <p className="text-dark-grey mb-6">
-            Не нашли ответ? Напишите — Ольга ответит в течение часа.
+            {note ?? "Не нашли ответ? Напишите — Ольга ответит в течение часа."}
           </p>
           <div className="flex flex-col gap-2 text-espresso">
             <ContactMasterButton

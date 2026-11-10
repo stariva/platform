@@ -9,22 +9,52 @@ import { formatPrice } from "@/lib/workshops-data";
 import { GNOMES_CARDS_ID, type pairOffer } from "../_data";
 
 /** Чем гномы различаются — коротко, чтобы выбрать одного или взять обоих. */
-const CHARACTER: Record<string, string[]> = {
-  "-9563": [
-    "Колпак-тыква с зелёным хвостиком, коричневый кафтан",
-    "Тёплая палитра охры и терракоты — уютно рядом с гирляндой и свечами",
-    "Подойдёт интерьеру в стиле кантри, бохо или деревенском",
-  ],
-  "-0554": [
-    "Красный колпак с белыми точками, красные варежки",
-    "Цвета Нового года — красный и белый, как на открытке",
-    "Хорош в светлом скандинавском интерьере с одним ярким пятном",
-  ],
+interface CardCopy {
+  /** Название и параметры для лендинга — в каталоге они суше. */
+  name: string;
+  params: string;
+  points: string[];
+}
+
+const CARDS: Record<string, CardCopy> = {
+  "-9563": {
+    name: "Большой вязаный гном «Тыква» ручной работы, 45 см",
+    params: "Высота 45 см · Нежная плюшевая пряжа",
+    points: [
+      "Высокий тыквенно-рыжий колпак с зелёным хвостиком и уютный шоколадный кафтан",
+      "Тёплые оттенки мёда, корицы и шоколада — мягко светятся рядом со свечами и гирляндой",
+      "В северной традиции такой гном в доме — к достатку, сытости и теплу",
+    ],
+  },
+  "-0554": {
+    name: "Большой вязаный гном «Мухомор» ручной работы, 40 см",
+    params: "Высота 40 см · Нежная плюшевая пряжа",
+    points: [
+      "Нарядный красный колпак в белую горошину, пушистая борода и красные варежки",
+      "Главные цвета Нового года — сочный красный и снежно-белый, как на рождественской открытке",
+      "Сразу создаёт праздничное настроение и становится ярким акцентом в светлой комнате",
+    ],
+  },
 };
 
-function characterOf(product: Product): string[] {
-  const tail = Object.keys(CHARACTER).find((key) => product.slug.endsWith(key));
-  return tail ? (CHARACTER[tail] ?? []) : [];
+function cardCopyOf(product: Product): CardCopy {
+  const tail = Object.keys(CARDS).find((key) => product.slug.endsWith(key));
+  return (
+    (tail ? CARDS[tail] : undefined) ?? {
+      name: product.name,
+      params: [product.dimensions, product.material]
+        .filter(Boolean)
+        .join(" · "),
+      points: [],
+    }
+  );
+}
+
+function stockBadge(product: Product): string {
+  if (!isPurchasable(product)) return "Нет в наличии";
+  return product.stockAvailable > 0
+    ? `В наличии (${product.stockAvailable} шт.)`
+    : "В наличии";
 }
 
 export function GnomesCards({
@@ -53,12 +83,12 @@ export function GnomesCards({
             Тыква и Мухомор
           </h2>
           <p className="text-dark-grey leading-relaxed">
-            Каждый гном связан в единственном экземпляре — таким, как на фото.
-            Выберите одного или поставьте пару рядом — они дополняют друг друга:
-            тёплая охра Тыквы добавляет дому уюта, а красный колпак Мухомора —
-            праздника.
+            Каждый гном связан вручную в единственном экземпляре — вы получите
+            именно тех хранителей, что видите на фото. Можно забрать одного, но
+            в паре они смотрятся как законченная живая история: разная высота
+            колпаков (40 и 45 см) создаёт красивый объём.
             {offer.isPair && offer.saving > 0
-              ? ` Оба вместе — ${formatPrice(offer.price)} вместо ${formatPrice(offer.regularPrice)}: цена комплекта применится в корзине сама.`
+              ? ` Вместе выгоднее — ${formatPrice(offer.price)} вместо ${formatPrice(offer.regularPrice)} (скидка ${formatPrice(offer.saving)} посчитается в корзине сама).`
               : null}
           </p>
         </div>
@@ -66,7 +96,7 @@ export function GnomesCards({
         <div className="grid md:grid-cols-2 gap-6 lg:gap-10">
           {gnomes.map((product) => {
             const { price, oldPrice } = product;
-            const purchasable = isPurchasable(product);
+            const copy = cardCopyOf(product);
             const image = product.images[0];
             return (
               <article
@@ -88,21 +118,19 @@ export function GnomesCards({
                     />
                   ) : null}
                   <span className="absolute top-4 left-4 rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs text-espresso">
-                    {purchasable ? "В наличии" : "Нет в наличии"}
+                    {stockBadge(product)}
                   </span>
                 </div>
 
                 <div className="flex flex-col flex-1 p-6 lg:p-8">
                   <h3 className="font-serif text-2xl text-espresso mb-2">
-                    {product.name}
+                    {copy.name}
                   </h3>
-                  {product.dimensions ? (
-                    <p className="text-sm text-text-grey mb-5">
-                      {product.dimensions} · {product.material}
-                    </p>
+                  {copy.params ? (
+                    <p className="text-sm text-text-grey mb-5">{copy.params}</p>
                   ) : null}
                   <ul className="flex flex-col gap-2 mb-6">
-                    {characterOf(product).map((item) => (
+                    {copy.points.map((item) => (
                       <li
                         key={item}
                         className="flex items-start gap-2 text-sm text-dark-grey"

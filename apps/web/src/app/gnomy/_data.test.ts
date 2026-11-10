@@ -103,7 +103,7 @@ test("the landing speaks of New Year, not of autumn", () => {
 test("hero promises a pair only while both gnomes are in stock", () => {
   const sold = { ...flyAgaric, inStock: false };
   const pair = heroCopy(pairOffer([pumpkin, flyAgaric]));
-  expect(pair.title).toBe("Два вязаных гнома");
+  expect(pair.title).toBe("Два больших вязаных гнома");
   expect(pair.inStock).toBe(true);
 
   const single = heroCopy(pairOffer([pumpkin, sold]));
@@ -117,29 +117,33 @@ test("hero promises a pair only while both gnomes are in stock", () => {
 });
 
 test("size answer names each gnome instead of gluing catalog strings", () => {
+  const sold = { ...flyAgaric, inStock: false };
   const [size] = gnomesFaq([
     pumpkin,
-    { ...flyAgaric, dimensions: "Высота около 40 см" },
+    { ...sold, dimensions: "Высота около 40 см" },
   ]);
   expect(size?.answer).toStartWith("Тыква — 40–45 см, Мухомор — около 40 см.");
   expect(size?.answer).not.toContain("Высота");
 
-  const [same] = gnomesFaq([pumpkin, flyAgaric]);
+  const [same] = gnomesFaq([pumpkin, sold]);
   expect(same?.answer).toStartWith("Оба гнома — 40–45 см.");
 });
 
 test("scarcity line shows only while something is in stock", () => {
   const sold = { ...flyAgaric, inStock: false };
   expect(heroCopy(pairOffer([pumpkin, flyAgaric])).scarcity).toContain(
-    "Гномы в наличии",
+    "всего 1 пара",
   );
   expect(
     heroCopy(pairOffer([{ ...pumpkin, inStock: false }, sold])).scarcity,
   ).toBeNull();
 });
 
-test("hero avoids quantity claims for different stock counts", () => {
-  for (const stockAvailable of [0, 1, 2, 5]) {
+test("hero claims the last pair only with exactly one of each in stock", () => {
+  const last = heroCopy(pairOffer([pumpkin, flyAgaric]));
+  expect(last.badge).toContain("В единственном экземпляре");
+
+  for (const stockAvailable of [0, 2, 5]) {
     for (const gnomes of [
       [{ ...pumpkin, stockAvailable }],
       [pumpkin, { ...flyAgaric, stockAvailable }],
@@ -169,7 +173,7 @@ test("ambiguous dimensions are not presented as height", () => {
     expect(size?.answer).not.toContain("рост");
     expect(gnome.dimensions).toBe(dimensions);
 
-    const [mixed] = gnomesFaq([gnome, flyAgaric]);
+    const [mixed] = gnomesFaq([{ ...gnome, inStock: false }, flyAgaric]);
     expect(mixed?.answer).toStartWith("Мухомор — 40–45 см.");
   }
 });
@@ -177,8 +181,16 @@ test("ambiguous dimensions are not presented as height", () => {
 test("different height descriptions do not imply a height difference", () => {
   const [size] = gnomesFaq([
     { ...pumpkin, dimensions: "Высота 40 см" },
-    { ...flyAgaric, dimensions: "Высота около 40 см" },
+    { ...flyAgaric, dimensions: "Высота около 40 см", inStock: false },
   ]);
   expect(size?.answer).toStartWith("Тыква — 40 см, Мухомор — около 40 см.");
   expect(size?.answer).not.toContain("разница");
+});
+
+test("pair faq quotes the single and bundle prices from the offer", () => {
+  const answers = gnomesFaq([pumpkin, flyAgaric])
+    .map((item) => item.answer.replace(/\s/g, " "))
+    .join(" ");
+  expect(answers).toContain("стоимость одного — 3 700 ₽");
+  expect(answers).toContain("скидка 1 100 ₽ — вся пара обойдётся в 6 300 ₽");
 });

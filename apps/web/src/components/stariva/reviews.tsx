@@ -56,6 +56,8 @@ interface ReviewsProps {
   heading?: string;
   /** Текст над отзывами магазина, когда у самого товара отзывов нет. */
   fallbackNote?: string;
+  /** Заголовок над отзывами магазина, когда у самого товара отзывов нет. */
+  fallbackHeading?: string;
 }
 
 /** Shows product reviews when available, otherwise store-wide reviews. */
@@ -64,6 +66,7 @@ export async function Reviews({
   productId,
   heading,
   fallbackNote,
+  fallbackHeading,
   verifiedOnly = false,
 }: ReviewsProps) {
   const isProductPage = Boolean(productId);
@@ -100,7 +103,7 @@ export async function Reviews({
   const title = showProductReviews
     ? (heading ?? "Отзывы о товаре")
     : isProductPage
-      ? "Отзывы о Stariva"
+      ? (fallbackHeading ?? "Отзывы о Stariva")
       : heading;
 
   return (
