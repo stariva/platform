@@ -21,7 +21,14 @@ const subscribe = () => () => {};
 /** Счётчик дней считается в браузере: страница кэшируется и не должна показывать устаревшее число. */
 export function NewYearCountdown() {
   const days = useSyncExternalStore(subscribe, daysUntilNewYear, () => null);
-  if (days === null) return <span className="opacity-0">00 дней</span>;
+  // До гидратации — пустое место той же ширины: в HTML не должно быть «00 дней»,
+  // иначе поисковики и читалки видят сломанный счётчик.
+  if (days === null)
+    return (
+      <span className="inline-block min-w-[7ch]" aria-hidden>
+        &nbsp;
+      </span>
+    );
   return (
     <span className="tabular-nums">
       {days} {pluralDays(days)}

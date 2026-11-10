@@ -22,6 +22,7 @@ import {
   pairButtonLabel,
   pairOffer,
   pickGnomes,
+  reviewsNote,
 } from "./_data";
 
 // Цены и наличие гномов — из базы, при сборке образа её нет.
@@ -95,6 +96,7 @@ export default async function GnomesPage() {
           limit={3}
           productId={gnomes[0]?.id}
           heading="Отзывы покупателей Stariva"
+          fallbackNote={reviewsNote(offer)}
         />
         <ElkaFaq
           items={faq}

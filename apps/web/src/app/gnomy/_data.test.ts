@@ -49,13 +49,13 @@ test("a missing gnome is skipped instead of breaking the page", () => {
 test("pair costs the bundle price while each gnome keeps its own price", () => {
   const offer = pairOffer([pumpkin, flyAgaric]);
   expect(offer).toMatchObject({
-    price: 6500,
+    price: 6300,
     regularPrice: 7400,
-    saving: 900,
+    saving: 1100,
     isPair: true,
   });
   expect(pairButtonLabel(offer).replace(/\s/g, " ")).toBe(
-    "Оба гнома в корзину — 6 500 ₽",
+    "Оба гнома в корзину — 6 300 ₽",
   );
 });
 
@@ -114,4 +114,26 @@ test("hero promises a pair only while both gnomes are in stock", () => {
   const none = heroCopy(pairOffer([{ ...pumpkin, inStock: false }, sold]));
   expect(none.inStock).toBe(false);
   expect(none.lead).toContain("нет в наличии");
+});
+
+test("size answer names each gnome instead of gluing catalog strings", () => {
+  const [size] = gnomesFaq([
+    pumpkin,
+    { ...flyAgaric, dimensions: "Высота около 40 см" },
+  ]);
+  expect(size?.answer).toStartWith("Тыква — 40–45 см, Мухомор — около 40 см.");
+  expect(size?.answer).not.toContain("Высота");
+
+  const [same] = gnomesFaq([pumpkin, flyAgaric]);
+  expect(same?.answer).toStartWith("Оба гнома — 40–45 см.");
+});
+
+test("scarcity line shows only while something is in stock", () => {
+  const sold = { ...flyAgaric, inStock: false };
+  expect(heroCopy(pairOffer([pumpkin, flyAgaric])).scarcity).toContain(
+    "одна пара",
+  );
+  expect(
+    heroCopy(pairOffer([{ ...pumpkin, inStock: false }, sold])).scarcity,
+  ).toBeNull();
 });

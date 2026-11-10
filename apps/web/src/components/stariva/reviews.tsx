@@ -54,6 +54,8 @@ interface ReviewsProps {
   productId?: string;
   /** Override section heading */
   heading?: string;
+  /** Текст над отзывами магазина, когда у самого товара отзывов нет. */
+  fallbackNote?: string;
 }
 
 /** Shows product reviews when available, otherwise store-wide reviews. */
@@ -61,6 +63,7 @@ export async function Reviews({
   limit = 6,
   productId,
   heading,
+  fallbackNote,
   verifiedOnly = false,
 }: ReviewsProps) {
   const isProductPage = Boolean(productId);
@@ -119,8 +122,8 @@ export async function Reviews({
             </h2>
             {isProductPage && !showProductReviews && (
               <p className="mt-4 text-taupe max-w-xl">
-                У этой модели ещё нет отзывов — вот что пишут о других изделиях
-                Ольги.
+                {fallbackNote ??
+                  "У этой модели ещё нет отзывов — вот что пишут о других изделиях Ольги."}
               </p>
             )}
           </div>
