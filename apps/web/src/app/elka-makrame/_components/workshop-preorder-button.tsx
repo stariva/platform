@@ -15,7 +15,13 @@ export function WorkshopPreorderButton({
   title,
   preorder,
   goal = "elka_workshop_preorder",
+  bundle,
+  buyLabel,
 }: {
+  /** Комбо: заказ оформляется на `slug`, а доступ выдаётся ко всем курсам. */
+  bundle?: string;
+  /** Своя подпись кнопки — в блоке тарифов. */
+  buyLabel?: string;
   slug: string;
   price: number;
   title: string;
@@ -25,11 +31,15 @@ export function WorkshopPreorderButton({
   return (
     <WorkshopPurchase
       slug={slug}
+      bundle={bundle}
       price={price}
       title={title}
       returnPath={`${WORKSHOP_PATH}#${WORKSHOP_SECTION_ID}`}
       preorder={preorder}
-      buyLabel={`${preorder ? "Оформить предзаказ" : "Купить"} за ${formatPrice(price)}`}
+      buyLabel={
+        buyLabel ??
+        `${preorder ? "Оформить предзаказ" : "Купить"} за ${formatPrice(price)}`
+      }
       buyGoal={goal}
     />
   );

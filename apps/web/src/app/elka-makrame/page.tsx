@@ -12,8 +12,12 @@ import { Reviews } from "@/components/stariva/reviews";
 import { WORKSHOP_PATH, WORKSHOP_SLUG } from "@/lib/elka/data";
 import { loadBigTreeWorkshop, loadElkaData } from "@/lib/elka/load";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { getBundle } from "@/lib/workshops/bundles";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
+import { KOMBO_SLUG } from "../elka-makrame-kombo/_data";
+import { ElkaAuthor } from "./_components/elka-author";
 import { ElkaReadyTrees } from "./_components/elka-ready-trees";
+import { ElkaTariffs } from "./_components/elka-tariffs";
 import { ElkaWorkshop, workshopOffer } from "./_components/elka-workshop";
 import { LegacyModelsRedirect } from "./_components/legacy-models-redirect";
 import { WORKSHOP_BUY_ID, workshopFaq } from "./_data";
@@ -89,6 +93,9 @@ export default async function ElkaMakramePage() {
     treePrices.length > 0 ? Math.min(...treePrices) : undefined;
   const { preorder, releaseLabel } = workshopOffer(workshop);
   const faq = workshopFaq({ preorder, releaseLabel, bigTree });
+  // Тарифы — после старта уроков, когда продаются оба мастер-класса.
+  const tariffs =
+    workshop && bigTree && !preorder ? { workshop, bigTree } : undefined;
 
   return (
     <>
@@ -118,8 +125,12 @@ export default async function ElkaMakramePage() {
         <ElkaWorkshop
           workshop={workshop}
           bigTree={bigTree}
+          tariffs={Boolean(tariffs)}
           readyTreePrice={readyTreePrice}
         />
+        {tariffs ? (
+          <ElkaTariffs {...tariffs} bundle={getBundle(KOMBO_SLUG)} />
+        ) : null}
         <ElkaCustomerLooks
           source="elka_workshop"
           eyebrow="Идеи для украшения"
@@ -136,6 +147,7 @@ export default async function ElkaMakramePage() {
           productId={reviewProductId}
           heading="Отзывы покупателей Stariva"
         />
+        <ElkaAuthor />
         <ElkaFaq
           items={faq}
           title="Частые вопросы о мастер-классе"
