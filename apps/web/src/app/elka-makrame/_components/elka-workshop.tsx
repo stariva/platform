@@ -21,8 +21,9 @@ import {
 import {
   BIG_TREE_ID,
   READY_TREES_ID,
+  TARIFFS_ID,
   WORKSHOP_BUY_ID,
-  WORKSHOP_INCLUDES,
+  WORKSHOP_HERO_BENEFITS,
   WORKSHOP_PROGRAM,
   WORKSHOP_QUICK_BUY_ID,
   WORKSHOP_SECTION_ID,
@@ -59,11 +60,17 @@ export function workshopOffer(workshop?: Workshop, now = new Date()) {
 export function ElkaWorkshop({
   workshop,
   bigTree,
+  tariffs = false,
   readyTreePrice,
 }: {
   workshop?: Workshop;
   /** Мастер-класс по большой ёлке; есть, только когда его продают. */
   bigTree?: Workshop;
+  /**
+   * Ниже на странице есть блок тарифов: кнопка первого экрана ведёт к нему,
+   * а большую ёлку продаёт он, а не карточка под формой оплаты.
+   */
+  tariffs?: boolean;
   /** Самая дешёвая готовая ёлка из каталога — для сравнения с ценой уроков. */
   readyTreePrice?: number;
 }) {
@@ -117,7 +124,8 @@ export function ElkaWorkshop({
             ) : (
               <p className="inline-flex items-center gap-2 rounded-2xl bg-white/80 py-2 px-4 mb-6 text-base font-medium text-espresso lg:text-lg">
                 <Check className="size-5 shrink-0 text-sage" aria-hidden />
-                Уроки уже открыты — начните сегодня
+                Уроки уже открыты — начните плести свой новогодний талисман
+                сегодня
               </p>
             )}
             <h1
@@ -126,14 +134,16 @@ export function ElkaWorkshop({
               style={{ fontSize: "clamp(32px, 4.6vw, 56px)" }}
             >
               Сплетите ёлку макраме своими руками
+              {/* Хвост заголовка мельче: целиком в 56px он занял бы пол-экрана. */}
+              <span className="mt-2 block text-[0.55em] leading-snug text-dark-grey">
+                — уютную семейную реликвию на долгие годы
+              </span>
             </h1>
           </div>
           <p className="order-4 text-dark-grey leading-relaxed lg:mb-8">
-            Ольга покажет в видеоуроках, как шаг за шагом сплести ёлку{" "}
-            {WORKSHOP_TREE_SIZE} — от выбора шнура до готового панно на стене.{" "}
             {preorder
-              ? "Оплатите предзаказ сейчас — зафиксируете цену со скидкой и получите уроки первыми, с запасом времени до праздника."
-              : "Уроки появятся в личном кабинете сразу после оплаты — плетите в своём темпе и успейте к празднику."}
+              ? `Ольга покажет в видеоуроках, как шаг за шагом сплести ёлку ${WORKSHOP_TREE_SIZE} — от выбора шнура до готового панно на стене. Оплатите предзаказ сейчас — зафиксируете цену со скидкой и получите уроки первыми, с запасом времени до праздника.`
+              : `Ольга шаг за шагом покажет в видеоуроках, как превратить натуральный хлопковый шнур в объёмное настенное панно ${WORKSHOP_TREE_SIZE} с деревянной звездой на вершине. Поймайте медитативный ритм плетения, отдохните от предпраздничной суеты и создайте тёплую новогоднюю традицию для своего дома. Доступ к урокам откроется в личном кабинете сразу после оплаты.`}
           </p>
 
           {workshop ? (
@@ -151,13 +161,23 @@ export function ElkaWorkshop({
                   </s>
                 )}
               </div>
-              <TrackedLink
-                href={`#${WORKSHOP_BUY_ID}`}
-                goal="elka_quick_buy_cta"
-                className="flex flex-1 items-center justify-center rounded-2xl bg-terracotta py-4 text-center text-parchment transition-colors hover:bg-terracotta-dark"
-              >
-                {preorder ? "Оформить предзаказ" : "Купить мастер-класс"}
-              </TrackedLink>
+              {tariffs ? (
+                <TrackedLink
+                  href={`#${TARIFFS_ID}`}
+                  goal="elka_tariffs_cta"
+                  className="flex flex-1 items-center justify-center rounded-2xl bg-terracotta px-4 py-4 text-center text-parchment transition-colors hover:bg-terracotta-dark"
+                >
+                  Выбрать свой формат и начать плести
+                </TrackedLink>
+              ) : (
+                <TrackedLink
+                  href={`#${WORKSHOP_BUY_ID}`}
+                  goal="elka_quick_buy_cta"
+                  className="flex flex-1 items-center justify-center rounded-2xl bg-terracotta py-4 text-center text-parchment transition-colors hover:bg-terracotta-dark"
+                >
+                  {preorder ? "Оформить предзаказ" : "Купить мастер-класс"}
+                </TrackedLink>
+              )}
             </div>
           ) : null}
         </div>
@@ -174,7 +194,7 @@ export function ElkaWorkshop({
             />
           </div>
           <ul className="order-5 mt-5 lg:mt-0 grid sm:grid-cols-2 gap-3">
-            {WORKSHOP_INCLUDES.map((item) => (
+            {WORKSHOP_HERO_BENEFITS.map((item) => (
               <li
                 key={item}
                 className="flex items-start gap-2 rounded-2xl bg-white/70 p-4 text-sm text-espresso"
@@ -305,7 +325,9 @@ export function ElkaWorkshop({
             ) : null}
           </div>
 
-          {!preorder && bigTree ? <BigTreeOffer bigTree={bigTree} /> : null}
+          {!preorder && bigTree && !tariffs ? (
+            <BigTreeOffer bigTree={bigTree} />
+          ) : null}
         </div>
       </div>
     </section>
