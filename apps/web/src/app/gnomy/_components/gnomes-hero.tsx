@@ -14,10 +14,10 @@ import {
 import { AddPairButton } from "./add-pair-button";
 
 const FACTS = [
-  "Связаны вручную из мягкой плюшевой пряжи — приятно взять в руки",
-  `Уже в наличии — отправим за ${IN_STOCK_SHIP_DAYS}`,
-  "Доставка в пункты выдачи Ozon по России",
-  "Упаковка в крафт и лён — удобно дарить к празднику",
+  "Связаны вручную из мягкой, бархатистой пряжи",
+  `Уже готовы и ждут отправки — вышлем за ${IN_STOCK_SHIP_DAYS}`,
+  "Удобная доставка в пункты выдачи Ozon по всей России",
+  "Подарочная упаковка в крафт и натуральный лён — можно сразу дарить",
 ];
 
 /**
@@ -35,7 +35,7 @@ export function GnomesHero({
   const copy = heroCopy(offer);
   const facts = copy.inStock
     ? FACTS
-    : FACTS.filter((fact) => !fact.startsWith("Уже в наличии"));
+    : FACTS.filter((fact) => !fact.startsWith("Уже готовы"));
   return (
     <section
       id={GNOMES_SECTION_ID}
@@ -54,7 +54,7 @@ export function GnomesHero({
             style={{ fontSize: "clamp(34px, 5vw, 62px)" }}
           >
             {copy.title} —{" "}
-            <em className="not-italic text-taupe">новогодний декор для дома</em>
+            <em className="not-italic text-taupe">{copy.accent}</em>
           </h1>
           <p className="text-lg text-dark-grey leading-relaxed max-w-xl mb-8 text-pretty">
             {copy.lead}

@@ -16,6 +16,7 @@ import { GnomesCards } from "./_components/gnomes-cards";
 import { GnomesHero } from "./_components/gnomes-hero";
 import { GnomesIdeas } from "./_components/gnomes-ideas";
 import {
+  GNOMES_FAQ_NOTE,
   GNOMES_PATH,
   gnomeList,
   gnomesFaq,
@@ -95,12 +96,14 @@ export default async function GnomesPage() {
         <Reviews
           limit={3}
           productId={gnomes[0]?.id}
-          heading="Отзывы покупателей Stariva"
+          heading="Что говорят о работах Stariva"
+          fallbackHeading="Что говорят о работах Stariva"
           fallbackNote={reviewsNote(offer)}
         />
         <ElkaFaq
           items={faq}
           title="Частые вопросы о гномах"
+          note={GNOMES_FAQ_NOTE}
           message="Здравствуйте, Ольга! У меня вопрос про вязаных гномов."
           source="gnomes_faq"
         />
