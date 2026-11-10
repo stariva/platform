@@ -22,9 +22,9 @@ test("both gnomes together cost the pair price to the kopeck", () => {
     GNOME_PAIR_PRICE_KOPECKS,
   );
   expect(priced[1]).toBe(other);
-  expect(priced[0]?.price).toBe(325_000);
+  expect(priced[0]?.price).toBe(315_000);
   expect(priced[0]?.listPrice).toBe(370_000);
-  expect(bundleSavingKopecks(priced)).toBe(90_000);
+  expect(bundleSavingKopecks(priced)).toBe(110_000);
 });
 
 test("an odd discount is split without losing a kopeck", () => {

@@ -95,7 +95,7 @@ test("both gnomes together are charged the bundle price, one alone the catalog p
   ]);
   assert.equal(
     both.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    650000,
+    630000,
   );
 
   const one = await resolveCatalogItems([

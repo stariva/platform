@@ -11,7 +11,7 @@
  */
 export const GNOME_TAILS = ["-9563", "-0554"] as const;
 /** Цена двух гномов вместе, в копейках. По отдельности — по цене в каталоге. */
-export const GNOME_PAIR_PRICE_KOPECKS = 650_000;
+export const GNOME_PAIR_PRICE_KOPECKS = 630_000;
 
 interface BundleItem {
   productSlug: string;

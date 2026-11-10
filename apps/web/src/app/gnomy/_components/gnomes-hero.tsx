@@ -1,6 +1,5 @@
 import { Check } from "lucide-react";
 import Image from "next/image";
-import { NewYearCountdown } from "@/components/stariva/new-year-countdown";
 import { TrackedLink } from "@/components/stariva/tracked-link";
 import type { Product } from "@/lib/catalog/types";
 import { IN_STOCK_SHIP_DAYS } from "@/lib/in-stock";
@@ -15,7 +14,7 @@ import {
 import { AddPairButton } from "./add-pair-button";
 
 const FACTS = [
-  "Связаны вручную из плюшевой пряжи",
+  "Связаны вручную из мягкой плюшевой пряжи — приятно взять в руки",
   `Уже в наличии — отправим за ${IN_STOCK_SHIP_DAYS}`,
   "Доставка в пункты выдачи Ozon по России",
   "Упаковка в крафт и лён — удобно дарить к празднику",
@@ -47,7 +46,7 @@ export function GnomesHero({
         <div>
           <p className="inline-flex items-center gap-2 rounded-full bg-sage-pale text-espresso px-4 py-2 text-sm mb-6">
             <span className="size-2 rounded-full bg-terracotta" aria-hidden />
-            До Нового года <NewYearCountdown />
+            {copy.badge}
           </p>
           <h1
             id="gnomes-title"
@@ -78,7 +77,9 @@ export function GnomesHero({
             ) : null}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          <div
+            className={`flex flex-col sm:flex-row gap-3 ${copy.scarcity ? "mb-3" : "mb-8"}`}
+          >
             <AddPairButton
               products={available}
               label={pairButtonLabel(offer)}
@@ -92,6 +93,11 @@ export function GnomesHero({
               Посмотреть каждого
             </TrackedLink>
           </div>
+          {copy.scarcity ? (
+            <p className="text-sm text-dark-grey mb-8 max-w-xl">
+              {copy.scarcity}
+            </p>
+          ) : null}
 
           <ul className="grid sm:grid-cols-2 gap-3 max-w-xl">
             {facts.map((fact) => (
