@@ -83,7 +83,8 @@ export default async function ElkaMakrameKomboPage() {
           source="elka_kombo"
           eyebrow="Идеи для украшения"
           title="Как наряжают ёлку макраме покупатели"
-          intro="Так готовые ёлки Stariva выглядят дома у покупателей. Ёлки, которые вы сплетёте сами, тоже можно каждый год украшать по-новому."
+          intro="Так мои готовые ёлки выглядят дома у покупателей. Ёлки, которые вы сплетёте сами, тоже можно каждый год украшать по-новому."
+          firstPerson
           cta={{
             href: `#${BUY_ID}`,
             label: "Хочу сплести такие",
@@ -99,6 +100,7 @@ export default async function ElkaMakrameKomboPage() {
           items={faq}
           title="Частые вопросы о комбо"
           message="Здравствуйте, Ольга! У меня вопрос про комбо мастер-классов по ёлкам макраме."
+          note="Не нашли ответ? Напишите — я отвечу в течение часа."
           source="elka_kombo_faq"
           community
         />
