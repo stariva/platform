@@ -72,9 +72,9 @@ export function heroCopy(offer: ReturnType<typeof pairOffer>) {
     return {
       title: "Два вязаных гнома",
       lead: "Тыква и Мухомор — добрые хранители домашнего уюта на всю зиму. Связаны вручную из мягкой плюшевой пряжи, ростом 40–45 см. Тёплая охра Тыквы — к достатку и полной чаше, красный колпак Мухомора — к празднику и сказке. Поставьте пару под ёлку, на подоконник или комод и встречайте Новый год с настроением.",
-      badge: `В единственном экземпляре · отправим за ${IN_STOCK_SHIP_DAYS}`,
+      badge: `В наличии · отправим за ${IN_STOCK_SHIP_DAYS}`,
       scarcity:
-        "В наличии одна пара. Такую же к Новому году Ольга может не успеть связать.",
+        "Гномы в наличии. Таких же к Новому году Ольга может не успеть связать.",
       inStock: true,
     };
   }
@@ -82,16 +82,16 @@ export function heroCopy(offer: ReturnType<typeof pairOffer>) {
     return {
       title: "Вязаный гном",
       lead: `${only.name}: интерьерный декор ручной вязки. Второго гнома сейчас нет в наличии — напишите Ольге, она подскажет, можно ли связать такого же.`,
-      badge: `В единственном экземпляре · отправим за ${IN_STOCK_SHIP_DAYS}`,
+      badge: `В наличии · отправим за ${IN_STOCK_SHIP_DAYS}`,
       scarcity:
-        "Остался один гном. Такого же к Новому году Ольга может не успеть связать.",
+        "Гном в наличии. Такого же к Новому году Ольга может не успеть связать.",
       inStock: true,
     };
   }
   return {
     title: "Вязаные гномы",
     lead: "Тыква и Мухомор — интерьерный декор ручной вязки. Сейчас обоих нет в наличии: напишите Ольге, она подскажет, можно ли связать такого же и к какому сроку.",
-    badge: "Каждый гном — в единственном экземпляре",
+    badge: "Сейчас нет в наличии",
     scarcity: null,
     inStock: false,
   };
@@ -108,7 +108,11 @@ export function reviewsNote(offer: ReturnType<typeof pairOffer>): string {
 
 /** «Высота около 40 см» → «около 40 см»: рост встраивается в середину фразы. */
 function heightOf(product: Product): string | undefined {
-  return product.dimensions?.replace(/^высота\s+/i, "").trim() || undefined;
+  return product.dimensions
+    ?.trim()
+    .match(
+      /^высота\s+((?:около\s+)?\d+(?:[.,]\d+)?(?:\s*[–—-]\s*\d+(?:[.,]\d+)?)?\s*см)\.?$/i,
+    )?.[1];
 }
 
 function shortName(product: Product): string {
@@ -124,10 +128,10 @@ function sizeAnswer(gnomes: Product[]): string {
     return height ? [{ name: shortName(gnome), height }] : [];
   });
   const [first, second] = sized;
-  if (!first) return "Около 40–45 см.";
+  if (!first) return "Размеры указаны в карточках гномов.";
   if (!second) return `${first.name} — ${first.height}.`;
   if (first.height === second.height) return `Оба гнома — ${first.height}.`;
-  return `${first.name} — ${first.height}, ${second.name} — ${second.height}. Рядом эта разница в росте смотрится особенно живо.`;
+  return `${first.name} — ${first.height}, ${second.name} — ${second.height}.`;
 }
 
 /** Вопросы покупателей — те же, что приходят Ольге про готовых гномов. */
@@ -135,7 +139,7 @@ export function gnomesFaq(gnomes: Product[]): FAQItem[] {
   return [
     {
       question: "Какого размера гномы?",
-      answer: `${sizeAnswer(gnomes)} Гном такого роста заметен в комнате и не теряется на полке — ему подойдёт место под ёлкой, на подоконнике или на консоли в прихожей.`,
+      answer: `${sizeAnswer(gnomes)} Гному подойдёт место под ёлкой, на подоконнике или на консоли в прихожей.`,
     },
     {
       question: "Из чего сделаны гномы?",

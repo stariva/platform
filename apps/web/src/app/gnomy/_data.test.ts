@@ -131,9 +131,54 @@ test("size answer names each gnome instead of gluing catalog strings", () => {
 test("scarcity line shows only while something is in stock", () => {
   const sold = { ...flyAgaric, inStock: false };
   expect(heroCopy(pairOffer([pumpkin, flyAgaric])).scarcity).toContain(
-    "одна пара",
+    "Гномы в наличии",
   );
   expect(
     heroCopy(pairOffer([{ ...pumpkin, inStock: false }, sold])).scarcity,
   ).toBeNull();
+});
+
+test("hero avoids quantity claims for different stock counts", () => {
+  for (const stockAvailable of [0, 1, 2, 5]) {
+    for (const gnomes of [
+      [{ ...pumpkin, stockAvailable }],
+      [pumpkin, { ...flyAgaric, stockAvailable }],
+      [{ ...pumpkin, inStock: false }],
+    ]) {
+      const { badge, scarcity } = heroCopy(pairOffer(gnomes));
+      expect(`${badge} ${scarcity ?? ""}`).not.toMatch(
+        /единственн|одна пара|Остался один/,
+      );
+    }
+  }
+});
+
+test("ambiguous dimensions are not presented as height", () => {
+  for (const dimensions of [
+    "Высота 40 см, ширина 20 см",
+    "Высота 40 см × 20 см",
+    "40 × 20 см",
+    "Ширина 40 см",
+    "40 см",
+    "",
+    undefined,
+  ]) {
+    const gnome = { ...pumpkin, dimensions };
+    const [size] = gnomesFaq([gnome]);
+    expect(size?.answer).toStartWith("Размеры указаны в карточках гномов.");
+    expect(size?.answer).not.toContain("рост");
+    expect(gnome.dimensions).toBe(dimensions);
+
+    const [mixed] = gnomesFaq([gnome, flyAgaric]);
+    expect(mixed?.answer).toStartWith("Мухомор — 40–45 см.");
+  }
+});
+
+test("different height descriptions do not imply a height difference", () => {
+  const [size] = gnomesFaq([
+    { ...pumpkin, dimensions: "Высота 40 см" },
+    { ...flyAgaric, dimensions: "Высота около 40 см" },
+  ]);
+  expect(size?.answer).toStartWith("Тыква — 40 см, Мухомор — около 40 см.");
+  expect(size?.answer).not.toContain("разница");
 });
