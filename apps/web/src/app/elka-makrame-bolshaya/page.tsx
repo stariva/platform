@@ -96,7 +96,8 @@ export default async function ElkaMakrameBolshayaPage() {
           source="elka_big"
           eyebrow="Идеи для украшения"
           title="Как наряжают ёлку макраме покупатели"
-          intro="Так готовые ёлки Stariva выглядят дома у покупателей. Ёлку, которую вы сплетёте сами, тоже можно каждый год украшать по-новому."
+          intro="Так мои готовые ёлки выглядят дома у покупателей. Ёлку, которую вы сплетёте сами, тоже можно каждый год украшать по-новому."
+          firstPerson
           cta={{
             href: `#${BUY_ID}`,
             label: "Хочу сплести такую",
@@ -112,6 +113,7 @@ export default async function ElkaMakrameBolshayaPage() {
           items={faq}
           title="Частые вопросы о мастер-классе"
           message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по большой ёлке макраме."
+          note="Не нашли ответ? Напишите — я отвечу в течение часа."
           source="elka_big_faq"
           community
         />

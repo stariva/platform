@@ -39,6 +39,8 @@ interface ElkaCustomerLooksProps {
   title: string;
   intro: string;
   cta: { href: string; label: string; goal: string };
+  /** Страницы мастер-классов говорят от лица Ольги: «я добавлю». */
+  firstPerson?: boolean;
 }
 
 /** Галерея «ёлки у покупателей» с идеями украшения и просмотром на весь экран. */
@@ -48,6 +50,7 @@ export function ElkaCustomerLooks({
   title,
   intro,
   cta,
+  firstPerson = false,
 }: ElkaCustomerLooksProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
@@ -198,7 +201,7 @@ export function ElkaCustomerLooks({
             >
               Пришлите фото
             </ContactMasterButton>{" "}
-            — Ольга добавит его в эту подборку.
+            — {firstPerson ? "я добавлю" : "Ольга добавит"} его в эту подборку.
           </p>
           <TrackedLink
             href={cta.href}
