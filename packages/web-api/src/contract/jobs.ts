@@ -1,5 +1,6 @@
 import { error, oc, type } from "@orpc/contract";
 import { z } from "zod";
+import { OzonRequestFailedError, ozonStockPullResultSchema } from "./admin";
 
 /**
  * Процедуры, которые вызывает воркер Hatchet (apps/jobs). Доступ — по
@@ -239,6 +240,16 @@ export const jobsContract = {
   reminders: remindersContract,
   storage: storageContract,
   analytics: analyticsContract,
+  ozon: {
+    /**
+     * Сверяет остаток товаров, которые продаются и на маркетплейсе Ozon:
+     * покупки на Ozon уменьшают остаток на сайте. Без ключей Seller API
+     * ничего не делает и отвечает configured: false.
+     */
+    syncStock: jobProcedure
+      .errors({ [OzonRequestFailedError.code]: OzonRequestFailedError })
+      .output(ozonStockPullResultSchema),
+  },
   npd: {
     /** Только алерт о зависших чеках; повторная регистрация дохода запрещена. */
     sweep: jobProcedure.output(

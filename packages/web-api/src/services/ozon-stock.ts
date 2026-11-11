@@ -1,8 +1,8 @@
 import { logger } from "@stariva/config";
-import { and, db, inArray, isNotNull } from "@stariva/db";
+import { and, db, eq, inArray, isNotNull, lt } from "@stariva/db";
 import { products } from "@stariva/db/schema";
 import { z } from "zod";
-import type { OzonStockPushResult } from "../contract";
+import type { OzonStockPullResult, OzonStockPushResult } from "../contract";
 import { env } from "../env";
 
 const OZON_API_URL = "https://api-seller.ozon.ru";
@@ -72,6 +72,7 @@ function stockQuery(slugs?: string[]) {
       ozonOfferId: products.ozonOfferId,
       ozonSku: products.ozonSku,
       stockAvailable: products.stockAvailable,
+      sellOnOzon: products.sellOnOzon,
     })
     .from(products)
     .where(
@@ -86,6 +87,9 @@ function stockQuery(slugs?: string[]) {
  * Дублирует остаток готовых изделий из нашей БД на FBS-склад Ozon и скрывает
  * такие товары с витрин Ozon. Ozon Доставка продаёт только то, что числится
  * в остатке на Ozon, а на маркетплейсе эти изделия продавать не нужно.
+ *
+ * Исключение — товары с `sellOnOzon`: их, наоборот, показываем на витрине
+ * Ozon, с любым остатком.
  *
  * Скрытие одностороннее: когда остаток кончился, товар остаётся скрытым —
  * на маркетплейс готовые изделия возвращаются вручную в кабинете Ozon.
@@ -113,7 +117,8 @@ export async function pushStockToOzon(
             current.stockAvailable === row.stockAvailable &&
             current.ozonOfferId === row.ozonOfferId &&
             current.ozonSku === row.ozonSku &&
-            current.ozonProductId === row.ozonProductId,
+            current.ozonProductId === row.ozonProductId &&
+            current.sellOnOzon === row.sellOnOzon,
         ),
       )
     ) {
@@ -131,6 +136,7 @@ async function pushStockSnapshotToOzon(
     syncedSlugs: [],
     failed: [],
     hidden: [],
+    shown: [],
   };
   if (rows.length === 0) return result;
 
@@ -160,13 +166,18 @@ async function pushStockSnapshotToOzon(
     }
   }
 
-  const toHide = rows
-    .filter((row) => row.stockAvailable > 0 && row.ozonSku !== null)
-    .map((row) => row.ozonSku as number);
-  for (const batch of chunks(toHide)) {
+  // NONE — скрыт везде, OZON — виден на витрине Ozon (без Селекта)
+  const placements = rows.flatMap((row) => {
+    if (row.ozonSku === null) return [];
+    if (row.sellOnOzon) return [{ sku: row.ozonSku, placement: "OZON" }];
+    if (row.stockAvailable > 0)
+      return [{ sku: row.ozonSku, placement: "NONE" }];
+    return [];
+  });
+  for (const batch of chunks(placements)) {
     const data = await ozonSellerFetch(
       "/v1/product/visibility/set",
-      { item_placement: batch.map((sku) => ({ sku, placement: "NONE" })) },
+      { item_placement: batch },
       visibilityResponseSchema,
     );
     const failedSkus = new Set(data.items_errors?.map((e) => e.sku));
@@ -181,7 +192,10 @@ async function pushStockSnapshotToOzon(
         code: error.code,
       });
     }
-    result.hidden.push(...batch.filter((sku) => !failedSkus.has(sku)));
+    for (const { sku, placement } of batch) {
+      if (failedSkus.has(sku)) continue;
+      (placement === "OZON" ? result.shown : result.hidden).push(sku);
+    }
   }
 
   result.syncedSlugs = rows
@@ -190,13 +204,113 @@ async function pushStockSnapshotToOzon(
         row.ozonOfferId !== null &&
         result.updated.includes(row.ozonOfferId) &&
         !result.failed.some((failure) => failure.offerId === row.ozonOfferId) &&
-        (row.stockAvailable === 0 ||
-          (row.ozonSku !== null && result.hidden.includes(row.ozonSku))),
+        (row.sellOnOzon
+          ? row.ozonSku !== null && result.shown.includes(row.ozonSku)
+          : row.stockAvailable === 0 ||
+            (row.ozonSku !== null && result.hidden.includes(row.ozonSku))),
     )
     .map((row) => row.slug);
 
   if (result.failed.length > 0) {
     logger.warn("ozon.stock.push_failed", { failed: result.failed });
+  }
+  return result;
+}
+
+const warehouseStocksResponseSchema = z.object({
+  products: z
+    .array(
+      z.object({
+        sku: z.coerce.number(),
+        warehouse_id: z.coerce.number(),
+        free_stock: z.coerce.number().int(),
+      }),
+    )
+    .default([]),
+  cursor: z.string().optional(),
+  has_next: z.boolean().optional(),
+});
+
+// Свежую правку остатка не трогаем: админка могла ещё не успеть отправить
+// её в Ozon, а оплаченный на сайте заказ — зарезервировать товар на Ozon.
+const RECENT_EDIT_MS = 5 * 60_000;
+
+/**
+ * Подтягивает на сайт остаток товаров, которые продаются и на маркетплейсе
+ * Ozon (`sellOnOzon`): покупка на Ozon уменьшает остаток только на складе
+ * Ozon, и без сверки сайт продал бы то, чего уже нет.
+ *
+ * Остаток только уменьшается, до свободного остатка на нашем FBS-складе.
+ * Вверх он не идёт: пополнение ведётся в админке, а отменённый на Ozon заказ
+ * мастер возвращает в остаток сам.
+ */
+export async function pullStockFromOzon(): Promise<OzonStockPullResult> {
+  const rows = await db
+    .select({
+      id: products.id,
+      slug: products.slug,
+      category: products.category,
+      ozonSku: products.ozonSku,
+      stockAvailable: products.stockAvailable,
+    })
+    .from(products)
+    .where(and(eq(products.sellOnOzon, true), isNotNull(products.ozonSku)));
+  const result: OzonStockPullResult = {
+    configured: true,
+    checked: rows.length,
+    lowered: [],
+  };
+
+  const free = new Map<number, number>();
+  for (const batch of chunks(rows)) {
+    let cursor: string | undefined;
+    do {
+      const data = await ozonSellerFetch(
+        "/v2/product/info/stocks-by-warehouse/fbs",
+        {
+          sku: batch.map((row) => String(row.ozonSku)),
+          limit: 1000,
+          ...(cursor && { cursor }),
+        },
+        warehouseStocksResponseSchema,
+      );
+      for (const item of data.products) {
+        if (item.warehouse_id === env.OZON_FBS_WAREHOUSE_ID) {
+          free.set(item.sku, Math.max(item.free_stock, 0));
+        }
+      }
+      cursor = data.has_next && data.cursor ? data.cursor : undefined;
+    } while (cursor);
+  }
+
+  const cutoff = new Date(Date.now() - RECENT_EDIT_MS);
+  for (const row of rows) {
+    // Нет строки склада в ответе — остаток неизвестен, не обнуляем наугад
+    const ozonFree = free.get(row.ozonSku as number);
+    if (ozonFree === undefined || ozonFree >= row.stockAvailable) continue;
+    const updated = await db
+      .update(products)
+      .set({ stockAvailable: ozonFree })
+      .where(
+        and(
+          eq(products.id, row.id),
+          eq(products.sellOnOzon, true),
+          // Остаток успели поменять — следующий прогон сверит заново
+          eq(products.stockAvailable, row.stockAvailable),
+          lt(products.updatedAt, cutoff),
+        ),
+      )
+      .returning({ id: products.id });
+    if (updated.length === 0) continue;
+    result.lowered.push({
+      slug: row.slug,
+      category: row.category,
+      from: row.stockAvailable,
+      to: ozonFree,
+    });
+  }
+  if (result.lowered.length > 0) {
+    logger.info("ozon.stock.pulled", { lowered: result.lowered });
   }
   return result;
 }

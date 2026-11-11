@@ -17,10 +17,17 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { descriptionWithoutLead } from "@/lib/catalog/description-lead";
+import { KIT_FAQ } from "@/lib/catalog/product-faq";
 import type { RatingSummary } from "@/lib/catalog/service";
 import type { Category, Product } from "@/lib/catalog/types";
 import { CONTACTS } from "@/lib/contacts";
-import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
+import {
+  IN_STOCK_SHIP_DAYS,
+  isKit,
+  isPurchasable,
+  pluralItems,
+  pluralKits,
+} from "@/lib/in-stock";
 import {
   getProductMadeToOrder,
   madeToOrderLeadTime,
@@ -113,7 +120,11 @@ function productSpecs(product: Product, categorySlug: string): Spec[] {
   }
   if (product.color) specs.push({ label: "Цвет", value: product.color });
   if (product.dimensions) {
-    specs.push({ label: "Размеры изделия", value: product.dimensions });
+    // У набора в этом поле и размер будущего изделия, и размер коробки
+    specs.push({
+      label: isKit(product) ? "Размеры" : "Размеры изделия",
+      value: product.dimensions,
+    });
   }
   // У интерьера и сумок «размеры» в базе — это габариты, а не размерная сетка
   if (categorySlug === "clothes" && product.sizes?.length) {
@@ -134,7 +145,11 @@ export function ProductDetails({
   rating,
 }: ProductDetailsProps) {
   const faq = categoryFaq(madeToOrderLeadTime(product));
-  const faqItems = faq[categorySlug] ?? faq.interior;
+  // Набор покупатель плетёт сам: тексты про готовое изделие ему не подходят
+  const kit = isKit(product);
+  const faqItems = kit
+    ? KIT_FAQ.map(({ question, answer }) => ({ q: question, a: answer }))
+    : (faq[categorySlug] ?? faq.interior);
   // Два независимых способа купить: готовое со склада и сплести под заказ.
   // Одежду готовой не продаём — только на заказ
   const readyToShip = isPurchasable(product);
@@ -277,7 +292,7 @@ export function ProductDetails({
                       strokeLinejoin="round"
                     />
                   </svg>
-                  Ручная работа
+                  {kit ? "Всё для плетения в коробке" : "Ручная работа"}
                 </span>
                 <span className="w-px h-3 bg-espresso/15" />
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
@@ -323,6 +338,17 @@ export function ProductDetails({
                 {product.shortDescription}
               </p>
 
+              {kit && product.highlights && (
+                <ul className="-mt-3 mb-8 space-y-2 text-sm text-espresso">
+                  {product.highlights.map((highlight) => (
+                    <li key={highlight} className="flex gap-2.5 leading-snug">
+                      <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-sage" />
+                      {highlight}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               {readyToShip && (
                 <div className="mb-4 rounded-xl border border-sage/30 bg-sage/5 p-5">
                   <div className="flex items-center gap-2 label-caps text-[11px] text-sage mb-2">
@@ -330,16 +356,29 @@ export function ProductDetails({
                     · отправим за {IN_STOCK_SHIP_DAYS}
                   </div>
                   <h2 className="font-serif text-xl text-espresso mb-1.5">
-                    Готовое изделие
+                    {kit ? "Набор для плетения" : "Готовое изделие"}
                   </h2>
-                  <p className="text-taupe text-[13px] leading-relaxed mb-5">
-                    {product.stockAvailable === 1
-                      ? "Осталось одно изделие"
-                      : `Готово ${product.stockAvailable} ${pluralItems(product.stockAvailable)}`}{" "}
-                    — уже сплетено, точно как на фото. Оплата на сайте, доставка
-                    Ozon.
-                  </p>
-                  <AddToCartButton product={product} label="Купить готовое" />
+                  {kit ? (
+                    <p className="text-taupe text-[13px] leading-relaxed mb-5">
+                      {product.stockAvailable === 1
+                        ? "Остался один набор"
+                        : `В наличии ${product.stockAvailable} ${pluralKits(product.stockAvailable)}`}
+                      . Изделие плетёте сами по видеоуроку — материалы и доступ
+                      к уроку в коробке. Оплата на сайте, доставка Ozon.
+                    </p>
+                  ) : (
+                    <p className="text-taupe text-[13px] leading-relaxed mb-5">
+                      {product.stockAvailable === 1
+                        ? "Осталось одно изделие"
+                        : `Готово ${product.stockAvailable} ${pluralItems(product.stockAvailable)}`}{" "}
+                      — уже сплетено, точно как на фото. Оплата на сайте,
+                      доставка Ozon.
+                    </p>
+                  )}
+                  <AddToCartButton
+                    product={product}
+                    label={kit ? "Купить набор" : "Купить готовое"}
+                  />
                 </div>
               )}
 
@@ -357,8 +396,9 @@ export function ProductDetails({
                     Нет в наличии
                   </p>
                   <p className="text-taupe text-[13px] leading-relaxed">
-                    Это изделие сейчас закончилось. Напишите мастеру —
-                    подскажем, когда появится, или подберём похожее.
+                    {kit
+                      ? "Наборы сейчас закончились. Напишите мастеру — подскажем, когда появятся."
+                      : "Это изделие сейчас закончилось. Напишите мастеру — подскажем, когда появится, или подберём похожее."}
                   </p>
                 </div>
               )}

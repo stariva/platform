@@ -28,15 +28,35 @@ const base = oc.errors({
 export const ozonStockPushResultSchema = z.object({
   /** Артикулы, остаток которых Ozon принял. */
   updated: z.array(z.string()),
-  /** Товары с подтверждённым остатком и требуемым скрытием. */
+  /** Товары с подтверждённым остатком и нужной видимостью на Ozon. */
   syncedSlugs: z.array(z.string()),
   /** Ошибки обновления остатка или скрытия с витрины. */
   failed: z.array(z.object({ offerId: z.string(), error: z.string() })),
   /** SKU, скрытые с витрин Ozon и Селект. */
   hidden: z.array(z.number().int().positive()),
+  /** SKU, выставленные на витрину Ozon: товары, которые продаются и там. */
+  shown: z.array(z.number().int().positive()),
 });
 
 export type OzonStockPushResult = z.infer<typeof ozonStockPushResultSchema>;
+
+export const ozonStockPullResultSchema = z.object({
+  /** false — у витрины нет ключей Seller API, сверки не было. */
+  configured: z.boolean(),
+  /** Сколько товаров продаётся и на Ozon. */
+  checked: z.number().int().nonnegative(),
+  /** Товары, остаток которых уменьшен до свободного остатка на Ozon. */
+  lowered: z.array(
+    z.object({
+      slug: z.string(),
+      category: z.string(),
+      from: z.number().int().nonnegative(),
+      to: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export type OzonStockPullResult = z.infer<typeof ozonStockPullResultSchema>;
 
 /**
  * Посылка изделия под заказ, которую упаковал мастер. Верхние границы — лимиты
@@ -54,8 +74,9 @@ export type MadeToOrderParcel = z.infer<typeof madeToOrderParcelSchema>;
 export const ozonContract = {
   /**
    * Дублирует остаток товаров на FBS-склад Ozon и скрывает готовые изделия
-   * с витрины Ozon. Админка зовёт после правки остатка: ключи Seller API
-   * есть только у витрины.
+   * с витрины Ozon; товары, которые продаются и на Ozon, наоборот, выставляет
+   * на витрину. Админка зовёт после правки остатка или флага продажи на
+   * Ozon: ключи Seller API есть только у витрины.
    */
   pushStock: base
     .errors({

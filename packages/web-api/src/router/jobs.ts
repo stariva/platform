@@ -1,4 +1,5 @@
 import { ORPCError } from "@orpc/server";
+import { logger } from "@stariva/config";
 import {
   createUploadUrl,
   getDownloadUrl,
@@ -7,6 +8,10 @@ import {
   isStorageConfigured,
 } from "@stariva/storage";
 import { jobs } from "../procedures";
+import {
+  isOzonSellerConfigured,
+  pullStockFromOzon,
+} from "../services/ozon-stock";
 import {
   claimNextVideo,
   completeRendition,
@@ -157,6 +162,27 @@ const directReport = jobs.analytics.directReport.handler(
   },
 );
 
+const ozonSyncStock = jobs.ozon.syncStock.handler(
+  async ({ context, errors }) => {
+    if (!isOzonSellerConfigured()) {
+      return { configured: false, checked: 0, lowered: [] };
+    }
+    try {
+      const result = await pullStockFromOzon();
+      if (result.lowered.length > 0) {
+        // Страница товара показывает наличие и число оставшихся штук
+        context.services.revalidatePaths(
+          result.lowered.map((p) => `/catalog/${p.category}/${p.slug}`),
+        );
+      }
+      return result;
+    } catch (error) {
+      logger.error("ozon.stock.pull_error", error);
+      throw errors.OZON_REQUEST_FAILED({ cause: error });
+    }
+  },
+);
+
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
   emails: {
@@ -167,6 +193,7 @@ export const jobsRouter = {
   reminders: { sweep },
   storage: { sweep: storageSweep },
   analytics: { metrikaGoals, metrikaLogs, directReport },
+  ozon: { syncStock: ozonSyncStock },
   npd: {
     sweep: jobs.npd.sweep.handler(({ context }) =>
       context.services.runNpdIssuingSweep(),
