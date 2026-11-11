@@ -1,5 +1,9 @@
 import { expect, mock, test } from "bun:test";
-import type { ReminderSweepResult, WebClient } from "../contract";
+import type {
+  OzonStockPullResult,
+  ReminderSweepResult,
+  WebClient,
+} from "../contract";
 import { JOBS_SECRET as secret } from "../testing/setup";
 
 const storage = await import("@stariva/storage");
@@ -61,6 +65,20 @@ mock.module("../services/yandex/direct", () => ({
     directCalls.push(args);
     if (yandexPending) throw new DirectReportPendingError("pending");
     return { rows: 3, goals: 2 };
+  },
+}));
+
+let ozonConfigured = true;
+let ozonPull = async (): Promise<OzonStockPullResult> => ({
+  configured: true,
+  checked: 1,
+  lowered: [{ slug: "nabor", category: "interior", from: 5, to: 3 }],
+});
+mock.module("../services/ozon-stock", () => ({
+  isOzonSellerConfigured: () => ozonConfigured,
+  pullStockFromOzon: () => ozonPull(),
+  pushStockToOzon: async () => {
+    throw new Error("not used in jobs");
   },
 }));
 
@@ -271,4 +289,43 @@ test("analytics jobs ask Hatchet to retry while Yandex prepares data", async () 
   const [, , direct] = await safe(api.directReport({ report: "stats" }));
   expect(direct?.code).toBe("ANALYTICS_PENDING");
   yandexPending = false;
+});
+
+test("ozon stock sync lowers stock and refreshes the product pages", async () => {
+  const revalidatePaths = mock((_paths: string[]) => {});
+  const api = wireClient({
+    authorization: `Bearer ${secret}`,
+    services: { ...services, revalidatePaths },
+  }).jobs.ozon;
+
+  const result = await api.syncStock();
+  expect(result.lowered).toEqual([
+    { slug: "nabor", category: "interior", from: 5, to: 3 },
+  ]);
+  expect(revalidatePaths).toHaveBeenCalledWith(["/catalog/interior/nabor"]);
+
+  // Nothing sold on Ozon: no pages to refresh
+  revalidatePaths.mockClear();
+  ozonPull = async () => ({ configured: true, checked: 1, lowered: [] });
+  await api.syncStock();
+  expect(revalidatePaths).not.toHaveBeenCalled();
+});
+
+test("ozon stock sync is a quiet no-op without Seller API keys", async () => {
+  ozonConfigured = false;
+  const result = await client(`Bearer ${secret}`).jobs.ozon.syncStock();
+  ozonConfigured = true;
+  expect(result).toEqual({ configured: false, checked: 0, lowered: [] });
+});
+
+test("ozon stock sync hides Ozon failure details", async () => {
+  ozonPull = async () => {
+    throw new Error("ozon_seller_request_failed_500: secret detail");
+  };
+  const [error, , definedError] = await safe(
+    client(`Bearer ${secret}`).jobs.ozon.syncStock(),
+  );
+  expect(definedError?.code).toBe("OZON_REQUEST_FAILED");
+  expect(String(error)).not.toContain("secret detail");
+  expect(lastStatus()).toBe(502);
 });

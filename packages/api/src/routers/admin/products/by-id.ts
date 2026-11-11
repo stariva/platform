@@ -22,6 +22,7 @@ export const byId = adminProcedure
         offerId: row.ozonOfferId,
         sku: row.ozonSku,
         stockAvailable: row.stockAvailable,
+        sellOnOzon: row.sellOnOzon,
       },
       updatedAt: row.updatedAt,
     };

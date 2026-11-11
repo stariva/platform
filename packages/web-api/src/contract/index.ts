@@ -28,6 +28,7 @@ export {
   madeToOrderParcelSchema,
   OzonNotConfiguredError,
   OzonRequestFailedError,
+  type OzonStockPullResult,
   type OzonStockPushResult,
 } from "./admin";
 export {

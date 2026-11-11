@@ -30,6 +30,7 @@ const row: ProductRow = {
   ozonSku: 4_804_740_135,
   stockAvailable: 0,
   stockSyncedAt: null,
+  sellOnOzon: false,
   featured: false,
   sortOrder: 0,
   seoTitle: null,

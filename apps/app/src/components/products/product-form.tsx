@@ -35,6 +35,7 @@ export interface OzonInfo {
   offerId: string | null;
   sku: number | null;
   stockAvailable: number;
+  sellOnOzon: boolean;
 }
 
 const selectClass =
@@ -356,6 +357,7 @@ export function ProductForm({
                 stockAvailable={ozon.stockAvailable}
                 sku={ozon.sku}
                 offerId={ozon.offerId}
+                sellOnOzon={ozon.sellOnOzon}
               />
             )}
           </CardContent>

@@ -9,6 +9,7 @@ let push = async (slugs: string[]): Promise<OzonStockPushResult> => ({
   syncedSlugs: slugs,
   failed: [],
   hidden: [123],
+  shown: [],
 });
 mock.module("../services/ozon-stock", () => ({
   isOzonSellerConfigured: () => configured,
@@ -16,6 +17,11 @@ mock.module("../services/ozon-stock", () => ({
     pushed.push(slugs);
     return push(slugs);
   },
+  pullStockFromOzon: async () => ({
+    configured: true,
+    checked: 0,
+    lowered: [],
+  }),
 }));
 
 const { safe } = await import("@orpc/client");

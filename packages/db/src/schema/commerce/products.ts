@@ -98,6 +98,11 @@ export const products = pgTable(
     stockAvailable: integer("stock_available").notNull().default(0),
     // Не используется: остатки больше не сверяются с Ozon
     stockSyncedAt: timestamp("stock_synced_at", { withTimezone: true }),
+    // Товар продаётся и на маркетплейсе Ozon, а не только на сайте. Остальные
+    // готовые изделия с витрины Ozon скрыты. У такого товара остаток общий:
+    // продажи на Ozon уменьшают его на складе Ozon, и сайт подтягивает
+    // это значение по расписанию (jobs.ozon.syncStock).
+    sellOnOzon: boolean("sell_on_ozon").notNull().default(false),
 
     // ── Витрина ──
     featured: boolean("featured").notNull().default(false),

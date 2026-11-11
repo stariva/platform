@@ -6,6 +6,7 @@ import { setAvailability } from "./set-availability";
 import { setOldPrice } from "./set-old-price";
 import { setOldPriceBulk } from "./set-old-price-bulk";
 import { setPrice } from "./set-price";
+import { setSellOnOzon } from "./set-sell-on-ozon";
 import { setStock } from "./set-stock";
 import { uploadImage } from "./upload-image";
 
@@ -18,6 +19,7 @@ export const adminProductsRouter = {
   setOldPrice,
   setOldPriceBulk,
   setStock,
+  setSellOnOzon,
   uploadImage,
   removeImage,
 };
