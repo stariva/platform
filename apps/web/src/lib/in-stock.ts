@@ -43,3 +43,17 @@ export function pluralItems(n: number) {
     return "изделия";
   return "изделий";
 }
+
+/** Набор для творчества: покупатель плетёт сам, готового изделия в коробке нет. */
+export function isKit(product: Pick<Product, "subcategory">): boolean {
+  return product.subcategory === "kits";
+}
+
+/** «1 набор», «3 набора», «12 наборов» */
+export function pluralKits(n: number) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "набор";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "набора";
+  return "наборов";
+}
