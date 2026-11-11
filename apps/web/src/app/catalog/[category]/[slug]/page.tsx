@@ -266,9 +266,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
         heading="Отзывы о товаре"
         {...(kitTreeReviews && {
           fallbackTopic: TREE_TOPIC,
-          fallbackHeading: "Отзывы о ёлках Ольги",
+          fallbackHeading: "Отзывы о моих ёлках",
           fallbackNote:
-            "О наборе отзывов пока нет — вот что пишут о готовых ёлках, которые сплела Ольга.",
+            "О наборе отзывов пока нет — вот что пишут о готовых ёлках, которые я сплела.",
         })}
       />
       <Footer />
