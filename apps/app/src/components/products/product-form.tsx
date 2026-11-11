@@ -25,7 +25,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { orpc } from "~/orpc/react";
 import { ProductImages } from "./product-images";
@@ -119,6 +119,7 @@ export function ProductForm({
   // Для нового товара адрес собираем из названия, пока его не правили руками
   const [slugTouched, setSlugTouched] = useState(Boolean(id));
   const [isRemovingImages, setIsRemovingImages] = useState(false);
+  const madeToOrderTouched = useRef(false);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -132,6 +133,12 @@ export function ProductForm({
   const slug = watch("slug");
   const subcategories: Record<string, string> =
     PRODUCT_CATEGORIES[category].subcategories;
+
+  const setDefaultMadeToOrder = (subcategory: string) => {
+    if (!id && !madeToOrderTouched.current) {
+      setValue("madeToOrder", subcategory !== "kits");
+    }
+  };
 
   const save = useMutation({
     ...orpc.admin.products.save.mutationOptions(),
@@ -208,12 +215,11 @@ export function ProductForm({
                         PRODUCT_CATEGORIES[
                           event.target.value as ProductCategoryId
                         ].subcategories;
-                      setValue(
-                        "subcategory",
-                        Object.keys(
-                          next,
-                        )[0] as ProductFormValues["subcategory"],
-                      );
+                      const subcategory = Object.keys(
+                        next,
+                      )[0] as ProductFormValues["subcategory"];
+                      setValue("subcategory", subcategory);
+                      setDefaultMadeToOrder(subcategory);
                     },
                   })}
                 >
@@ -232,7 +238,10 @@ export function ProductForm({
                 <select
                   id="subcategory"
                   className={selectClass}
-                  {...register("subcategory")}
+                  {...register("subcategory", {
+                    onChange: (event) =>
+                      setDefaultMadeToOrder(event.target.value),
+                  })}
                 >
                   {Object.entries(subcategories).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -316,7 +325,10 @@ export function ProductForm({
                   <Switch
                     id="madeToOrder"
                     checked={field.value}
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => {
+                      madeToOrderTouched.current = true;
+                      field.onChange(checked);
+                    }}
                   />
                 </div>
               )}
