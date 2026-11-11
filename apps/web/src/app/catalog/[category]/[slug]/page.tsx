@@ -11,6 +11,7 @@ import {
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Reviews } from "@/components/stariva/reviews";
+import { KIT_FAQ } from "@/lib/catalog/product-faq";
 import {
   productMetaDescription,
   productMetaTitle,
@@ -22,7 +23,7 @@ import {
   getReviews,
   summarizeRatings,
 } from "@/lib/catalog/service";
-import { IN_STOCK_SHIP_DAYS_RANGE, isPurchasable } from "@/lib/in-stock";
+import { IN_STOCK_SHIP_DAYS_RANGE, isKit, isPurchasable } from "@/lib/in-stock";
 import {
   madeToOrderLeadTime,
   madeToOrderLeadTimeDays,
@@ -244,7 +245,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={summarizeRatings(markupReviews)}
         reviews={markupReviews}
       />
-      <FAQJsonLd items={faq[categorySlug] ?? faq.interior} />
+      <FAQJsonLd
+        items={isKit(product) ? KIT_FAQ : (faq[categorySlug] ?? faq.interior)}
+      />
       <ProductDetails
         product={product}
         category={category}
