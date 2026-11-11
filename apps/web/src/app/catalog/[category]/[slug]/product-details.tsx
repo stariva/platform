@@ -453,7 +453,7 @@ export function ProductDetails({
                       withPageLink
                       className="text-espresso underline underline-offset-4 decoration-espresso/25 hover:text-terracotta hover:decoration-terracotta transition-colors"
                     >
-                      Напишите Ольге
+                      Напишите мне
                     </ContactMasterButton>
                   </p>
                 )}
