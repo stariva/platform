@@ -86,6 +86,12 @@ export const ozonContract = {
     .input(
       z.object({
         slugs: z.array(z.string().min(1).max(256)).min(1).max(100),
+        /**
+         * Только видимость на витрине Ozon, остаток не трогаем. Для
+         * переключения продажи на Ozon: остаток пары товар-склад Ozon
+         * принимает не чаще раза в 30 секунд и иначе отклоняет запрос.
+         */
+        visibilityOnly: z.boolean().optional(),
       }),
     )
     .output(ozonStockPushResultSchema),

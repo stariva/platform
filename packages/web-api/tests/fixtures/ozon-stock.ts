@@ -121,6 +121,18 @@ assert.deepEqual(shown.syncedSlugs, ["vase"]);
 rows = [{ ...product, sellOnOzon: true, stockAvailable: 0 }];
 placements = [];
 assert.deepEqual((await pushStockToOzon(["vase"])).shown, [123]);
+// Toggling the flag sends the placement only: Ozon rejects frequent stock pushes.
+rows = [{ ...product, sellOnOzon: true }];
+sent = [];
+placements = [];
+const onlyVisibility = await pushStockToOzon(["vase"], {
+  visibilityOnly: true,
+});
+assert.deepEqual(sent, []);
+assert.deepEqual(placements, [{ sku: 123, placement: "OZON" }]);
+assert.deepEqual(onlyVisibility.updated, []);
+assert.deepEqual(onlyVisibility.syncedSlugs, ["vase"]);
+rows = [{ ...product, sellOnOzon: true, stockAvailable: 0 }];
 // A rejected placement means the product is not synced.
 visibilityErrors = [{ sku: 123, code: "REJECTED" }];
 assert.deepEqual((await pushStockToOzon(["vase"])).syncedSlugs, []);

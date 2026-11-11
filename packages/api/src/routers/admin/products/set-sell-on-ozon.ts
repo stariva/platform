@@ -39,6 +39,10 @@ export const setSellOnOzon = adminProcedure
       .set({ sellOnOzon: input.sellOnOzon })
       .where(eq(products.id, input.id));
 
-    const ozonSynced = await pushStorefrontStockToOzon([current.slug]);
+    // Только видимость: остаток не менялся, а повторную отправку остатка
+    // Ozon отклоняет («Stock is updated too frequently»).
+    const ozonSynced = await pushStorefrontStockToOzon([current.slug], {
+      visibilityOnly: true,
+    });
     return { sellOnOzon: input.sellOnOzon, ozonSynced };
   });

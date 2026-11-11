@@ -33,10 +33,15 @@ function storefrontApi(timeoutMs: number): WebClient | null {
  * готовые изделия с витрины Ozon либо показать те, что продаются и там): без
  * остатка на Ozon Ozon Доставка их не отправит. Ключи Seller API есть только у витрины, поэтому идём через неё.
  * Возвращает false, если остаток в Ozon обновить не удалось.
+ *
+ * `visibilityOnly` — поменять только видимость на витрине Ozon: остаток
+ * Ozon принимает не чаще раза в 30 секунд на товар и склад.
  */
 export async function pushStorefrontStockToOzon(
   slugs: string[],
+  options: { visibilityOnly?: boolean } = {},
 ): Promise<boolean> {
+  const visibilityOnly = options.visibilityOnly === true;
   if (slugs.length === 0) return false;
   try {
     const api = storefrontApi(30_000);
@@ -44,11 +49,14 @@ export async function pushStorefrontStockToOzon(
       logger.warn("storefront.ozon_stock.not_configured");
       return false;
     }
-    const data = await api.admin.ozon.pushStock({ slugs });
+    const data = await api.admin.ozon.pushStock({
+      slugs,
+      ...(visibilityOnly && { visibilityOnly }),
+    });
     if (
       data.failed.length > 0 ||
       !slugs.every((slug) => data.syncedSlugs.includes(slug)) ||
-      data.updated.length < new Set(slugs).size
+      (!visibilityOnly && data.updated.length < new Set(slugs).size)
     ) {
       logger.warn("storefront.ozon_stock.rejected", { failed: data.failed });
       return false;
