@@ -95,13 +95,19 @@ function stockQuery(slugs?: string[]) {
  * на маркетплейс готовые изделия возвращаются вручную в кабинете Ozon.
  *
  * Без `slugs` отправляет все товары с артикулом Ozon, включая нулевой остаток.
+ *
+ * `visibilityOnly` — меняем только видимость, остаток не отправляем: Ozon
+ * принимает остаток пары товар-склад не чаще раза в 30 секунд, и
+ * переключение продажи на Ozon сразу после правки остатка иначе отклоняется.
  */
 export async function pushStockToOzon(
   slugs?: string[],
+  options: { visibilityOnly?: boolean } = {},
 ): Promise<OzonStockPushResult> {
+  const visibilityOnly = options.visibilityOnly === true;
   while (true) {
     const rows = await stockQuery(slugs);
-    const outcome = await pushStockSnapshotToOzon(rows).then(
+    const outcome = await pushStockSnapshotToOzon(rows, visibilityOnly).then(
       (result) => ({ result }),
       (error: unknown) => ({ error }),
     );
@@ -130,6 +136,7 @@ export async function pushStockToOzon(
 
 async function pushStockSnapshotToOzon(
   rows: Awaited<ReturnType<typeof stockQuery>>,
+  visibilityOnly: boolean,
 ): Promise<OzonStockPushResult> {
   const result: OzonStockPushResult = {
     updated: [],
@@ -140,7 +147,7 @@ async function pushStockSnapshotToOzon(
   };
   if (rows.length === 0) return result;
 
-  for (const batch of chunks(rows)) {
+  for (const batch of visibilityOnly ? [] : chunks(rows)) {
     const data = await ozonSellerFetch(
       "/v2/products/stocks",
       {
@@ -202,7 +209,7 @@ async function pushStockSnapshotToOzon(
     .filter(
       (row) =>
         row.ozonOfferId !== null &&
-        result.updated.includes(row.ozonOfferId) &&
+        (visibilityOnly || result.updated.includes(row.ozonOfferId)) &&
         !result.failed.some((failure) => failure.offerId === row.ozonOfferId) &&
         (row.sellOnOzon
           ? row.ozonSku !== null && result.shown.includes(row.ozonSku)
