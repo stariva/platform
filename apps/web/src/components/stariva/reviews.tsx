@@ -58,6 +58,11 @@ interface ReviewsProps {
   fallbackNote?: string;
   /** Заголовок над отзывами магазина, когда у самого товара отзывов нет. */
   fallbackHeading?: string;
+  /**
+   * О чём должны быть отзывы магазина, когда у товара своих нет: у набора
+   * показываем отзывы о таком же готовом изделии, а не о сумках и поясах.
+   */
+  fallbackTopic?: RegExp;
 }
 
 /** Shows product reviews when available, otherwise store-wide reviews. */
@@ -67,6 +72,7 @@ export async function Reviews({
   heading,
   fallbackNote,
   fallbackHeading,
+  fallbackTopic,
   verifiedOnly = false,
 }: ReviewsProps) {
   const isProductPage = Boolean(productId);
@@ -74,7 +80,15 @@ export async function Reviews({
   // Нет отзывов на этот товар — показываем лучшие отзывы магазина
   const showProductReviews = productReviews.length > 0;
   // Подтверждённые — с маркетплейсов, где отзыв оставляют только после покупки
-  const reviews = (showProductReviews ? productReviews : await getReviews())
+  const storeReviews = showProductReviews ? [] : await getReviews();
+  const onTopic = fallbackTopic
+    ? storeReviews.filter((review) =>
+        fallbackTopic.test(`${review.productTitle ?? ""} ${review.text}`),
+      )
+    : [];
+  // По теме ничего нет — остаются лучшие отзывы магазина
+  const fallbackReviews = onTopic.length > 0 ? onTopic : storeReviews;
+  const reviews = (showProductReviews ? productReviews : fallbackReviews)
     .filter((review) => !verifiedOnly || review.source !== "site")
     .slice(0, limit);
 

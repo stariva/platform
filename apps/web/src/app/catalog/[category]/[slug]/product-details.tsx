@@ -377,7 +377,11 @@ export function ProductDetails({
                   )}
                   <AddToCartButton
                     product={product}
-                    label={kit ? "Купить набор" : "Купить готовое"}
+                    label={
+                      kit
+                        ? `Купить набор · ${formatPrice(product.price)}`
+                        : "Купить готовое"
+                    }
                   />
                 </div>
               )}
@@ -439,29 +443,46 @@ export function ProductDetails({
                   </Button>
                 )}
 
-                <Button
-                  asChild
-                  variant="outline"
-                  className="flex items-center justify-center gap-2 w-full border-espresso/20 text-espresso hover:bg-espresso hover:text-parchment py-3 h-auto rounded-2xl transition-colors label-caps"
-                >
-                  <a href={CONTACTS.phoneHref}>
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden="true"
+                {/* Набор покупают без разговора: вместо звонка — вопрос в мессенджере */}
+                {kit && readyToShip && (
+                  <p className="text-center text-[13px] text-taupe">
+                    Остались вопросы?{" "}
+                    <ContactMasterButton
+                      source="product"
+                      message={`Здравствуйте, Ольга! Вопрос про «${product.name}».`}
+                      withPageLink
+                      className="text-espresso underline underline-offset-4 decoration-espresso/25 hover:text-terracotta hover:decoration-terracotta transition-colors"
                     >
-                      <path
-                        d="M4.5 5.5c0-1 .8-2 1.8-2h2c.5 0 .9.3 1 .8l.7 2.5c.2.6-.1 1.2-.6 1.5l-1.2.7c1 2.3 2.8 4.1 5.1 5.1l.7-1.2c.3-.5.9-.8 1.5-.6l2.5.7c.5.1.8.5.8 1v2c0 1-1 1.8-2 1.8C9.7 17.8 6.2 14.3 4.5 5.5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Позвонить
-                  </a>
-                </Button>
+                      Напишите Ольге
+                    </ContactMasterButton>
+                  </p>
+                )}
+
+                {!(kit && readyToShip) && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 w-full border-espresso/20 text-espresso hover:bg-espresso hover:text-parchment py-3 h-auto rounded-2xl transition-colors label-caps"
+                  >
+                    <a href={CONTACTS.phoneHref}>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M4.5 5.5c0-1 .8-2 1.8-2h2c.5 0 .9.3 1 .8l.7 2.5c.2.6-.1 1.2-.6 1.5l-1.2.7c1 2.3 2.8 4.1 5.1 5.1l.7-1.2c.3-.5.9-.8 1.5-.6l2.5.7c.5.1.8.5.8 1v2c0 1-1 1.8-2 1.8C9.7 17.8 6.2 14.3 4.5 5.5Z"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Позвонить
+                    </a>
+                  </Button>
+                )}
 
                 {/* Delivery info */}
                 <div className="flex items-center justify-center gap-4 pt-1">
