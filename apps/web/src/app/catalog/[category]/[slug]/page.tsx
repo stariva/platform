@@ -111,6 +111,9 @@ const categoryFaqJsonLd = (
 
 export const revalidate = 3600;
 
+/** «Ёлка», «елочка», «ёлочки» — в названии товара и в тексте отзыва. */
+const TREE_TOPIC = /[её]л(к|оч)/i;
+
 interface ProductPageProps {
   params: Promise<{ category: string; slug: string }>;
 }
@@ -202,6 +205,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   // отзывы с Авито показываем, но в разметку товара не отдаём
   const markupReviews = productReviews.filter((r) => r.source !== "avito");
   const faq = categoryFaqJsonLd(madeToOrderLeadTime(product));
+  // У набора своих отзывов пока нет: показываем отзывы о готовых ёлках
+  const kitTreeReviews = isKit(product) && TREE_TOPIC.test(product.name);
 
   return (
     <>
@@ -256,7 +261,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={rating}
       />
       <BuyingGuide product={product} />
-      <Reviews productId={product.id} heading="Отзывы о товаре" />
+      <Reviews
+        productId={product.id}
+        heading="Отзывы о товаре"
+        {...(kitTreeReviews && {
+          fallbackTopic: TREE_TOPIC,
+          fallbackHeading: "Отзывы о ёлках Ольги",
+          fallbackNote:
+            "О наборе отзывов пока нет — вот что пишут о готовых ёлках, которые сплела Ольга.",
+        })}
+      />
       <Footer />
       <MobileStickyBar />
     </>

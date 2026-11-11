@@ -421,6 +421,13 @@
       "when": 1794379589512,
       "tag": "0059_product_sell_on_ozon",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794382329701,
+      "tag": "0060_macrame_kit_copy",
+      "breakpoints": true
     }
   ]
 }
