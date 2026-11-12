@@ -2,7 +2,7 @@ import {
   accessCode,
   accessCodesList,
   issueAccessCode,
-  orderAccessCodes,
+  orderAccess,
   removeAccessCode,
 } from "./access-codes";
 import { sendBrief, sendMissingBriefs } from "./brief";
@@ -39,7 +39,7 @@ export const adminWorkshopsRouter = {
   sendMissingBriefs,
   accessCodes: accessCodesList,
   accessCode,
-  orderAccessCodes,
+  orderAccess,
   issueAccessCode,
   removeAccessCode,
 };

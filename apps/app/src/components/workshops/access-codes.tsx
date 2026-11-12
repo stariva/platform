@@ -2,6 +2,7 @@
 
 import {
   Button,
+  buttonVariants,
   Input,
   Label,
   Select,
@@ -12,6 +13,7 @@ import {
   toast,
 } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
@@ -34,7 +36,17 @@ async function copy(text: string, done: string) {
   }
 }
 
-/** Выдать код покупателю с Ярмарки и сразу скопировать сообщение для чата. */
+/** Откуда покупатель: от этого зависит, как код до него дойдёт. */
+const CHANNEL_LABELS = {
+  livemaster: "Ярмарка Мастеров",
+  ozon: "Набор с Ozon",
+} as const;
+type IssueChannel = keyof typeof CHANNEL_LABELS;
+
+/**
+ * Выдать код. Покупателю с Ярмарки — сразу скопировать сообщение для чата;
+ * к набору с Ozon — напечатать купон в коробку.
+ */
 export function AccessCodeIssue({
   workshops,
   defaultWorkshop,
@@ -46,18 +58,26 @@ export function AccessCodeIssue({
   const [workshop, setWorkshop] = useState(
     defaultWorkshop ?? workshops[0]?.slug ?? "",
   );
+  const [channel, setChannel] = useState<IssueChannel>("livemaster");
   const [note, setNote] = useState("");
-  const [issued, setIssued] = useState<{ code: string; title: string } | null>(
-    null,
-  );
+  const [issued, setIssued] = useState<{
+    id: string;
+    code: string;
+    title: string;
+    channel: IssueChannel;
+  } | null>(null);
   const titles = Object.fromEntries(workshops.map((w) => [w.slug, w.title]));
 
   const issue = useMutation({
     ...orpc.admin.workshops.issueAccessCode.mutationOptions(),
-    onSuccess: async ({ code }) => {
-      setIssued({ code, title: titles[workshop] ?? workshop });
+    onSuccess: async ({ id, code }) => {
+      setIssued({ id, code, title: titles[workshop] ?? workshop, channel });
       setNote("");
       router.refresh();
+      if (channel === "ozon") {
+        toast.success(`Код ${code} выдан — напечатайте купон`);
+        return;
+      }
       await copy(
         accessCodeMessage(code),
         `Код ${code} скопирован с сообщением`,
@@ -77,7 +97,29 @@ export function AccessCodeIssue({
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+        <div className="space-y-1.5">
+          <Label htmlFor="access-code-channel">Где купили</Label>
+          <Select
+            value={channel}
+            onValueChange={(value) => {
+              if (value) setChannel(value as IssueChannel);
+            }}
+          >
+            <SelectTrigger id="access-code-channel" className="w-full">
+              <SelectValue>
+                {(value: IssueChannel) => CHANNEL_LABELS[value]}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1.5">
           <Label htmlFor="access-code-workshop">Мастер-класс</Label>
           <Select
@@ -102,27 +144,53 @@ export function AccessCodeIssue({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="access-code-note">
-            Заказ на Ярмарке (необязательно)
+            {channel === "ozon"
+              ? "Отправление Ozon (необязательно)"
+              : "Заказ на Ярмарке (необязательно)"}
           </Label>
           <Input
             id="access-code-note"
             maxLength={200}
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Номер заказа или имя покупателя"
+            placeholder={
+              channel === "ozon"
+                ? "Номер отправления"
+                : "Номер заказа или имя покупателя"
+            }
           />
         </div>
         <Button
           disabled={!workshop || issue.isPending}
           onClick={() =>
-            issue.mutate({ workshopSlug: workshop, note: note || undefined })
+            issue.mutate({
+              workshopSlug: workshop,
+              channel,
+              note: note || undefined,
+            })
           }
         >
           {issue.isPending ? "Выдаём…" : "Выдать код"}
         </Button>
       </div>
 
-      {issued && (
+      {issued?.channel === "ozon" && (
+        <div className="space-y-3 rounded-md bg-muted p-4">
+          <p className="text-muted-foreground text-sm">
+            Код к «{issued.title}». Напечатайте купон и положите в коробку: на
+            нём QR-код, адрес и сам код.
+          </p>
+          <p className="font-mono text-3xl tracking-widest">{issued.code}</p>
+          <Link
+            href={`/access-codes/${issued.id}/print`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            Напечатать купон
+          </Link>
+        </div>
+      )}
+
+      {issued?.channel === "livemaster" && (
         <div className="space-y-3 rounded-md bg-muted p-4">
           <p className="text-muted-foreground text-sm">
             Код к «{issued.title}». Сообщение уже скопировано — вставьте его в

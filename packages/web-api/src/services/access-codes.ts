@@ -29,3 +29,15 @@ export function formatAccessCode(code: string): string {
   const half = ACCESS_CODE_LENGTH / 2;
   return `${code.slice(0, half)} ${code.slice(half)}`;
 }
+
+/**
+ * Заказ мастер-класса, который открыт по оплате набора на сайте. Один на пару
+ * «заказ набора — мастер-класс»: повторный вебхук находит ту же строку и
+ * ничего не дублирует, а админка по этому id видит, что доступ уже отправлен.
+ */
+export function kitWorkshopOrderId(
+  productOrderId: string,
+  workshopSlug: string,
+): string {
+  return `kit-${productOrderId}-${workshopSlug}`;
+}

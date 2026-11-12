@@ -435,6 +435,13 @@
       "when": 1794383828449,
       "tag": "0061_macrame_kit_copy_first_person",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794497121244,
+      "tag": "0062_product_workshop_slug",
+      "breakpoints": true
     }
   ]
 }

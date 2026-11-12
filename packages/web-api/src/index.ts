@@ -17,6 +17,7 @@ export {
   ACCESS_CODE_LENGTH,
   formatAccessCode,
   generateAccessCode,
+  kitWorkshopOrderId,
   normalizeAccessCode,
 } from "./services/access-codes";
 export {

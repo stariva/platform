@@ -90,6 +90,8 @@ export const productFormSchema = z
     dimensions: optionalText(300),
     careInstructions: optionalText(1000),
     ideaAuthor: optionalText(200),
+    // slug мастер-класса, который идёт с товаром; пусто — без мастер-класса
+    workshopSlug: optionalText(200),
     sizes: z.array(z.string().trim().min(1).max(20)).max(20),
     bestFor: optionalText(300),
     highlights: z

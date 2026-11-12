@@ -18,18 +18,22 @@ export function formatWorkshopPurchaseMessage(
     workshop.releaseAt && workshop.releaseAt > now ? workshop.releaseAt : null;
   // Код с Ярмарки: курс оплачен там, на сайте его только активировали
   const fromLivemaster = order.attribution?.last.utm_source === "livemaster";
-  // Код с купона в наборе: мастер-класс оплачен в цене набора, цены у заказа нет
-  const fromKit = order.attribution?.last.utm_source === "kit";
+  // Мастер-класс из набора оплачен в цене набора — цены у заказа нет.
+  // kit — набор куплен на сайте, ozon — код с купона в коробке с Ozon
+  const source = order.attribution?.last.utm_source;
   const price = formatPrice(order.amount / 100);
   const bundle = getBundle(order.bundleSlug);
   return {
-    title: fromKit
-      ? `Активирован код из набора: «${workshop.title}»`
-      : fromLivemaster
-        ? `Активирован код с Ярмарки Мастеров: «${workshop.title}» · ${price}`
-        : bundle
-          ? `Куплено комбо «${bundle.title}» · ${price}`
-          : `Куплен мастер-класс «${workshop.title}» · ${price}`,
+    title:
+      source === "kit"
+        ? `Открыт мастер-класс к набору: «${workshop.title}»`
+        : source === "ozon"
+          ? `Активирован код из набора с Ozon: «${workshop.title}»`
+          : fromLivemaster
+            ? `Активирован код с Ярмарки Мастеров: «${workshop.title}» · ${price}`
+            : bundle
+              ? `Куплено комбо «${bundle.title}» · ${price}`
+              : `Куплен мастер-класс «${workshop.title}» · ${price}`,
     message: [
       `Email: ${order.contactEmail ?? email}`,
       release &&
