@@ -135,21 +135,28 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith(workshopOrderId);
 
-    const { orderAccess } = await import(
-      "../../../../../packages/api/src/routers/admin/workshops/access-codes"
-    );
+    // @stariva/api не входит в зависимости web, и turbo prune не кладёт его в
+    // образ. Путь в переменной — чтобы tsc при сборке не искал этот модуль.
+    const adminAccessCodes =
+      "../../../../../packages/api/src/routers/admin/workshops/access-codes";
+    const { orderAccess } = (await import(adminAccessCodes)) as {
+      orderAccess: {
+        "~orpc": {
+          handler: (
+            options: Record<string, unknown>,
+            input: { orderId: string },
+          ) => Promise<{ linked: { slug: string }[]; granted: unknown[] }>;
+        };
+      };
+    };
     const handler = orderAccess["~orpc"].handler;
     const accessFor = (orderId: string) =>
       handler(
         {
-          context: { db } as unknown as Parameters<
-            typeof handler
-          >[0]["context"],
+          context: { db },
           input: { orderId },
           path: [],
-          procedure: orderAccess as unknown as Parameters<
-            typeof handler
-          >[0]["procedure"],
+          procedure: orderAccess,
           errors: {},
           lastEventId: undefined,
         },
