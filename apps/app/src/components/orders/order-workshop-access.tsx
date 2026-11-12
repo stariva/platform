@@ -87,7 +87,7 @@ export function OrderWorkshopAccess({
                 key={row.workshopSlug}
                 className="space-y-1 rounded-md border p-3 text-sm"
               >
-                <Badge variant="success-light">Доступ отправлен</Badge>
+                <Badge variant="success-light">Доступ открыт</Badge>
                 <p>{titles[row.workshopSlug] ?? row.workshopSlug}</p>
                 {row.email && (
                   <p className="text-muted-foreground break-all">{row.email}</p>

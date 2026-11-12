@@ -69,6 +69,7 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
     async function seedOrder(
       productSlug: string,
       contactEmail: string | null,
+      captured = false,
     ): Promise<string> {
       const id = crypto.randomUUID();
       await db.insert(productOrders).values({
@@ -88,6 +89,8 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
         id: crypto.randomUUID(),
         orderId: id,
         productSlug,
+        workshopSlug: captured ? workshopSlug : null,
+        workshopLinkCaptured: captured,
         name: "Позиция",
         price: 199_000,
         // Два набора в заказе — мастер-класс всё равно один
@@ -132,6 +135,49 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith(workshopOrderId);
 
+    const { orderAccess } = await import(
+      "../../../../../packages/api/src/routers/admin/workshops/access-codes"
+    );
+    const handler = orderAccess["~orpc"].handler;
+    const accessFor = (orderId: string) =>
+      handler(
+        {
+          context: { db } as unknown as Parameters<
+            typeof handler
+          >[0]["context"],
+          input: { orderId },
+          path: [],
+          procedure: orderAccess as unknown as Parameters<
+            typeof handler
+          >[0]["procedure"],
+          errors: {},
+          lastEventId: undefined,
+        },
+        { orderId },
+      );
+    // A captured link survives a catalog rename or replacement.
+    const capturedOrder = await seedOrder(
+      `kit-${run}`,
+      `snapshot-${email}`,
+      true,
+    );
+    await db
+      .update(products)
+      .set({ workshopSlug: null, slug: `renamed-${run}` })
+      .where(eq(products.slug, `kit-${run}`));
+    await grantKitWorkshops(capturedOrder);
+    expect(
+      (await accessFor(capturedOrder)).linked.map(
+        (w: { slug: string }) => w.slug,
+      ),
+    ).toEqual([workshopSlug]);
+    expect((await accessFor(capturedOrder)).granted).toHaveLength(1);
+    // The old order has no remaining catalog link, but its grant is still visible.
+    expect((await accessFor(kitOrder)).linked).toHaveLength(0);
+    expect((await accessFor(kitOrder)).granted).toHaveLength(1);
+    await grantKitWorkshops(kitOrder);
+    expect(notify).toHaveBeenCalledTimes(2);
+
     // Без почты и без мастер-класса у товара ничего не открываем
     await grantKitWorkshops(await seedOrder(`kit-${run}`, null));
     await grantKitWorkshops(
@@ -142,7 +188,7 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
         .select()
         .from(orders)
         .where(eq(orders.workshopSlug, workshopSlug)),
-    ).toHaveLength(1);
-    expect(notify).toHaveBeenCalledTimes(1);
+    ).toHaveLength(2);
+    expect(notify).toHaveBeenCalledTimes(2);
   },
 );

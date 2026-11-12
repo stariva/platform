@@ -70,8 +70,14 @@ export function AccessCodeIssue({
 
   const issue = useMutation({
     ...orpc.admin.workshops.issueAccessCode.mutationOptions(),
-    onSuccess: async ({ id, code }) => {
-      setIssued({ id, code, title: titles[workshop] ?? workshop, channel });
+    onSuccess: async ({ id, code }, variables) => {
+      const { workshopSlug: workshop, channel = "livemaster" } = variables;
+      setIssued({
+        id,
+        code,
+        title: titles[workshop] ?? workshop,
+        channel: channel as IssueChannel,
+      });
       setNote("");
       router.refresh();
       if (channel === "ozon") {

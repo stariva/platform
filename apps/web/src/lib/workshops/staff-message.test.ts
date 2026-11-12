@@ -100,3 +100,21 @@ test("a combo purchase is announced as the combo", () => {
   );
   expect(title).toBe(`Куплено комбо «Две ёлки макраме» · ${formatPrice(1590)}`);
 });
+
+for (const source of ["kit", "ozon"]) {
+  test(`paid purchase with ${source} URL attribution keeps its price`, () => {
+    const touch = { utm_source: source, landing: "/", at: now.toISOString() };
+    expect(
+      formatWorkshopPurchaseMessage(
+        {
+          ...order,
+          paymentId: "payment",
+          attribution: { first: touch, last: touch },
+        },
+        { title: "Ёлка макраме", releaseAt: null },
+        "account@example.test",
+        now,
+      ).title,
+    ).toBe("Куплен мастер-класс «Ёлка макраме» · 2 490 ₽");
+  });
+}

@@ -21,13 +21,14 @@ export function formatWorkshopPurchaseMessage(
   // Мастер-класс из набора оплачен в цене набора — цены у заказа нет.
   // kit — набор куплен на сайте, ozon — код с купона в коробке с Ozon
   const source = order.attribution?.last.utm_source;
+  const systemKitOrder = order.amount === 0 && order.paymentId === null;
   const price = formatPrice(order.amount / 100);
   const bundle = getBundle(order.bundleSlug);
   return {
     title:
-      source === "kit"
+      source === "kit" && systemKitOrder
         ? `Открыт мастер-класс к набору: «${workshop.title}»`
-        : source === "ozon"
+        : source === "ozon" && systemKitOrder
           ? `Активирован код из набора с Ozon: «${workshop.title}»`
           : fromLivemaster
             ? `Активирован код с Ярмарки Мастеров: «${workshop.title}» · ${price}`

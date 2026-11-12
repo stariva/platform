@@ -230,6 +230,18 @@ async function handleMadeToOrderPayment(
     }
   }
 
+  // Финальная доплата завершает оплату; повтор вебхука повторит выдачу.
+  if (row.type === "balance") {
+    try {
+      await grantKitWorkshops(orderId);
+    } catch (error) {
+      console.error(
+        `[payments/webhook] Не удалось открыть мастер-класс к набору ${orderId}:`,
+        error,
+      );
+    }
+  }
+
   // Чек на каждый этап — до уведомления мастеру, которое может бросить ошибку
   const [items, payments] = await Promise.all([
     getProductOrderItems(orderId),

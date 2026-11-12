@@ -88,7 +88,8 @@ export default async function AccessCodesPage({
           <p className="text-muted-foreground max-w-3xl text-sm">
             Набор купили на Ozon — выдайте код и положите в коробку купон: почту
             такого покупателя мы не знаем. Если набор купили на сайте, уроки
-            уходят на почту сами, купон не нужен.
+            уходят на почту сами, если покупатель указал email — купон не нужен.
+            Если email не указан, выдайте купон вручную.
           </p>
           <p className="text-muted-foreground mt-2 max-w-3xl text-sm">
             Купили мастер-класс на Ярмарке — выдайте код и вставьте сообщение в

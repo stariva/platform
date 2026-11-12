@@ -142,11 +142,25 @@ export async function createMadeToOrderOrder(
     .returning({ number: productOrders.number });
   if (!created) throw new Error("product_order_not_created");
 
+  const workshopLinks = await db
+    .select({ slug: products.slug, workshopSlug: products.workshopSlug })
+    .from(products)
+    .where(
+      inArray(
+        products.slug,
+        input.items.map((item) => item.productSlug),
+      ),
+    );
+  const workshopByProduct = new Map(
+    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
+  );
   await db.insert(productOrderItems).values(
     input.items.map((item) => ({
       id: randomUUID(),
       orderId,
       productSlug: item.productSlug,
+      workshopSlug: workshopByProduct.get(item.productSlug) ?? null,
+      workshopLinkCaptured: true,
       ozonSku: null,
       name: item.name,
       price: item.price,
@@ -203,11 +217,25 @@ export async function createProductOrder(
     .returning({ number: productOrders.number });
   if (!created) throw new Error("product_order_not_created");
 
+  const workshopLinks = await db
+    .select({ slug: products.slug, workshopSlug: products.workshopSlug })
+    .from(products)
+    .where(
+      inArray(
+        products.slug,
+        input.items.map((item) => item.productSlug),
+      ),
+    );
+  const workshopByProduct = new Map(
+    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
+  );
   await db.insert(productOrderItems).values(
     input.items.map((item) => ({
       id: randomUUID(),
       orderId,
       productSlug: item.productSlug,
+      workshopSlug: workshopByProduct.get(item.productSlug) ?? null,
+      workshopLinkCaptured: true,
       ozonSku: item.ozonSku,
       name: item.name,
       price: item.price,

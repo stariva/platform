@@ -12,7 +12,7 @@ import {
   workshops,
 } from "@stariva/db/schema";
 import { kitWorkshopOrderId } from "@stariva/web-api";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getProductOrderCustomerEmail } from "@/lib/commerce/orders";
 import { findOrCreateBuyer } from "./buyer";
 import { notifyWorkshopBooked } from "./notifications";
@@ -55,18 +55,19 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
     .limit(1);
   if (!order) return;
 
-  // Только мастер-классы, которые есть в каталоге: связь у товара — просто slug
+  // Новые позиции используют снимок; старые сохраняют связь через каталог.
   const linked = await db
     .selectDistinct({ slug: workshops.slug })
     .from(productOrderItems)
-    .innerJoin(products, eq(products.slug, productOrderItems.productSlug))
-    .innerJoin(workshops, eq(workshops.slug, products.workshopSlug))
-    .where(
-      and(
-        eq(productOrderItems.orderId, productOrderId),
-        isNotNull(products.workshopSlug),
+    .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
+    .innerJoin(
+      workshops,
+      eq(
+        workshops.slug,
+        sql`case when ${productOrderItems.workshopLinkCaptured} then ${productOrderItems.workshopSlug} else ${products.workshopSlug} end`,
       ),
-    );
+    )
+    .where(and(eq(productOrderItems.orderId, productOrderId)));
   if (linked.length === 0) return;
 
   const email = await getProductOrderCustomerEmail(order);

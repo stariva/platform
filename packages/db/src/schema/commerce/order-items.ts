@@ -1,4 +1,11 @@
-import { bigint, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+} from "drizzle-orm/pg-core";
 import { productOrders } from "./orders";
 
 /** Параметры изделия под заказ: размер, цвет, мерки и пожелания покупателя. */
@@ -17,6 +24,11 @@ export const productOrderItems = pgTable("product_order_items", {
     .notNull()
     .references(() => productOrders.id, { onDelete: "cascade" }),
   productSlug: text("product_slug").notNull(),
+  // Связь на момент оформления; false — старая позиция без снимка.
+  workshopSlug: text("workshop_slug"),
+  workshopLinkCaptured: boolean("workshop_link_captured")
+    .notNull()
+    .default(false),
   // SKU Ozon (fbs_sku или fbo_sku в зависимости от схемы), нужен для
   // v2/delivery/checkout и v2/order/create. SKU Ozon больше 2^31 — нужен bigint.
   // У изделий под заказ SKU нет: они не проходят через Ozon.

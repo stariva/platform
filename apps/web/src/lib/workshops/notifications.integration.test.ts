@@ -9,7 +9,9 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
     expect(url.hostname).toBe("127.0.0.1");
     expect(url.pathname).toBe("/stariva_notification_test");
     process.env.POSTGRES_URL = url.href;
-    const email = mock(async (_message: { idempotencyKey: string }) => {});
+    const email = mock(
+      async (_message: { idempotencyKey: string; to: string[] }) => {},
+    );
     const telegram = mock(async () => {});
     mock.module("@stariva/emails", () => ({
       sendEmail: email,
@@ -61,6 +63,7 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
         status: "paid",
         paidAt: new Date(now.getTime() - 3600_000),
         accessToken: id,
+        contactEmail: `contact-${id}@example.test`,
         telegramChatId: "synthetic-chat",
       });
       const read = async () =>
@@ -98,6 +101,9 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
       expect(
         email.mock.calls.map(([message]) => message.idempotencyKey),
       ).toEqual([`workshop:${id}:booked:email`, `workshop:${id}:booked:email`]);
+      expect(email.mock.calls.at(-1)?.[0].to).toEqual([
+        `contact-${id}@example.test`,
+      ]);
       expect((await read())[0]?.sentAt).toBeInstanceOf(Date);
       expect(await claim(id, "booked", "email")).toBeNull();
       // A late failure must not delete a completed delivery.
@@ -113,6 +119,9 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
       const result = await runWorkshopReminderSweep(now);
       expect(result).toEqual({ checked: 1, delivered: 2, failed: 0 });
       expect(telegram).toHaveBeenCalledTimes(2);
+      expect(email.mock.calls.at(-1)?.[0].to).toEqual([
+        `contact-${id}@example.test`,
+      ]);
       expect(email.mock.calls.at(-1)?.[0].idempotencyKey).toBe(
         `workshop:${id}:release:email`,
       );

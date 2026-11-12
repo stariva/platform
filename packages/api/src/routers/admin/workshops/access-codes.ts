@@ -4,22 +4,17 @@ import {
   count,
   desc,
   eq,
-  inArray,
-  isNotNull,
   isNull,
   orders,
   productOrderItems,
   productOrders,
   products,
+  sql,
   workshopAccessCodes,
   workshops,
 } from "@stariva/db";
 import { currentWorkshopPrice } from "@stariva/validators";
-import {
-  formatAccessCode,
-  generateAccessCode,
-  kitWorkshopOrderId,
-} from "@stariva/web-api";
+import { formatAccessCode, generateAccessCode } from "@stariva/web-api";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -209,34 +204,31 @@ export const orderAccess = adminProcedure
     const linked = await context.db
       .selectDistinct({ slug: workshops.slug, title: workshops.title })
       .from(productOrderItems)
-      .innerJoin(products, eq(products.slug, productOrderItems.productSlug))
-      .innerJoin(workshops, eq(workshops.slug, products.workshopSlug))
-      .where(
-        and(
-          eq(productOrderItems.orderId, input.orderId),
-          isNotNull(products.workshopSlug),
+      .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
+      .innerJoin(
+        workshops,
+        eq(
+          workshops.slug,
+          sql`case when ${productOrderItems.workshopLinkCaptured} then ${productOrderItems.workshopSlug} else ${products.workshopSlug} end`,
         ),
-      );
+      )
+      .where(and(eq(productOrderItems.orderId, input.orderId)));
 
     const [granted, codes] = await Promise.all([
       // Заказ мастер-класса, созданный при оплате набора, — см. kit-access.ts
-      linked.length === 0
-        ? []
-        : context.db
-            .select({
-              workshopSlug: orders.workshopSlug,
-              email: orders.contactEmail,
-              paidAt: orders.paidAt,
-            })
-            .from(orders)
-            .where(
-              inArray(
-                orders.id,
-                linked.map(({ slug }) =>
-                  kitWorkshopOrderId(input.orderId, slug),
-                ),
-              ),
-            ),
+      context.db
+        .select({
+          workshopSlug: orders.workshopSlug,
+          email: orders.contactEmail,
+          paidAt: orders.paidAt,
+        })
+        .from(orders)
+        .where(
+          eq(
+            orders.id,
+            sql`'kit-' || ${input.orderId} || '-' || ${orders.workshopSlug}`,
+          ),
+        ),
       context.db
         .select(ticketFields)
         .from(workshopAccessCodes)

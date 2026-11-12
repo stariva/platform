@@ -17,7 +17,16 @@ import {
   type WorkshopEmailKind,
 } from "@stariva/emails";
 import { loadWorkshopMaterials } from "@stariva/storage";
-import { and, between, eq, gte, inArray, isNotNull, or } from "drizzle-orm";
+import {
+  and,
+  between,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  or,
+  sql,
+} from "drizzle-orm";
 import { baseEnv, env } from "@/env";
 import {
   type DeliveryConfig,
@@ -356,7 +365,11 @@ function deliverTelegram(target: Target, kind: ReminderKind) {
 
 async function loadTargets(where: Parameters<typeof and>[number]) {
   const rows = await db
-    .select({ order: orders, workshop: workshops, email: user.email })
+    .select({
+      order: orders,
+      workshop: workshops,
+      email: sql<string>`coalesce(${orders.contactEmail}, ${user.email})`,
+    })
     .from(orders)
     .innerJoin(workshops, eq(workshops.slug, orders.workshopSlug))
     .innerJoin(user, eq(user.id, orders.userId))

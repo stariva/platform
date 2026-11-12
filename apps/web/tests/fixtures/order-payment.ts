@@ -79,6 +79,8 @@ mock.module("@/lib/payments/yookassa", () => ({
   getPayment: async () => null,
   kopecksToValue: (amount: number) => (amount / 100).toFixed(2),
 }));
+const grantKitWorkshops = mock(async (_id: string) => {});
+mock.module("@/lib/workshops/kit-access", () => ({ grantKitWorkshops }));
 const { applyProductOrderPayment } = await import(
   "../../src/lib/commerce/order-payment"
 );
@@ -200,3 +202,12 @@ await test("a deposit never touches the shipment", async () => {
   expect(createMadeToOrderShipment).not.toHaveBeenCalled();
   expect(calls).toEqual(["notify:row-1"]);
 });
+
+if (
+  scenario.includes("balance") ||
+  scenario === "a deposit never touches the shipment"
+) {
+  expect(grantKitWorkshops).toHaveBeenCalledTimes(
+    scenario.includes("balance") ? 1 : 0,
+  );
+}
