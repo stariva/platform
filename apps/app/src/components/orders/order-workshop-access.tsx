@@ -20,7 +20,8 @@ import { Badge } from "@stariva/ui/reui";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useConfirm } from "~/components/confirm-dialog";
 import { AccessCodeRemove } from "~/components/workshops/access-codes";
 import { orpc } from "~/orpc/react";
 
@@ -34,29 +35,199 @@ export interface OrderAccessCode {
 
 const ticketHref = (id: string) => `/access-codes/${id}/print`;
 
+const sentFormat = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Moscow",
+});
+
+interface KitWorkshop {
+  slug: string;
+  title: string;
+  /** Уроки уже открыты покупателю. */
+  granted: boolean;
+  /** Куда ушёл или уйдёт бриф; null — почты нет. */
+  email: string | null;
+  hasBrief: boolean;
+  briefSentAt: Date | null;
+}
+
+/**
+ * Один мастер-класс набора: открыт ли доступ, ушёл ли бриф, и кнопка, чтобы
+ * отправить его вручную. Первая отправка заодно открывает уроки.
+ */
+function KitWorkshopRow({
+  orderId,
+  workshop,
+}: {
+  orderId: string;
+  workshop: KitWorkshop;
+}) {
+  const router = useRouter();
+  const confirm = useConfirm();
+  const deliveryKey = `kit-brief:${orderId}:${workshop.slug}`;
+  const [deliveryWarning, setDeliveryWarning] = useState<string | null>(null);
+  const [delivered, setDelivered] = useState(false);
+  const [deliveryLoaded, setDeliveryLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const warning = sessionStorage.getItem(deliveryKey);
+      setDeliveryWarning(warning);
+      setDelivered(!!warning);
+    } catch {
+      // Локальное подтверждение работает и без доступа к хранилищу.
+    }
+    setDeliveryLoaded(true);
+  }, [deliveryKey]);
+  const wasSent = !!workshop.briefSentAt || delivered;
+  const send = useMutation({
+    ...orpc.admin.workshops.sendKitBrief.mutationOptions(),
+    onSuccess: ({ to, warning }) => {
+      setDelivered(true);
+      setDeliveryWarning(warning);
+      try {
+        if (warning) sessionStorage.setItem(deliveryKey, warning);
+        else sessionStorage.removeItem(deliveryKey);
+      } catch {
+        // Сохраняем состояние текущей строки, даже если хранилище недоступно.
+      }
+      if (warning) toast.warning(`${warning}: ${to}`);
+      else toast.success(`Бриф отправлен на ${to}`);
+      router.refresh();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Не удалось отправить бриф");
+      // Доступ мог открыться, даже если письмо не ушло
+      router.refresh();
+    },
+  });
+
+  async function submit() {
+    if (
+      wasSent &&
+      !(await confirm({
+        title: "Отправить бриф ещё раз?",
+        description: `Бриф уже уходил на ${workshop.email ?? "почту покупателя"}. Придёт ещё одно письмо с PDF.`,
+        confirmLabel: "Отправить",
+      }))
+    ) {
+      return;
+    }
+    send.mutate({ orderId, workshopSlug: workshop.slug });
+  }
+
+  return (
+    <li className="space-y-2 rounded-md border p-3 text-sm">
+      <p className="font-medium">{workshop.title}</p>
+      <div className="flex flex-wrap gap-2">
+        {workshop.granted ? (
+          <Badge variant="success-light">Доступ открыт</Badge>
+        ) : (
+          <Badge variant="warning-light">Доступ не открыт</Badge>
+        )}
+        {workshop.briefSentAt ? (
+          <Badge variant="success-light">
+            Бриф отправлен {sentFormat.format(workshop.briefSentAt)}
+          </Badge>
+        ) : (
+          workshop.hasBrief &&
+          !delivered && <Badge variant="warning-light">Бриф не отправлен</Badge>
+        )}
+      </div>
+      {deliveryWarning && (
+        <p role="status" className="text-amber-700">
+          {deliveryWarning}
+        </p>
+      )}
+      {workshop.email && (
+        <p className="text-muted-foreground break-all">{workshop.email}</p>
+      )}
+      {!workshop.hasBrief ? (
+        <p className="text-muted-foreground">
+          У мастер-класса нет PDF — загрузите бриф в карточке курса.
+        </p>
+      ) : !workshop.email ? (
+        <p className="text-muted-foreground">
+          У заказа нет почты — отправить бриф некуда. Выдайте код и напечатайте
+          купон.
+        </p>
+      ) : (
+        <Button
+          size="sm"
+          variant={wasSent ? "outline" : "default"}
+          disabled={send.isPending || !deliveryLoaded}
+          onClick={submit}
+        >
+          {send.isPending
+            ? "Отправляем…"
+            : wasSent
+              ? "Отправить ещё раз"
+              : "Отправить бриф"}
+        </Button>
+      )}
+    </li>
+  );
+}
+
 /**
  * Мастер-класс к набору из заказа. Обычно делать ничего не нужно: при оплате
- * уроки сами уходят на почту покупателя. Купон с кодом — запасной путь, когда
- * почты у заказа нет или мастер-класс к товару ещё не привязан.
+ * уроки и бриф сами уходят на почту покупателя. Не ушли — бриф отправляется
+ * кнопкой. Купон с кодом — запасной путь, когда почты у заказа нет или
+ * мастер-класс к товару ещё не привязан.
  */
 export function OrderWorkshopAccess({
   orderId,
   workshops,
+  email,
   linked,
   granted,
   codes,
 }: {
   orderId: string;
   workshops: { slug: string; title: string }[];
+  /** Почта покупателя из заказа; null — её нет. */
+  email: string | null;
   /** Мастер-классы, привязанные к товарам заказа. */
-  linked: { slug: string; title: string }[];
-  /** Уже открыты на почту покупателя при оплате. */
-  granted: { workshopSlug: string; email: string | null }[];
+  linked: { slug: string; title: string; hasBrief: boolean }[];
+  /** Уже открыты на почту покупателя. */
+  granted: {
+    workshopSlug: string;
+    email: string | null;
+    hasBrief: boolean;
+    briefSentAt: Date | null;
+  }[];
   codes: OrderAccessCode[];
 }) {
   const router = useRouter();
   const [workshop, setWorkshop] = useState(linked[0]?.slug ?? "");
   const titles = Object.fromEntries(workshops.map((w) => [w.slug, w.title]));
+  const linkedTitles = Object.fromEntries(linked.map((w) => [w.slug, w.title]));
+  // Открытые — первыми; привязанные к товарам, но ещё не открытые — следом
+  const kitWorkshops: KitWorkshop[] = [
+    ...granted.map((row) => ({
+      slug: row.workshopSlug,
+      title:
+        linkedTitles[row.workshopSlug] ??
+        titles[row.workshopSlug] ??
+        row.workshopSlug,
+      granted: true,
+      email: row.email ?? email,
+      hasBrief: row.hasBrief,
+      briefSentAt: row.briefSentAt,
+    })),
+    ...linked
+      .filter((w) => !granted.some((row) => row.workshopSlug === w.slug))
+      .map((w) => ({
+        slug: w.slug,
+        title: w.title,
+        granted: false,
+        email,
+        hasBrief: w.hasBrief,
+        briefSentAt: null,
+      })),
+  ];
 
   const issue = useMutation({
     ...orpc.admin.workshops.issueAccessCode.mutationOptions(),
@@ -75,24 +246,19 @@ export function OrderWorkshopAccess({
         <CardTitle>Мастер-класс к набору</CardTitle>
         <CardDescription>
           {linked.length > 0
-            ? "После оплаты уроки и PDF сами уходят на почту покупателя. Купон с кодом нужен, только если почты нет."
+            ? "После оплаты уроки и бриф сами уходят на почту покупателя. Если письмо не ушло, отправьте бриф кнопкой — в нём PDF и ссылка на уроки. Купон с кодом нужен, только если почты нет."
             : "К товарам заказа мастер-класс не привязан — привяжите его в карточке товара или выдайте код и напечатайте купон в коробку."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {granted.length > 0 && (
+        {kitWorkshops.length > 0 && (
           <ul className="space-y-2">
-            {granted.map((row) => (
-              <li
-                key={row.workshopSlug}
-                className="space-y-1 rounded-md border p-3 text-sm"
-              >
-                <Badge variant="success-light">Доступ открыт</Badge>
-                <p>{titles[row.workshopSlug] ?? row.workshopSlug}</p>
-                {row.email && (
-                  <p className="text-muted-foreground break-all">{row.email}</p>
-                )}
-              </li>
+            {kitWorkshops.map((row) => (
+              <KitWorkshopRow
+                key={`${orderId}:${row.slug}`}
+                orderId={orderId}
+                workshop={row}
+              />
             ))}
           </ul>
         )}

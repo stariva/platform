@@ -10,6 +10,7 @@ import {
   productOrders,
   products,
   sql,
+  user,
   workshopAccessCodes,
   workshops,
 } from "@stariva/db";
@@ -18,6 +19,7 @@ import { formatAccessCode, generateAccessCode } from "@stariva/web-api";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { briefSentAt, workshopHasBrief } from "./brief";
 
 /**
  * Где продан курс: livemaster — Ярмарка Мастеров; ozon — набор куплен на
@@ -188,7 +190,8 @@ const ticketFields = {
 
 /**
  * Мастер-классы к наборам из заказа на сайте: какие идут с товарами заказа,
- * какие уже открыты на почту покупателя при оплате и какие выданы купоном.
+ * какие уже открыты на почту покупателя (и ушёл ли бриф) и какие выданы
+ * купоном. `email` — куда уйдёт бриф; null — почты у заказа нет.
  *
  * @example client.admin.workshops.orderAccess({ orderId: "order_1" })
  */
@@ -196,13 +199,23 @@ export const orderAccess = adminProcedure
   .input(z.object({ orderId: z.string().min(1) }))
   .handler(async ({ context, input }) => {
     const [order] = await context.db
-      .select({ number: productOrders.number })
+      .select({
+        number: productOrders.number,
+        email: sql<
+          string | null
+        >`coalesce(nullif(trim(${productOrders.contactEmail}), ''), ${user.email})`,
+      })
       .from(productOrders)
+      .leftJoin(user, eq(user.id, productOrders.userId))
       .where(eq(productOrders.id, input.orderId));
-    if (!order) return { linked: [], granted: [], codes: [] };
+    if (!order) return { email: null, linked: [], granted: [], codes: [] };
 
     const linked = await context.db
-      .selectDistinct({ slug: workshops.slug, title: workshops.title })
+      .selectDistinct({
+        slug: workshops.slug,
+        title: workshops.title,
+        hasBrief: workshopHasBrief,
+      })
       .from(productOrderItems)
       .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
       .innerJoin(
@@ -221,8 +234,11 @@ export const orderAccess = adminProcedure
           workshopSlug: orders.workshopSlug,
           email: orders.contactEmail,
           paidAt: orders.paidAt,
+          hasBrief: workshopHasBrief,
+          briefSentAt,
         })
         .from(orders)
+        .innerJoin(workshops, eq(workshops.slug, orders.workshopSlug))
         .where(
           eq(
             orders.id,
@@ -248,6 +264,7 @@ export const orderAccess = adminProcedure
         ),
     ]);
     return {
+      email: order.email,
       linked,
       granted,
       codes: codes.map((row) => ({ ...row, code: formatAccessCode(row.code) })),
