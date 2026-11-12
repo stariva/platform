@@ -19,9 +19,9 @@ const CODE_DIGITS = 6;
 
 type Notice = { tone: "error" | "info"; text: string } | null;
 
-export function CodeForm() {
+export function CodeForm({ initialCode = "" }: { initialCode?: string }) {
   const { data: session, isPending: sessionPending } = useSession();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [codeError, setCodeError] = useState<string>();
@@ -124,11 +124,12 @@ export function CodeForm() {
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div>
         <label htmlFor={codeId} className="block text-sm text-espresso mb-1.5">
-          Код из сообщения
+          Код из сообщения или с купона
         </label>
         <CodeInput
           id={codeId}
-          autoFocus
+          // Код пришёл из QR — курсор сразу в поле почты
+          autoFocus={!initialCode}
           value={code}
           onChange={(value) => {
             setCode(value);
@@ -167,6 +168,7 @@ export function CodeForm() {
               inputMode="email"
               autoComplete="email"
               autoCapitalize="none"
+              autoFocus={Boolean(initialCode)}
               spellCheck={false}
               placeholder="olga@mail.ru"
               value={email}

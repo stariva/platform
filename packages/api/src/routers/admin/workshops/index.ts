@@ -1,6 +1,8 @@
 import {
+  accessCode,
   accessCodesList,
   issueAccessCode,
+  orderAccessCodes,
   removeAccessCode,
 } from "./access-codes";
 import { sendBrief, sendMissingBriefs } from "./brief";
@@ -36,6 +38,8 @@ export const adminWorkshopsRouter = {
   sendBrief,
   sendMissingBriefs,
   accessCodes: accessCodesList,
+  accessCode,
+  orderAccessCodes,
   issueAccessCode,
   removeAccessCode,
 };

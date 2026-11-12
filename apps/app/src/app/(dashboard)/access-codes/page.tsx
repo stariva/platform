@@ -169,6 +169,15 @@ export default async function AccessCodesPage({
                   <TableCell className="align-top">
                     {!row.redeemedAt && (
                       <div className="flex justify-end gap-1">
+                        <Link
+                          href={`/access-codes/${row.id}/print`}
+                          className={buttonVariants({
+                            variant: "ghost",
+                            size: "sm",
+                          })}
+                        >
+                          Купон
+                        </Link>
                         <AccessCodeCopy code={row.code} />
                         <AccessCodeRemove id={row.id} code={row.code} />
                       </div>

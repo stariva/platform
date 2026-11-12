@@ -65,6 +65,22 @@ test("a Livemaster code is announced as an activation, not a site purchase", () 
   );
 });
 
+test("a kit code is announced without a price: the kit already paid for it", () => {
+  const touch = {
+    utm_source: "kit",
+    utm_medium: "offline",
+    landing: "/code",
+    at: "2026-10-01T10:00:00Z",
+  };
+  const { title } = formatWorkshopPurchaseMessage(
+    { ...order, amount: 0, attribution: { first: touch, last: touch } },
+    { title: "Ёлка макраме", releaseAt: null },
+    "account@example.test",
+    now,
+  );
+  expect(title).toBe("Активирован код из набора: «Ёлка макраме»");
+});
+
 test("a combo purchase is announced as the combo", () => {
   const { title } = formatWorkshopPurchaseMessage(
     { ...order, bundleSlug: "elka-makrame-kombo", amount: 159000 },
