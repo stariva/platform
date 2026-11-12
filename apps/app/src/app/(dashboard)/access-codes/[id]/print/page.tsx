@@ -11,13 +11,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * QR одним контуром: у отдельных квадратов при печати между рядами бывают
- * щели. Тихую зону даёт сам купон; без рамки `qr` матрицу не отдаёт, поэтому
- * просим рамку в один модуль и срезаем её.
+ * щели. Сохраняем тихую зону шириной в четыре модуля вокруг кода.
  */
 function qrOutline(url: string) {
-  const modules = encodeQR(url, "raw", { ecc: "medium", border: 1 })
-    .slice(1, -1)
-    .map((row) => row.slice(1, -1));
+  const modules = encodeQR(url, "raw", { ecc: "medium", border: 4 });
   let path = "";
   modules.forEach((row, y) => {
     let x = 0;

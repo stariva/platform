@@ -74,10 +74,14 @@ export function AccessTicket({ ticket }: { ticket: AccessTicketData }) {
 @page { size: ${width}mm ${heightMm}mm; margin: 0; }
 @media print {
   html, body { background: #fff !important; }
-  body * { visibility: hidden; }
-  #access-ticket, #access-ticket * { visibility: visible; }
+  body *:not(#access-ticket):not(#access-ticket *):not(:has(#access-ticket)) {
+    display: none !important;
+  }
+  body *:has(#access-ticket) {
+    position: static !important;
+  }
   #access-ticket {
-    position: fixed; left: 0; top: 0; margin: 0;
+    position: absolute; left: 0; top: 0; margin: 0;
     border: 0; box-shadow: none; outline: 0;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
