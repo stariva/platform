@@ -20,7 +20,7 @@ import { Badge } from "@stariva/ui/reui";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { AccessCodeRemove } from "~/components/workshops/access-codes";
 import { orpc } from "~/orpc/react";
@@ -67,9 +67,32 @@ function KitWorkshopRow({
 }) {
   const router = useRouter();
   const confirm = useConfirm();
+  const deliveryKey = `kit-brief:${orderId}:${workshop.slug}`;
+  const [deliveryWarning, setDeliveryWarning] = useState<string | null>(null);
+  const [delivered, setDelivered] = useState(false);
+  const [deliveryLoaded, setDeliveryLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const warning = sessionStorage.getItem(deliveryKey);
+      setDeliveryWarning(warning);
+      setDelivered(!!warning);
+    } catch {
+      // Локальное подтверждение работает и без доступа к хранилищу.
+    }
+    setDeliveryLoaded(true);
+  }, [deliveryKey]);
+  const wasSent = !!workshop.briefSentAt || delivered;
   const send = useMutation({
     ...orpc.admin.workshops.sendKitBrief.mutationOptions(),
     onSuccess: ({ to, warning }) => {
+      setDelivered(true);
+      setDeliveryWarning(warning);
+      try {
+        if (warning) sessionStorage.setItem(deliveryKey, warning);
+        else sessionStorage.removeItem(deliveryKey);
+      } catch {
+        // Сохраняем состояние текущей строки, даже если хранилище недоступно.
+      }
       if (warning) toast.warning(`${warning}: ${to}`);
       else toast.success(`Бриф отправлен на ${to}`);
       router.refresh();
@@ -83,7 +106,7 @@ function KitWorkshopRow({
 
   async function submit() {
     if (
-      workshop.briefSentAt &&
+      wasSent &&
       !(await confirm({
         title: "Отправить бриф ещё раз?",
         description: `Бриф уже уходил на ${workshop.email ?? "почту покупателя"}. Придёт ещё одно письмо с PDF.`,
@@ -109,11 +132,15 @@ function KitWorkshopRow({
             Бриф отправлен {sentFormat.format(workshop.briefSentAt)}
           </Badge>
         ) : (
-          workshop.hasBrief && (
-            <Badge variant="warning-light">Бриф не отправлен</Badge>
-          )
+          workshop.hasBrief &&
+          !delivered && <Badge variant="warning-light">Бриф не отправлен</Badge>
         )}
       </div>
+      {deliveryWarning && (
+        <p role="status" className="text-amber-700">
+          {deliveryWarning}
+        </p>
+      )}
       {workshop.email && (
         <p className="text-muted-foreground break-all">{workshop.email}</p>
       )}
@@ -129,13 +156,13 @@ function KitWorkshopRow({
       ) : (
         <Button
           size="sm"
-          variant={workshop.briefSentAt ? "outline" : "default"}
-          disabled={send.isPending}
+          variant={wasSent ? "outline" : "default"}
+          disabled={send.isPending || !deliveryLoaded}
           onClick={submit}
         >
           {send.isPending
             ? "Отправляем…"
-            : workshop.briefSentAt
+            : wasSent
               ? "Отправить ещё раз"
               : "Отправить бриф"}
         </Button>
@@ -227,7 +254,11 @@ export function OrderWorkshopAccess({
         {kitWorkshops.length > 0 && (
           <ul className="space-y-2">
             {kitWorkshops.map((row) => (
-              <KitWorkshopRow key={row.slug} orderId={orderId} workshop={row} />
+              <KitWorkshopRow
+                key={`${orderId}:${row.slug}`}
+                orderId={orderId}
+                workshop={row}
+              />
             ))}
           </ul>
         )}

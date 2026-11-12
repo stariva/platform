@@ -1,12 +1,15 @@
 import { randomBytes } from "node:crypto";
 import { ORPCError } from "@orpc/server";
 import {
+  and,
   type CampaignAttribution,
   courseAccess,
   type Database,
   eq,
   orders,
+  productOrderItems,
   productOrders,
+  products,
   sql,
   user,
   workshopOrderNotifications,
@@ -18,13 +21,14 @@ import { z } from "zod";
 import { adminProcedure } from "../../../orpc";
 import { sendBriefForOrder } from "./brief";
 
-/** Заказ набора ещё не оплачен или деньги вернули — бриф не положен. */
-const UNPAID = new Set<string>([
-  "pending",
-  "canceled",
-  "refunded",
-  "requested",
-  "awaiting_deposit",
+/** Полная оплата согласно productOrderStatus в схеме commerce/orders. */
+const PAID = new Set<string>([
+  "paid",
+  "ozon_order_failed",
+  "fulfilling",
+  "shipped",
+  "delivered",
+  "ready_to_ship",
 ]);
 
 function secretToken(): string {
@@ -44,15 +48,28 @@ function kitAttribution(): CampaignAttribution {
 
 /** Аккаунт покупателя по почте; гостю заводим новый, как при оплате на сайте. */
 async function buyerId(db: Database, email: string, name: string) {
-  const address = email.toLowerCase();
-  await db
-    .insert(user)
-    .values({ id: crypto.randomUUID(), name, email: address })
-    .onConflictDoNothing({ target: user.email });
-  const [found] = await db
-    .select({ id: user.id })
-    .from(user)
-    .where(eq(sql`lower(${user.email})`, address));
+  const address = email.trim().toLowerCase();
+  const find = () =>
+    db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(sql`lower(${user.email})`, address))
+      .limit(2);
+  let matches = await find();
+  if (matches.length === 0) {
+    await db
+      .insert(user)
+      .values({ id: crypto.randomUUID(), name, email: address })
+      .onConflictDoNothing({ target: user.email });
+    matches = await find();
+  }
+  if (matches.length > 1) {
+    throw new ORPCError("CONFLICT", {
+      message:
+        "Найдено несколько аккаунтов с этой почтой — проверьте покупателя",
+    });
+  }
+  const [found] = matches;
   if (!found) {
     throw new ORPCError("INTERNAL_SERVER_ERROR", {
       message: "Не удалось завести аккаунт покупателя",
@@ -93,9 +110,29 @@ export const sendKitBrief = adminProcedure
     if (!order) {
       throw new ORPCError("NOT_FOUND", { message: "Заказ не найден" });
     }
-    if (UNPAID.has(order.status)) {
+    if (!PAID.has(order.status)) {
       throw new ORPCError("BAD_REQUEST", {
         message: "Заказ не оплачен — бриф отправляем после оплаты",
+      });
+    }
+
+    const [linked] = await db
+      .select({ id: productOrderItems.id })
+      .from(productOrderItems)
+      .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
+      .where(
+        and(
+          eq(productOrderItems.orderId, order.id),
+          eq(
+            sql`case when ${productOrderItems.workshopLinkCaptured} then ${productOrderItems.workshopSlug} else ${products.workshopSlug} end`,
+            input.workshopSlug,
+          ),
+        ),
+      )
+      .limit(1);
+    if (!linked) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Мастер-класс не входит в этот заказ",
       });
     }
 
@@ -133,7 +170,7 @@ export const sendKitBrief = adminProcedure
           message: "У заказа нет почты — выдайте код и напечатайте купон",
         });
       }
-      const contactEmail = email;
+      const contactEmail = email.trim().toLowerCase();
       const userId =
         order.userId ?? (await buyerId(db, contactEmail, order.contactName));
 
@@ -174,7 +211,7 @@ export const sendKitBrief = adminProcedure
     }
 
     const result = await sendBriefForOrder(db, workshopOrderId);
-    if (!existing) {
+    try {
       // В письме с брифом уже есть ссылка на уроки — письмо о покупке сайт
       // вдогонку слать не должен. Если бриф не ушёл, отметки нет, и сайт
       // сам дошлёт письмо о покупке с PDF.
@@ -187,7 +224,22 @@ export const sendKitBrief = adminProcedure
           sentAt: sql`now()`,
           leaseUntil: null,
         })
-        .onConflictDoNothing();
+        .onConflictDoUpdate({
+          target: [
+            workshopOrderNotifications.orderId,
+            workshopOrderNotifications.kind,
+            workshopOrderNotifications.channel,
+          ],
+          set: { sentAt: sql`now()`, leaseUntil: null },
+        });
+    } catch {
+      return {
+        ...result,
+        warning:
+          result.warning ??
+          "Письмо отправлено, но отметка о покупке не сохранена",
+        opened: !existing,
+      };
     }
     return { ...result, opened: !existing };
   });
