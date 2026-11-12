@@ -78,9 +78,12 @@ function deleteRisks(order: AdminOrderView): string[] {
 export function OrderEditor({
   order,
   costs,
+  workshopAccess,
 }: {
   order: AdminOrderView;
   costs?: ReactNode;
+  /** Код и купон на мастер-класс к набору из заказа. */
+  workshopAccess?: ReactNode;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -305,6 +308,8 @@ export function OrderEditor({
         </Card>
 
         {order.kind === "made_to_order" && <MadeToOrderStage order={order} />}
+
+        {workshopAccess}
 
         <Card>
           <CardHeader>
