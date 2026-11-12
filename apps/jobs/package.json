@@ -11,8 +11,8 @@
     "format": "biome format .",
     "lint": "biome lint .",
     "check": "biome check .",
-    "trigger:dev": "bunx trigger.dev@4.8.1 dev",
-    "trigger:deploy": "bunx trigger.dev@4.8.1 deploy",
+    "trigger:dev": "bunx trigger.dev@4.8.5 dev",
+    "trigger:deploy": "bunx trigger.dev@4.8.5 deploy",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
