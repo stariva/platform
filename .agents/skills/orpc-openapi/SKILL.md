@@ -48,6 +48,7 @@ Compact mode (default): path params merge with query params or the request body 
 Set `inputStructure: 'detailed'` in the metadata to receive `{ params, query, headers, body }` instead (define only the fields you need in the input schema). Set `outputStructure: 'detailed'` to return `{ status?, headers?, body? }` and vary the status per response.
 
 Query strings and form data are decoded with bracket notation (fetch `openapi/bracket-notation` before designing schemas for nested query input; its limits are not guessable):
+
 - Repeated keys become arrays: `?color=red&color=blue` gives `['red', 'blue']`; `color[]=red` pushes too.
 - `[number]` targets an array index; `[key]` targets an object property: `?filter[status]=active` gives `{ filter: { status: 'active' } }`.
 - It cannot represent empty objects or arrays, root-level arrays, or objects whose keys are all numbers, and query/form values always arrive as strings (or files, in form data).
@@ -151,10 +152,12 @@ Contract-first workflows belong to the `orpc-contract` skill: defining the shape
 ## Full documentation
 
 If this skill and a fetched docs page disagree, trust the page: this skill is a summary and v2 is still moving. The docs are served at https://orpc.dev (the v1 docs stay at https://v1.orpc.dev):
+
 - https://orpc.dev/llms.txt : index of every page with descriptions
 - https://orpc.dev/llms-full.txt : the entire docs in one file (large; prefer single pages)
 - Append `.md` to any docs URL for that page's exact source markdown (for example https://orpc.dev/docs/openapi/routing.md)
 
 Pages to fetch when you need details beyond this skill:
+
 - OpenAPI: `openapi/routing`, `openapi/input-and-output-mapping`, `openapi/bracket-notation`, `openapi/serializer`, `openapi/handler`, `openapi/link`, `openapi/specification`, `openapi/scalar`
 - Plugins: `plugins/smart-coercion`, `plugins/openapi-reference`

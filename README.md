@@ -268,11 +268,13 @@ succeed. These migrations must support rerunning after partial completion; use
 <td>
 
 **Core**
+
 - [Bun](https://bun.sh) — Runtime & package manager
 - [Turborepo](https://turborepo.org) — Monorepo build system
 - [TypeScript](https://www.typescriptlang.org/) — Type safety
 
 **Frontend**
+
 - [Next.js 16](https://nextjs.org) — React framework
 - [React 19](https://react.dev) — UI library
 - [Tailwind CSS v4](https://tailwindcss.com) — Styling
@@ -282,6 +284,7 @@ succeed. These migrations must support rerunning after partial completion; use
 <td>
 
 **Backend**
+
 - [oRPC](https://orpc.unnoq.com) — Type-safe APIs (RPC + OpenAPI)
 - [Drizzle ORM](https://orm.drizzle.team) — Database ORM
 - [Neon](https://neon.tech) / Postgres — Serverless or self-hosted
@@ -289,6 +292,7 @@ succeed. These migrations must support rerunning after partial completion; use
 - [Hono](https://hono.dev) — Optional standalone API server
 
 **Tools**
+
 - [TanStack Query](https://tanstack.com/query) — Data fetching
 - [React Hook Form](https://react-hook-form.com) — Forms
 - [Zod](https://zod.dev) — Validation
@@ -321,6 +325,7 @@ This project is optimized for **zero-config deployment** on Vercel.
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/bunworks/bun-turbo-starter)
 
 **Manual Deployment:**
+
 1. Push your code to GitHub
 2. Import project on [Vercel](https://vercel.com/new)
 3. Select `apps/app` as root directory
@@ -348,6 +353,7 @@ RESEND_API_KEY=re_your_api_key
 ### Other Platforms
 
 This starter can be deployed to any platform that supports Next.js:
+
 - **Netlify** — Add `apps/app` as base directory
 - **Railway** — Auto-detects Next.js configuration
 - **Fly.io** — Use provided Dockerfile
@@ -382,6 +388,7 @@ This starter can be deployed to any platform that supports Next.js:
 **Better Auth Setup**
 
 The `auth:generate` command creates database schema from your Better Auth configuration:
+
 - Config: `packages/auth/script/auth-cli.ts`
 - Output: `packages/db/src/auth-schema.ts`
 - Runtime config: `packages/auth/src/index.ts`
@@ -389,6 +396,7 @@ The `auth:generate` command creates database schema from your Better Auth config
 **Type-safe Environment Variables**
 
 Environment variables are validated using `@t3-oss/env-core`:
+
 - Define schema in `packages/config/src/index.ts`
 - Import and use across packages
 - Fails fast if variables are missing or invalid
@@ -396,6 +404,7 @@ Environment variables are validated using `@t3-oss/env-core`:
 **Shared Packages**
 
 The `api` package should be:
+
 - **Production dependency** in apps that serve the API
 - **Dev dependency** in apps that only consume the API
 
@@ -414,4 +423,5 @@ MIT
 ## Acknowledgments
 
 This starter is inspired by [bun-turbo-starter](https://github.com/bunworks/bun-turbo-starter) and optimized for the Bun ecosystem.
+
 # platform

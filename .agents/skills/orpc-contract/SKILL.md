@@ -156,11 +156,13 @@ Then run `npx @hey-api/openapi-ts`. It writes `orpc.gen.ts` (one procedure contr
 ## Full documentation
 
 If this skill and a fetched docs page disagree, trust the page: this skill is a summary and v2 is still moving. The docs are served at https://orpc.dev (the v1 docs stay at https://v1.orpc.dev):
+
 - https://orpc.dev/llms.txt : index of every page with descriptions
 - https://orpc.dev/llms-full.txt : the entire docs in one file (large; prefer single pages)
 - Append `.md` to any docs URL for that page's exact source markdown (for example https://orpc.dev/docs/contract/procedure.md)
 
 Pages to fetch when you need details beyond this skill:
+
 - Contract: `contract/procedure`, `contract/router`, `contract/implementation`, `contract/generate-from-openapi`
 - Clients: `client/client-side`, `client/server-side`, `client/error-handling`, `openapi/link`
 - Workflows: `recipes/publish-client-to-npm`, `contract/client-factory`, `recipes/monorepo-setup`

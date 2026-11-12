@@ -14,6 +14,7 @@ This skill targets oRPC v2. Check what is installed before writing code: `npm ls
 Pretrained oRPC knowledge describes v1 and is often wrong for v2 (routing moved to `.meta(openapi(...))`, `RPCLink` split `url` into `origin` plus a path, automatic middleware dedupe was removed). Prefer retrieval: the index of every docs page is at https://orpc.dev/llms.txt; see [Full documentation](#full-documentation) for the mechanics.
 
 Package map:
+
 - `@orpc/server`: the `os` builder, routers, middleware, `RPCHandler`, server-side clients (`call`, `createRouterClient`), `implement` for mocks
 - `@orpc/client`: `createORPCClient`, `RPCLink`, `safe`, `createSafeClient`, `isDefinedError`
 - `@orpc/contract`: contract-first API definitions implemented separately from their logic (see the `orpc-contract` skill)
@@ -226,11 +227,13 @@ const safeClient = createSafeClient(orpc); // every call returns [error, data]
 ## Full documentation
 
 This skill is an overview; fetch exact docs instead of guessing APIs, and if this skill and a fetched page disagree, trust the page. The docs are served at https://orpc.dev (the v1 docs stay at https://v1.orpc.dev):
+
 - https://orpc.dev/llms.txt : index of every page with descriptions
 - https://orpc.dev/llms-full.txt : the entire docs in one file (large; prefer single pages)
 - Append `.md` to any docs URL for that page's exact source markdown (for example https://orpc.dev/docs/procedure.md)
 
 Doc map, all under `https://orpc.dev/docs/`:
+
 - Top level: `procedure`, `router`, `middleware`, `context`, `error-handling`, `metadata`, plus `binary-data` (file uploads) and `async-iterator-object` (streaming/SSE)
 - `rpc/*`, `openapi/*`: protocol details, handlers, links; `contract/*`: contract-first (the `orpc-contract` skill)
 - `client/*`: server- and client-side clients, error handling, `DynamicLink`
