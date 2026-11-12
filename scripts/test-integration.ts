@@ -32,6 +32,11 @@ const suites: Suite[] = [
     database: "stariva_access_code_test",
   },
   {
+    file: "apps/web/src/lib/workshops/kit-access.integration.test.ts",
+    env: "KIT_ACCESS_TEST_DATABASE_URL",
+    database: "stariva_kit_access_test",
+  },
+  {
     file: "apps/web/src/lib/custom-order/inbox.integration.test.ts",
     env: "CUSTOM_ORDER_TEST_DATABASE_URL",
     database: "stariva_custom_order_test",

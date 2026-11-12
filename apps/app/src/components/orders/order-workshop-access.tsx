@@ -35,21 +35,27 @@ export interface OrderAccessCode {
 const ticketHref = (id: string) => `/access-codes/${id}/print`;
 
 /**
- * Мастер-класс к набору из заказа: выдать код и напечатать купон в коробку.
- * Код одноразовый; заказ по нему создаётся на 0 ₽ — мастер-класс уже оплачен
- * в цене набора.
+ * Мастер-класс к набору из заказа. Обычно делать ничего не нужно: при оплате
+ * уроки сами уходят на почту покупателя. Купон с кодом — запасной путь, когда
+ * почты у заказа нет или мастер-класс к товару ещё не привязан.
  */
 export function OrderWorkshopAccess({
   orderId,
   workshops,
+  linked,
+  granted,
   codes,
 }: {
   orderId: string;
   workshops: { slug: string; title: string }[];
+  /** Мастер-классы, привязанные к товарам заказа. */
+  linked: { slug: string; title: string }[];
+  /** Уже открыты на почту покупателя при оплате. */
+  granted: { workshopSlug: string; email: string | null }[];
   codes: OrderAccessCode[];
 }) {
   const router = useRouter();
-  const [workshop, setWorkshop] = useState("");
+  const [workshop, setWorkshop] = useState(linked[0]?.slug ?? "");
   const titles = Object.fromEntries(workshops.map((w) => [w.slug, w.title]));
 
   const issue = useMutation({
@@ -68,11 +74,28 @@ export function OrderWorkshopAccess({
       <CardHeader>
         <CardTitle>Мастер-класс к набору</CardTitle>
         <CardDescription>
-          Выдайте код и напечатайте купон в коробку: на нём QR-код, адрес и сам
-          код. Покупатель откроет видеоуроки любым из способов.
+          {linked.length > 0
+            ? "После оплаты уроки и PDF сами уходят на почту покупателя. Купон с кодом нужен, только если почты нет."
+            : "К товарам заказа мастер-класс не привязан — привяжите его в карточке товара или выдайте код и напечатайте купон в коробку."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {granted.length > 0 && (
+          <ul className="space-y-2">
+            {granted.map((row) => (
+              <li
+                key={row.workshopSlug}
+                className="space-y-1 rounded-md border p-3 text-sm"
+              >
+                <Badge variant="success-light">Доступ открыт</Badge>
+                <p>{titles[row.workshopSlug] ?? row.workshopSlug}</p>
+                {row.email && (
+                  <p className="text-muted-foreground break-all">{row.email}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
         {codes.length > 0 && (
           <ul className="space-y-3">
             {codes.map((row) => (

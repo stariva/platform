@@ -58,6 +58,8 @@ const item: ItemRow = {
   id: "item-1",
   orderId: order.id,
   productSlug: "tunika-5565",
+  workshopSlug: null,
+  workshopLinkCaptured: false,
   ozonSku: null,
   name: "Туника",
   price: 350000,

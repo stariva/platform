@@ -66,6 +66,7 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   dimensions: "",
   careInstructions: "",
   ideaAuthor: "",
+  workshopSlug: "",
   sizes: [],
   bestFor: "",
   highlights: [],
@@ -109,11 +110,14 @@ export function ProductForm({
   initialValues,
   ozon,
   storefrontUrl,
+  workshops,
 }: {
   id?: string;
   initialValues: ProductFormValues;
   ozon?: OzonInfo;
   storefrontUrl?: string;
+  /** Мастер-классы, которые можно приложить к товару (набору). */
+  workshops: { slug: string; title: string }[];
 }) {
   const router = useRouter();
   // Для нового товара адрес собираем из названия, пока его не правили руками
@@ -429,6 +433,27 @@ export function ProductForm({
                   rows={2}
                   {...register("careInstructions")}
                 />
+              </FieldRow>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldRow
+                label="Мастер-класс в комплекте"
+                htmlFor="workshopSlug"
+                hint="Для наборов. Оплатили на сайте — уроки и PDF сами уйдут на почту покупателя. Покупателям с Ozon кладите в коробку купон с кодом."
+                error={errors.workshopSlug?.message}
+              >
+                <select
+                  id="workshopSlug"
+                  className={selectClass}
+                  {...register("workshopSlug")}
+                >
+                  <option value="">Без мастер-класса</option>
+                  {workshops.map((workshop) => (
+                    <option key={workshop.slug} value={workshop.slug}>
+                      {workshop.title}
+                    </option>
+                  ))}
+                </select>
               </FieldRow>
             </div>
             <div className="sm:col-span-2">

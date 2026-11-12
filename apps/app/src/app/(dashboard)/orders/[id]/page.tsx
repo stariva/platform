@@ -19,8 +19,8 @@ export default async function OrderPage({
     if ((error as { code?: string }).code === "NOT_FOUND") notFound();
     throw error;
   });
-  const [codes, workshops] = await Promise.all([
-    api.admin.workshops.orderAccessCodes({ orderId: order.id }),
+  const [access, workshops] = await Promise.all([
+    api.admin.workshops.orderAccess({ orderId: order.id }),
     api.admin.workshops.list(),
   ]);
 
@@ -45,7 +45,12 @@ export default async function OrderPage({
               workshops={workshops
                 .filter((w) => w.status !== "archived")
                 .map(({ slug, title }) => ({ slug, title }))}
-              codes={codes.map((row) => ({
+              linked={access.linked}
+              granted={access.granted.map((row) => ({
+                workshopSlug: row.workshopSlug,
+                email: row.email,
+              }))}
+              codes={access.codes.map((row) => ({
                 id: row.id,
                 code: row.code,
                 workshopSlug: row.workshopSlug,

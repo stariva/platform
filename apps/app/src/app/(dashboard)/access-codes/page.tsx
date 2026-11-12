@@ -79,13 +79,19 @@ export default async function AccessCodesPage({
 
   return (
     <>
-      <SiteHeader title="Коды с Ярмарки" />
+      <SiteHeader title="Коды доступа" />
       <div className="space-y-4 px-4 pb-10 lg:px-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Коды с Ярмарки Мастеров
+            Коды доступа к мастер-классам
           </h1>
           <p className="text-muted-foreground max-w-3xl text-sm">
+            Набор купили на Ozon — выдайте код и положите в коробку купон: почту
+            такого покупателя мы не знаем. Если набор купили на сайте, уроки
+            уходят на почту сами, если покупатель указал email — купон не нужен.
+            Если email не указан, выдайте купон вручную.
+          </p>
+          <p className="text-muted-foreground mt-2 max-w-3xl text-sm">
             Купили мастер-класс на Ярмарке — выдайте код и вставьте сообщение в
             чат заказа. Покупатель вводит код на stariva.ru/code, получает
             письмо с уроками и PDF, а заказ появляется в «Записях» с меткой

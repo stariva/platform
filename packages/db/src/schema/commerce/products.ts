@@ -80,6 +80,9 @@ export const products = pgTable(
     // Текст для витрины: «Лучше всего для: …» и короткие преимущества
     bestFor: text("best_for"),
     highlights: text("highlights").array().notNull().default(sql`'{}'::text[]`),
+    // Мастер-класс, который идёт с товаром (набор для плетения): оплатили на
+    // сайте — открываем уроки на почту покупателя. null — без мастер-класса.
+    workshopSlug: text("workshop_slug"),
 
     // ── Под заказ ──
     madeToOrder: boolean("made_to_order").notNull().default(true),

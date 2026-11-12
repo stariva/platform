@@ -5,6 +5,7 @@ import {
   eq,
   productOrderItems,
   productOrders,
+  products,
 } from "@stariva/db";
 import type { CampaignAttribution } from "@stariva/db/schema";
 import { z } from "zod";
@@ -122,10 +123,16 @@ export const fromRequest = adminProcedure
           .returning({ id: productOrders.id, number: productOrders.number });
         if (!order) throw new Error("product_order_not_created");
 
+        const [product] = await tx
+          .select({ workshopSlug: products.workshopSlug })
+          .from(products)
+          .where(eq(products.slug, input.productSlug));
         await tx.insert(productOrderItems).values({
           id: crypto.randomUUID(),
           orderId: id,
           productSlug: input.productSlug,
+          workshopSlug: product?.workshopSlug ?? null,
+          workshopLinkCaptured: true,
           ozonSku: null,
           name: input.name,
           price: amount,

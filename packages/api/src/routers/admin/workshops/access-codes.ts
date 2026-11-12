@@ -6,7 +6,10 @@ import {
   eq,
   isNull,
   orders,
+  productOrderItems,
   productOrders,
+  products,
+  sql,
   workshopAccessCodes,
   workshops,
 } from "@stariva/db";
@@ -17,10 +20,14 @@ import { z } from "zod";
 import { adminProcedure } from "../../../orpc";
 
 /**
- * Где продан курс: livemaster — Ярмарка Мастеров, kit — набор с сайта, к
- * которому мастер-класс идёт в коробке.
+ * Где продан курс: livemaster — Ярмарка Мастеров; ozon — набор куплен на
+ * Ozon, код лежит на купоне в коробке; kit — набор куплен на сайте, а купон
+ * понадобился вместо письма (покупатель не оставил почту).
  */
-const CHANNELS = ["livemaster", "kit"] as const;
+const CHANNELS = ["livemaster", "ozon", "kit"] as const;
+
+/** С набором мастер-класс уже оплачен: заказ по коду создаётся на 0 ₽. */
+const KIT_CHANNELS = new Set<string>(["ozon", "kit"]);
 
 /**
  * Пометка кода из набора. По ней же находим коды заказа: отдельной связи с
@@ -35,11 +42,13 @@ const ISSUE_ATTEMPTS = 5;
  * Выдаёт одноразовый код доступа к мастер-классу для покупателя с Ярмарки
  * Мастеров. Цену курса фиксирует сразу: она уйдёт в заказ при активации.
  *
- * С `productOrderId` — код к набору из заказа на сайте: его печатают на
- * купоне и кладут в коробку. Мастер-класс уже оплачен в цене набора, поэтому
- * заказ по такому коду создаётся на 0 ₽ и выручку второй раз не считает.
+ * Код к набору (канал ozon или kit) печатают на купоне и кладут в коробку.
+ * Мастер-класс уже оплачен в цене набора, поэтому заказ по такому коду
+ * создаётся на 0 ₽ и выручку второй раз не считает. С `productOrderId` код
+ * привязан к заказу с сайта — запасной путь, когда у заказа нет почты.
  *
  * @example client.admin.workshops.issueAccessCode({ workshopSlug: "elka-makrame", note: "Заказ 12345678" })
+ * @example client.admin.workshops.issueAccessCode({ workshopSlug: "elka-makrame", channel: "ozon" })
  * @example client.admin.workshops.issueAccessCode({ workshopSlug: "elka-makrame", productOrderId: "order_1" })
  */
 export const issueAccessCode = adminProcedure
@@ -76,9 +85,11 @@ export const issueAccessCode = adminProcedure
       }
       kitOrderNumber = order.number;
     }
-    const fromKit = kitOrderNumber !== null || input.channel === "kit";
+    const channel = kitOrderNumber !== null ? "kit" : input.channel;
     // Та же цена, что сейчас на сайте: после старта — уже без скидки предзаказа
-    const amount = fromKit ? 0 : currentWorkshopPrice(workshop);
+    const amount = KIT_CHANNELS.has(channel)
+      ? 0
+      : currentWorkshopPrice(workshop);
     const note =
       kitOrderNumber !== null ? kitNote(kitOrderNumber) : input.note || null;
 
@@ -90,7 +101,7 @@ export const issueAccessCode = adminProcedure
           id: crypto.randomUUID(),
           code,
           workshopSlug: workshop.slug,
-          channel: fromKit ? "kit" : input.channel,
+          channel,
           amount,
           note,
         })
@@ -176,34 +187,71 @@ const ticketFields = {
 };
 
 /**
- * Коды к наборам из заказа на сайте, свежие сверху: по ним печатают купоны
- * в коробку.
+ * Мастер-классы к наборам из заказа на сайте: какие идут с товарами заказа,
+ * какие уже открыты на почту покупателя при оплате и какие выданы купоном.
  *
- * @example client.admin.workshops.orderAccessCodes({ orderId: "order_1" })
+ * @example client.admin.workshops.orderAccess({ orderId: "order_1" })
  */
-export const orderAccessCodes = adminProcedure
+export const orderAccess = adminProcedure
   .input(z.object({ orderId: z.string().min(1) }))
   .handler(async ({ context, input }) => {
     const [order] = await context.db
       .select({ number: productOrders.number })
       .from(productOrders)
       .where(eq(productOrders.id, input.orderId));
-    if (!order) return [];
-    const rows = await context.db
-      .select(ticketFields)
-      .from(workshopAccessCodes)
-      .leftJoin(workshops, eq(workshops.slug, workshopAccessCodes.workshopSlug))
-      .where(
-        and(
-          eq(workshopAccessCodes.channel, "kit"),
-          eq(workshopAccessCodes.note, kitNote(order.number)),
+    if (!order) return { linked: [], granted: [], codes: [] };
+
+    const linked = await context.db
+      .selectDistinct({ slug: workshops.slug, title: workshops.title })
+      .from(productOrderItems)
+      .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
+      .innerJoin(
+        workshops,
+        eq(
+          workshops.slug,
+          sql`case when ${productOrderItems.workshopLinkCaptured} then ${productOrderItems.workshopSlug} else ${products.workshopSlug} end`,
         ),
       )
-      .orderBy(
-        desc(workshopAccessCodes.createdAt),
-        desc(workshopAccessCodes.id),
-      );
-    return rows.map((row) => ({ ...row, code: formatAccessCode(row.code) }));
+      .where(and(eq(productOrderItems.orderId, input.orderId)));
+
+    const [granted, codes] = await Promise.all([
+      // Заказ мастер-класса, созданный при оплате набора, — см. kit-access.ts
+      context.db
+        .select({
+          workshopSlug: orders.workshopSlug,
+          email: orders.contactEmail,
+          paidAt: orders.paidAt,
+        })
+        .from(orders)
+        .where(
+          eq(
+            orders.id,
+            sql`'kit-' || ${input.orderId} || '-' || ${orders.workshopSlug}`,
+          ),
+        ),
+      context.db
+        .select(ticketFields)
+        .from(workshopAccessCodes)
+        .leftJoin(
+          workshops,
+          eq(workshops.slug, workshopAccessCodes.workshopSlug),
+        )
+        .where(
+          and(
+            eq(workshopAccessCodes.channel, "kit"),
+            eq(workshopAccessCodes.note, kitNote(order.number)),
+          ),
+        )
+        .orderBy(
+          desc(workshopAccessCodes.createdAt),
+          desc(workshopAccessCodes.id),
+        ),
+    ]);
+    return {
+      linked,
+      granted,
+      codes: codes.map((row) => ({ ...row, code: formatAccessCode(row.code) })),
+    };
   });
 
 /**
