@@ -34,7 +34,7 @@
     "@stariva/storage": "workspace:*",
     "@stariva/validators": "workspace:*",
     "@stariva/web-api": "workspace:*",
-    "better-auth": "1.7.18",
+    "better-auth": "1.7.22",
     "qr": "0.7.2",
     "zod": "4.6.7"
   },
