@@ -86,6 +86,7 @@ const quoteInput = {
 const createInput = {
   contactName: "Анна",
   contactPhone: "+7 900 123-45-67",
+  contactEmail: "anna@example.com",
   items: [{ productSlug: "elka", quantity: 1 }],
   delivery: {
     method: "pickup" as const,

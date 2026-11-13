@@ -216,7 +216,7 @@ export default function CheckoutPage() {
       const created = await webApi.checkout.create({
         contactName: contact.name,
         contactPhone: contact.phone,
-        contactEmail: contact.email || undefined,
+        contactEmail: contact.email,
         comment: contact.comment || undefined,
         // Черновик мог сохранить галочку из прошлой корзины с набором
         gift: hasKit && contact.gift === true ? true : undefined,
@@ -384,7 +384,7 @@ export default function CheckoutPage() {
                     <p className="text-espresso">{contact.name}</p>
                     <p>
                       {contact.phone}
-                      {contact.email && ` · ${contact.email}`}
+                      {` · ${contact.email}`}
                     </p>
                     {contact.comment && (
                       <p className="whitespace-pre-line">

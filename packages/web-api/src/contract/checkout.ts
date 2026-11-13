@@ -126,7 +126,7 @@ export type CheckoutQuote = z.infer<typeof checkoutQuoteSchema>;
 export const createOrderInputSchema = z.object({
   contactName: z.string().min(1).max(120),
   contactPhone: phone,
-  contactEmail: z.email().optional(),
+  contactEmail: z.email("Укажите email").trim(),
   comment: z.string().trim().max(1500).optional(),
   /**
    * Набор в подарок: доступ к мастер-классу не уходит на почту, а выдаётся
