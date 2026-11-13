@@ -11,6 +11,7 @@ mock.module("@stariva/config", () => ({
 }));
 mock.module("../../src/lib/ozon-delivery/auth", () => ({
   getOzonDeliveryToken: async () => "fixture",
+  invalidateOzonDeliveryToken: () => {},
   isOzonDeliveryConfigured: () => true,
 }));
 const { checkout } = await import("../../src/lib/ozon-delivery/client");
