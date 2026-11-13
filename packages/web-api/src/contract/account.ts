@@ -75,11 +75,133 @@ export const lessonVideoSchema = z.object({
 
 export type LessonVideo = z.infer<typeof lessonVideoSchema>;
 
+/** Строка списка уроков курса под плеером. */
+export const lessonSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  durationSeconds: z.number().int(),
+  free: z.boolean(),
+  completed: z.boolean(),
+  positionSeconds: z.number().int(),
+});
+
+export type LessonSummary = z.infer<typeof lessonSummarySchema>;
+
+/** Всё, что приложение показывает под плеером урока. */
+export const lessonDetailsSchema = z.object({
+  slug: z.string(),
+  workshopTitle: z.string(),
+  lessonId: z.string(),
+  title: z.string(),
+  durationSeconds: z.number().int(),
+  /** Где остановился зритель — с этой секунды плеер продолжает. */
+  positionSeconds: z.number().int(),
+  completed: z.boolean(),
+  /** Этапы урока: тап по главе перематывает плеер. */
+  chapters: z.array(
+    z.object({ time: z.number().int().min(0), title: z.string() }),
+  ),
+  checklist: z.array(z.object({ id: z.string(), label: z.string() })),
+  /** Отмеченные пункты чек-листа (их id). */
+  checkedMaterials: z.array(z.string()),
+  attachments: z.array(
+    z.object({
+      label: z.string(),
+      key: z.string(),
+      kind: z.enum(["pdf", "image"]),
+    }),
+  ),
+  lessons: z.array(lessonSummarySchema),
+});
+
+export type LessonDetails = z.infer<typeof lessonDetailsSchema>;
+
+export const mobileCourseSchema = z.object({
+  slug: z.string(),
+  title: z.string(),
+  cover: z.string(),
+  lessonCount: z.number().int(),
+  completedLessons: z.number().int(),
+});
+
+export type MobileCourse = z.infer<typeof mobileCourseSchema>;
+
+/** Главный экран приложения: курсы, «Продолжить плетение» и демо-урок. */
+export const mobileCoursesSchema = z.object({
+  courses: z.array(mobileCourseSchema),
+  resume: z
+    .object({
+      slug: z.string(),
+      workshopTitle: z.string(),
+      lessonId: z.string(),
+      lessonTitle: z.string(),
+      positionSeconds: z.number().int(),
+    })
+    .nullable(),
+  /** Бесплатный урок для всех: магазины требуют контент без покупки. */
+  demo: z
+    .object({
+      slug: z.string(),
+      workshopTitle: z.string(),
+      lessonId: z.string(),
+      lessonTitle: z.string(),
+    })
+    .nullable(),
+});
+
+export type MobileCourses = z.infer<typeof mobileCoursesSchema>;
+
+export const appReleaseSchema = z.object({
+  version: z.string(),
+  bundleZipUrl: z.string(),
+  minNativeVersion: z.string(),
+  apkDownloadUrl: z.string().nullable(),
+  releaseNotes: z.string(),
+});
+
+export type AppRelease = z.infer<typeof appReleaseSchema>;
+
 export const accountContract = {
   /** Вошёл ли посетитель и купил ли он мастер-класс. */
   workshopAccess: oc
     .input(z.object({ slug: workshopSlug }))
     .output(z.object({ authenticated: z.boolean(), owned: z.boolean() })),
+
+  /**
+   * Купленные мастер-классы с прогрессом для главного экрана приложения.
+   * Без входа — UNAUTHORIZED.
+   */
+  myCourses: oc.output(mobileCoursesSchema),
+
+  /**
+   * Главы, чек-лист нарезки, схемы и список уроков для экрана урока.
+   * Бесплатное превью открыто всем, остальное — владельцам (без входа
+   * UNAUTHORIZED, без покупки FORBIDDEN).
+   */
+  lessonDetails: oc
+    .errors({ [LessonNotFoundError.code]: LessonNotFoundError })
+    .input(
+      z.object({ slug: workshopSlug, lessonId: z.string().min(1).max(200) }),
+    )
+    .output(lessonDetailsSchema),
+
+  /**
+   * Сохраняет отмеченные в чек-листе нарезки материалы урока. Лишние id
+   * отбрасываются. Только владельцам курса.
+   */
+  saveLessonChecklist: oc
+    .errors({ [LessonNotFoundError.code]: LessonNotFoundError })
+    .input(
+      z.object({
+        slug: workshopSlug,
+        lessonId: z.string().min(1).max(200),
+        checkedMaterials: z.array(z.string().min(1).max(200)).max(200),
+      }),
+    )
+    .output(type<void>()),
+
+  /** Последний релиз приложения для кнопки «Проверить обновления». */
+  latestRelease: oc.output(appReleaseSchema.nullable()),
 
   /**
    * Сохраняет место, где покупатель остановился в уроке. Только владельцам

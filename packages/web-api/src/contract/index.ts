@@ -7,15 +7,20 @@ import { jobsContract } from "./jobs";
 import { ordersContract } from "./orders";
 
 export {
+  type AppRelease,
   FilesUnavailableError,
+  type LessonDetails,
   LessonNotFoundError,
   LessonNotReleasedError,
+  type LessonSummary,
   type LessonVideo,
   type LessonVideoResult,
   MAX_REVIEW_PHOTO_BYTES,
   MAX_REVIEW_PHOTOS,
   MaterialNotFoundError,
   type MaterialUrlResult,
+  type MobileCourse,
+  type MobileCourses,
   ReviewPhotoInvalidError,
   ReviewUnavailableError,
   VideoNotUploadedError,
