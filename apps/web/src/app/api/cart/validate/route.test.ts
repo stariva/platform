@@ -78,6 +78,18 @@ test("returns fresh price and capped stock for buyable products", async () => {
   });
 });
 
+test("marks a kit, so a cart from before the gift option still offers it", async () => {
+  catalog = {
+    products: [{ ...product, category: "interior", subcategory: "kits" }],
+    status: "available",
+  };
+
+  const res = await POST(request({ lines: [stock(product.slug)] }));
+
+  const { lines } = (await res.json()) as { lines: { kit?: boolean }[] };
+  assert.equal(lines[0]?.kit, true);
+});
+
 test("ready-made clothes from an old cart are no longer for sale", async () => {
   catalog = {
     products: [{ ...product, category: "clothes", subcategory: "tops" }],

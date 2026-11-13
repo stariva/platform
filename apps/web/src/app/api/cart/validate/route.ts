@@ -9,6 +9,7 @@ import {
   priceInKopecks,
 } from "@/lib/commerce/catalog";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
+import { isKit } from "@/lib/in-stock";
 
 export const runtime = "nodejs";
 
@@ -103,6 +104,8 @@ export async function POST(request: NextRequest) {
         ozonSku: product.ozonSku as number,
         price,
         maxQuantity: Math.min(MAX_ITEM_QUANTITY, product.stockAvailable),
+        // Корзина, собранная до появления подарка, не помнит, что это набор
+        ...(isKit(product) ? { kit: true } : {}),
       };
     },
   );
