@@ -119,6 +119,22 @@ test("отклоняет запрос с чужого сайта", async () => {
   expect(recorded).toHaveLength(0);
 });
 
+test("за прокси сравнивает Origin с хостом посетителя, а не с адресом пода", async () => {
+  // На проде nextUrl.host — имя пода, а сайт открыт по stariva.ru
+  const proxied = new NextRequest("http://stariva-7d9f:3000/api/cart/events", {
+    method: "POST",
+    headers: {
+      "user-agent": CHROME,
+      origin: "https://stariva.ru",
+      host: "stariva.ru",
+      "x-forwarded-host": "stariva.ru",
+    },
+    body: JSON.stringify(event),
+  });
+  expect((await POST(proxied)).status).toBe(204);
+  expect(recorded).toHaveLength(1);
+});
+
 test("отклоняет неизвестное действие и кривой id корзины", async () => {
   expect((await POST(request({ ...event, action: "steal" }))).status).toBe(400);
   expect((await POST(request({ ...event, cartId: "../x" }))).status).toBe(400);
