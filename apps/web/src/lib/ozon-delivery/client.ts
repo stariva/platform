@@ -1,6 +1,10 @@
 import { logger } from "@stariva/config";
 import { z } from "zod";
-import { getOzonDeliveryToken, isOzonDeliveryConfigured } from "./auth";
+import {
+  getOzonDeliveryToken,
+  invalidateOzonDeliveryToken,
+  isOzonDeliveryConfigured,
+} from "./auth";
 import { normalizePointInfo, pointInfoSchema } from "./point-info";
 import type {
   CheckoutSplit,
@@ -90,36 +94,50 @@ async function ozonDeliveryFetch<T>(
   schema: z.ZodType<T>,
   timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
-  const token = await getOzonDeliveryToken();
-  // Сигнал действует и на чтение тела: зависший ответ тоже оборвётся.
-  const signal = AbortSignal.timeout(timeoutMs);
-  let res: Response;
-  try {
-    res = await fetch(`${BASE_URL}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-      signal,
-    });
-  } catch (error) {
-    throw new Error(`ozon_delivery_request_failed_network: ${String(error)}`);
-  }
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`ozon_delivery_request_failed_${res.status}: ${detail}`);
-  }
-
-  try {
-    return schema.parse(await res.json());
-  } catch (error) {
-    if (signal.aborted) {
+  // 401 = токен протух раньше срока из кэша: сбрасываем его и повторяем один
+  // раз с новым. Ozon отверг запрос до обработки, дубля заказа не будет.
+  for (let attempt = 0; ; attempt++) {
+    const token = await getOzonDeliveryToken();
+    // Сигнал действует и на чтение тела: зависший ответ тоже оборвётся.
+    const signal = AbortSignal.timeout(timeoutMs);
+    let res: Response;
+    try {
+      res = await fetch(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+        signal,
+      });
+    } catch (error) {
       throw new Error(`ozon_delivery_request_failed_network: ${String(error)}`);
     }
-    throw error;
+
+    if (res.status === 401 && attempt === 0) {
+      console.warn(
+        `[ozon-delivery] ${path}: 401, сбрасываем access_token и повторяем`,
+      );
+      invalidateOzonDeliveryToken(token);
+      continue;
+    }
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`ozon_delivery_request_failed_${res.status}: ${detail}`);
+    }
+
+    try {
+      return schema.parse(await res.json());
+    } catch (error) {
+      if (signal.aborted) {
+        throw new Error(
+          `ozon_delivery_request_failed_network: ${String(error)}`,
+        );
+      }
+      throw error;
+    }
   }
 }
 
