@@ -3,23 +3,13 @@ import { getSession } from "@/lib/auth/session";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { cartEventSchema, recordCartEvent } from "@/lib/cart/event-log";
 import { readJsonBody } from "@/lib/read-json";
+import { sameOrigin } from "@/lib/same-origin";
 import { collectVisitor } from "@/lib/visitor";
 
 export const runtime = "nodejs";
 
 // Сто строк корзины с названиями и ссылками на фото
 const MAX_BODY_BYTES = 64 * 1024;
-
-/** Запрос со страниц сайта, а не с чужого: Origin браузер подставляет сам. */
-function sameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Журнал корзин для админки: браузер присылает каждое изменение корзины
