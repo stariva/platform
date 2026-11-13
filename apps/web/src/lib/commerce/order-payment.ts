@@ -88,6 +88,7 @@ export async function applyProductOrderPayment(
     );
   }
 
+  const manualDelivery = order.deliveryMethod === "manual";
   let attemptId: string | null = null;
   try {
     // До Ozon: сбой отправления бросает ошибку, а чек нужен в любом случае
@@ -112,46 +113,62 @@ export async function applyProductOrderPayment(
       expected: 1,
     });
 
-    attemptId = await claimProductOrderShipment(orderId);
-    if (!attemptId) return;
+    if (manualDelivery) {
+      // Ozon не ответил при оформлении, расчёта нет: отправление в Ozon
+      // не создаём. Мастер получит адрес в уведомлении и отправит заказ сама.
+      console.warn(
+        `[payments/webhook] Заказ товаров ${orderId} оплачен с ручной доставкой: отправление в Ozon Доставка создаёт мастер`,
+      );
+    } else {
+      attemptId = await claimProductOrderShipment(orderId);
+      if (!attemptId) return;
 
-    const delivery =
-      order.deliveryMethod === "pickup"
-        ? { method: "pickup" as const, pointId: order.deliveryPointId ?? "" }
-        : {
-            method: "courier" as const,
-            address:
-              (order.deliveryAddress as { address: string })?.address ?? "",
-            latitude: (order.deliveryAddress as { lat: number })?.lat ?? 0,
-            longitude: (order.deliveryAddress as { lng: number })?.lng ?? 0,
-          };
+      const delivery =
+        order.deliveryMethod === "pickup"
+          ? { method: "pickup" as const, pointId: order.deliveryPointId ?? "" }
+          : {
+              method: "courier" as const,
+              address:
+                (order.deliveryAddress as { address: string })?.address ?? "",
+              latitude: (order.deliveryAddress as { lat: number })?.lat ?? 0,
+              longitude: (order.deliveryAddress as { lng: number })?.lng ?? 0,
+            };
 
-    const ozonOrder = await createOzonDeliveryOrder({
-      items: items.map((i) => {
-        if (i.ozonSku === null) {
-          throw new Error(`order_item_without_ozon_sku:${i.id}`);
-        }
-        return { sku: i.ozonSku, quantity: i.quantity, price: i.price };
-      }),
-      delivery,
-      recipient: {
-        name: order.contactName,
-        phone: order.contactPhone,
-        email: order.contactEmail ?? undefined,
-      },
-      checkout: order.checkoutSnapshot as DeliveryCheckoutResponse,
-    });
+      const ozonOrder = await createOzonDeliveryOrder({
+        items: items.map((i) => {
+          if (i.ozonSku === null) {
+            throw new Error(`order_item_without_ozon_sku:${i.id}`);
+          }
+          return { sku: i.ozonSku, quantity: i.quantity, price: i.price };
+        }),
+        delivery,
+        recipient: {
+          name: order.contactName,
+          phone: order.contactPhone,
+          email: order.contactEmail ?? undefined,
+        },
+        checkout: order.checkoutSnapshot as DeliveryCheckoutResponse,
+      });
 
-    await attachOzonOrder(
-      orderId,
-      attemptId,
-      ozonOrder.orderId,
-      ozonOrder.postingNumbers,
-    );
-    console.info(
-      `[payments/webhook] Заказ товаров ${orderId} оплачен, создан заказ Ozon Доставка ${ozonOrder.orderId}`,
-    );
+      await attachOzonOrder(
+        orderId,
+        attemptId,
+        ozonOrder.orderId,
+        ozonOrder.postingNumbers,
+      );
+      console.info(
+        `[payments/webhook] Заказ товаров ${orderId} оплачен, создан заказ Ozon Доставка ${ozonOrder.orderId}`,
+      );
+    }
   } catch (error) {
+    if (manualDelivery) {
+      // Отправление вручную: сбой чека не про Ozon, повтор webhook доделает
+      console.error(
+        `[payments/webhook] Заказ ${orderId} с ручной доставкой: не удалось подготовить чек:`,
+        error,
+      );
+      throw error;
+    }
     console.error(
       `[payments/webhook] КРИТИЧНО: заказ ${orderId} оплачен, но создание заказа в Ozon Доставка не удалось:`,
       error,

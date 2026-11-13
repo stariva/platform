@@ -24,6 +24,14 @@ export const DeliveryNotAvailableError = error("DELIVERY_NOT_AVAILABLE", {
 });
 
 /**
+ * Стоимость доставки при создании заказа оказалась выше, чем покупатель видел
+ * на странице. Витрина пересчитывает доставку и просит подтвердить сумму.
+ */
+export const DeliveryPriceChangedError = error("DELIVERY_PRICE_CHANGED", {
+  message: "Стоимость доставки изменилась. Проверьте сумму и оплатите ещё раз.",
+});
+
+/**
  * Товары из корзины сняты с продажи или раскуплены. Витрина убирает их из
  * корзины по списку.
  */
@@ -70,6 +78,12 @@ const stockItemSchema = z.object({
 const pickupDeliverySchema = z.object({
   method: z.literal("pickup"),
   pointId: z.string().min(1),
+  /**
+   * Название и адрес пункта так, как их видел покупатель. Нужен только когда
+   * Ozon не отвечает и заказ уходит с ручной доставкой: мастеру нужен адрес,
+   * а взять его из Ozon нельзя. В обычном заказе адрес берётся из Ozon.
+   */
+  pointLabel: z.string().trim().max(400).optional(),
 });
 
 const personalDataConsent = z.literal(true, {
@@ -100,6 +114,11 @@ export const checkoutQuoteSchema = z.object({
   deliveryPriceKopecks: z.number().int().nonnegative(),
   /** Даты прибытия по отправлениям (ISO): покупателю показываем самую позднюю. */
   shipments: z.array(z.object({ dateFrom: z.string(), dateTo: z.string() })),
+  /**
+   * Ozon не ответил, расчёта нет: доставка бесплатна для покупателя, а заказ
+   * мастер отправит вручную.
+   */
+  manual: z.boolean().optional(),
 });
 
 export type CheckoutQuote = z.infer<typeof checkoutQuoteSchema>;
@@ -116,6 +135,12 @@ export const createOrderInputSchema = z.object({
   gift: z.boolean().optional(),
   items: z.array(stockItemSchema).min(1).max(100),
   delivery: pickupDeliverySchema,
+  /**
+   * Стоимость доставки, которую покупатель видел на странице. Если сервер
+   * насчитал больше, заказ не создаётся: `DELIVERY_PRICE_CHANGED`. Меньше или
+   * бесплатно (Ozon не ответил) — можно. Без поля проверки нет.
+   */
+  expectedDeliveryKopecks: z.number().int().nonnegative().optional(),
   // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ) и акцепт оферты.
   personalDataConsent,
   offerAccepted: z.literal(true, { error: "Подтвердите согласие с офертой" }),
@@ -212,6 +237,7 @@ export const checkoutContract = {
       [ItemsUnavailableError.code]: ItemsUnavailableError,
       [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
       [DeliveryNotAvailableError.code]: DeliveryNotAvailableError,
+      [DeliveryPriceChangedError.code]: DeliveryPriceChangedError,
       [PaymentCreateFailedError.code]: PaymentCreateFailedError,
     })
     .input(createOrderInputSchema)

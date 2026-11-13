@@ -6,6 +6,7 @@ const { safe } = await import("@orpc/client");
 const {
   CheckoutCheckFailedError,
   DeliveryNotAvailableError,
+  DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
   OptionsUnavailableError,
@@ -162,6 +163,51 @@ test("quotes the delivery to the chosen point", async () => {
   ).toEqual(quote);
 });
 
+test("quote passes a manual (Ozon unavailable) delivery through", async () => {
+  const manual = {
+    available: true,
+    deliveryPriceKopecks: 0,
+    shipments: [],
+    manual: true,
+  };
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        quote: async () => ({ status: "ok", quote: manual }),
+      }),
+    },
+  });
+  expect(
+    await client.checkout.quote({
+      contactPhone: "+7 900 123-45-67",
+      items: [{ productSlug: "elka", quantity: 1 }],
+      delivery: { method: "pickup", pointId: "123" },
+    }),
+  ).toEqual(manual);
+});
+
+test("create hands the expected delivery price and point label to the service", async () => {
+  const seen: unknown[] = [];
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        create: async (input) => {
+          seen.push([input.expectedDeliveryKopecks, input.delivery]);
+          return { status: "ok", order: createdOrder };
+        },
+      }),
+    },
+  });
+  await client.checkout.create({
+    ...createInput,
+    delivery: { ...createInput.delivery, pointLabel: "ПВЗ, Москва" },
+    expectedDeliveryKopecks: 0,
+  });
+  expect(seen).toEqual([
+    [0, { method: "pickup", pointId: "123", pointLabel: "ПВЗ, Москва" }],
+  ]);
+});
+
 test("quote tells which items are gone with a 409", async () => {
   const client = wireClient({
     services: {
@@ -272,6 +318,7 @@ test("maps every create failure to its own error", async () => {
     [{ status: "unconfigured" }, PaymentsUnavailableError, 503],
     [{ status: "check_failed" }, CheckoutCheckFailedError, 502],
     [{ status: "delivery_unavailable" }, DeliveryNotAvailableError, 400],
+    [{ status: "delivery_price_changed" }, DeliveryPriceChangedError, 409],
     [{ status: "payment_failed" }, PaymentCreateFailedError, 502],
     [
       { status: "items_unavailable", unavailableProductSlugs: ["elka"] },

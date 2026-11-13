@@ -5,6 +5,12 @@ const TTL_MS = 10 * 60 * 1000;
 // Адрес и режим работы пункта меняются редко, а point/info — самый
 // «дорогой» запрос чекаута: держим подробности дольше, чем список точек.
 const DETAILS_TTL_MS = 60 * 60 * 1000;
+// Когда Ozon не отвечает, отдаём прошлые данные: пункты и адреса меняются
+// редко, а без них покупатель не выберет, куда везти. Устаревшие записи
+// живут ещё сутки и работают только как запасной вариант.
+const STALE_GRACE_MS = 24 * 60 * 60 * 1000;
+// После сбоя не дёргаем Ozon заново на каждый запрос, а пользуемся запасом
+const RETRY_AFTER_ERROR_MS = 60 * 1000;
 
 interface LocationsCache {
   points: PickupPointLocation[];
@@ -27,6 +33,15 @@ async function loadLocations(): Promise<LocationsCache> {
         };
         cache = loaded;
         return loaded;
+      })
+      .catch((error: unknown) => {
+        if (!cache) throw error;
+        console.warn(
+          "[pickup-points] Ozon не отдал список пунктов, берём прошлый:",
+          error,
+        );
+        cache = { ...cache, expiresAt: Date.now() + RETRY_AFTER_ERROR_MS };
+        return cache;
       })
       .finally(() => {
         pending = null;
@@ -57,20 +72,32 @@ export async function getCachedPickupPointsInfo(
   const { byId } = await loadLocations();
   const now = Date.now();
   for (const [id, entry] of details) {
-    if (entry.expiresAt <= now || !byId.has(id)) details.delete(id);
+    if (entry.expiresAt + STALE_GRACE_MS <= now || !byId.has(id)) {
+      details.delete(id);
+    }
   }
-  const missing = ids.filter((id) => byId.has(id) && !details.has(id));
+  const isFresh = (id: string) => (details.get(id)?.expiresAt ?? 0) > now;
+  const missing = ids.filter((id) => byId.has(id) && !isFresh(id));
 
   if (missing.length > 0) {
-    const fetched = await getPickupPointsInfo(missing, byId);
-    const expiresAt = Date.now() + DETAILS_TTL_MS;
-    for (const point of fetched.points) {
-      if (!byId.has(point.id)) continue;
-      details.set(point.id, { point, expiresAt });
-    }
-    for (const id of fetched.unavailable) {
-      if (!byId.has(id)) continue;
-      details.set(id, { point: null, expiresAt });
+    try {
+      const fetched = await getPickupPointsInfo(missing, byId);
+      const expiresAt = Date.now() + DETAILS_TTL_MS;
+      for (const point of fetched.points) {
+        if (!byId.has(point.id)) continue;
+        details.set(point.id, { point, expiresAt });
+      }
+      for (const id of fetched.unavailable) {
+        if (!byId.has(id)) continue;
+        details.set(id, { point: null, expiresAt });
+      }
+    } catch (error) {
+      // Запасной вариант — только если устаревшие данные есть по всем пунктам
+      if (!missing.every((id) => details.has(id))) throw error;
+      console.warn(
+        "[pickup-points] Ozon не отдал адреса пунктов, берём прошлые:",
+        error,
+      );
     }
   }
 

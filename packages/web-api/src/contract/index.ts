@@ -38,6 +38,7 @@ export {
   type CreateOrderInput,
   DELIVERY_PHONE_ERROR,
   DeliveryNotAvailableError,
+  DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
   isDeliveryPhone,

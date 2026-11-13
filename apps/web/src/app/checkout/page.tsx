@@ -2,6 +2,7 @@
 
 import {
   type CheckoutQuote,
+  DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
 } from "@stariva/web-api/contract";
@@ -29,6 +30,7 @@ import { rememberOrderPhone } from "@/lib/commerce/order-phone";
 import {
   formatDateRange,
   localDateKey,
+  pickupPointAddressLine,
   pointKindLabel,
 } from "@/lib/ozon-delivery/format";
 import type { DeliverySelection, PickupPoint } from "@/lib/ozon-delivery/types";
@@ -199,10 +201,15 @@ export default function CheckoutPage() {
     if (quoteState.status !== "ready" || !selectedPoint || !contact) return;
     // Форма уже не пропускает без согласия; здесь сужаем тип до того, что просит API
     if (contact.personalDataConsent !== true) return;
-    const delivery: DeliverySelection = {
-      method: "pickup",
+    const delivery = {
+      method: "pickup" as const,
       pointId: selectedPoint.id,
-    };
+      // Адрес для мастера на случай, если Ozon не ответит и заказ уйдёт вручную
+      pointLabel: pickupPointAddressLine(
+        selectedPoint.title,
+        selectedPoint.address,
+      ),
+    } satisfies DeliverySelection & { pointLabel: string };
 
     setSubmitting(true);
     try {
@@ -218,6 +225,8 @@ export default function CheckoutPage() {
           quantity: item.quantity,
         })),
         delivery,
+        // Сервер не возьмёт за доставку больше, чем показано на странице
+        expectedDeliveryKopecks: quoteState.quote.deliveryPriceKopecks,
         personalDataConsent: contact.personalDataConsent,
         offerAccepted: true,
       });
@@ -230,6 +239,10 @@ export default function CheckoutPage() {
     } catch (error) {
       if (error instanceof ItemsUnavailableError) {
         dropUnavailableItems(error.data.unavailableProductSlugs);
+      } else if (error instanceof DeliveryPriceChangedError) {
+        // Ozon ожил или цена сдвинулась: пересчитываем и показываем новую сумму
+        setQuoteAttempt((n) => n + 1);
+        toast.error(error.message);
       } else {
         toast.error(
           formErrorMessage(
@@ -568,6 +581,17 @@ function QuoteStatus({
           Повторить
         </button>
       </div>
+    );
+  }
+  if (state.status === "ready" && state.quote.manual) {
+    return (
+      <p
+        className="rounded-xl bg-sand px-4 py-3 text-sm text-espresso"
+        aria-live="polite"
+      >
+        Расчёт доставки Ozon сейчас недоступен. Доставка для вас бесплатна —
+        отправим заказ вручную и напишем, когда он будет в пути.
+      </p>
     );
   }
   if (state.status === "ready") {

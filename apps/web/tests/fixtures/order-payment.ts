@@ -159,6 +159,27 @@ await test("successful shipment remains linked to its attempt", async () => {
   expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
 });
 
+await test("manual delivery orders skip Ozon and are left for the master", async () => {
+  order.deliveryMethod = "manual";
+  await apply();
+  // Чек выпускается, а отправление не трогаем и «сбоем Ozon» не считаем
+  expect(issueNpdReceipt).toHaveBeenCalledTimes(1);
+  expect(claimProductOrderShipment).not.toHaveBeenCalled();
+  expect(createOzonDeliveryOrder).not.toHaveBeenCalled();
+  expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
+  expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
+});
+
+await test("a receipt failure on a manual order is not reported as an Ozon failure", async () => {
+  order.deliveryMethod = "manual";
+  const error = new Error("email lookup failed");
+  getProductOrderCustomerEmail.mockRejectedValueOnce(error);
+  await expect(apply()).rejects.toBe(error);
+  expect(claimProductOrderShipment).not.toHaveBeenCalled();
+  expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
+  expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
+});
+
 // Доплата заказа под заказ: webhook создаёт отправление, затем сообщает мастеру
 const applyStage = (type: "deposit" | "balance") => {
   order.kind = "made_to_order";

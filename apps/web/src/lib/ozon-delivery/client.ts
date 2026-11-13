@@ -5,6 +5,12 @@ import {
   invalidateOzonDeliveryToken,
   isOzonDeliveryConfigured,
 } from "./auth";
+import { createBreaker } from "./breaker";
+import {
+  isInfrastructureStatus,
+  isOzonInfrastructureError,
+  OzonDeliveryError,
+} from "./errors";
 import { normalizePointInfo, pointInfoSchema } from "./point-info";
 import type {
   CheckoutSplit,
@@ -44,7 +50,9 @@ const pointInfoResponseSchema = z.object({
 const POINT_INFO_BATCH_SIZE = 100;
 // Без таймаута зависший Ozon держит запрос покупателя бесконечно. Список
 // пунктов по всей стране тяжёлый, поэтому ему отведено больше времени.
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 30_000;
+// Покупатель ждёт ответа на странице оформления — отвечаем быстро и отказом
+const INTERACTIVE_TIMEOUT_MS = 8_000;
 const POINT_LIST_TIMEOUT_MS = 60_000;
 // Сплит, который Ozon не может доставить, приходит без способа доставки
 // и с warehouse_id = 0 — такие сплиты отбрасываются в checkout().
@@ -88,11 +96,52 @@ const postingSchema = z.object({
 });
 const cancelOrderResponseSchema = z.object({ message: z.string().optional() });
 
+// Общий предохранитель на процесс: когда Ozon лежит, покупатель не ждёт
+// таймаут на каждом клике, а сразу получает ручную доставку.
+const breaker = createBreaker({ threshold: 3, cooldownMs: 30_000 });
+
+interface OzonRequestOptions {
+  timeoutMs?: number;
+  /**
+   * Запрос покупателя до оплаты: с коротким таймаутом, и при открытом
+   * предохранителе не уходит в Ozon. Остальные (создание заказа после оплаты,
+   * отмена) работают всегда и с длинным таймаутом.
+   */
+  guarded?: boolean;
+}
+
 async function ozonDeliveryFetch<T>(
   path: string,
   body: unknown,
   schema: z.ZodType<T>,
-  timeoutMs = REQUEST_TIMEOUT_MS,
+  options: OzonRequestOptions = {},
+): Promise<T> {
+  const guarded = options.guarded ?? false;
+  if (guarded && breaker.isOpen()) {
+    throw new OzonDeliveryError("ozon_delivery_circuit_open", true);
+  }
+  try {
+    const result = await requestOzon(path, body, schema, {
+      ...options,
+      timeoutMs:
+        options.timeoutMs ??
+        (guarded ? INTERACTIVE_TIMEOUT_MS : REQUEST_TIMEOUT_MS),
+    });
+    breaker.recordSuccess();
+    return result;
+  } catch (error) {
+    // Отказ по существу — Ozon жив и ответил, предохранитель это не трогает
+    if (isOzonInfrastructureError(error)) breaker.recordFailure();
+    else breaker.recordSuccess();
+    throw error;
+  }
+}
+
+async function requestOzon<T>(
+  path: string,
+  body: unknown,
+  schema: z.ZodType<T>,
+  { timeoutMs }: { timeoutMs: number },
 ): Promise<T> {
   // 401 = токен протух раньше срока из кэша: сбрасываем его и повторяем один
   // раз с новым. Ozon отверг запрос до обработки, дубля заказа не будет.
@@ -112,7 +161,10 @@ async function ozonDeliveryFetch<T>(
         signal,
       });
     } catch (error) {
-      throw new Error(`ozon_delivery_request_failed_network: ${String(error)}`);
+      throw new OzonDeliveryError(
+        `ozon_delivery_request_failed_network: ${String(error)}`,
+        true,
+      );
     }
 
     if (res.status === 401 && attempt === 0) {
@@ -125,19 +177,30 @@ async function ozonDeliveryFetch<T>(
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      throw new Error(`ozon_delivery_request_failed_${res.status}: ${detail}`);
+      throw new OzonDeliveryError(
+        `ozon_delivery_request_failed_${res.status}: ${detail}`,
+        isInfrastructureStatus(res.status),
+      );
     }
 
+    let json: unknown;
     try {
-      return schema.parse(await res.json());
+      json = await res.json();
     } catch (error) {
-      if (signal.aborted) {
-        throw new Error(
-          `ozon_delivery_request_failed_network: ${String(error)}`,
-        );
-      }
-      throw error;
+      throw new OzonDeliveryError(
+        `ozon_delivery_request_failed_network: ${String(error)}`,
+        true,
+      );
     }
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) {
+      // Ozon ответил не по контракту — для покупателя это тот же сбой связи
+      throw new OzonDeliveryError(
+        `ozon_delivery_bad_response: ${parsed.error.message}`,
+        true,
+      );
+    }
+    return parsed.data;
   }
 }
 
@@ -183,6 +246,7 @@ export async function checkDeliveryAvailable(
     "/v1/delivery/check",
     { client_phone: normalizePhone(phone) },
     deliveryCheckSchema,
+    { guarded: true },
   );
   return { available: data.is_possible };
 }
@@ -194,7 +258,7 @@ export async function listPickupPoints(): Promise<PickupPointLocation[]> {
     "/v1/delivery/point/list",
     {},
     pickupPointListSchema,
-    POINT_LIST_TIMEOUT_MS,
+    { guarded: true, timeoutMs: POINT_LIST_TIMEOUT_MS },
   );
   const locations: PickupPointLocation[] = [];
   for (const raw of data.points) {
@@ -239,6 +303,7 @@ export async function getPickupPointsInfo(
         "/v1/delivery/point/info",
         { map_point_ids: batch },
         pointInfoResponseSchema,
+        { guarded: true },
       ),
     ),
   );
@@ -272,6 +337,7 @@ export async function checkout(
       items: request.items,
     },
     checkoutResponseSchema,
+    { guarded: true },
   );
 
   const splits: CheckoutSplit[] = [];

@@ -11,6 +11,8 @@ for (const scenario of [
   "Ozon failures reuse the claimed attempt",
   "receipts are still processed when a shipment needs no new attempt",
   "successful shipment remains linked to its attempt",
+  "manual delivery orders skip Ozon and are left for the master",
+  "a receipt failure on a manual order is not reported as an Ozon failure",
   "a balance payment gives the shipment its own id before the master is told",
   "a shipment failure still tells the master and then rethrows",
   "a deposit never touches the shipment",
