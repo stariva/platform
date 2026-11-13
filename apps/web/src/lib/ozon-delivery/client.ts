@@ -38,6 +38,10 @@ const pointInfoResponseSchema = z.object({
   points: z.array(pointInfoSchema),
 });
 const POINT_INFO_BATCH_SIZE = 100;
+// Без таймаута зависший Ozon держит запрос покупателя бесконечно. Список
+// пунктов по всей стране тяжёлый, поэтому ему отведено больше времени.
+const REQUEST_TIMEOUT_MS = 15_000;
+const POINT_LIST_TIMEOUT_MS = 60_000;
 // Сплит, который Ozon не может доставить, приходит без способа доставки
 // и с warehouse_id = 0 — такие сплиты отбрасываются в checkout().
 const checkoutResponseSchema = z.object({
@@ -84,23 +88,39 @@ async function ozonDeliveryFetch<T>(
   path: string,
   body: unknown,
   schema: z.ZodType<T>,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   const token = await getOzonDeliveryToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  });
+  // Сигнал действует и на чтение тела: зависший ответ тоже оборвётся.
+  const signal = AbortSignal.timeout(timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (error) {
+    throw new Error(`ozon_delivery_request_failed_network: ${String(error)}`);
+  }
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     throw new Error(`ozon_delivery_request_failed_${res.status}: ${detail}`);
   }
 
-  return schema.parse(await res.json());
+  try {
+    return schema.parse(await res.json());
+  } catch (error) {
+    if (signal.aborted) {
+      throw new Error(`ozon_delivery_request_failed_network: ${String(error)}`);
+    }
+    throw error;
+  }
 }
 
 function deliveryPayload(delivery: DeliverySelection) {
@@ -156,6 +176,7 @@ export async function listPickupPoints(): Promise<PickupPointLocation[]> {
     "/v1/delivery/point/list",
     {},
     pickupPointListSchema,
+    POINT_LIST_TIMEOUT_MS,
   );
   const locations: PickupPointLocation[] = [];
   for (const raw of data.points) {

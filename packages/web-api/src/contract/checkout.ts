@@ -50,7 +50,17 @@ export const MAX_MADE_TO_ORDER_QUANTITY = 10;
 /** Позиций под заказ в одном заказе. */
 export const MAX_MADE_TO_ORDER_LINES = 20;
 
-const phone = z.string().min(5, "Укажите телефон").max(32);
+/**
+ * Телефон для Ozon Доставки: Ozon принимает 10–15 цифр, остальное
+ * (+, пробелы, скобки, дефисы) отбрасывается при отправке.
+ */
+export const DELIVERY_PHONE_ERROR = "Укажите телефон полностью";
+
+export function isDeliveryPhone(value: string): boolean {
+  return /^\d{10,15}$/.test(value.replace(/\D/g, ""));
+}
+
+const phone = z.string().max(32).refine(isDeliveryPhone, DELIVERY_PHONE_ERROR);
 
 const stockItemSchema = z.object({
   productSlug: z.string().min(1),
