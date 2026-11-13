@@ -20,6 +20,8 @@ export const cartValidationLineSchema = z.discriminatedUnion("available", [
     price: z.number().int().positive(),
     /** Сколько изделий можно положить в заказ: свободный остаток (для готовых) или лимит, но не больше лимита корзины. */
     maxQuantity: z.number().int().positive(),
+    /** Набор для плетения: к нему на оформлении предлагаем подарок с кодом. */
+    kit: z.boolean().optional(),
   }),
   z.object({
     productSlug: z.string(),

@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   jsonb,
   pgEnum,
@@ -107,6 +108,9 @@ export const productOrders = pgTable(
     attribution: jsonb("attribution").$type<CampaignAttribution>(),
     // IP, город, устройство и язык покупателя в момент заказа.
     visitor: jsonb("visitor").$type<VisitorInfo>(),
+    // Набор в подарок: доступ к мастер-классу не уходит на почту покупателя,
+    // а выдаётся кодом на купоне в коробке — его вводит получатель.
+    gift: boolean("gift").notNull().default(false),
     // Внутренняя заметка мастера, покупателю не показывается.
     masterNotes: text("master_notes"),
     // Под заказ: служба и номер отправления, которые мастер вводит при отправке;

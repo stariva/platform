@@ -363,8 +363,9 @@ export function ProductDetails({
                       {product.stockAvailable === 1
                         ? "Остался один набор"
                         : `В наличии ${product.stockAvailable} ${pluralKits(product.stockAvailable)}`}
-                      . Изделие плетёте сами по видеоуроку — материалы и доступ
-                      к уроку в коробке. Оплата на сайте, доставка Ozon.
+                      . Изделие плетёте сами по видеоуроку. Доступ к уроку
+                      придёт на почту сразу после оплаты, а коробку с
+                      материалами привезёт Ozon.
                     </p>
                   ) : (
                     <p className="text-taupe text-[13px] leading-relaxed mb-5">

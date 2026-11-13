@@ -34,6 +34,8 @@ const cartItemSchema = z.object({
   fulfillmentType: fulfillmentTypeSchema.default("stock"),
   /** Размер и цвет, выбранные на карточке; только для изделий под заказ. */
   options: madeToOrderOptionsSchema.optional(),
+  /** Набор для плетения: к нему можно оформить подарок с кодом доступа. */
+  kit: z.boolean().optional(),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
@@ -64,6 +66,8 @@ export interface CatalogUpdate {
   price: number;
   /** Верхняя граница количества: остаток на складе или лимит изделий под заказ */
   maxQuantity: number;
+  /** Набор для плетения (каталог — единственный источник правды). */
+  kit?: boolean;
 }
 
 interface CartContextValue {
@@ -276,8 +280,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             image: fresh.image || item.image,
             price: fresh.price,
             quantity: Math.min(item.quantity, Math.max(fresh.maxQuantity, 1)),
+            kit: fresh.kit === true,
           };
           if (
+            merged.kit !== Boolean(item.kit) ||
             merged.ozonSku !== item.ozonSku ||
             merged.name !== item.name ||
             merged.image !== item.image ||

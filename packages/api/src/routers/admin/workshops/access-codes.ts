@@ -10,14 +10,20 @@ import {
   productOrders,
   products,
   sql,
+  user,
   workshopAccessCodes,
   workshops,
 } from "@stariva/db";
 import { currentWorkshopPrice } from "@stariva/validators";
-import { formatAccessCode, generateAccessCode } from "@stariva/web-api";
+import {
+  formatAccessCode,
+  generateAccessCode,
+  kitCodeNote,
+} from "@stariva/web-api";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { accessSentAt } from "./brief";
 
 /**
  * Где продан курс: livemaster — Ярмарка Мастеров; ozon — набор куплен на
@@ -28,12 +34,6 @@ const CHANNELS = ["livemaster", "ozon", "kit"] as const;
 
 /** С набором мастер-класс уже оплачен: заказ по коду создаётся на 0 ₽. */
 const KIT_CHANNELS = new Set<string>(["ozon", "kit"]);
-
-/**
- * Пометка кода из набора. По ней же находим коды заказа: отдельной связи с
- * заказом изделий у кода нет.
- */
-const kitNote = (orderNumber: number) => `Набор, заказ №${orderNumber}`;
 
 // Совпадение случайного кода с уже выданным — почти невероятно, но бывает
 const ISSUE_ATTEMPTS = 5;
@@ -91,7 +91,9 @@ export const issueAccessCode = adminProcedure
       ? 0
       : currentWorkshopPrice(workshop);
     const note =
-      kitOrderNumber !== null ? kitNote(kitOrderNumber) : input.note || null;
+      kitOrderNumber !== null
+        ? kitCodeNote(kitOrderNumber)
+        : input.note || null;
 
     for (let attempt = 0; attempt < ISSUE_ATTEMPTS; attempt++) {
       const code = generateAccessCode();
@@ -188,7 +190,8 @@ const ticketFields = {
 
 /**
  * Мастер-классы к наборам из заказа на сайте: какие идут с товарами заказа,
- * какие уже открыты на почту покупателя при оплате и какие выданы купоном.
+ * какие уже открыты на почту покупателя (и ушло ли письмо с доступом) и какие
+ * выданы купоном. `email` — куда уйдёт письмо; null — почты у заказа нет.
  *
  * @example client.admin.workshops.orderAccess({ orderId: "order_1" })
  */
@@ -196,13 +199,25 @@ export const orderAccess = adminProcedure
   .input(z.object({ orderId: z.string().min(1) }))
   .handler(async ({ context, input }) => {
     const [order] = await context.db
-      .select({ number: productOrders.number })
+      .select({
+        number: productOrders.number,
+        gift: productOrders.gift,
+        email: sql<
+          string | null
+        >`coalesce(nullif(trim(${productOrders.contactEmail}), ''), ${user.email})`,
+      })
       .from(productOrders)
+      .leftJoin(user, eq(user.id, productOrders.userId))
       .where(eq(productOrders.id, input.orderId));
-    if (!order) return { linked: [], granted: [], codes: [] };
+    if (!order) {
+      return { email: null, gift: false, linked: [], granted: [], codes: [] };
+    }
 
     const linked = await context.db
-      .selectDistinct({ slug: workshops.slug, title: workshops.title })
+      .selectDistinct({
+        slug: workshops.slug,
+        title: workshops.title,
+      })
       .from(productOrderItems)
       .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
       .innerJoin(
@@ -221,8 +236,10 @@ export const orderAccess = adminProcedure
           workshopSlug: orders.workshopSlug,
           email: orders.contactEmail,
           paidAt: orders.paidAt,
+          accessSentAt,
         })
         .from(orders)
+        .innerJoin(workshops, eq(workshops.slug, orders.workshopSlug))
         .where(
           eq(
             orders.id,
@@ -239,7 +256,7 @@ export const orderAccess = adminProcedure
         .where(
           and(
             eq(workshopAccessCodes.channel, "kit"),
-            eq(workshopAccessCodes.note, kitNote(order.number)),
+            eq(workshopAccessCodes.note, kitCodeNote(order.number)),
           ),
         )
         .orderBy(
@@ -248,6 +265,8 @@ export const orderAccess = adminProcedure
         ),
     ]);
     return {
+      email: order.email,
+      gift: order.gift,
       linked,
       granted,
       codes: codes.map((row) => ({ ...row, code: formatAccessCode(row.code) })),

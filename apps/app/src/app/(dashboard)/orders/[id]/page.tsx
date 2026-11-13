@@ -45,10 +45,13 @@ export default async function OrderPage({
               workshops={workshops
                 .filter((w) => w.status !== "archived")
                 .map(({ slug, title }) => ({ slug, title }))}
+              email={access.email}
+              gift={access.gift}
               linked={access.linked}
               granted={access.granted.map((row) => ({
                 workshopSlug: row.workshopSlug,
                 email: row.email,
+                accessSentAt: row.accessSentAt,
               }))}
               codes={access.codes.map((row) => ({
                 id: row.id,

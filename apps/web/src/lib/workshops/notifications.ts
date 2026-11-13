@@ -52,6 +52,7 @@ import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
 import { bundleExtraFor, getBundle } from "./bundles";
 import { googleCalendarUrl } from "./calendar";
+import { isKitWorkshopOrder } from "./kit-order";
 import { earnsPreorderBonus } from "./preorder-bonus";
 import {
   dueReminders,
@@ -132,9 +133,12 @@ function telegramText(kind: ReminderKind, target: Target): string {
   const when = target.workshop.releaseAt
     ? formatReleaseDateTime(target.workshop.releaseAt.toISOString())
     : "";
-  const materials = target.workshop.materials
-    .map((item) => `• ${escapeTelegramHtml(item)}`)
-    .join("\n");
+  // Покупателю набора материалы не нужны: всё лежит в коробке
+  const materials = isKitWorkshopOrder(target.order.id)
+    ? ""
+    : target.workshop.materials
+        .map((item) => `• ${escapeTelegramHtml(item)}`)
+        .join("\n");
   switch (kind) {
     case "week":
       return [
@@ -201,9 +205,12 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
   if (!order.accessToken) return Promise.resolve(false);
   const accessToken = order.accessToken;
   const release = upcomingRelease(workshop);
+  // Покупатель набора получает материалы в коробке: список покупок ему не нужен
+  const kit = isKitWorkshopOrder(order.id);
 
   return claimed(target, kind, "email", async () => {
-    const brief = kind === "booked" ? await briefForBookedEmail(target) : [];
+    const brief =
+      kind === "booked" && !kit ? await briefForBookedEmail(target) : [];
     await sendEmail({
       idempotencyKey: `workshop:${order.id}:${kind}:email`,
       to: [target.email],
@@ -238,6 +245,7 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
         bundle: bundleExtraFor(order.bundleSlug),
         attachedFiles:
           brief.length > 0 ? brief.map((file) => file.label) : undefined,
+        kit,
       }),
     });
     if (brief.length === 0) return;
@@ -467,6 +475,7 @@ export async function runWorkshopReminderSweep(now = new Date()) {
     // само письмо о покупке: вдруг бриф уйдёт вместе с ним.
     if (
       recentlyPaid &&
+      !isKitWorkshopOrder(order.id) &&
       workshop.materialFiles.length > 0 &&
       isSent(target, "booked", "email") &&
       !isSent(target, BRIEF, "email")
