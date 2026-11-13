@@ -35,7 +35,7 @@
     "@vercel/otel": "^2.3.0",
     "better-auth": "1.7.22",
     "date-fns": "^4.4.0",
-    "geist": "^1.9.2",
+    "geist": "1.9.2",
     "lucide-react": "^1.72.0",
     "next": "16.4.6",
     "qr": "0.7.2",
