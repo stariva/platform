@@ -61,9 +61,12 @@ interface KitWorkshop {
 function KitWorkshopRow({
   orderId,
   workshop,
+  gift,
 }: {
   orderId: string;
   workshop: KitWorkshop;
+  /** Заказ — подарок: доступ только по коду на купоне, письма нет. */
+  gift: boolean;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -117,6 +120,19 @@ function KitWorkshopRow({
       return;
     }
     send.mutate({ orderId, workshopSlug: workshop.slug });
+  }
+
+  if (gift) {
+    return (
+      <li className="space-y-2 rounded-md border p-3 text-sm">
+        <p className="font-medium">{workshop.title}</p>
+        <Badge variant="info-light">Подарок: доступ по коду</Badge>
+        <p className="text-muted-foreground">
+          Письма покупателю нет. Напечатайте купон с кодом и положите в коробку:
+          доступ откроется, когда получатель введёт код.
+        </p>
+      </li>
+    );
   }
 
   return (
@@ -180,6 +196,7 @@ export function OrderWorkshopAccess({
   orderId,
   workshops,
   email,
+  gift,
   linked,
   granted,
   codes,
@@ -188,6 +205,8 @@ export function OrderWorkshopAccess({
   workshops: { slug: string; title: string }[];
   /** Почта покупателя из заказа; null — её нет. */
   email: string | null;
+  /** Набор в подарок: доступ только по коду на купоне, письма нет. */
+  gift: boolean;
   /** Мастер-классы, привязанные к товарам заказа. */
   linked: { slug: string; title: string }[];
   /** Уже открыты на почту покупателя. */
@@ -241,9 +260,11 @@ export function OrderWorkshopAccess({
       <CardHeader>
         <CardTitle>Мастер-класс к набору</CardTitle>
         <CardDescription>
-          {linked.length > 0
-            ? "После оплаты доступ к урокам сам уходит на почту покупателя, а коробку привозит Ozon. Если письмо не ушло, отправьте его кнопкой. Купон с кодом нужен, только если почты нет."
-            : "К товарам заказа мастер-класс не привязан — привяжите его в карточке товара или выдайте код и напечатайте купон в коробку."}
+          {gift
+            ? "Покупатель оформил набор в подарок: код доступа выдан при оплате, на почту ничего не уходит. Напечатайте купон и положите в коробку — получатель введёт код на stariva.ru/code."
+            : linked.length > 0
+              ? "После оплаты доступ к урокам сам уходит на почту покупателя, а коробку привозит Ozon. Если письмо не ушло, отправьте его кнопкой. Купон с кодом нужен, только если почты нет."
+              : "К товарам заказа мастер-класс не привязан — привяжите его в карточке товара или выдайте код и напечатайте купон в коробку."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -254,6 +275,7 @@ export function OrderWorkshopAccess({
                 key={`${orderId}:${row.slug}`}
                 orderId={orderId}
                 workshop={row}
+                gift={gift}
               />
             ))}
           </ul>

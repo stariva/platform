@@ -12,7 +12,7 @@ import {
 } from "@/lib/cart/cart-context";
 import { flyToCart } from "@/lib/cart/fly-to-cart";
 import type { Product } from "@/lib/catalog/types";
-import { isPurchasable } from "@/lib/in-stock";
+import { isKit, isPurchasable } from "@/lib/in-stock";
 import { cn } from "@/lib/utils";
 
 /** Сколько кнопка показывает «Добавлено», прежде чем вернуться в обычный вид. */
@@ -98,6 +98,7 @@ export function AddToCartButton({
           name: product.name,
           image: product.images[0] ?? "",
           price: Math.round(product.price * 100),
+          kit: isKit(product),
         };
         // Полёт стартует раньше add: значок корзины придержит счётчик до приземления
         flyToCart({

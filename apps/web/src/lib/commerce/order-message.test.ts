@@ -32,6 +32,7 @@ const order: OrderRow = {
   deliveryAddress: null,
   checkoutSnapshot: null,
   customerNotes: null,
+  gift: false,
   deliveryNote: null,
   depositAmount: null,
   leadTime: null,
@@ -163,6 +164,19 @@ test("stock order message carries the buyer comment", () => {
   );
 
   assert.ok(message.includes("Комментарий: Позвоните перед доставкой"));
+});
+
+test("a gift order tells the master to print the coupon", () => {
+  const items = [{ ...item, ozonSku: 123, options: null }];
+  const gift = formatPaidOrderMessage(
+    { ...order, kind: "stock", gift: true },
+    items,
+  );
+  const plain = formatPaidOrderMessage({ ...order, kind: "stock" }, items);
+
+  assert.ok(gift.message.includes("ПОДАРОК"));
+  assert.ok(gift.message.includes("купон"));
+  assert.ok(!plain.message.includes("ПОДАРОК"));
 });
 
 test("the balance message says where to ship and that Ozon takes over", () => {

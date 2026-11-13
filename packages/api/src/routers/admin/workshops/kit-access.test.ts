@@ -36,12 +36,14 @@ function request(
   accounts: { id: string }[] = [{ id: "buyer" }],
   bookedFails = false,
   releaseAt: Date | null = null,
+  gift = false,
 ) {
   const rows: unknown[][] = [
     [
       {
         id: "kit",
         status,
+        gift,
         userId: null,
         contactEmail: " Buyer@Example.COM ",
         contactName: "Buyer",
@@ -120,6 +122,25 @@ for (const status of [
     expect(sendAccess).not.toHaveBeenCalled();
   });
 }
+
+test("rejects a gift order: access goes by code, not by email", async () => {
+  sendAccess.mockClear();
+  const { result, inserts } = request(
+    "paid",
+    true,
+    false,
+    [],
+    false,
+    null,
+    true,
+  );
+  await expect(result).rejects.toMatchObject({
+    code: "BAD_REQUEST",
+    message: expect.stringContaining("подарок"),
+  });
+  expect(inserts).toHaveLength(0);
+  expect(sendAccess).not.toHaveBeenCalled();
+});
 
 test("rejects a workshop outside the order", async () => {
   const { result, inserts, conditions } = request("paid", false);

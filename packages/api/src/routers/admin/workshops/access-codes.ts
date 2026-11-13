@@ -15,7 +15,11 @@ import {
   workshops,
 } from "@stariva/db";
 import { currentWorkshopPrice } from "@stariva/validators";
-import { formatAccessCode, generateAccessCode } from "@stariva/web-api";
+import {
+  formatAccessCode,
+  generateAccessCode,
+  kitCodeNote,
+} from "@stariva/web-api";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -30,12 +34,6 @@ const CHANNELS = ["livemaster", "ozon", "kit"] as const;
 
 /** С набором мастер-класс уже оплачен: заказ по коду создаётся на 0 ₽. */
 const KIT_CHANNELS = new Set<string>(["ozon", "kit"]);
-
-/**
- * Пометка кода из набора. По ней же находим коды заказа: отдельной связи с
- * заказом изделий у кода нет.
- */
-const kitNote = (orderNumber: number) => `Набор, заказ №${orderNumber}`;
 
 // Совпадение случайного кода с уже выданным — почти невероятно, но бывает
 const ISSUE_ATTEMPTS = 5;
@@ -93,7 +91,9 @@ export const issueAccessCode = adminProcedure
       ? 0
       : currentWorkshopPrice(workshop);
     const note =
-      kitOrderNumber !== null ? kitNote(kitOrderNumber) : input.note || null;
+      kitOrderNumber !== null
+        ? kitCodeNote(kitOrderNumber)
+        : input.note || null;
 
     for (let attempt = 0; attempt < ISSUE_ATTEMPTS; attempt++) {
       const code = generateAccessCode();
@@ -201,6 +201,7 @@ export const orderAccess = adminProcedure
     const [order] = await context.db
       .select({
         number: productOrders.number,
+        gift: productOrders.gift,
         email: sql<
           string | null
         >`coalesce(nullif(trim(${productOrders.contactEmail}), ''), ${user.email})`,
@@ -208,7 +209,9 @@ export const orderAccess = adminProcedure
       .from(productOrders)
       .leftJoin(user, eq(user.id, productOrders.userId))
       .where(eq(productOrders.id, input.orderId));
-    if (!order) return { email: null, linked: [], granted: [], codes: [] };
+    if (!order) {
+      return { email: null, gift: false, linked: [], granted: [], codes: [] };
+    }
 
     const linked = await context.db
       .selectDistinct({
@@ -253,7 +256,7 @@ export const orderAccess = adminProcedure
         .where(
           and(
             eq(workshopAccessCodes.channel, "kit"),
-            eq(workshopAccessCodes.note, kitNote(order.number)),
+            eq(workshopAccessCodes.note, kitCodeNote(order.number)),
           ),
         )
         .orderBy(
@@ -263,6 +266,7 @@ export const orderAccess = adminProcedure
     ]);
     return {
       email: order.email,
+      gift: order.gift,
       linked,
       granted,
       codes: codes.map((row) => ({ ...row, code: formatAccessCode(row.code) })),
