@@ -183,7 +183,11 @@ export async function applyProductOrderPayment(
   }
 
   // Заказ уже создан в Ozon — сбой уведомления не должен заставлять YooKassa
-  // повторять webhook, поэтому здесь он только попадает в лог.
+  // повторять webhook, поэтому здесь он только попадает в лог. С ручной
+  // доставкой иначе: уведомление — единственный сигнал создать отправление,
+  // и потерянное оставит оплаченный заказ без отправки. Повтор безопасен:
+  // notifyOrderPaid при сбое возвращает захват, письмо покупателю уходит
+  // только при первой отметке об оплате, а чек выпускается один раз на платёж.
   try {
     await notifyOrderPaid(orderId);
   } catch (error) {
@@ -191,6 +195,7 @@ export async function applyProductOrderPayment(
       `[payments/webhook] Не удалось уведомить мастера о заказе ${orderId}:`,
       error,
     );
+    if (manualDelivery) throw error;
   }
 }
 

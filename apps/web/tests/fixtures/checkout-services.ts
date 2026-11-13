@@ -185,6 +185,23 @@ await test("create stays free when Ozon is down and the buyer expected a price",
   expect(result.status).toBe("ok");
 });
 
+await test("create refuses a manual order that has no address for the point", async () => {
+  checkout.mockRejectedValueOnce(ozonDown());
+  // Старая вкладка: подписи пункта нет, а Ozon адрес подсказать не может
+  const { pointLabel: _, ...delivery } = createInput.delivery;
+  expect(await checkoutServices.create({ ...createInput, delivery })).toEqual({
+    status: "check_failed",
+  });
+  checkout.mockRejectedValueOnce(ozonDown());
+  expect(
+    await checkoutServices.create({
+      ...createInput,
+      delivery: { ...delivery, pointLabel: "   " },
+    }),
+  ).toEqual({ status: "check_failed" });
+  expect(createProductOrder).not.toHaveBeenCalled();
+});
+
 await test("create reports delivery_unavailable when Ozon says no", async () => {
   checkout.mockResolvedValueOnce({
     available: false,

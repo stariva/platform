@@ -177,6 +177,16 @@ export const checkoutServices: CheckoutServices = {
         return null;
       });
 
+    // Ручной заказ без адреса пункта мастер не отправит: Ozon ничего не
+    // подскажет, значит, адрес должен прийти от покупателя (так делает
+    // страница; не пришёл — старая вкладка, пусть оформит заново)
+    if (!deliveryQuote && !pickupPoint && !data.delivery.pointLabel?.trim()) {
+      console.error(
+        `[checkout/create] Ozon недоступен, а адреса пункта ${data.delivery.pointId} нет: ручной заказ не принимаем`,
+      );
+      return { status: "check_failed" };
+    }
+
     const order = await createProductOrder({
       userId: userId ?? undefined,
       attribution: attributionFromRequest({ headers }),

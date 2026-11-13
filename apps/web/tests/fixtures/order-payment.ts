@@ -62,10 +62,11 @@ const notifyOzonOrderFailed = mock(async () => {});
 const notifyMadeToOrderPayment = mock(async (id: string) => {
   calls.push(`notify:${id}`);
 });
+const notifyOrderPaid = mock(async (_id: string) => {});
 mock.module("../../src/lib/commerce/order-notifications", () => ({
   notifyCustomer: async () => {},
   notifyMadeToOrderPayment,
-  notifyOrderPaid: async () => {},
+  notifyOrderPaid,
   notifyOzonOrderFailed,
 }));
 const issueNpdReceipt = mock(async () => {});
@@ -178,6 +179,21 @@ await test("a receipt failure on a manual order is not reported as an Ozon failu
   expect(claimProductOrderShipment).not.toHaveBeenCalled();
   expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
   expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
+});
+
+await test("a lost master notification on a manual order makes the webhook retry", async () => {
+  order.deliveryMethod = "manual";
+  const error = new Error("staff_notification_failed");
+  notifyOrderPaid.mockRejectedValueOnce(error);
+  // Для ручного заказа уведомление — единственный сигнал отправить посылку
+  await expect(apply()).rejects.toBe(error);
+  expect(markProductOrderOzonFailed).not.toHaveBeenCalled();
+});
+
+await test("a lost master notification on an Ozon order is only logged", async () => {
+  notifyOrderPaid.mockRejectedValueOnce(new Error("staff_notification_failed"));
+  await apply();
+  expect(attachOzonOrder).toHaveBeenCalledTimes(1);
 });
 
 // Доплата заказа под заказ: webhook создаёт отправление, затем сообщает мастеру

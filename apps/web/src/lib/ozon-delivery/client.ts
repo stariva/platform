@@ -6,6 +6,7 @@ import {
   isOzonDeliveryConfigured,
 } from "./auth";
 import { createBreaker } from "./breaker";
+import { withDeadline } from "./deadline";
 import {
   isInfrastructureStatus,
   isOzonInfrastructureError,
@@ -143,12 +144,20 @@ async function requestOzon<T>(
   schema: z.ZodType<T>,
   { timeoutMs }: { timeoutMs: number },
 ): Promise<T> {
+  // Один срок на всё: получение токена, сам запрос, чтение тела и повтор
+  // после 401. Сигнал действует и на чтение тела: зависший ответ тоже оборвётся.
+  const signal = AbortSignal.timeout(timeoutMs);
+  const timedOut = () =>
+    new OzonDeliveryError(
+      `ozon_delivery_request_failed_network: timeout after ${timeoutMs} ms`,
+      true,
+    );
   // 401 = токен протух раньше срока из кэша: сбрасываем его и повторяем один
   // раз с новым. Ozon отверг запрос до обработки, дубля заказа не будет.
   for (let attempt = 0; ; attempt++) {
-    const token = await getOzonDeliveryToken();
-    // Сигнал действует и на чтение тела: зависший ответ тоже оборвётся.
-    const signal = AbortSignal.timeout(timeoutMs);
+    // Обновление токена общее для всех запросов: ждём его не дольше срока,
+    // но не отменяем — им пользуются и другие покупатели
+    const token = await withDeadline(getOzonDeliveryToken(), signal, timedOut);
     let res: Response;
     try {
       res = await fetch(`${BASE_URL}${path}`, {
