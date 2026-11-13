@@ -19,7 +19,7 @@ import { formatAccessCode, generateAccessCode } from "@stariva/web-api";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { briefSentAt, workshopHasBrief } from "./brief";
+import { accessSentAt } from "./brief";
 
 /**
  * Где продан курс: livemaster — Ярмарка Мастеров; ozon — набор куплен на
@@ -190,8 +190,8 @@ const ticketFields = {
 
 /**
  * Мастер-классы к наборам из заказа на сайте: какие идут с товарами заказа,
- * какие уже открыты на почту покупателя (и ушёл ли бриф) и какие выданы
- * купоном. `email` — куда уйдёт бриф; null — почты у заказа нет.
+ * какие уже открыты на почту покупателя (и ушло ли письмо с доступом) и какие
+ * выданы купоном. `email` — куда уйдёт письмо; null — почты у заказа нет.
  *
  * @example client.admin.workshops.orderAccess({ orderId: "order_1" })
  */
@@ -214,7 +214,6 @@ export const orderAccess = adminProcedure
       .selectDistinct({
         slug: workshops.slug,
         title: workshops.title,
-        hasBrief: workshopHasBrief,
       })
       .from(productOrderItems)
       .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
@@ -234,8 +233,7 @@ export const orderAccess = adminProcedure
           workshopSlug: orders.workshopSlug,
           email: orders.contactEmail,
           paidAt: orders.paidAt,
-          hasBrief: workshopHasBrief,
-          briefSentAt,
+          accessSentAt,
         })
         .from(orders)
         .innerJoin(workshops, eq(workshops.slug, orders.workshopSlug))

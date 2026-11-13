@@ -50,8 +50,7 @@ export default async function OrderPage({
               granted={access.granted.map((row) => ({
                 workshopSlug: row.workshopSlug,
                 email: row.email,
-                hasBrief: row.hasBrief,
-                briefSentAt: row.briefSentAt,
+                accessSentAt: row.accessSentAt,
               }))}
               codes={access.codes.map((row) => ({
                 id: row.id,

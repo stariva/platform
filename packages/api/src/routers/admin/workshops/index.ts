@@ -7,7 +7,7 @@ import {
 } from "./access-codes";
 import { sendBrief, sendMissingBriefs } from "./brief";
 import { byId, videos } from "./by-id";
-import { sendKitBrief } from "./kit-brief";
+import { sendKitAccess } from "./kit-access";
 import { list } from "./list";
 import { livemasterPdf } from "./livemaster-pdf";
 import { materialUrl } from "./material-url";
@@ -38,7 +38,7 @@ export const adminWorkshopsRouter = {
   uploadImage,
   sendBrief,
   sendMissingBriefs,
-  sendKitBrief,
+  sendKitAccess,
   accessCodes: accessCodesList,
   accessCode,
   orderAccess,

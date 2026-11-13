@@ -7,7 +7,8 @@ const scenario = process.argv[2];
 const now = new Date();
 const target = {
   order: {
-    id: "synthetic-order",
+    // Заказ мастер-класса из набора: его id начинается с «kit-»
+    id: scenario === "kit" ? "kit-synthetic-order" : "synthetic-order",
     amount: 249000,
     paidAt: now,
     createdAt: now,
@@ -52,7 +53,11 @@ const bookedEmails: Array<{
   attachments: unknown[];
 }> = [];
 const briefEmails: Array<{ idempotencyKey: string; files: unknown[] }> = [];
-const StarivaWorkshopEmail = () => null;
+const emailProps: Array<{ kit?: boolean; attachedFiles?: string[] }> = [];
+const StarivaWorkshopEmail = (props: (typeof emailProps)[number]) => {
+  emailProps.push(props);
+  return null;
+};
 mock.module("@stariva/emails", () => ({
   StarivaWorkshopEmail,
   isEmailConfigured: () => false,
@@ -153,6 +158,19 @@ if (scenario === "mark-fails") {
     { filename: pdf.filename, path: pdf.url },
   ]);
   assert.equal(sent.get("synthetic-order:brief:email"), now);
+  assert.deepEqual(await runWorkshopReminderSweep(now), {
+    checked: 1,
+    delivered: 0,
+    failed: 0,
+  });
+  assert.equal(briefEmails.length, 0);
+} else if (scenario === "kit") {
+  // Покупателю набора доступ приходит на почту сразу, а материалы лежат в
+  // коробке: ни вложения, ни отдельного письма со списком покупок
+  assert.deepEqual(bookedEmails[0]?.attachments, []);
+  assert.equal(emailProps[0]?.kit, true);
+  assert.equal(emailProps[0]?.attachedFiles, undefined);
+  assert.equal(sent.has("kit-synthetic-order:brief:email"), false);
   assert.deepEqual(await runWorkshopReminderSweep(now), {
     checked: 1,
     delivered: 0,

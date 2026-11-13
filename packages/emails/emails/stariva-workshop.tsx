@@ -32,6 +32,11 @@ export interface StarivaWorkshopEmailProps {
   bundle?: { title: string; releaseLabel?: string };
   /** Подписи PDF-брифа во вложении — только в письме о покупке. */
   attachedFiles?: string[];
+  /**
+   * Мастер-класс идёт в наборе с сайта: доступ открывается сразу после оплаты,
+   * а коробку привозит Ozon. Список покупок и бриф не нужны — всё в коробке.
+   */
+  kit?: boolean;
 }
 
 const muted = { color: colors.darkGrey, fontSize: 14, lineHeight: "23px" };
@@ -62,10 +67,26 @@ function copy({
   kind,
   workshopTitle,
   releaseLabel,
+  kit,
 }: StarivaWorkshopEmailProps) {
   const title = `«${workshopTitle}»`;
   switch (kind) {
     case "booked":
+      if (kit) {
+        return releaseLabel
+          ? {
+              preview: `Набор куплен: урок ${title} откроется ${releaseLabel}`,
+              heading: "Набор куплен!",
+              intro: `Спасибо за покупку! Видеоурок ${title} откроется ${releaseLabel}, а мы напомним о старте. Сам набор мы отправим Ozon-доставкой.`,
+              button: "Открыть кабинет",
+            }
+          : {
+              preview: `Доступ к уроку ${title} открыт`,
+              heading: "Доступ открыт",
+              intro: `Спасибо за покупку! Видеоурок ${title} уже ждёт вас в личном кабинете: смотрите его хоть сейчас, не дожидаясь коробки. Сам набор мы отправим Ozon-доставкой. Доступ бессрочный.`,
+              button: "Смотреть урок",
+            };
+      }
       return releaseLabel
         ? {
             preview: `Вы записаны на мастер-класс ${title}`,
@@ -127,8 +148,11 @@ export default function StarivaWorkshopEmail(
   },
 ) {
   const text = copy(props);
-  const showMaterials = props.materials.length > 0 && props.kind !== "release";
+  // В наборе материалы лежат в коробке, покупать их не нужно
+  const showMaterials =
+    props.materials.length > 0 && props.kind !== "release" && !props.kit;
   const extra = extraCourse(props);
+  const kitBox = props.kit && props.kind === "booked";
 
   return (
     <StarivaLayout
@@ -159,6 +183,34 @@ export default function StarivaWorkshopEmail(
             }}
           >
             {extra.text}
+          </Text>
+        </Section>
+      )}
+      {kitBox && (
+        <Section
+          style={{
+            marginTop: 36,
+            padding: "20px 22px",
+            borderRadius: 12,
+            background: colors.offWhite,
+            border: `1px solid ${colors.lightGrey}`,
+          }}
+        >
+          <Text style={{ ...labelCaps, margin: "0 0 8px" }}>
+            📦 Набор приедет по Ozon
+          </Text>
+          <Text
+            style={{
+              margin: 0,
+              fontSize: 14,
+              lineHeight: "23px",
+              color: colors.nearBlack,
+            }}
+          >
+            Шнур, основа и декор уже лежат в коробке — докупать ничего не нужно.
+            Дома пригодятся только ножницы, сантиметровая лента и малярный
+            скотч. Пока набор в пути, посмотрите урок целиком: так плести будет
+            легче.
           </Text>
         </Section>
       )}

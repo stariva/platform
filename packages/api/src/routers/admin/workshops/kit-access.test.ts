@@ -2,11 +2,28 @@ import { expect, mock, test } from "bun:test";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 
-const deliver = mock(async () => ({ to: "buyer@example.com", warning: null }));
-mock.module("./brief", () => ({ sendBriefForOrder: deliver }));
+const recipient = {
+  to: "buyer@example.com",
+  accessToken: "token",
+  slug: "course",
+  orderId: "workshop-order",
+};
+mock.module("./brief", () => ({
+  accessUrl: () => "https://stariva.test/access",
+  errorReason: (error: unknown) =>
+    error instanceof Error ? error.message : String(error),
+  recipientColumns: {},
+}));
+const sendAccess = mock(async (_email: unknown) => {});
+// Остальные экспорты пакета оставляем настоящими: мок живёт на весь прогон
+const emails = await import("@stariva/emails");
+mock.module("@stariva/emails", () => ({
+  ...emails,
+  sendKitAccessEmail: sendAccess,
+}));
 const originalUrl = process.env.POSTGRES_URL;
-process.env.POSTGRES_URL ??= "postgres://postgres@localhost/kit_brief_test";
-const { sendKitBrief } = await import("./kit-brief");
+process.env.POSTGRES_URL ??= "postgres://postgres@localhost/kit_access_test";
+const { sendKitAccess } = await import("./kit-access");
 if (originalUrl === undefined) delete process.env.POSTGRES_URL;
 
 function request(
@@ -16,7 +33,7 @@ function request(
   accounts: { id: string }[] = [{ id: "buyer" }],
   bookedFails = false,
 ) {
-  const rows = [
+  const rows: unknown[][] = [
     [
       {
         id: "kit",
@@ -28,11 +45,15 @@ function request(
       },
     ],
     linked ? [{ id: "item" }] : [],
-    [{ slug: "course", materialFiles: ["brief.pdf"] }],
+    [{ slug: "course", title: "Course" }],
     existing ? [{ id: "workshop-order" }] : [],
-    accounts,
-    [{ id: "new-buyer" }],
   ];
+  if (!existing) {
+    rows.push(accounts);
+    // Аккаунта не нашлось — его создают и ищут ещё раз
+    if (accounts.length === 0) rows.push([{ id: "new-buyer" }]);
+  }
+  rows.push([recipient]);
   const conditions: unknown[] = [];
   const inserts: unknown[] = [];
   const upsert = mock(async () => {
@@ -44,6 +65,7 @@ function request(
       const query = {
         from: () => query,
         leftJoin: () => query,
+        innerJoin: () => query,
         where: (condition: unknown) => {
           conditions.push(condition);
           return Object.assign(Promise.resolve(result), {
@@ -64,12 +86,12 @@ function request(
     }),
     transaction: async (fn: (tx: unknown) => unknown) => fn(db),
   };
-  const handler = sendKitBrief["~orpc"].handler;
+  const handler = sendKitAccess["~orpc"].handler;
   const result = handler({
     context: { db } as unknown as Parameters<typeof handler>[0]["context"],
     input: { orderId: "kit", workshopSlug: "course" },
     path: [],
-    procedure: sendKitBrief,
+    procedure: sendKitAccess,
     errors: {},
     lastEventId: undefined,
   });
@@ -87,9 +109,11 @@ for (const status of [
   "canceled",
 ]) {
   test(`rejects ${status} before issuing access or sending`, async () => {
+    sendAccess.mockClear();
     const { result, inserts } = request(status);
     await expect(result).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(inserts).toHaveLength(0);
+    expect(sendAccess).not.toHaveBeenCalled();
   });
 }
 
@@ -105,11 +129,18 @@ test("rejects a workshop outside the order", async () => {
 });
 
 for (const existing of [false, true]) {
-  test(`records booked after delivery, existing=${existing}`, async () => {
+  test(`sends the access email and records booked, existing=${existing}`, async () => {
+    sendAccess.mockClear();
     const { result, inserts, upsert } = request("paid", true, existing);
     await expect(result).resolves.toMatchObject({
+      to: "buyer@example.com",
       opened: !existing,
       warning: null,
+    });
+    expect(sendAccess).toHaveBeenCalledWith({
+      to: "buyer@example.com",
+      workshopTitle: "Course",
+      accessUrl: "https://stariva.test/access",
     });
     expect(inserts).toContainEqual(
       expect.objectContaining({ kind: "booked", channel: "email" }),
@@ -129,18 +160,29 @@ for (const existing of [false, true]) {
   });
 }
 
+test("does not record booked when the email fails", async () => {
+  sendAccess.mockClear();
+  sendAccess.mockRejectedValueOnce(new Error("provider down"));
+  const { result, inserts } = request("paid");
+  await expect(result).rejects.toMatchObject({ code: "BAD_GATEWAY" });
+  expect(inserts).toHaveLength(0);
+});
+
 test("rejects ambiguous case-insensitive accounts without creating access", async () => {
+  sendAccess.mockClear();
   const { result, inserts } = request("paid", true, false, [
     { id: "one" },
     { id: "two" },
   ]);
   await expect(result).rejects.toMatchObject({ code: "CONFLICT" });
   expect(inserts).toHaveLength(0);
+  expect(sendAccess).not.toHaveBeenCalled();
 });
 
-test("returns a delivery warning when booked persistence fails", async () => {
+test("returns a warning when booked persistence fails", async () => {
   const { result } = request("paid", true, true, [], true);
   await expect(result).resolves.toMatchObject({
+    recorded: false,
     warning: expect.stringContaining("Письмо отправлено"),
   });
 });
