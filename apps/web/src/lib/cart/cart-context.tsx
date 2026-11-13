@@ -34,6 +34,8 @@ const cartItemSchema = z.object({
   fulfillmentType: fulfillmentTypeSchema.default("stock"),
   /** Размер и цвет, выбранные на карточке; только для изделий под заказ. */
   options: madeToOrderOptionsSchema.optional(),
+  /** Набор для плетения: к нему можно оформить подарок с кодом доступа. */
+  kit: z.boolean().optional(),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;

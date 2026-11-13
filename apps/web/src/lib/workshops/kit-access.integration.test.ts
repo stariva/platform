@@ -70,12 +70,14 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
       productSlug: string,
       contactEmail: string | null,
       captured = false,
+      gift = false,
     ): Promise<string> {
       const id = crypto.randomUUID();
       await db.insert(productOrders).values({
         id,
         kind: "stock",
         status: "paid",
+        gift,
         contactName: "Анна",
         contactPhone: "+79001234567",
         contactEmail,
@@ -197,5 +199,43 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
         .where(eq(orders.workshopSlug, workshopSlug)),
     ).toHaveLength(2);
     expect(notify).toHaveBeenCalledTimes(2);
+
+    // Подарок: ни доступа, ни письма — только один код на купон в коробку,
+    // сколько бы раз ни пришёл вебхук
+    const giftOrder = await seedOrder(
+      `renamed-${run}`,
+      `gift-${email}`,
+      true,
+      true,
+    );
+    await Promise.all([
+      grantKitWorkshops(giftOrder),
+      grantKitWorkshops(giftOrder),
+    ]);
+    await grantKitWorkshops(giftOrder);
+    const { workshopAccessCodes } = await import("@stariva/db/schema");
+    const { kitCodeNote } = await import("@stariva/web-api");
+    const [giftRow] = await db
+      .select({ number: productOrders.number })
+      .from(productOrders)
+      .where(eq(productOrders.id, giftOrder));
+    const giftCodes = await db
+      .select()
+      .from(workshopAccessCodes)
+      .where(eq(workshopAccessCodes.note, kitCodeNote(giftRow?.number ?? 0)));
+    expect(giftCodes).toHaveLength(1);
+    expect(giftCodes[0]).toMatchObject({
+      workshopSlug,
+      channel: "kit",
+      amount: 0,
+      redeemedAt: null,
+    });
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(
+      await db
+        .select()
+        .from(orders)
+        .where(eq(orders.workshopSlug, workshopSlug)),
+    ).toHaveLength(2);
   },
 );

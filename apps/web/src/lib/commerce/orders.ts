@@ -48,6 +48,8 @@ export interface CreateProductOrderInput {
   contactEmail?: string;
   /** Комментарий покупателя к заказу — попадает в customerNotes. */
   comment?: string;
+  /** Набор в подарок: доступ к мастер-классу выдаётся кодом, а не письмом. */
+  gift?: boolean;
   items: OrderLineInput[];
   delivery: DeliverySelection;
   /** Выбранный пункт выдачи — чтобы мастер видел его адрес, а не только id. */
@@ -201,6 +203,7 @@ export async function createProductOrder(
       amountTotal,
       currency: "RUB",
       customerNotes: input.comment || null,
+      gift: input.gift ?? false,
       deliveryMethod: input.delivery.method,
       deliveryPointId:
         input.delivery.method === "pickup" ? input.delivery.pointId : null,

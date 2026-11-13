@@ -46,6 +46,7 @@ export default async function OrderPage({
                 .filter((w) => w.status !== "archived")
                 .map(({ slug, title }) => ({ slug, title }))}
               email={access.email}
+              gift={access.gift}
               linked={access.linked}
               granted={access.granted.map((row) => ({
                 workshopSlug: row.workshopSlug,

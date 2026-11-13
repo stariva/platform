@@ -133,6 +133,7 @@ export const sendKitAccess = adminProcedure
       .select({
         id: productOrders.id,
         status: productOrders.status,
+        gift: productOrders.gift,
         userId: productOrders.userId,
         contactEmail: productOrders.contactEmail,
         contactName: productOrders.contactName,
@@ -146,6 +147,15 @@ export const sendKitAccess = adminProcedure
     if (!PAID.has(order.status)) {
       throw new ORPCError("BAD_REQUEST", {
         message: "Заказ не оплачен — доступ открываем после оплаты",
+      });
+    }
+
+    // Подарок: письмо с доступом покупателю раскрыло бы сюрприз и заняло бы
+    // курс вместо получателя — доступ выдаётся только кодом на купоне
+    if (order.gift) {
+      throw new ORPCError("BAD_REQUEST", {
+        message:
+          "Заказ — подарок: доступ выдаётся кодом на купоне, на почту не отправляется",
       });
     }
 

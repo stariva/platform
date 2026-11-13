@@ -65,6 +65,8 @@ export default function CheckoutPage() {
     [cartItems],
   );
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  // Подарок с кодом доступа имеет смысл только для набора с мастер-классом
+  const hasKit = items.some((item) => item.kit);
   const { notices, dismissNotices } = useCartValidation();
 
   const [step, setStep] = useState<Step>("contact");
@@ -209,6 +211,8 @@ export default function CheckoutPage() {
         contactPhone: contact.phone,
         contactEmail: contact.email || undefined,
         comment: contact.comment || undefined,
+        // Черновик мог сохранить галочку из прошлой корзины с набором
+        gift: hasKit && contact.gift === true ? true : undefined,
         items: items.map((item) => ({
           productSlug: item.productSlug,
           quantity: item.quantity,
@@ -382,6 +386,7 @@ export default function CheckoutPage() {
                 initial={contact}
                 busy={checkingPhone}
                 submitLabel={contact ? "Сохранить" : "Продолжить"}
+                offerGift={hasKit}
                 onSubmit={handleContactSubmit}
               />
             </CheckoutSection>

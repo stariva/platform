@@ -9,9 +9,14 @@ import {
   productOrderItems,
   productOrders,
   products,
+  workshopAccessCodes,
   workshops,
 } from "@stariva/db/schema";
-import { kitWorkshopOrderId } from "@stariva/web-api";
+import {
+  generateAccessCode,
+  kitCodeNote,
+  kitWorkshopOrderId,
+} from "@stariva/web-api";
 import { and, eq, sql } from "drizzle-orm";
 import { getProductOrderCustomerEmail } from "@/lib/commerce/orders";
 import { findOrCreateBuyer } from "./buyer";
@@ -32,10 +37,69 @@ function kitAttribution(): CampaignAttribution {
   return { first: touch, last: touch };
 }
 
+// Совпадение случайного кода с уже выданным — почти невероятно, но бывает
+const CODE_ATTEMPTS = 5;
+
+/**
+ * Подарок: вместо письма выдаём по коду на каждый мастер-класс набора. Код
+ * печатают на купоне и кладут в коробку, получатель вводит его на /code.
+ * Идемпотентно: повторный вебхук не выдаёт второй код на тот же курс.
+ */
+async function issueGiftCodes(orderNumber: number, slugs: string[]) {
+  const note = kitCodeNote(orderNumber);
+  await db.transaction(async (tx) => {
+    // Два вебхука подряд не должны выдать два кода на один курс
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`gift-codes:${note}`}, 0))`,
+    );
+    for (const slug of slugs) {
+      const [existing] = await tx
+        .select({ id: workshopAccessCodes.id })
+        .from(workshopAccessCodes)
+        .where(
+          and(
+            eq(workshopAccessCodes.channel, "kit"),
+            eq(workshopAccessCodes.note, note),
+            eq(workshopAccessCodes.workshopSlug, slug),
+          ),
+        )
+        .limit(1);
+      if (existing) continue;
+
+      let issued = false;
+      for (let attempt = 0; attempt < CODE_ATTEMPTS && !issued; attempt++) {
+        const [row] = await tx
+          .insert(workshopAccessCodes)
+          .values({
+            id: crypto.randomUUID(),
+            code: generateAccessCode(),
+            workshopSlug: slug,
+            channel: "kit",
+            // Мастер-класс уже оплачен в цене набора
+            amount: 0,
+            note,
+          })
+          .onConflictDoNothing({ target: workshopAccessCodes.code })
+          .returning({ id: workshopAccessCodes.id });
+        issued = Boolean(row);
+      }
+      if (!issued) throw new Error("access_code_not_issued");
+      console.info(
+        `[workshops/kit] Заказ №${orderNumber}: подарок, выдан код на «${slug}»`,
+      );
+    }
+  });
+}
+
 /**
  * Набор оплатили на сайте — открываем мастер-класс, который идёт с ним, на
- * почту покупателя: письмо со ссылкой на уроки и PDF уходит как при обычной
- * покупке. Заказ мастер-класса создаётся на 0 ₽: он оплачен в цене набора.
+ * почту покупателя: письмо со ссылкой на уроки уходит сразу после оплаты, а
+ * коробку привозит Ozon. Заказ мастер-класса создаётся на 0 ₽: он оплачен в
+ * цене набора.
+ *
+ * Подарок (`gift`) почту не использует: доступ выдаётся кодом на купоне в
+ * коробке, а получатель сам открывает уроки. Письма покупателю нет, даже если
+ * он оставил почту.
  *
  * Идемпотентно, вызывается при каждом вебхуке об оплате. Без почты (её не
  * оставили и заказ оформлен без входа) ничего не делает — тогда мастер кладёт
@@ -45,6 +109,8 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
   const [order] = await db
     .select({
       id: productOrders.id,
+      number: productOrders.number,
+      gift: productOrders.gift,
       userId: productOrders.userId,
       contactEmail: productOrders.contactEmail,
       contactName: productOrders.contactName,
@@ -69,6 +135,14 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
     )
     .where(and(eq(productOrderItems.orderId, productOrderId)));
   if (linked.length === 0) return;
+
+  if (order.gift) {
+    await issueGiftCodes(
+      order.number,
+      linked.map(({ slug }) => slug),
+    );
+    return;
+  }
 
   const email = await getProductOrderCustomerEmail(order);
   if (!email) {

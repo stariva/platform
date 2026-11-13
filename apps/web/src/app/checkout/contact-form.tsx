@@ -11,6 +11,7 @@ import {
   PersonalDataConsentLabel,
 } from "@/components/stariva/consent-checkbox";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -33,6 +34,8 @@ export const contactFormSchema = z.object({
     .optional()
     .or(z.literal("")),
   comment: z.string().trim().max(1500, "Не больше 1500 символов").optional(),
+  /** Набор в подарок: код доступа будет в коробке, а не на почте. */
+  gift: z.boolean().optional(),
   personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
 });
 
@@ -49,6 +52,7 @@ const draftSchema = z.object({
   phone: z.string().max(32),
   email: z.string().max(254),
   comment: z.string().max(1500).optional(),
+  gift: z.boolean().optional(),
 });
 
 function readDraft() {
@@ -71,6 +75,7 @@ function saveDraft(values: Partial<ContactFormValues>) {
         phone: values.phone ?? "",
         email: values.email ?? "",
         comment: values.comment ?? "",
+        gift: values.gift ?? false,
       }),
     );
   } catch {
@@ -83,6 +88,8 @@ interface ContactFormProps {
   initial: ContactFormValues | null;
   busy: boolean;
   submitLabel: string;
+  /** В корзине есть набор: предлагаем оформить его в подарок. */
+  offerGift?: boolean;
   onSubmit: (values: ContactFormValues) => void;
 }
 
@@ -90,6 +97,7 @@ export function ContactForm({
   initial,
   busy,
   submitLabel,
+  offerGift = false,
   onSubmit,
 }: ContactFormProps) {
   const form = useForm<ContactFormValues>({
@@ -99,6 +107,7 @@ export function ContactForm({
       phone: "",
       email: "",
       comment: "",
+      gift: false,
       personalDataConsent: false,
     },
   });
@@ -210,6 +219,38 @@ export function ContactForm({
             </FormItem>
           )}
         />
+        {offerGift && (
+          <FormField
+            control={form.control}
+            name="gift"
+            render={({ field }) => (
+              <FormItem className="rounded-xl border border-espresso/10 bg-sand/60 p-4">
+                <div className="flex items-start gap-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value === true}
+                      onCheckedChange={(value) =>
+                        field.onChange(value === true)
+                      }
+                      disabled={busy}
+                      className="mt-0.5"
+                    />
+                  </FormControl>
+                  <div className="space-y-1">
+                    <FormLabel className="cursor-pointer">
+                      Это подарок
+                    </FormLabel>
+                    <p className="text-[13px] leading-relaxed text-taupe">
+                      Ссылку на видеоурок мы не отправим на почту. Код доступа
+                      будет на купоне в коробке: получатель введёт его на
+                      stariva.ru/code и откроет урок сам.
+                    </p>
+                  </div>
+                </div>
+              </FormItem>
+            )}
+          />
+        )}
         <FormField
           control={form.control}
           name="personalDataConsent"

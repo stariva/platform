@@ -128,6 +128,7 @@ export const checkoutServices: CheckoutServices = {
       contactPhone: data.contactPhone,
       contactEmail: data.contactEmail,
       comment: data.comment,
+      gift: data.gift,
       items,
       delivery: data.delivery,
       pickupPoint,

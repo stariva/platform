@@ -99,6 +99,11 @@ export const createOrderInputSchema = z.object({
   contactPhone: phone,
   contactEmail: z.email().optional(),
   comment: z.string().trim().max(1500).optional(),
+  /**
+   * Набор в подарок: доступ к мастер-классу не уходит на почту, а выдаётся
+   * кодом на купоне в коробке. Без наборов в заказе флаг ничего не меняет.
+   */
+  gift: z.boolean().optional(),
   items: z.array(stockItemSchema).min(1).max(100),
   delivery: pickupDeliverySchema,
   // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ) и акцепт оферты.
