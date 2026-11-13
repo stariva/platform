@@ -171,7 +171,11 @@ export const sendKitAccess = adminProcedure
     }
 
     const [workshop] = await db
-      .select({ slug: workshops.slug, title: workshops.title })
+      .select({
+        slug: workshops.slug,
+        title: workshops.title,
+        releaseAt: workshops.releaseAt,
+      })
       .from(workshops)
       .where(eq(workshops.slug, input.workshopSlug));
     if (!workshop) {
@@ -255,6 +259,8 @@ export const sendKitAccess = adminProcedure
         to,
         workshopTitle: workshop.title,
         accessUrl: accessUrl(recipient),
+        // Урок ещё не вышел — в письме дата открытия, а не «смотрите сейчас»
+        releaseAt: workshop.releaseAt,
       });
     } catch (error) {
       logger.error("workshops.kit_access.send_failed", error, {

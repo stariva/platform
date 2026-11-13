@@ -8,21 +8,24 @@ const recipient = {
   slug: "course",
   orderId: "workshop-order",
 };
+const originalUrl = process.env.POSTGRES_URL;
+process.env.POSTGRES_URL ??= "postgres://postgres@localhost/kit_access_test";
+// mock.module живёт на весь прогон bun test: остальные экспорты модулей
+// оставляем настоящими, иначе другие файлы не найдут своих имён
+const realBrief = await import("./brief");
 mock.module("./brief", () => ({
+  ...realBrief,
   accessUrl: () => "https://stariva.test/access",
   errorReason: (error: unknown) =>
     error instanceof Error ? error.message : String(error),
   recipientColumns: {},
 }));
 const sendAccess = mock(async (_email: unknown) => {});
-// Остальные экспорты пакета оставляем настоящими: мок живёт на весь прогон
 const emails = await import("@stariva/emails");
 mock.module("@stariva/emails", () => ({
   ...emails,
   sendKitAccessEmail: sendAccess,
 }));
-const originalUrl = process.env.POSTGRES_URL;
-process.env.POSTGRES_URL ??= "postgres://postgres@localhost/kit_access_test";
 const { sendKitAccess } = await import("./kit-access");
 if (originalUrl === undefined) delete process.env.POSTGRES_URL;
 
@@ -32,6 +35,7 @@ function request(
   existing = true,
   accounts: { id: string }[] = [{ id: "buyer" }],
   bookedFails = false,
+  releaseAt: Date | null = null,
 ) {
   const rows: unknown[][] = [
     [
@@ -45,7 +49,7 @@ function request(
       },
     ],
     linked ? [{ id: "item" }] : [],
-    [{ slug: "course", title: "Course" }],
+    [{ slug: "course", title: "Course", releaseAt }],
     existing ? [{ id: "workshop-order" }] : [],
   ];
   if (!existing) {
@@ -141,6 +145,7 @@ for (const existing of [false, true]) {
       to: "buyer@example.com",
       workshopTitle: "Course",
       accessUrl: "https://stariva.test/access",
+      releaseAt: null,
     });
     expect(inserts).toContainEqual(
       expect.objectContaining({ kind: "booked", channel: "email" }),
@@ -159,6 +164,16 @@ for (const existing of [false, true]) {
       );
   });
 }
+
+test("passes the release date of a lesson that is not out yet", async () => {
+  sendAccess.mockClear();
+  const releaseAt = new Date("2099-01-01T07:00:00Z");
+  const { result } = request("paid", true, true, [], false, releaseAt);
+  await expect(result).resolves.toMatchObject({ warning: null });
+  expect(sendAccess).toHaveBeenCalledWith(
+    expect.objectContaining({ releaseAt }),
+  );
+});
 
 test("does not record booked when the email fails", async () => {
   sendAccess.mockClear();

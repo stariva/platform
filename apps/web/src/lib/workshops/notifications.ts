@@ -133,9 +133,12 @@ function telegramText(kind: ReminderKind, target: Target): string {
   const when = target.workshop.releaseAt
     ? formatReleaseDateTime(target.workshop.releaseAt.toISOString())
     : "";
-  const materials = target.workshop.materials
-    .map((item) => `• ${escapeTelegramHtml(item)}`)
-    .join("\n");
+  // Покупателю набора материалы не нужны: всё лежит в коробке
+  const materials = isKitWorkshopOrder(target.order.id)
+    ? ""
+    : target.workshop.materials
+        .map((item) => `• ${escapeTelegramHtml(item)}`)
+        .join("\n");
   switch (kind) {
     case "week":
       return [
