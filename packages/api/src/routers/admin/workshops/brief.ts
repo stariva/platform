@@ -38,13 +38,20 @@ export const briefSentAt =
     workshopOrderNotifications.sentAt,
   );
 
+/** Когда покупателю ушло письмо о покупке со ссылкой на уроки; null — не уходило. */
+export const accessSentAt =
+  sql<Date | null>`(select ${workshopOrderNotifications.sentAt} from ${workshopOrderNotifications} where ${workshopOrderNotifications.orderId} = ${orders.id} and ${workshopOrderNotifications.kind} = 'booked' and ${workshopOrderNotifications.channel} = 'email')`.mapWith(
+    workshopOrderNotifications.sentAt,
+  );
+
 /** У курса есть PDF-бриф — его можно отправить. */
 export const workshopHasBrief = sql<boolean>`coalesce(jsonb_array_length(${workshops.materialFiles}) > 0, false)`;
 
 /** Оплаченная запись, которой бриф положен, но письмом ещё не уходил. */
-export const briefMissing: SQL = sql`${orders.status} = 'paid' and ${workshopHasBrief} and ${briefSentAt} is null`;
+// Заказы из наборов не берём: материалы у них в коробке, список покупок не нужен
+export const briefMissing: SQL = sql`${orders.status} = 'paid' and ${orders.id} not like 'kit-%' and ${workshopHasBrief} and ${briefSentAt} is null`;
 
-function accessUrl(order: { accessToken: string | null; slug: string }) {
+export function accessUrl(order: { accessToken: string | null; slug: string }) {
   const site = (env.STOREFRONT_URL ?? DEFAULT_STOREFRONT_URL).replace(
     /\/$/,
     "",
@@ -62,7 +69,7 @@ interface Recipient {
   to: string | null;
 }
 
-const recipientColumns = {
+export const recipientColumns = {
   orderId: orders.id,
   slug: orders.workshopSlug,
   accessToken: orders.accessToken,
@@ -129,7 +136,7 @@ async function recordBriefSent(db: Database, orderId: string) {
 }
 
 /** Причина сбоя доставки для админа: ответ почтового провайдера как есть. */
-function errorReason(error: unknown) {
+export function errorReason(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 

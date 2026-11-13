@@ -53,6 +53,7 @@ export {
   type StarivaWorkshopUnpaidEmailProps,
   workshopUnpaidEmailSubject,
 } from "./emails/stariva-workshop-unpaid";
+export { sendKitAccessEmail } from "./kit-access";
 export { sendOrderStatusEmail } from "./order";
 export type { OrderEmailOrder } from "./order-email";
 export {

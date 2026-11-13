@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { ORPCError } from "@orpc/server";
+import { logger } from "@stariva/config";
 import {
   and,
   type CampaignAttribution,
@@ -15,11 +16,12 @@ import {
   workshopOrderNotifications,
   workshops,
 } from "@stariva/db";
+import { sendKitAccessEmail } from "@stariva/emails";
 import { kitWorkshopOrderId } from "@stariva/web-api";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
-import { sendBriefForOrder } from "./brief";
+import { accessUrl, errorReason, recipientColumns } from "./brief";
 
 /** Полная оплата согласно productOrderStatus в схеме commerce/orders. */
 const PAID = new Set<string>([
@@ -78,16 +80,47 @@ async function buyerId(db: Database, email: string, name: string) {
   return found.id;
 }
 
+/** Сохраняет отметку отдельно от доставки: эту операцию безопасно повторять. */
+async function recordAccessSent(db: Database, orderId: string) {
+  try {
+    await db
+      .insert(workshopOrderNotifications)
+      .values({
+        orderId,
+        kind: "booked",
+        channel: "email",
+        sentAt: sql`now()`,
+        leaseUntil: null,
+      })
+      .onConflictDoUpdate({
+        target: [
+          workshopOrderNotifications.orderId,
+          workshopOrderNotifications.kind,
+          workshopOrderNotifications.channel,
+        ],
+        set: { sentAt: sql`now()`, leaseUntil: null },
+      });
+    return { recorded: true, warning: null };
+  } catch (error) {
+    logger.error("workshops.kit_access.mark_failed", error, { orderId });
+    return {
+      recorded: false,
+      warning: "Письмо отправлено, но отметка не сохранена",
+    };
+  }
+}
+
 /**
- * Отправляет PDF-бриф мастер-класса покупателю набора — кнопка в заказе.
- * Если доступ к урокам ещё не открыт (заказ оплачен до привязки мастер-класса
- * или письмо при оплате не ушло), сначала открывает его: создаёт заказ
- * мастер-класса на 0 ₽ с тем же id, что и оплата на сайте, так что второй раз
- * доступ не выдаётся. В письме — PDF и ссылка в кабинет с уроками.
+ * Отправляет покупателю набора письмо с доступом к урокам — кнопка в заказе.
+ * Обычно письмо уходит само при оплате; кнопка нужна, когда оно не дошло.
+ * Если доступ ещё не открыт (заказ оплачен до привязки мастер-класса или
+ * вебхук не сработал), сначала открывает его: создаёт заказ мастер-класса
+ * на 0 ₽ с тем же id, что и оплата на сайте, так что второй раз доступ не
+ * выдаётся. В письме — ссылка в кабинет и пояснение, что коробку привезёт Ozon.
  *
- * @example client.admin.workshops.sendKitBrief({ orderId: "order_1", workshopSlug: "elka-makrame" })
+ * @example client.admin.workshops.sendKitAccess({ orderId: "order_1", workshopSlug: "elka-makrame" })
  */
-export const sendKitBrief = adminProcedure
+export const sendKitAccess = adminProcedure
   .input(
     z.object({
       orderId: z.string().min(1),
@@ -112,10 +145,11 @@ export const sendKitBrief = adminProcedure
     }
     if (!PAID.has(order.status)) {
       throw new ORPCError("BAD_REQUEST", {
-        message: "Заказ не оплачен — бриф отправляем после оплаты",
+        message: "Заказ не оплачен — доступ открываем после оплаты",
       });
     }
 
+    // Мастер-класс должен идти с товаром из этого заказа
     const [linked] = await db
       .select({ id: productOrderItems.id })
       .from(productOrderItems)
@@ -137,17 +171,15 @@ export const sendKitBrief = adminProcedure
     }
 
     const [workshop] = await db
-      .select({ slug: workshops.slug, materialFiles: workshops.materialFiles })
+      .select({
+        slug: workshops.slug,
+        title: workshops.title,
+        releaseAt: workshops.releaseAt,
+      })
       .from(workshops)
       .where(eq(workshops.slug, input.workshopSlug));
     if (!workshop) {
       throw new ORPCError("NOT_FOUND", { message: "Мастер-класс не найден" });
-    }
-    // Проверяем до выдачи доступа: без PDF отправлять нечего
-    if (workshop.materialFiles.length === 0) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "У мастер-класса нет PDF — загрузите бриф в карточке курса",
-      });
     }
 
     const workshopOrderId = kitWorkshopOrderId(order.id, workshop.slug);
@@ -210,36 +242,36 @@ export const sendKitBrief = adminProcedure
       });
     }
 
-    const result = await sendBriefForOrder(db, workshopOrderId);
-    try {
-      // В письме с брифом уже есть ссылка на уроки — письмо о покупке сайт
-      // вдогонку слать не должен. Если бриф не ушёл, отметки нет, и сайт
-      // сам дошлёт письмо о покупке с PDF.
-      await db
-        .insert(workshopOrderNotifications)
-        .values({
-          orderId: workshopOrderId,
-          kind: "booked",
-          channel: "email",
-          sentAt: sql`now()`,
-          leaseUntil: null,
-        })
-        .onConflictDoUpdate({
-          target: [
-            workshopOrderNotifications.orderId,
-            workshopOrderNotifications.kind,
-            workshopOrderNotifications.channel,
-          ],
-          set: { sentAt: sql`now()`, leaseUntil: null },
-        });
-    } catch {
-      return {
-        ...result,
-        warning:
-          result.warning ??
-          "Письмо отправлено, но отметка о покупке не сохранена",
-        opened: !existing,
-      };
+    const [recipient] = await db
+      .select(recipientColumns)
+      .from(orders)
+      .innerJoin(user, eq(user.id, orders.userId))
+      .where(eq(orders.id, workshopOrderId));
+    if (!recipient?.to) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "У покупателя нет email",
+      });
     }
-    return { ...result, opened: !existing };
+    const { to } = recipient;
+    try {
+      // Без ключа идемпотентности: повторная отправка — осознанное действие
+      await sendKitAccessEmail({
+        to,
+        workshopTitle: workshop.title,
+        accessUrl: accessUrl(recipient),
+        // Урок ещё не вышел — в письме дата открытия, а не «смотрите сейчас»
+        releaseAt: workshop.releaseAt,
+      });
+    } catch (error) {
+      logger.error("workshops.kit_access.send_failed", error, {
+        orderId: workshopOrderId,
+      });
+      throw new ORPCError("BAD_GATEWAY", {
+        message: `Письмо не ушло: ${errorReason(error)}`,
+      });
+    }
+    // Отметка «письмо о покупке ушло» не даёт сайту прислать то же письмо
+    // вдогонку
+    const mark = await recordAccessSent(db, workshopOrderId);
+    return { to, ...mark, opened: !existing };
   });

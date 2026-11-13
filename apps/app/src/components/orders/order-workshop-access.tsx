@@ -48,15 +48,15 @@ interface KitWorkshop {
   title: string;
   /** Уроки уже открыты покупателю. */
   granted: boolean;
-  /** Куда ушёл или уйдёт бриф; null — почты нет. */
+  /** Куда ушло или уйдёт письмо с доступом; null — почты нет. */
   email: string | null;
-  hasBrief: boolean;
-  briefSentAt: Date | null;
+  /** Когда покупателю ушло письмо с доступом; null — не уходило. */
+  accessSentAt: Date | null;
 }
 
 /**
- * Один мастер-класс набора: открыт ли доступ, ушёл ли бриф, и кнопка, чтобы
- * отправить его вручную. Первая отправка заодно открывает уроки.
+ * Один мастер-класс набора: открыт ли доступ, ушло ли письмо с доступом, и
+ * кнопка, чтобы отправить его вручную. Первая отправка заодно открывает уроки.
  */
 function KitWorkshopRow({
   orderId,
@@ -67,7 +67,7 @@ function KitWorkshopRow({
 }) {
   const router = useRouter();
   const confirm = useConfirm();
-  const deliveryKey = `kit-brief:${orderId}:${workshop.slug}`;
+  const deliveryKey = `kit-access:${orderId}:${workshop.slug}`;
   const [deliveryWarning, setDeliveryWarning] = useState<string | null>(null);
   const [delivered, setDelivered] = useState(false);
   const [deliveryLoaded, setDeliveryLoaded] = useState(false);
@@ -81,9 +81,10 @@ function KitWorkshopRow({
     }
     setDeliveryLoaded(true);
   }, [deliveryKey]);
-  const wasSent = !!workshop.briefSentAt || delivered;
+  // Письмо ушло, даже если отметка о нём в базе не сохранилась
+  const wasSent = !!workshop.accessSentAt || delivered;
   const send = useMutation({
-    ...orpc.admin.workshops.sendKitBrief.mutationOptions(),
+    ...orpc.admin.workshops.sendKitAccess.mutationOptions(),
     onSuccess: ({ to, warning }) => {
       setDelivered(true);
       setDeliveryWarning(warning);
@@ -94,11 +95,11 @@ function KitWorkshopRow({
         // Сохраняем состояние текущей строки, даже если хранилище недоступно.
       }
       if (warning) toast.warning(`${warning}: ${to}`);
-      else toast.success(`Бриф отправлен на ${to}`);
+      else toast.success(`Доступ отправлен на ${to}`);
       router.refresh();
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Не удалось отправить бриф");
+      toast.error(error.message || "Не удалось отправить доступ");
       // Доступ мог открыться, даже если письмо не ушло
       router.refresh();
     },
@@ -108,8 +109,8 @@ function KitWorkshopRow({
     if (
       wasSent &&
       !(await confirm({
-        title: "Отправить бриф ещё раз?",
-        description: `Бриф уже уходил на ${workshop.email ?? "почту покупателя"}. Придёт ещё одно письмо с PDF.`,
+        title: "Отправить доступ ещё раз?",
+        description: `Письмо с доступом уже уходило на ${workshop.email ?? "почту покупателя"}. Придёт ещё одно такое же письмо.`,
         confirmLabel: "Отправить",
       }))
     ) {
@@ -127,13 +128,14 @@ function KitWorkshopRow({
         ) : (
           <Badge variant="warning-light">Доступ не открыт</Badge>
         )}
-        {workshop.briefSentAt ? (
+        {workshop.accessSentAt ? (
           <Badge variant="success-light">
-            Бриф отправлен {sentFormat.format(workshop.briefSentAt)}
+            Письмо отправлено {sentFormat.format(workshop.accessSentAt)}
           </Badge>
         ) : (
-          workshop.hasBrief &&
-          !delivered && <Badge variant="warning-light">Бриф не отправлен</Badge>
+          !delivered && (
+            <Badge variant="warning-light">Письмо не отправлено</Badge>
+          )
         )}
       </div>
       {deliveryWarning && (
@@ -144,14 +146,10 @@ function KitWorkshopRow({
       {workshop.email && (
         <p className="text-muted-foreground break-all">{workshop.email}</p>
       )}
-      {!workshop.hasBrief ? (
+      {!workshop.email ? (
         <p className="text-muted-foreground">
-          У мастер-класса нет PDF — загрузите бриф в карточке курса.
-        </p>
-      ) : !workshop.email ? (
-        <p className="text-muted-foreground">
-          У заказа нет почты — отправить бриф некуда. Выдайте код и напечатайте
-          купон.
+          У заказа нет почты — отправить доступ некуда. Выдайте код и
+          напечатайте купон.
         </p>
       ) : (
         <Button
@@ -164,7 +162,7 @@ function KitWorkshopRow({
             ? "Отправляем…"
             : wasSent
               ? "Отправить ещё раз"
-              : "Отправить бриф"}
+              : "Отправить доступ на почту"}
         </Button>
       )}
     </li>
@@ -172,10 +170,11 @@ function KitWorkshopRow({
 }
 
 /**
- * Мастер-класс к набору из заказа. Обычно делать ничего не нужно: при оплате
- * уроки и бриф сами уходят на почту покупателя. Не ушли — бриф отправляется
- * кнопкой. Купон с кодом — запасной путь, когда почты у заказа нет или
- * мастер-класс к товару ещё не привязан.
+ * Мастер-класс к набору из заказа. Обычно делать ничего не нужно: доступ к
+ * урокам сам уходит на почту покупателя сразу после оплаты, а коробку
+ * привозит Ozon. Письмо не ушло — отправьте его кнопкой. Купон с кодом —
+ * запасной путь, когда почты у заказа нет или мастер-класс к товару ещё не
+ * привязан.
  */
 export function OrderWorkshopAccess({
   orderId,
@@ -190,13 +189,12 @@ export function OrderWorkshopAccess({
   /** Почта покупателя из заказа; null — её нет. */
   email: string | null;
   /** Мастер-классы, привязанные к товарам заказа. */
-  linked: { slug: string; title: string; hasBrief: boolean }[];
+  linked: { slug: string; title: string }[];
   /** Уже открыты на почту покупателя. */
   granted: {
     workshopSlug: string;
     email: string | null;
-    hasBrief: boolean;
-    briefSentAt: Date | null;
+    accessSentAt: Date | null;
   }[];
   codes: OrderAccessCode[];
 }) {
@@ -214,8 +212,7 @@ export function OrderWorkshopAccess({
         row.workshopSlug,
       granted: true,
       email: row.email ?? email,
-      hasBrief: row.hasBrief,
-      briefSentAt: row.briefSentAt,
+      accessSentAt: row.accessSentAt,
     })),
     ...linked
       .filter((w) => !granted.some((row) => row.workshopSlug === w.slug))
@@ -224,8 +221,7 @@ export function OrderWorkshopAccess({
         title: w.title,
         granted: false,
         email,
-        hasBrief: w.hasBrief,
-        briefSentAt: null,
+        accessSentAt: null,
       })),
   ];
 
@@ -246,7 +242,7 @@ export function OrderWorkshopAccess({
         <CardTitle>Мастер-класс к набору</CardTitle>
         <CardDescription>
           {linked.length > 0
-            ? "После оплаты уроки и бриф сами уходят на почту покупателя. Если письмо не ушло, отправьте бриф кнопкой — в нём PDF и ссылка на уроки. Купон с кодом нужен, только если почты нет."
+            ? "После оплаты доступ к урокам сам уходит на почту покупателя, а коробку привозит Ozon. Если письмо не ушло, отправьте его кнопкой. Купон с кодом нужен, только если почты нет."
             : "К товарам заказа мастер-класс не привязан — привяжите его в карточке товара или выдайте код и напечатайте купон в коробку."}
         </CardDescription>
       </CardHeader>
