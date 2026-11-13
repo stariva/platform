@@ -94,11 +94,30 @@ test("checks the phone against Ozon Delivery", async () => {
   expect(seen).toEqual(["+7 900 123-45-67"]);
 });
 
-test("asks for a phone before calling Ozon", async () => {
-  const client = wireClient({ services: { checkout: checkout() } });
-  const [error] = await safe(client.checkout.checkPhone({ phone: "12" }));
-  expect(error).toMatchObject({ code: "BAD_REQUEST" });
-  expect(firstIssue(error)).toBe("Укажите телефон");
+test("asks for a full phone before calling Ozon", async () => {
+  let calls = 0;
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        checkPhone: async () => {
+          calls += 1;
+          return { status: "ok", check: { available: true } };
+        },
+      }),
+    },
+  });
+  // Слишком короткий, неполный (+7 и код) и с лишним текстом вместо цифр
+  for (const phone of ["12", "+7 900", "+7 (900) 12", "телефон"]) {
+    const [error] = await safe(client.checkout.checkPhone({ phone }));
+    expect(error).toMatchObject({ code: "BAD_REQUEST" });
+    expect(firstIssue(error)).toBe("Укажите телефон полностью");
+  }
+  expect(calls).toBe(0);
+
+  expect(
+    await client.checkout.checkPhone({ phone: "8 (900) 123-45-67" }),
+  ).toEqual({ available: true });
+  expect(calls).toBe(1);
 });
 
 test("reports missing Ozon keys and Ozon failures differently", async () => {

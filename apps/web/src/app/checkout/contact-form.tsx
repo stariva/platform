@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { DELIVERY_PHONE_ERROR, isDeliveryPhone } from "@stariva/web-api";
 import { ArrowRightIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -26,7 +27,11 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const contactFormSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(120),
-  phone: z.string().trim().min(5, "Введите телефон").max(32),
+  phone: z
+    .string()
+    .trim()
+    .max(32)
+    .refine(isDeliveryPhone, DELIVERY_PHONE_ERROR),
   email: z
     .string()
     .trim()
