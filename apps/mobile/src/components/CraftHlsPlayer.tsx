@@ -18,6 +18,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { z } from "zod";
 import { formatTime } from "@/lib/format";
 import { readJson, writeJson } from "@/lib/storage";
 
@@ -57,10 +58,11 @@ export interface CraftHlsPlayerProps {
   ref?: Ref<CraftHlsPlayerHandle>;
 }
 
-interface LocalProgress {
-  positionSeconds: number;
-  savedAt: number;
-}
+const localProgressSchema = z.object({
+  positionSeconds: z.number().finite().nonnegative(),
+  savedAt: z.number().finite().nonnegative(),
+});
+type LocalProgress = z.infer<typeof localProgressSchema>;
 
 type WakeState = "off" | "on" | "unsupported";
 
@@ -108,6 +110,19 @@ export function CraftHlsPlayer({
   // Секунда, на которую вернуться после смены источника (новая ссылка)
   const resumeAt = useRef<number | null>(null);
   const lastSavedAt = useRef(-1);
+  const progress = useRef<ProgressSnapshot | null>(null);
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
+  const nativeRefreshes = useRef(0);
+
+  const captureProgress = useCallback((video: HTMLVideoElement) => {
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      progress.current = {
+        positionSeconds: video.currentTime,
+        durationSeconds: video.duration,
+      };
+    }
+  }, []);
   // Серверная позиция читается один раз: обновление данных урока не должно
   // перезапускать видео
   const startAtRef = useRef(startAt);
@@ -130,14 +145,16 @@ export function CraftHlsPlayer({
   const saveProgress = useCallback(
     (completed?: boolean) => {
       const video = videoRef.current;
-      if (!video || !Number.isFinite(video.duration)) return;
-      const position = Math.floor(video.currentTime);
+      if (video) captureProgress(video);
+      const current = progress.current;
+      if (!current) return;
+      const position = Math.floor(current.positionSeconds);
       // Ничего не сдвинулось — не шлём то же самое
       if (position === lastSavedAt.current && completed === undefined) return;
       lastSavedAt.current = position;
       const snapshot: ProgressSnapshot = {
         positionSeconds: position,
-        durationSeconds: Math.floor(video.duration),
+        durationSeconds: Math.floor(current.durationSeconds),
         ...(completed ? { completed } : {}),
       };
       void writeJson(`stariva:progress:${progressKey}`, {
@@ -146,7 +163,7 @@ export function CraftHlsPlayer({
       } satisfies LocalProgress);
       latest.current.onSaveProgress(snapshot);
     },
-    [progressKey],
+    [progressKey, captureProgress],
   );
 
   // Автосохранение раз в 10 секунд, пока видео идёт
@@ -180,6 +197,16 @@ export function CraftHlsPlayer({
     setFailed(false);
     let cancelled = false;
     let hls: Hls | null = null;
+    let onMeta: (() => void) | undefined;
+    const onNativeError = () => {
+      if (cancelled) return;
+      setFailed(true);
+      resumeAt.current = video.currentTime;
+      if (nativeRefreshes.current < 1) {
+        nativeRefreshes.current += 1;
+        latest.current.onSourceExpired?.();
+      }
+    };
 
     // Сначала то, что сохранил сервер, но если запись не дошла до него,
     // берём локальную копию: так прогресс не теряется без сети
@@ -188,17 +215,22 @@ export function CraftHlsPlayer({
         resumeAt.current ??
         Math.max(
           startAtRef.current,
-          (await readJson<LocalProgress>(`stariva:progress:${progressKey}`))
-            ?.positionSeconds ?? 0,
+          (
+            await readJson(
+              `stariva:progress:${progressKey}`,
+              localProgressSchema,
+            )
+          )?.positionSeconds ?? 0,
         );
-      resumeAt.current = null;
       if (cancelled) return;
+      resumeAt.current = null;
 
-      const onMeta = () => {
+      onMeta = () => {
         if (wanted > 0 && wanted < video.duration - 1) {
           video.currentTime = wanted;
         }
-        video.playbackRate = speed;
+        video.playbackRate = speedRef.current;
+        captureProgress(video);
       };
       video.addEventListener("loadedmetadata", onMeta, { once: true });
 
@@ -211,7 +243,14 @@ export function CraftHlsPlayer({
             resumeAt.current = video.currentTime;
             latest.current.onSourceExpired?.();
           } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls?.startLoad();
+            if (
+              data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+              data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT
+            ) {
+              setFailed(true);
+            } else {
+              hls?.startLoad();
+            }
           } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
             hls?.recoverMediaError();
           } else {
@@ -222,6 +261,7 @@ export function CraftHlsPlayer({
         hls.attachMedia(video);
       } else {
         // iOS WKWebView без MSE играет HLS сам; MP4 — тем более
+        video.addEventListener("error", onNativeError);
         video.src = src.url;
       }
     };
@@ -229,38 +269,62 @@ export function CraftHlsPlayer({
 
     return () => {
       cancelled = true;
+      captureProgress(video);
+      saveProgress();
+      resumeAt.current = progress.current?.positionSeconds ?? null;
+      if (onMeta) video.removeEventListener("loadedmetadata", onMeta);
+      video.removeEventListener("error", onNativeError);
       hls?.destroy();
       video.removeAttribute("src");
       video.load();
     };
-    // speed читается один раз при старте; смена скорости — в отдельном эффекте
-  }, [src.url, src.type, progressKey, attempt]);
+  }, [src.url, src.type, progressKey, attempt, captureProgress, saveProgress]);
 
   /* ---------- Wake Lock ---------- */
 
-  const releaseWake = useCallback(async () => {
-    try {
-      await KeepAwake.allowSleep();
-    } catch {
-      // нечего отпускать
-    }
+  const wakeOperation = useRef(0);
+  const wakeQueue = useRef(Promise.resolve());
+
+  const releaseWake = useCallback(() => {
+    ++wakeOperation.current;
     setWake((state) => (state === "unsupported" ? state : "off"));
+    wakeQueue.current = wakeQueue.current.then(async () => {
+      try {
+        await KeepAwake.allowSleep();
+      } catch {
+        // нечего отпускать
+      }
+    });
+    return wakeQueue.current;
   }, []);
 
-  const acquireWake = useCallback(async () => {
-    try {
-      const { isSupported } = await KeepAwake.isSupported();
-      if (!isSupported) return setWake("unsupported");
-      await KeepAwake.keepAwake();
-      setWake("on");
-    } catch {
-      setWake("unsupported");
-    }
+  const acquireWake = useCallback(() => {
+    const operation = ++wakeOperation.current;
+    wakeQueue.current = wakeQueue.current.then(async () => {
+      if (operation !== wakeOperation.current) return;
+      try {
+        const { isSupported } = await KeepAwake.isSupported();
+        if (operation !== wakeOperation.current) return;
+        if (!isSupported) return setWake("unsupported");
+        await KeepAwake.keepAwake();
+        if (operation !== wakeOperation.current) {
+          await KeepAwake.allowSleep();
+          return;
+        }
+        setWake("on");
+      } catch {
+        if (operation === wakeOperation.current) setWake("unsupported");
+      }
+    });
+    return wakeQueue.current;
   }, []);
 
   useEffect(() => {
     if (playing) void acquireWake();
     else void releaseWake();
+    return () => {
+      void releaseWake();
+    };
   }, [playing, acquireWake, releaseWake]);
 
   // Система снимает блокировку, когда приложение уходит в фон: вернуть её
@@ -274,8 +338,6 @@ export function CraftHlsPlayer({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [playing, acquireWake]);
 
-  useEffect(() => () => void releaseWake(), [releaseWake]);
-
   /* ---------- Скорость и зеркало ---------- */
 
   useEffect(() => {
@@ -283,7 +345,7 @@ export function CraftHlsPlayer({
   }, [speed]);
 
   useEffect(() => {
-    void readJson<boolean>(MIRROR_KEY).then((value) => {
+    void readJson(MIRROR_KEY, z.boolean()).then((value) => {
       if (value) setMirrored(true);
     });
   }, []);
@@ -369,16 +431,19 @@ export function CraftHlsPlayer({
           onClick={togglePlay}
           onPlay={() => setPlaying(true)}
           onPause={() => {
+            void releaseWake();
             setPlaying(false);
             saveProgress();
           }}
           onEnded={() => {
+            void releaseWake();
             setPlaying(false);
             saveProgress(true);
           }}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
           onDurationChange={(e) => setDuration(e.currentTarget.duration)}
           onTimeUpdate={(e) => {
+            captureProgress(e.currentTarget);
             setTime(e.currentTarget.currentTime);
             latest.current.onTimeUpdate?.(e.currentTarget.currentTime);
           }}

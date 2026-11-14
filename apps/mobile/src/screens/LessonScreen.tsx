@@ -32,7 +32,11 @@ interface LessonScreenProps {
  * чек-листом нарезки шнура и списком уроков курса. Тёмная тема включена
  * всегда: экран смотрят подолгу, а свет от телефона не должен слепить.
  */
-export function LessonScreen({
+export function LessonScreen(props: LessonScreenProps) {
+  return <LessonContent key={`${props.slug}:${props.lessonId}`} {...props} />;
+}
+
+function LessonContent({
   slug,
   lessonId,
   onSelectLesson,
@@ -46,6 +50,57 @@ export function LessonScreen({
     queryKey: ["lesson", slug, lessonId],
     queryFn: () => api.account.lessonDetails({ slug, lessonId }),
   });
+
+  const [checked, setChecked] = useState<Set<string> | null>(null);
+  const pending = useRef<string[] | null>(null);
+  const sending = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+
+  const flushChecklist = useCallback(async () => {
+    window.clearTimeout(timer.current);
+    if (sending.current) return;
+    sending.current = true;
+    try {
+      while (pending.current !== null) {
+        const snapshot = pending.current;
+        pending.current = null;
+        try {
+          await api.account.saveLessonChecklist(
+            { slug, lessonId, checkedMaterials: snapshot },
+            { context: { keepalive: true } },
+          );
+        } catch {
+          // Более свежий снимок включает все изменения и имеет приоритет.
+          if (pending.current === null) {
+            pending.current = snapshot;
+            break;
+          }
+        }
+      }
+    } finally {
+      sending.current = false;
+    }
+  }, [slug, lessonId]);
+
+  useEffect(
+    () => () => {
+      void flushChecklist();
+    },
+    [flushChecklist],
+  );
+
+  const toggleMaterial = (id: string) => {
+    const next = new Set(checked ?? details.data?.checkedMaterials ?? []);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setChecked(next);
+    pending.current = [...next];
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(
+      () => void flushChecklist(),
+      CHECKLIST_SAVE_DELAY_MS,
+    );
+  };
 
   const video = useQuery({
     queryKey: ["lesson-video", slug, lessonId],
@@ -158,10 +213,10 @@ export function LessonScreen({
           <MaterialsChecklist
             // Отметки привязаны к уроку: при смене урока список начинается заново
             key={lessonId}
-            slug={slug}
-            lessonId={lessonId}
             items={lesson.checklist}
-            initiallyChecked={lesson.checkedMaterials}
+            checked={checked ?? new Set(lesson.checkedMaterials)}
+            onToggle={toggleMaterial}
+            onFlush={flushChecklist}
           />
         )}
         {tab === "lessons" && (
@@ -244,49 +299,23 @@ function ChapterList({
 }
 
 function MaterialsChecklist({
-  slug,
-  lessonId,
   items,
-  initiallyChecked,
+  checked,
+  onToggle,
+  onFlush,
 }: {
-  slug: string;
-  lessonId: string;
   items: { id: string; label: string }[];
-  initiallyChecked: string[];
+  checked: Set<string>;
+  onToggle: (id: string) => void;
+  onFlush: () => Promise<void>;
 }) {
-  const [checked, setChecked] = useState(() => new Set(initiallyChecked));
-  const timer = useRef<number | undefined>(undefined);
-  // Что ушло на сервер, чтобы не слать одно и то же при выходе
-  const pending = useRef<string[] | null>(null);
-
-  const flush = useCallback(() => {
-    window.clearTimeout(timer.current);
-    const checkedMaterials = pending.current;
-    if (!checkedMaterials) return;
-    pending.current = null;
-    api.account
-      .saveLessonChecklist(
-        { slug, lessonId, checkedMaterials },
-        { context: { keepalive: true } },
-      )
-      .catch(() => {
-        // Следующая отметка отправит весь список заново
-        pending.current = checkedMaterials;
-      });
-  }, [slug, lessonId]);
-
-  // Выход с вкладки или экрана не должен терять последние отметки
-  useEffect(() => flush, [flush]);
-
-  const toggle = (id: string) => {
-    const next = new Set(checked);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setChecked(next);
-    pending.current = [...next];
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(flush, CHECKLIST_SAVE_DELAY_MS);
-  };
+  // Выход с вкладки отправляет последний снимок через общую очередь урока.
+  useEffect(
+    () => () => {
+      void onFlush();
+    },
+    [onFlush],
+  );
 
   if (items.length === 0) {
     return <Empty>Список материалов для этого урока не заполнен</Empty>;
@@ -306,7 +335,7 @@ function MaterialsChecklist({
               <button
                 type="button"
                 aria-pressed={isChecked}
-                onClick={() => toggle(item.id)}
+                onClick={() => onToggle(item.id)}
                 className={`flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 py-2 text-left ring-1 ${
                   isChecked ? "bg-sage/20 ring-sage" : "bg-surface ring-line"
                 }`}

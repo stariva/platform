@@ -24,7 +24,12 @@ function App() {
     <LessonScreen
       slug={slug}
       lessonId={lessonId}
-      onSelectLesson={setLessonId}
+      onSelectLesson={(id) => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("lesson", id);
+        window.history.replaceState(window.history.state, "", url);
+        setLessonId(id);
+      }}
       onBack={() => window.history.back()}
     />
   );
