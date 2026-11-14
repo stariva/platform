@@ -317,7 +317,15 @@ export function AccessTicket({ ticket }: { ticket: AccessTicketData }) {
           Приятного плетения! Ольга
         </p>
         {ticket.note && (
-          <p style={{ marginTop: "2mm", fontSize: "7pt" }}>{ticket.note}</p>
+          <p
+            style={{
+              marginTop: "2mm",
+              fontSize: "7pt",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {ticket.note}
+          </p>
         )}
       </div>
     </>
