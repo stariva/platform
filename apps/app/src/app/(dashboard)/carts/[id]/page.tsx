@@ -14,13 +14,14 @@ import {
 import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CartSourceBlock } from "~/components/carts/cart-source";
 import {
   ACTION_LABELS,
   cartTotal,
   optionsLabel,
   visitorSummary,
 } from "~/components/carts/cart-meta";
+import { CartSourceBlock } from "~/components/carts/cart-source";
+import { RemoveCartEvent } from "~/components/carts/remove-cart-event";
 import { SiteHeader } from "~/components/layout";
 import {
   dateTime,
@@ -191,6 +192,7 @@ export default async function CartPage({
                   <TableHead>Что</TableHead>
                   <TableHead>Реклама</TableHead>
                   <TableHead>Откуда</TableHead>
+                  <TableHead className="w-px" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -241,6 +243,12 @@ export default async function CartPage({
                       {guestPlace(event.visitor) && (
                         <div>{guestPlace(event.visitor)}</div>
                       )}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <RemoveCartEvent
+                        id={event.id}
+                        label={`${ACTION_LABELS[event.action]}, ${dateTimeSeconds.format(event.createdAt)}`}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
