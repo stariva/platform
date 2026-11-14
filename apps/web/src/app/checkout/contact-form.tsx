@@ -1,7 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { DELIVERY_PHONE_ERROR, isDeliveryPhone } from "@stariva/web-api/contract";
+import {
+  DELIVERY_PHONE_ERROR,
+  isDeliveryPhone,
+} from "@stariva/web-api/contract";
 import { ArrowRightIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -32,12 +35,7 @@ export const contactFormSchema = z.object({
     .trim()
     .max(32)
     .refine(isDeliveryPhone, DELIVERY_PHONE_ERROR),
-  email: z
-    .string()
-    .trim()
-    .email("Некорректный email")
-    .optional()
-    .or(z.literal("")),
+  email: z.string().trim().min(1, "Введите email").email("Некорректный email"),
   comment: z.string().trim().max(1500, "Не больше 1500 символов").optional(),
   /** Набор в подарок: код доступа будет в коробке, а не на почте. */
   gift: z.boolean().optional(),
@@ -180,12 +178,7 @@ export function ContactForm({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>
-                  Email{" "}
-                  <span className="font-normal text-taupe">
-                    — необязательно
-                  </span>
-                </FormLabel>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input
                     type="email"

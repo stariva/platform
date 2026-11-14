@@ -214,7 +214,9 @@ function deliveryDetails(order: ProductOrderRow) {
   const label = needsDeliveryQuote(order)
     ? "Пункт выдачи Ozon — выберете, и посчитаем доставку"
     : order.deliveryMethod === "manual"
-      ? "Способ и стоимость согласует мастер"
+      ? order.kind === "stock"
+        ? "Мастер отправит заказ сама — доставка бесплатно"
+        : "Способ и стоимость согласует мастер"
       : order.deliveryMethod === "courier"
         ? "Курьером Ozon"
         : method?.type === "POSTAMAT"
