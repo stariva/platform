@@ -17,21 +17,23 @@ import { adminProcedure } from "../../../orpc";
  */
 export const removeEvent = adminProcedure
   .input(z.object({ id: z.string().min(1).max(64) }))
-  .handler(async ({ context, input }) => {
-    const [removed] = await context.db
-      .delete(cartEvents)
-      .where(eq(cartEvents.id, input.id))
-      .returning({ id: cartEvents.id, cartId: cartEvents.cartId });
-    if (!removed) {
-      throw new ORPCError("NOT_FOUND", { message: "Событие не найдено" });
-    }
-    const [left] = await context.db
-      .select({ value: count() })
-      .from(cartEvents)
-      .where(eq(cartEvents.cartId, removed.cartId));
-    return {
-      id: removed.id,
-      cartId: removed.cartId,
-      remaining: left?.value ?? 0,
-    };
-  });
+  .handler(async ({ context, input }) =>
+    context.db.transaction(async (tx) => {
+      const [removed] = await tx
+        .delete(cartEvents)
+        .where(eq(cartEvents.id, input.id))
+        .returning({ id: cartEvents.id, cartId: cartEvents.cartId });
+      if (!removed) {
+        throw new ORPCError("NOT_FOUND", { message: "Событие не найдено" });
+      }
+      const [left] = await tx
+        .select({ value: count() })
+        .from(cartEvents)
+        .where(eq(cartEvents.cartId, removed.cartId));
+      return {
+        id: removed.id,
+        cartId: removed.cartId,
+        remaining: left?.value ?? 0,
+      };
+    }),
+  );
