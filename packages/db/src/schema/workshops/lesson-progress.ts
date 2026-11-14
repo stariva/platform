@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -22,6 +23,11 @@ export const lessonProgress = pgTable(
     positionSeconds: integer("position_seconds").notNull().default(0),
     durationSeconds: integer("duration_seconds").notNull().default(0),
     completed: boolean("completed").notNull().default(false),
+    // Отмеченные в чек-листе нарезки материалы: id из lesson.materialsChecklist
+    checkedMaterials: text("checked_materials")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     updatedAt: timestamp("updated_at")
       .$defaultFn(() => new Date())
       .notNull(),

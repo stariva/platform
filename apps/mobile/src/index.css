@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/*
+ * Палитра Stariva: льняной фон и графитово-хвойная тёмная тема. Экран
+ * плеера включает тёмную тему сам (класс .theme-dark) — глазам комфортнее,
+ * когда руки заняты и телефон лежит перед лицом.
+ */
+:root {
+  --bg: #faf7f2;
+  --surface: #ffffff;
+  --fg: #2a2723;
+  --muted: #6f675d;
+  --line: #e6dfd4;
+  --accent: #c86d51;
+  --accent-fg: #ffffff;
+  --sage: #5c7457;
+}
+
+.theme-dark {
+  --bg: #181a18;
+  --surface: #222522;
+  --fg: #f3efe8;
+  --muted: #a8a196;
+  --line: #333733;
+  --accent: #d9856a;
+  --accent-fg: #181a18;
+  --sage: #8aa885;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-sage: var(--sage);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}

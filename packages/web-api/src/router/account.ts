@@ -6,6 +6,12 @@ import {
   lessonExists,
   upsertLessonProgress,
 } from "../services/course-access";
+import {
+  getLatestRelease,
+  getLessonDetails,
+  listMobileCourses,
+  saveLessonChecklist as saveChecklist,
+} from "../services/mobile-courses";
 import { saveWorkshopReview as saveReview } from "../services/workshop-reviews";
 
 const workshopAccess = account.workshopAccess.handler(
@@ -39,6 +45,43 @@ const saveLessonProgress = account.saveLessonProgress.handler(
     });
   },
 );
+
+const myCourses = account.myCourses.handler(async ({ context }) => {
+  const user = context.session?.user;
+  if (!user) throw new ORPCError("UNAUTHORIZED");
+  return listMobileCourses(user.id);
+});
+
+const lessonDetails = account.lessonDetails.handler(
+  async ({ input, context, errors }) => {
+    const result = await getLessonDetails({
+      userId: context.session?.user.id ?? null,
+      ...input,
+    });
+    switch (result.status) {
+      case "ok":
+        return result.details;
+      case "not_found":
+        throw errors.LESSON_NOT_FOUND();
+      case "unauthorized":
+        throw new ORPCError("UNAUTHORIZED");
+      case "forbidden":
+        throw new ORPCError("FORBIDDEN");
+    }
+  },
+);
+
+const saveLessonChecklist = account.saveLessonChecklist.handler(
+  async ({ input, context, errors }) => {
+    const user = context.session?.user;
+    if (!user) throw new ORPCError("UNAUTHORIZED");
+    const result = await saveChecklist({ userId: user.id, ...input });
+    if (result === "not_found") throw errors.LESSON_NOT_FOUND();
+    if (result === "forbidden") throw new ORPCError("FORBIDDEN");
+  },
+);
+
+const latestRelease = account.latestRelease.handler(() => getLatestRelease());
 
 const lessonVideo = account.lessonVideo.handler(
   async ({ input, context, errors }) => {
@@ -144,6 +187,10 @@ const saveWorkshopReview = account.saveWorkshopReview.handler(
 
 export const accountRouter = {
   workshopAccess,
+  myCourses,
+  lessonDetails,
+  saveLessonChecklist,
+  latestRelease,
   saveLessonProgress,
   lessonVideo,
   materialUrl,
