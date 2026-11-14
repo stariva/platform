@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import type { LessonDetails } from "@stariva/web-api/contract";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronLeft, Circle, CircleCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -19,6 +20,72 @@ const TABS: { id: Tab; label: string }[] = [
 
 /** Пауза после последней отметки, чтобы не слать запрос на каждый тап. */
 const CHECKLIST_SAVE_DELAY_MS = 600;
+
+interface ChecklistQueue {
+  /** Самый свежий снимок, который ещё не ушёл на сервер. */
+  pending: string[] | null;
+  sending: boolean;
+  timer: number | undefined;
+}
+
+/**
+ * Очередь сохранения чек-листа по урокам живёт вне компонента: если выйти из
+ * урока, пока запрос в пути, и вернуться, новый экран встаёт в ту же очередь
+ * и не обгоняет старый запрос. Сервер заменяет массив целиком, поэтому порядок
+ * записей важен.
+ */
+const checklistQueues = new Map<string, ChecklistQueue>();
+
+function checklistQueue(slug: string, lessonId: string): ChecklistQueue {
+  const key = `${slug}:${lessonId}`;
+  let queue = checklistQueues.get(key);
+  if (!queue) {
+    queue = { pending: null, sending: false, timer: undefined };
+    checklistQueues.set(key, queue);
+  }
+  return queue;
+}
+
+function scheduleChecklistSave(
+  slug: string,
+  lessonId: string,
+  snapshot: string[],
+) {
+  const queue = checklistQueue(slug, lessonId);
+  queue.pending = snapshot;
+  window.clearTimeout(queue.timer);
+  queue.timer = window.setTimeout(
+    () => void flushChecklistSave(slug, lessonId),
+    CHECKLIST_SAVE_DELAY_MS,
+  );
+}
+
+async function flushChecklistSave(slug: string, lessonId: string) {
+  const queue = checklistQueue(slug, lessonId);
+  window.clearTimeout(queue.timer);
+  if (queue.sending) return;
+  queue.sending = true;
+  try {
+    while (queue.pending !== null) {
+      const snapshot = queue.pending;
+      queue.pending = null;
+      try {
+        await api.account.saveLessonChecklist(
+          { slug, lessonId, checkedMaterials: snapshot },
+          { context: { keepalive: true } },
+        );
+      } catch {
+        // Более свежий снимок включает все изменения и имеет приоритет
+        if (queue.pending === null) {
+          queue.pending = snapshot;
+          break;
+        }
+      }
+    }
+  } finally {
+    queue.sending = false;
+  }
+}
 
 interface LessonScreenProps {
   slug: string;
@@ -51,37 +118,15 @@ function LessonContent({
     queryFn: () => api.account.lessonDetails({ slug, lessonId }),
   });
 
+  const queryClient = useQueryClient();
   const [checked, setChecked] = useState<Set<string> | null>(null);
-  const pending = useRef<string[] | null>(null);
-  const sending = useRef(false);
-  const timer = useRef<number | undefined>(undefined);
 
-  const flushChecklist = useCallback(async () => {
-    window.clearTimeout(timer.current);
-    if (sending.current) return;
-    sending.current = true;
-    try {
-      while (pending.current !== null) {
-        const snapshot = pending.current;
-        pending.current = null;
-        try {
-          await api.account.saveLessonChecklist(
-            { slug, lessonId, checkedMaterials: snapshot },
-            { context: { keepalive: true } },
-          );
-        } catch {
-          // Более свежий снимок включает все изменения и имеет приоритет.
-          if (pending.current === null) {
-            pending.current = snapshot;
-            break;
-          }
-        }
-      }
-    } finally {
-      sending.current = false;
-    }
-  }, [slug, lessonId]);
+  const flushChecklist = useCallback(
+    () => flushChecklistSave(slug, lessonId),
+    [slug, lessonId],
+  );
 
+  // Выход с экрана отправляет последний снимок через общую очередь урока
   useEffect(
     () => () => {
       void flushChecklist();
@@ -94,12 +139,12 @@ function LessonContent({
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setChecked(next);
-    pending.current = [...next];
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(
-      () => void flushChecklist(),
-      CHECKLIST_SAVE_DELAY_MS,
+    // Кеш урока тоже обновляем: при возврате на экран отметки не откатятся
+    queryClient.setQueryData<LessonDetails>(
+      ["lesson", slug, lessonId],
+      (data) => data && { ...data, checkedMaterials: [...next] },
     );
+    scheduleChecklistSave(slug, lessonId, [...next]);
   };
 
   const video = useQuery({
