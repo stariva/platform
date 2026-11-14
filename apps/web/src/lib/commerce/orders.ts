@@ -54,7 +54,13 @@ export interface CreateProductOrderInput {
   delivery: DeliverySelection;
   /** Выбранный пункт выдачи — чтобы мастер видел его адрес, а не только id. */
   pickupPoint?: PickupPoint | null;
-  checkout: DeliveryCheckoutResponse;
+  /** Подпись пункта от покупателя — если Ozon не отдал адрес, мастеру нужен хоть какой-то. */
+  pointLabel?: string;
+  /**
+   * Расчёт Ozon. null — Ozon не ответил: заказ принимается с ручной доставкой,
+   * бесплатной для покупателя, отправление мастер создаст сама.
+   */
+  checkout: DeliveryCheckoutResponse | null;
 }
 
 export interface MadeToOrderLineInput {
@@ -183,7 +189,7 @@ export async function createProductOrder(
     (sum, i) => sum + i.price * i.quantity,
     0,
   );
-  const amountDelivery = input.checkout.deliveryPriceKopecks;
+  const amountDelivery = input.checkout?.deliveryPriceKopecks ?? 0;
   const amountTotal = amountProducts + amountDelivery;
   assertValidOrderTotal(amountTotal);
 
@@ -204,7 +210,9 @@ export async function createProductOrder(
       currency: "RUB",
       customerNotes: input.comment || null,
       gift: input.gift ?? false,
-      deliveryMethod: input.delivery.method,
+      // Без расчёта Ozon отправление создаётся вручную — заказ «manual»,
+      // но пункт, который выбрал покупатель, сохраняем
+      deliveryMethod: input.checkout ? input.delivery.method : "manual",
       deliveryPointId:
         input.delivery.method === "pickup" ? input.delivery.pointId : null,
       deliveryAddress:
@@ -214,7 +222,8 @@ export async function createProductOrder(
               lat: input.delivery.latitude,
               lng: input.delivery.longitude,
             }
-          : pickupPointAddress(input.pickupPoint),
+          : (pickupPointAddress(input.pickupPoint) ??
+            (input.pointLabel ? { address: input.pointLabel } : null)),
       checkoutSnapshot: input.checkout,
     })
     .returning({ number: productOrders.number });

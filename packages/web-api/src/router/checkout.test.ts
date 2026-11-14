@@ -6,6 +6,7 @@ const { safe } = await import("@orpc/client");
 const {
   CheckoutCheckFailedError,
   DeliveryNotAvailableError,
+  DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
   OptionsUnavailableError,
@@ -34,6 +35,7 @@ const quote = {
 const createInput = {
   contactName: "Анна",
   contactPhone: "+7 900 123-45-67",
+  contactEmail: "anna@example.com",
   items: [{ productSlug: "elka", quantity: 1 }],
   delivery: { method: "pickup" as const, pointId: "123" },
   personalDataConsent: true as const,
@@ -162,6 +164,51 @@ test("quotes the delivery to the chosen point", async () => {
   ).toEqual(quote);
 });
 
+test("quote passes a manual (Ozon unavailable) delivery through", async () => {
+  const manual = {
+    available: true,
+    deliveryPriceKopecks: 0,
+    shipments: [],
+    manual: true,
+  };
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        quote: async () => ({ status: "ok", quote: manual }),
+      }),
+    },
+  });
+  expect(
+    await client.checkout.quote({
+      contactPhone: "+7 900 123-45-67",
+      items: [{ productSlug: "elka", quantity: 1 }],
+      delivery: { method: "pickup", pointId: "123" },
+    }),
+  ).toEqual(manual);
+});
+
+test("create hands the expected delivery price and point label to the service", async () => {
+  const seen: unknown[] = [];
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        create: async (input) => {
+          seen.push([input.expectedDeliveryKopecks, input.delivery]);
+          return { status: "ok", order: createdOrder };
+        },
+      }),
+    },
+  });
+  await client.checkout.create({
+    ...createInput,
+    delivery: { ...createInput.delivery, pointLabel: "ПВЗ, Москва" },
+    expectedDeliveryKopecks: 0,
+  });
+  expect(seen).toEqual([
+    [0, { method: "pickup", pointId: "123", pointLabel: "ПВЗ, Москва" }],
+  ]);
+});
+
 test("quote tells which items are gone with a 409", async () => {
   const client = wireClient({
     services: {
@@ -272,6 +319,7 @@ test("maps every create failure to its own error", async () => {
     [{ status: "unconfigured" }, PaymentsUnavailableError, 503],
     [{ status: "check_failed" }, CheckoutCheckFailedError, 502],
     [{ status: "delivery_unavailable" }, DeliveryNotAvailableError, 400],
+    [{ status: "delivery_price_changed" }, DeliveryPriceChangedError, 409],
     [{ status: "payment_failed" }, PaymentCreateFailedError, 502],
     [
       { status: "items_unavailable", unavailableProductSlugs: ["elka"] },
@@ -338,6 +386,21 @@ test("made-to-order failures keep their own texts", async () => {
   );
   expect(failed).toBeInstanceOf(CheckoutCheckFailedError);
   expect((failed as Error).message).toBe("Не удалось проверить заявку");
+});
+
+test("an order needs a valid email for the receipt and status updates", async () => {
+  const client = wireClient({ services: { checkout: checkout() } });
+  const { contactEmail: _, ...withoutEmail } = createInput;
+  const [missing] = await safe(
+    // @ts-expect-error email обязателен в контракте
+    client.checkout.create(withoutEmail),
+  );
+  expect(missing).toMatchObject({ code: "BAD_REQUEST" });
+  expect(firstIssue(missing)).toBe("Укажите email");
+  const [invalid] = await safe(
+    client.checkout.create({ ...createInput, contactEmail: "anna" }),
+  );
+  expect(invalid).toMatchObject({ code: "BAD_REQUEST" });
 });
 
 test("made-to-order requires an email", async () => {
