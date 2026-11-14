@@ -1,7 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { DELIVERY_PHONE_ERROR, isDeliveryPhone } from "@stariva/web-api/contract";
+import {
+  DELIVERY_PHONE_ERROR,
+  isDeliveryPhone,
+} from "@stariva/web-api/contract";
 import { ArrowRightIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
