@@ -35,7 +35,7 @@
     "@turbo/gen": "2.11.11",
     "sherif": "1.13.0",
     "turbo": "2.11.11",
-    "typescript": "1.7.1.0-dev.20261114.1v.20261114.1"
+    "typescript": "7.1.0-dev.20261114.1"
   },
   "packageManager": "bun@1.4.4",
   "workspaces": [
