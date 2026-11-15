@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarClockIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -361,14 +362,31 @@ export function ProductDetails({
                 <div className="mb-4 rounded-xl border border-sage/30 bg-sage/5 p-5">
                   <div className="flex items-center gap-2 label-caps text-[11px] text-sage mb-2">
                     <span className="size-1.5 rounded-full bg-sage" />В наличии
-                    ·{" "}
-                    {shipsFrom
-                      ? `отправка с ${shipsFrom}`
-                      : `отправим за ${IN_STOCK_SHIP_DAYS}`}
+                    {!shipsFrom && <> · отправим за {IN_STOCK_SHIP_DAYS}</>}
                   </div>
                   <h2 className="font-serif text-xl text-espresso mb-1.5">
                     {kit ? "Набор для плетения" : "Готовое изделие"}
                   </h2>
+                  {shipsFrom && (
+                    <div
+                      role="note"
+                      className="mb-3 flex items-center gap-3 rounded-lg border border-terracotta/40 bg-terracotta/10 px-4 py-3"
+                    >
+                      <CalendarClockIcon
+                        className="size-6 shrink-0 text-terracotta"
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                      />
+                      <p className="leading-tight">
+                        <span className="block text-base font-semibold text-espresso">
+                          Отправка с {shipsFrom}
+                        </span>
+                        <span className="block text-[13px] text-taupe">
+                          Заказать и оплатить можно уже сейчас
+                        </span>
+                      </p>
+                    </div>
+                  )}
                   {kit ? (
                     <p className="text-taupe text-[13px] leading-relaxed mb-5">
                       {product.stockAvailable === 1
@@ -377,8 +395,6 @@ export function ProductDetails({
                       . Изделие плетёте сами по видеоуроку. Доступ к уроку
                       придёт на почту сразу после оплаты, а коробку с
                       материалами привезёт Ozon.
-                      {shipsFrom &&
-                        ` Заказать можно уже сейчас: отправим с ${shipsFrom}.`}
                     </p>
                   ) : (
                     <p className="text-taupe text-[13px] leading-relaxed mb-5">

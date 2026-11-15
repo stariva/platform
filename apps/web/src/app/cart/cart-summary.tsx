@@ -2,6 +2,7 @@
 
 import {
   ArrowRightIcon,
+  CalendarClockIcon,
   LockKeyholeIcon,
   PackageCheckIcon,
   RulerIcon,
@@ -100,12 +101,9 @@ export function CartSummary({
 }: CartSummaryProps) {
   const blocked = unavailableCount > 0 || count === 0;
   const copy = COPY[kind];
+  // Дату отправки показываем отдельной плашкой над кнопкой, в списке она лишняя
   const perks = shipsFrom
-    ? copy.perks.map((perk) =>
-        perk.Icon === PackageCheckIcon
-          ? { ...perk, text: `Заказ отправим с ${shipsFrom}` }
-          : perk,
-      )
+    ? copy.perks.filter((perk) => perk.Icon !== PackageCheckIcon)
     : copy.perks;
 
   return (
@@ -134,6 +132,22 @@ export function CartSummary({
             {formatPrice(subtotal / 100)}
           </span>
         </div>
+
+        {shipsFrom && (
+          <div
+            role="note"
+            className="mt-5 flex items-center gap-3 rounded-xl border border-terracotta/40 bg-terracotta/10 px-4 py-3"
+          >
+            <CalendarClockIcon
+              className="size-6 shrink-0 text-terracotta"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+            <p className="text-sm font-semibold leading-snug text-espresso">
+              Заказ отправим с {shipsFrom}
+            </p>
+          </div>
+        )}
 
         {unavailableCount > 0 && (
           <div className="mt-5 rounded-xl bg-parchment px-4 py-3 text-sm text-espresso">
