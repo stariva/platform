@@ -257,6 +257,7 @@ export async function getLatestRelease(): Promise<AppRelease | null> {
   return {
     version: row.version,
     bundleZipUrl: row.bundleZipUrl,
+    bundleChecksum: row.bundleChecksum,
     minNativeVersion: row.minNativeVersion,
     apkDownloadUrl: row.apkDownloadUrl,
     releaseNotes: row.releaseNotes,

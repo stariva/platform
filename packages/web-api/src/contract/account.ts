@@ -154,6 +154,8 @@ export type MobileCourses = z.infer<typeof mobileCoursesSchema>;
 export const appReleaseSchema = z.object({
   version: z.string(),
   bundleZipUrl: z.string(),
+  /** SHA-256 архива бандла (hex); пусто — бандл поставить нельзя. */
+  bundleChecksum: z.string(),
   minNativeVersion: z.string(),
   apkDownloadUrl: z.string().nullable(),
   releaseNotes: z.string(),

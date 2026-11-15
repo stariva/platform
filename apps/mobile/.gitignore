@@ -1,0 +1,6 @@
+# Ключи подписи: потеряете — APK перестанет обновляться поверх прежнего
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+google-services.json

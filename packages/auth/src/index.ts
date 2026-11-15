@@ -3,19 +3,7 @@ import type { BetterAuthOptions, BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
-
-/** Возвращает origin'ы вместе с их www/без-www парами, без дублей. */
-function withWwwVariants(urls: string[]): string[] {
-  const origins = new Set<string>();
-  for (const url of urls) {
-    const { protocol, host } = new URL(url);
-    origins.add(`${protocol}//${host}`);
-    if (host === "localhost" || host.startsWith("localhost:")) continue;
-    const twin = host.startsWith("www.") ? host.slice(4) : `www.${host}`;
-    origins.add(`${protocol}//${twin}`);
-  }
-  return [...origins];
-}
+import { trustedOriginsFor } from "./origins";
 
 /**
  * Адрес из списка администраторов ADMIN_EMAILS (через запятую, без учёта
@@ -102,6 +90,11 @@ export function initAuth<
    * Ключ — путь эндпоинта, например "/sign-up/email".
    */
   rateLimitRules?: Record<string, { window: number; max: number }>;
+  /**
+   * Дополнительные доверенные origin'ы (кроме сайта и его www-варианта),
+   * например `MOBILE_APP_ORIGINS` для приложения. Без `*`: только точные.
+   */
+  extraTrustedOrigins?: readonly string[];
   extraPlugins?: TExtraPlugins;
 }) {
   const config = {
@@ -112,7 +105,10 @@ export function initAuth<
     secret: options.secret,
     // Доверяем и основному домену, и его www-варианту (и наоборот), иначе
     // better-auth отклоняет запросы с "Invalid origin".
-    trustedOrigins: withWwwVariants([options.baseUrl, options.productionUrl]),
+    trustedOrigins: trustedOriginsFor(
+      [options.baseUrl, options.productionUrl],
+      options.extraTrustedOrigins,
+    ),
     /**
      * Built-in rate limiting protects auth endpoints (sign-in, OTP, password
      * reset) from brute-force and abuse. Tune per environment as needed.

@@ -1,6 +1,7 @@
 import { createORPCClient, ORPCError, type StandardUrl } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { WEB_RPC_PATH, type WebClient } from "@stariva/web-api/contract";
+import { tokens } from "@/lib/tokens";
 
 /**
  * Адрес сайта. В браузере и в dev-режиме пусто: запросы идут на тот же адрес
@@ -20,12 +21,19 @@ export const api: WebClient<CallContext> = createORPCClient(
     url: (API_URL
       ? new URL(WEB_RPC_PATH, API_URL).href
       : WEB_RPC_PATH) as StandardUrl,
-    fetch: (url, init, { context }) =>
-      fetch(url, {
+    fetch: async (url, init, { context }) => {
+      // Вход — bearer-токен, а не cookie: cookie сайта из WebView другого
+      // origin не доходят, а `include` потребовал бы Allow-Credentials на сайте
+      const headers = new Headers(init.headers);
+      const token = await tokens.get();
+      if (token) headers.set("authorization", `Bearer ${token}`);
+      return fetch(url, {
         ...init,
-        credentials: "include",
+        headers,
+        credentials: "omit",
         keepalive: context.keepalive ?? false,
-      }),
+      });
+    },
   }),
 );
 

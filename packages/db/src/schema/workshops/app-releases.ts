@@ -10,6 +10,8 @@ export const appReleases = pgTable("app_releases", {
   version: text("version").primaryKey(),
   // Архив бандла в бакете: его скачивает @capgo/capacitor-updater
   bundleZipUrl: text("bundle_zip_url").notNull(),
+  // SHA-256 архива (hex): без него Capgo отказывается скачивать бандл
+  bundleChecksum: text("bundle_checksum").notNull().default(""),
   // Старше этой версии оболочки бандл не запустится — приложение просит APK
   minNativeVersion: text("min_native_version").notNull().default("1.0.0"),
   apkDownloadUrl: text("apk_download_url"),
