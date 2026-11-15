@@ -87,6 +87,10 @@ App Store (куда вести iOS, когда оболочка устарела
    `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
    `ANDROID_KEY_PASSWORD`). **Ключ подписи один на всю жизнь приложения** и
    хранится вне git: APK с другим ключом не встанет поверх установленного.
+   Без локального SDK то же делает workflow «Mobile release»
+   (`.github/workflows/mobile-release.yml`, запуск вручную с `version_code`/
+   `version_name`) — keystore лежит в секретах `ANDROID_KEYSTORE_*`, готовый
+   APK приходит артефактом и GitHub Release.
 3. Поднять `version` бандла и опубликовать **один раз**, уже с готовым APK:
    `bun run release -- --apk <файл> --min-native <новая оболочка> --notes "…"`.
    Версия публикуется однократно, поэтому запускать `release` до появления APK

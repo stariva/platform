@@ -1,0 +1,111 @@
+name: Mobile release
+
+# Собирает подписанный релизный APK «Stariva Мастер-классы» и прикладывает его
+# к GitHub Release. Подпись — keystore из секретов ANDROID_KEYSTORE_* (тот же
+# ключ обязан подписывать все обновления приложения, терять его нельзя).
+#
+# После сборки APK публикуется в app_releases командой
+# `bun run release -- --apk <файл>` (scripts/release.ts заливает его в бакет
+# и проставляет apk_download_url).
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "versionCode — должен расти на каждой сборке"
+        required: true
+        type: string
+      version_name:
+        description: "versionName X.Y.Z (пусто — оставить из build.gradle)"
+        required: false
+        type: string
+      notes:
+        description: "Что нового (текст GitHub Release)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      # Плагины Capacitor 8 собираются под Java 21
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Restore signing keystore
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
+        run: |
+          mkdir -p apps/mobile/android/keystore
+          echo "$ANDROID_KEYSTORE_FILE" | base64 -d > apps/mobile/android/keystore/stariva.keystore
+          echo "ANDROID_KEYSTORE_FILE=$GITHUB_WORKSPACE/apps/mobile/android/keystore/stariva.keystore" >> "$GITHUB_ENV"
+
+      - name: Set version
+        working-directory: apps/mobile/android/app
+        env:
+          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" build.gradle
+          if [ -n "$VERSION_NAME" ]; then
+            sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION_NAME\"/" build.gradle
+          fi
+          grep -E "versionCode|versionName" build.gradle
+
+      - name: Sync web bundle
+        working-directory: apps/mobile
+        run: bun run cap:sync
+
+      - name: Build release APK
+        working-directory: apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEYSTORE_FILE: ${{ env.ANDROID_KEYSTORE_FILE }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Collect APK
+        id: apk
+        working-directory: apps/mobile/android
+        run: |
+          src="app/build/outputs/apk/release/app-release.apk"
+          version_name="$(grep -oP 'versionName "\K[^"]+' app/build.gradle)"
+          version_code="$(grep -oP 'versionCode \K[0-9]+' app/build.gradle)"
+          out="$GITHUB_WORKSPACE/stariva-${version_name}-${version_code}.apk"
+          cp "$src" "$out"
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+          echo "name=stariva-${version_name}-${version_code}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 30
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: mobile-v${{ inputs.version_name || inputs.version_code }}
+          NOTES: ${{ inputs.notes }}
+          APK: ${{ steps.apk.outputs.path }}
+          NAME: ${{ steps.apk.outputs.name }}
+        run: |
+          gh release create "$TAG" "$APK" \
+            --title "$TAG" \
+            --notes "${NOTES:-Релизный APK Stariva Мастер-классы}" \
+            --latest=false || \
+          gh release upload "$TAG" "$APK" --clobber
