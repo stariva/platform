@@ -5,6 +5,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./errors": "./src/errors.ts",
+    "./cors": "./src/cors.ts",
+    "./origins": "./src/origins.ts",
     "./env": "./env.ts"
   },
   "license": "MIT",
@@ -14,7 +16,8 @@
     "lint": "biome lint .",
     "check": "biome check .",
     "generate": "bun --env-file=../../.env x @better-auth/cli generate --config script/auth-cli.ts --output ../db/src/auth-schema.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@stariva/config": "workspace:*",
@@ -25,6 +28,7 @@
   "devDependencies": {
     "@better-auth/cli": "1.4.21",
     "@stariva/tsconfig": "workspace:*",
+    "@types/bun": "1.4.4",
     "@types/node": "26.6.6",
     "typescript": "7.1.0-dev.20261114.1"
   }

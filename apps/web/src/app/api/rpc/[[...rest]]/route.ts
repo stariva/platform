@@ -1,6 +1,7 @@
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { RequestLimitHandlerPlugin } from "@orpc/server/plugins";
+import { corsPreflight, withCors } from "@stariva/auth/cors";
 import { logger } from "@stariva/config";
 import { syncPostboxEvents } from "@stariva/emails";
 import {
@@ -135,4 +136,9 @@ async function handleRequest(request: Request) {
   return matched ? response : new Response("Not found", { status: 404 });
 }
 
-export const POST = handleRequest;
+// CORS — для мобильного приложения (Capacitor), другой origin. Точные origin'ы
+// без `*` и без cookie: приложение входит bearer-токеном (@stariva/auth/cors)
+export const POST = async (request: Request) =>
+  withCors(request, await handleRequest(request));
+
+export const OPTIONS = (request: Request) => corsPreflight(request);

@@ -87,6 +87,7 @@
         "@capacitor/preferences": "^8.0.1",
         "@capgo/capacitor-updater": "^8.54.2",
         "@orpc/client": "2.0.0-beta.50",
+        "@stariva/auth": "workspace:*",
         "@stariva/web-api": "workspace:*",
         "@tanstack/react-query": "^5.107.1",
         "hls.js": "^1.7.4",
@@ -238,6 +239,7 @@
       "devDependencies": {
         "@better-auth/cli": "1.4.21",
         "@stariva/tsconfig": "workspace:*",
+        "@types/bun": "1.4.4",
         "@types/node": "26.6.6",
         "typescript": "7.1.0-dev.20261114.1",
       },

@@ -28,6 +28,37 @@ bun test               # версии, решение об обновлении,
 Адрес API в оболочке: `VITE_API_URL=https://stariva.ru` при сборке. Ссылка на
 App Store (куда вести iOS, когда оболочка устарела): `VITE_IOS_STORE_URL`.
 
+## Вход в аккаунт
+
+Приложение входит в тот же аккаунт, что и сайт: почта → код из письма
+(`LoginScreen`). Регистрации в приложении нет — кабинет создают на stariva.ru,
+где берётся согласие на обработку персональных данных.
+
+**Схема — bearer-токен, не cookie.** Бандл открывается как `https://localhost`
+(Android) и `capacitor://localhost` (iOS), для сайта это другой origin, и cookie
+сессии оттуда не ходят (SameSite=Lax, ITP в iOS, сторонние cookie в Android).
+Поэтому:
+
+1. `POST /api/auth/sign-in/email-otp` отвечает заголовком `set-auth-token`
+   (плагин `bearer` better-auth в `apps/web/src/lib/auth/server.ts`).
+2. Токен лежит в Capacitor Preferences (`src/lib/tokens.ts`) и уходит как
+   `Authorization: Bearer …` во все запросы: и в `/api/rpc` (`src/lib/api.ts`),
+   и в `/api/auth` (`src/lib/auth-client.ts`). Запросы идут с
+   `credentials: "omit"`.
+3. Сайт отвечает на CORS только этим двум origin'ам, точным значением, без `*`
+   и **без** `Access-Control-Allow-Credentials` (`@stariva/auth/cors`, роуты
+   `/api/rpc` и `/api/auth`). Список origin'ов — `MOBILE_APP_ORIGINS`
+   в `packages/auth/src/origins.ts`; тест `src/auth-origins.test.ts` сверяет его
+   с `capacitor.config.ts`: меняете `androidScheme`/`hostname` — меняйте и список.
+4. Если сервер на любой запрос отвечает `UNAUTHORIZED`, токен стирается и
+   показывается вход. Нет сети при запуске — токен не трогаем.
+
+Токен — это ключ от аккаунта: хранится в Preferences, а не в Keychain/Keystore
+(нативного плагина безопасного хранилища в оболочке нет). Его не видят другие
+приложения, но он попадает в резервные копии устройства. Перейти на безопасное
+хранилище можно позже, заменив `src/lib/tokens.ts` (новый плагин = новая
+оболочка, см. ниже).
+
 ## Две версии, не путать
 
 - **Бандл** — `version` в `package.json`. Обновляется по воздуху.

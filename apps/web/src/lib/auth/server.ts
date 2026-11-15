@@ -1,6 +1,7 @@
 import "server-only";
 
 import { initAuth } from "@stariva/auth";
+import { MOBILE_APP_ORIGINS } from "@stariva/auth/origins";
 import { env } from "@stariva/config";
 import { and, count, db, eq, gt } from "@stariva/db";
 import { user } from "@stariva/db/schema";
@@ -15,7 +16,7 @@ import {
 } from "@stariva/emails";
 import type { GenericEndpointContext } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { emailOTP, magicLink } from "better-auth/plugins";
+import { bearer, emailOTP, magicLink } from "better-auth/plugins";
 import { antispam } from "./antispam-plugin";
 import { loginAudit, recordLoginEvent } from "./login-audit";
 import {
@@ -66,6 +67,8 @@ export const auth = initAuth({
   disableSignUp: true,
   // emailOTP витрины подключён ниже со своими настройками и письмом
   emailOTP: false,
+  // Мобильное приложение: https://localhost (Android), capacitor://localhost (iOS)
+  extraTrustedOrigins: MOBILE_APP_ORIGINS,
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 дней
     updateAge: 60 * 60 * 24, // обновлять сессию раз в сутки
@@ -125,6 +128,11 @@ export const auth = initAuth({
       },
     }),
     otpSignUp({ allowedAttempts: SIGN_IN_CODE_ATTEMPTS }),
+    // Мобильное приложение входит токеном, а не cookie (cookie сайта из
+    // WebView другого origin не доходят). Токен отдаётся заголовком
+    // set-auth-token только разрешённым origin'ам (см. @stariva/auth/cors), а
+    // принимается только подписанным: сырой id сессии не годится.
+    bearer({ requireSignature: true }),
     magicLink({
       // Аккаунт создаётся только регистрацией: там берём согласие на
       // обработку персональных данных. Ссылка лишь пускает в существующий.
