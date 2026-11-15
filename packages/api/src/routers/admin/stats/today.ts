@@ -1,7 +1,6 @@
 import {
   and,
   cartEvents,
-  chatConversations,
   contactClicks,
   count,
   customOrderRequests,
@@ -45,7 +44,6 @@ export const today = adminProcedure.handler(async ({ context }) => {
     accessCodes,
     clicks,
     users,
-    chats,
   ] = await Promise.all([
     db
       .select({ total: count() })
@@ -93,10 +91,6 @@ export const today = adminProcedure.handler(async ({ context }) => {
       .from(contactClicks)
       .where(gte(contactClicks.createdAt, since)),
     db.select({ total: count() }).from(user).where(gte(user.createdAt, since)),
-    db
-      .select({ total: count() })
-      .from(chatConversations)
-      .where(gte(chatConversations.createdAt, since)),
   ]);
 
   return {
@@ -109,6 +103,5 @@ export const today = adminProcedure.handler(async ({ context }) => {
     accessCodes: total(accessCodes),
     contactClicks: total(clicks),
     users: total(users),
-    chats: total(chats),
   };
 });

@@ -26,7 +26,6 @@ import {
   IconMail,
   IconMailForward,
   IconMap2,
-  IconMessageChatbot,
   IconMessageForward,
   IconMessageStar,
   IconPackage,
@@ -140,12 +139,6 @@ const marketing: NavItem[] = [
 
 const customers: NavItem[] = [
   { title: "Пользователи", url: "/users", icon: IconUsers, today: "users" },
-  {
-    title: "Чат с Никой",
-    url: "/chats",
-    icon: IconMessageChatbot,
-    today: "chats",
-  },
   { title: "Журнал писем", url: "/email-log", icon: IconMail },
 ];
 
