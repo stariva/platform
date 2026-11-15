@@ -19,6 +19,8 @@ COPY --from=pruner /repo/out/full/ .
 COPY .env.example .env
 ENV APP_URL=https://app.stariva.ru
 ENV NEXT_PUBLIC_APP_URL=https://app.stariva.ru
+ENV NEXT_PUBLIC_APP_NAME="Stariva"
+ENV NEXT_PUBLIC_APP_SHORT_NAME="Stariva"
 # Идентификатор выкладки для защиты от рассинхрона версий при rolling update:
 # клиент со старой страницей после выкатки перезагрузится целиком.
 ARG DEPLOYMENT_ID=dev

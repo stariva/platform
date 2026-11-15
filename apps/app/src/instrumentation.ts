@@ -10,5 +10,5 @@
 import { registerOTel } from "@vercel/otel";
 
 export function register() {
-  registerOTel({ serviceName: "acme-app" });
+  registerOTel({ serviceName: "stariva-app" });
 }
