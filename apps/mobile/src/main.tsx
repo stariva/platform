@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { UpdateBanner } from "@/components/UpdateBanner";
+import { useAppUpdate } from "@/lib/use-app-update";
 import { LessonScreen } from "@/screens/LessonScreen";
 import "./index.css";
 
@@ -17,21 +19,27 @@ function App() {
   const slug = params.get("slug") ?? "";
   const [lessonId, setLessonId] = useState(params.get("lesson") ?? "");
 
-  if (!slug || !lessonId) {
-    return <p className="p-6 text-muted">Откройте урок из списка курсов.</p>;
-  }
+  const update = useAppUpdate();
+
   return (
-    <LessonScreen
-      slug={slug}
-      lessonId={lessonId}
-      onSelectLesson={(id) => {
-        const url = new URL(window.location.href);
-        url.searchParams.set("lesson", id);
-        window.history.replaceState(window.history.state, "", url);
-        setLessonId(id);
-      }}
-      onBack={() => window.history.back()}
-    />
+    <>
+      {!slug || !lessonId ? (
+        <p className="p-6 text-muted">Откройте урок из списка курсов.</p>
+      ) : (
+        <LessonScreen
+          slug={slug}
+          lessonId={lessonId}
+          onSelectLesson={(id) => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("lesson", id);
+            window.history.replaceState(window.history.state, "", url);
+            setLessonId(id);
+          }}
+          onBack={() => window.history.back()}
+        />
+      )}
+      <UpdateBanner update={update} />
+    </>
   );
 }
 

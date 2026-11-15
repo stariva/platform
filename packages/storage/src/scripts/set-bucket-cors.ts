@@ -9,6 +9,11 @@
  * Запуск (адреса сайта и админки — аргументами):
  *   bun --env-file=../../.env src/scripts/set-bucket-cors.ts https://stariva.ru https://app.stariva.ru
  * Без аргументов — только показывает текущие правила.
+ *
+ * Мобильное приложение открывает бандл как https://localhost (Android) и
+ * capacitor://localhost (iOS): без них в списке видео в приложении не
+ * загрузится. Правила заменяются целиком, поэтому передавайте все адреса сразу:
+ *   bun --env-file=../../.env src/scripts/set-bucket-cors.ts https://stariva.ru https://app.stariva.ru https://localhost capacitor://localhost
  */
 import {
   GetBucketCorsCommand,
@@ -28,8 +33,10 @@ if (!bucket || !accessKeyId || !secretAccessKey) {
 const origins = process.argv.slice(2);
 for (const origin of origins) {
   const url = new URL(origin);
-  if (url.origin !== origin) {
-    throw new Error(`Нужен адрес без пути и слеша в конце: ${url.origin}`);
+  // Не url.origin: у capacitor://localhost (приложение на iOS) он «null»
+  const normalized = `${url.protocol}//${url.host}`;
+  if (normalized !== origin) {
+    throw new Error(`Нужен адрес без пути и слеша в конце: ${normalized}`);
   }
 }
 
