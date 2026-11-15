@@ -1,6 +1,5 @@
 import { adminCampaignsRouter } from "./campaigns";
 import { adminCartsRouter } from "./carts";
-import { adminChatsRouter } from "./chats";
 import { adminContactClicksRouter } from "./contact-clicks";
 import { adminCrmRouter } from "./crm";
 import { adminEmailLogRouter } from "./email-log";
@@ -28,6 +27,5 @@ export const adminRouter = {
   workshops: adminWorkshopsRouter,
   users: adminUsersRouter,
   stats: adminStatsRouter,
-  chats: adminChatsRouter,
   crm: adminCrmRouter,
 };
