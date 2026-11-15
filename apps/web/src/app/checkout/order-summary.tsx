@@ -129,7 +129,7 @@ function SummaryBody({ items, subtotal, delivery }: OrderSummaryProps) {
                 )}
               </p>
               {shipsFromLabel(item.productSlug) && (
-                <p className="mt-0.5 text-xs text-taupe">
+                <p className="mt-1 inline-block rounded-md bg-terracotta/10 px-2 py-0.5 text-xs font-semibold text-terracotta-dark">
                   Отправим с {shipsFromLabel(item.productSlug)}
                 </p>
               )}
