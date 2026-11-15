@@ -21,6 +21,7 @@ import {
   visitorSummary,
 } from "~/components/carts/cart-meta";
 import { CartSourceBlock } from "~/components/carts/cart-source";
+import { RemoveCart } from "~/components/carts/remove-cart";
 import { RemoveCartEvent } from "~/components/carts/remove-cart-event";
 import { SiteHeader } from "~/components/layout";
 import {
@@ -72,9 +73,14 @@ export default async function CartPage({
           >
             ← Все корзины
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Корзина
-          </h1>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Корзина</h1>
+            <RemoveCart
+              id={cart.cartId}
+              label={`Корзина от ${dateTime.format(cart.lastAt)}, событий: ${cart.events.length}`}
+              redirectTo="/carts"
+            />
+          </div>
           <p className="text-muted-foreground text-sm">
             {cart.users.length > 0
               ? cart.users.map((person, index) => (
