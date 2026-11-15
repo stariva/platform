@@ -208,9 +208,12 @@ function confirmedCopy(order: OrderView): {
   const courier = order.deliveryMethod === "courier";
   const point = pointLabel(order);
   const dates = deliveryDatesLabel(order.deliveryDates);
+  // Заказ в Ozon Доставке оформлен сразу после оплаты, а посылку мастер
+  // передаёт позже (у набора «Ёлка» — с 18 ноября): отслеживание и штрихкод
+  // появятся только после отправки, поэтому обещаем их в будущем времени
   const ozonTracking = courier
-    ? "Следить за посылкой можно в приложении Ozon."
-    : "Следить за посылкой можно в приложении Ozon, там же будет штрихкод для получения.";
+    ? "Когда посылку отправят, следить за ней можно будет в приложении Ozon."
+    : "Когда посылку отправят, следить за ней можно будет в приложении Ozon, там же появится штрихкод для получения.";
 
   const receive: Step = {
     title: courier ? "Курьер привозит заказ" : "Вы забираете заказ",
@@ -244,8 +247,8 @@ function confirmedCopy(order: OrderView): {
           : {
               title:
                 order.status === "fulfilling"
-                  ? "Заказ передан в Ozon Доставку"
-                  : "Передаём заказ в Ozon Доставку",
+                  ? "Заказ оформлен в Ozon Доставке"
+                  : "Оформляем заказ в Ozon Доставке",
               text: ozonTracking,
               done: order.status === "fulfilling",
             },
@@ -314,7 +317,7 @@ function confirmedCopy(order: OrderView): {
           }
         : order.status === "fulfilling"
           ? {
-              title: "Заказ передан в Ozon Доставку",
+              title: "Заказ оформлен в Ozon Доставке",
               text: ozonTracking,
               done: true,
             }
@@ -324,8 +327,8 @@ function confirmedCopy(order: OrderView): {
             },
       {
         ...receive,
-        // Об отслеживании в Ozon говорит шаг выше, когда заказ передан в Ozon
-        // Доставку. В ready_to_ship посылку отправляет Ольга, и не обязательно
+        // Об отслеживании в Ozon говорит шаг выше, когда заказ оформлен в Ozon
+        // Доставке. В ready_to_ship посылку отправляет Ольга, и не обязательно
         // через Ozon: обещать там отслеживание нельзя
         text: point ? `Пункт выдачи: ${point}` : undefined,
       },
