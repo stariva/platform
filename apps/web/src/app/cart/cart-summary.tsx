@@ -84,6 +84,8 @@ interface CartSummaryProps {
   onRemoveUnavailable: () => void;
   /** Кнопка оформления — по ней мобильная панель понимает, что итог на экране */
   ctaRef?: Ref<HTMLDivElement>;
+  /** «18 ноября»: в заказе есть товар, который отправим не сразу */
+  shipsFrom?: string | null;
 }
 
 export function CartSummary({
@@ -94,9 +96,17 @@ export function CartSummary({
   checking,
   onRemoveUnavailable,
   ctaRef,
+  shipsFrom,
 }: CartSummaryProps) {
   const blocked = unavailableCount > 0 || count === 0;
   const copy = COPY[kind];
+  const perks = shipsFrom
+    ? copy.perks.map((perk) =>
+        perk.Icon === PackageCheckIcon
+          ? { ...perk, text: `Заказ отправим с ${shipsFrom}` }
+          : perk,
+      )
+    : copy.perks;
 
   return (
     <aside className="lg:sticky lg:top-28 space-y-4">
@@ -160,7 +170,7 @@ export function CartSummary({
       </div>
 
       <ul className="px-1 space-y-3 text-[13px] text-taupe">
-        {copy.perks.map(({ Icon, text }) => (
+        {perks.map(({ Icon, text }) => (
           <li key={text} className="flex gap-3">
             <Icon
               className="size-4 shrink-0 mt-px text-espresso"

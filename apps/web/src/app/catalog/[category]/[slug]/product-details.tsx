@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { descriptionWithoutLead } from "@/lib/catalog/description-lead";
-import { KIT_FAQ } from "@/lib/catalog/product-faq";
+import { kitFaq } from "@/lib/catalog/product-faq";
 import type { RatingSummary } from "@/lib/catalog/service";
 import type { Category, Product } from "@/lib/catalog/types";
 import { CONTACTS } from "@/lib/contacts";
@@ -27,6 +27,7 @@ import {
   isPurchasable,
   pluralItems,
   pluralKits,
+  shipsFromLabel,
 } from "@/lib/in-stock";
 import {
   getProductMadeToOrder,
@@ -147,8 +148,13 @@ export function ProductDetails({
   const faq = categoryFaq(madeToOrderLeadTime(product));
   // Набор покупатель плетёт сам: тексты про готовое изделие ему не подходят
   const kit = isKit(product);
+  // Покупать можно сразу, но отправляем с даты: вместо «1–2 дня» пишем её
+  const shipsFrom = shipsFromLabel(product.slug);
   const faqItems = kit
-    ? KIT_FAQ.map(({ question, answer }) => ({ q: question, a: answer }))
+    ? kitFaq(shipsFrom).map(({ question, answer }) => ({
+        q: question,
+        a: answer,
+      }))
     : (faq[categorySlug] ?? faq.interior);
   // Два независимых способа купить: готовое со склада и сплести под заказ.
   // Одежду готовой не продаём — только на заказ
@@ -353,7 +359,10 @@ export function ProductDetails({
                 <div className="mb-4 rounded-xl border border-sage/30 bg-sage/5 p-5">
                   <div className="flex items-center gap-2 label-caps text-[11px] text-sage mb-2">
                     <span className="size-1.5 rounded-full bg-sage" />В наличии
-                    · отправим за {IN_STOCK_SHIP_DAYS}
+                    ·{" "}
+                    {shipsFrom
+                      ? `отправка с ${shipsFrom}`
+                      : `отправим за ${IN_STOCK_SHIP_DAYS}`}
                   </div>
                   <h2 className="font-serif text-xl text-espresso mb-1.5">
                     {kit ? "Набор для плетения" : "Готовое изделие"}
@@ -366,6 +375,8 @@ export function ProductDetails({
                       . Изделие плетёте сами по видеоуроку. Доступ к уроку
                       придёт на почту сразу после оплаты, а коробку с
                       материалами привезёт Ozon.
+                      {shipsFrom &&
+                        ` Заказать можно уже сейчас: отправим с ${shipsFrom}.`}
                     </p>
                   ) : (
                     <p className="text-taupe text-[13px] leading-relaxed mb-5">
