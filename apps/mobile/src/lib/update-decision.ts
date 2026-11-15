@@ -12,6 +12,18 @@ export type UpdateStatus =
    */
   | { kind: "native"; release: AppRelease; url: string | null };
 
+/**
+ * Версия работающего бандла. Вшитый бандл плагин отдаёт с `id === "builtin"`, а
+ * его `version` — это версия оболочки (versionName), не веб-бандла: тогда
+ * берём версию, с которой собран сам бандл.
+ */
+export function runningBundleVersion(
+  bundle: { id: string; version: string },
+  builtinVersion: string,
+): string {
+  return bundle.id === "builtin" ? builtinVersion : bundle.version;
+}
+
 export interface DecisionInput {
   release: AppRelease | null;
   /** Версия нативной оболочки (versionName / MARKETING_VERSION). */
@@ -48,6 +60,10 @@ export function decideUpdate(input: DecisionInput): UpdateStatus {
   // Эта версия уже падала при запуске на этом телефоне. Не предлагаем её снова
   // по кругу: ждём следующий релиз
   if (input.failedVersions.has(release.version)) return { kind: "none" };
+
+  // Без контрольной суммы Capgo бандл не скачает: не предлагаем то, что
+  // заведомо не поставится (релиз выпущен в обход скрипта release)
+  if (!release.bundleChecksum) return { kind: "none" };
 
   return { kind: "bundle", release };
 }

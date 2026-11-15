@@ -463,6 +463,13 @@
       "when": 1794602224546,
       "tag": "0065_mobile_app",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794757161710,
+      "tag": "0066_app_release_checksum",
+      "breakpoints": true
     }
   ]
 }

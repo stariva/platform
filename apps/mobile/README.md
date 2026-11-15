@@ -83,14 +83,18 @@ App Store (куда вести iOS, когда оболочка устарела
 
 1. Поднять `versionName`/`versionCode` (Android) и `MARKETING_VERSION`/
    `CURRENT_PROJECT_VERSION` (iOS), `bun run cap:sync`.
-2. Поднять `version` бандла и выпустить его с `--min-native <новая оболочка>`:
-   старые оболочки получат просьбу скачать новую сборку, а не сломанный бандл.
-3. Android: подписанный release-APK (`./gradlew assembleRelease` с
+2. Android: собрать подписанный release-APK (`./gradlew assembleRelease` с
    `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-   `ANDROID_KEY_PASSWORD`), затем `bun run release -- --apk <файл> --min-native …`.
-   **Ключ подписи один на всю жизнь приложения** и хранится вне git: APK с
-   другим ключом не встанет поверх установленного.
-4. iOS: Archive в Xcode → App Store Connect (TestFlight/релиз).
+   `ANDROID_KEY_PASSWORD`). **Ключ подписи один на всю жизнь приложения** и
+   хранится вне git: APK с другим ключом не встанет поверх установленного.
+3. Поднять `version` бандла и опубликовать **один раз**, уже с готовым APK:
+   `bun run release -- --apk <файл> --min-native <новая оболочка> --notes "…"`.
+   Версия публикуется однократно, поэтому запускать `release` до появления APK
+   нельзя. Старые оболочки получат просьбу скачать новую сборку, а не
+   сломанный бандл. Следующие выпуски без `--min-native` наследуют этот минимум
+   и прежнюю ссылку на APK.
+4. iOS: Archive в Xcode → App Store Connect (TestFlight/релиз); ссылка на
+   страницу приложения — `VITE_IOS_STORE_URL` в следующей сборке.
 
 ## Перед первой публикацией
 

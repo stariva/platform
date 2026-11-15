@@ -11,11 +11,13 @@
  *
  * Версия бандла — `version` из package.json: поднимите её перед релизом.
  * `--min-native` — самая старая оболочка (versionName в Android,
- * MARKETING_VERSION в iOS), на которой этот бандл работает. Поднимайте её, если
+ * MARKETING_VERSION в iOS), на которой этот бандл работает. Не указан —
+ * берётся минимум прошлого релиза. Поднимайте его, если
  * бандл использует новый нативный плагин: старые телефоны получат просьбу
  * скачать новую сборку, а не сломанный бандл. `--apk` прикладывайте вместе с
  * новой оболочкой.
  */
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,7 +39,7 @@ const distDir = join(root, "dist");
 const { values } = parseArgs({
   options: {
     notes: { type: "string", default: "" },
-    "min-native": { type: "string", default: "1.0.0" },
+    "min-native": { type: "string" },
     apk: { type: "string" },
     "dry-run": { type: "boolean", default: false },
   },
@@ -54,8 +56,9 @@ const { version } = JSON.parse(
 if (!parseVersion(version))
   fail(`version «${version}» в package.json не X.Y.Z`);
 
-const minNative = values["min-native"] ?? "1.0.0";
-if (!parseVersion(minNative)) fail(`--min-native «${minNative}» не X.Y.Z`);
+if (values["min-native"] && !parseVersion(values["min-native"])) {
+  fail(`--min-native «${values["min-native"]}» не X.Y.Z`);
+}
 
 // Capgo распаковывает архив и ищет index.html в его корне
 if (!existsSync(join(distDir, "index.html"))) {
@@ -97,11 +100,19 @@ if (existing) {
 }
 
 const [last] = await db
-  .select({ buildNumber: appReleases.buildNumber })
+  .select({
+    buildNumber: appReleases.buildNumber,
+    minNativeVersion: appReleases.minNativeVersion,
+    apkDownloadUrl: appReleases.apkDownloadUrl,
+  })
   .from(appReleases)
   .orderBy(desc(appReleases.buildNumber))
   .limit(1);
 const buildNumber = (last?.buildNumber ?? 0) + 1;
+// Без --min-native наследуем прежний минимум: иначе обычный выпуск после
+// релиза с новым плагином снова пустил бы старые оболочки на несовместимый
+// бандл. Понизить минимум можно только явным флагом
+const minNative = values["min-native"] ?? last?.minNativeVersion ?? "1.0.0";
 
 if (values["dry-run"]) {
   console.log(
@@ -110,8 +121,16 @@ if (values["dry-run"]) {
   process.exit(0);
 }
 
-// Версия в ключе: файлы кэшируются навсегда, и перезаписывать их нельзя
-const bundleKey = `mobile/bundles/${version}.zip`;
+const sha256 = (bytes: Uint8Array) =>
+  createHash("sha256").update(bytes).digest("hex");
+
+// Контрольная сумма нужна приложению: без неё Capgo бандл не скачает
+const bundleChecksum = sha256(zip);
+
+// Файлы кэшируются навсегда и бакет не защищает от перезаписи, поэтому хеш
+// содержимого — часть ключа: другая сборка той же версии ляжет рядом, а не
+// поверх (параллельный запуск не подменит чужой архив)
+const bundleKey = `mobile/bundles/${version}-${bundleChecksum.slice(0, 12)}.zip`;
 const bundleZipUrl = await uploadPublicObject(
   bundleKey,
   zip,
@@ -121,10 +140,11 @@ console.log(`↑ ${bundleZipUrl}`);
 
 let apkDownloadUrl: string | null = null;
 if (apkPath) {
-  const apkKey = `mobile/apk/stariva-${version}.apk`;
+  const apk = new Uint8Array(readFileSync(apkPath));
+  const apkKey = `mobile/apk/stariva-${version}-${sha256(apk).slice(0, 12)}.apk`;
   await uploadPublicObject(
     apkKey,
-    new Uint8Array(readFileSync(apkPath)),
+    apk,
     "application/vnd.android.package-archive",
   );
   apkDownloadUrl = publicObjectUrl(apkKey);
@@ -132,21 +152,19 @@ if (apkPath) {
 } else {
   // Без нового APK ссылка остаётся прежней: старые оболочки по-прежнему
   // просят скачать последнюю сборку
-  const [previous] = await db
-    .select({ apkDownloadUrl: appReleases.apkDownloadUrl })
-    .from(appReleases)
-    .orderBy(desc(appReleases.buildNumber))
-    .limit(1);
-  apkDownloadUrl = previous?.apkDownloadUrl ?? null;
+  apkDownloadUrl = last?.apkDownloadUrl ?? null;
 }
 
 await db.insert(appReleases).values({
   version,
   bundleZipUrl,
+  bundleChecksum,
   minNativeVersion: minNative,
   apkDownloadUrl,
   releaseNotes: values.notes ?? "",
   buildNumber,
 });
-console.log(`✓ Релиз ${version} (сборка №${buildNumber}) опубликован`);
+console.log(
+  `✓ Релиз ${version} (сборка №${buildNumber}, min-native ${minNative}) опубликован`,
+);
 process.exit(0);

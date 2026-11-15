@@ -7,13 +7,18 @@ on:
   pull_request:
     paths:
       - "apps/mobile/**"
+      - "bun.lock"
       - "packages/web-api/src/contract/**"
       - ".github/workflows/mobile.yml"
   push:
     branches: ["main"]
     paths:
       - "apps/mobile/**"
+      - "bun.lock"
       - ".github/workflows/mobile.yml"
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

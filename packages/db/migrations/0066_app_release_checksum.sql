@@ -1,0 +1,1 @@
+ALTER TABLE "app_releases" ADD COLUMN "bundle_checksum" text DEFAULT '' NOT NULL;

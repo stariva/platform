@@ -4,7 +4,11 @@ import { Capacitor } from "@capacitor/core";
 import { CapacitorUpdater } from "@capgo/capacitor-updater";
 import type { AppRelease } from "@stariva/web-api/contract";
 import { api } from "@/lib/api";
-import { decideUpdate, type UpdateStatus } from "@/lib/update-decision";
+import {
+  decideUpdate,
+  runningBundleVersion,
+  type UpdateStatus,
+} from "@/lib/update-decision";
 
 /** Работаем внутри оболочки; в браузере и Telegram-мини-приложении версию задаёт деплой сайта. */
 export const isNativeApp = Capacitor.isNativePlatform();
@@ -24,11 +28,6 @@ export async function markAppReady(): Promise<void> {
   }
 }
 
-/** Версия работающего бандла: у вшитого плагин отвечает «builtin». */
-function runningBundleVersion(pluginVersion: string): string {
-  return pluginVersion === "builtin" ? __APP_VERSION__ : pluginVersion;
-}
-
 /**
  * Спрашивает сайт о последнем релизе и решает, что предложить. Бросает ошибку,
  * если сайт недоступен: ручная проверка покажет её, автоматическая промолчит.
@@ -46,7 +45,7 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
   return decideUpdate({
     release,
     nativeVersion: native.version,
-    bundleVersion: runningBundleVersion(current.bundle.version),
+    bundleVersion: runningBundleVersion(current.bundle, __APP_VERSION__),
     failedVersions: new Set(
       list.bundles.filter((b) => b.status === "error").map((b) => b.version),
     ),
@@ -71,6 +70,7 @@ export async function installBundle(release: AppRelease): Promise<void> {
     (await CapacitorUpdater.download({
       url: release.bundleZipUrl,
       version: release.version,
+      checksum: release.bundleChecksum,
     }));
   await CapacitorUpdater.set({ id: bundle.id });
 }

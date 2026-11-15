@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import type { AppRelease } from "@stariva/web-api/contract";
-import { type DecisionInput, decideUpdate } from "./update-decision";
+import {
+  type DecisionInput,
+  decideUpdate,
+  runningBundleVersion,
+} from "./update-decision";
 
 const release: AppRelease = {
   version: "1.4.0",
   bundleZipUrl: "https://cdn.example/mobile/bundles/1.4.0.zip",
+  bundleChecksum: "a".repeat(64),
   minNativeVersion: "1.2.0",
   apkDownloadUrl: "https://cdn.example/mobile/apk/stariva-1.2.0.apk",
   releaseNotes: "",
@@ -92,5 +97,25 @@ describe("decideUpdate", () => {
     expect(decideUpdate(input({ failedVersions: new Set(["1.4.0"]) }))).toEqual(
       { kind: "none" },
     );
+  });
+});
+
+test("релиз без контрольной суммы не предлагается: Capgo его не скачает", () => {
+  expect(
+    decideUpdate(input({ release: { ...release, bundleChecksum: "" } })),
+  ).toEqual({ kind: "none" });
+});
+
+describe("runningBundleVersion", () => {
+  test("у вшитого бандла version — версия оболочки, берём версию сборки", () => {
+    expect(
+      runningBundleVersion({ id: "builtin", version: "1.0.0" }, "1.4.0"),
+    ).toBe("1.4.0");
+  });
+
+  test("у скачанного бандла — его собственная версия", () => {
+    expect(
+      runningBundleVersion({ id: "9f3a", version: "1.3.0" }, "1.0.0"),
+    ).toBe("1.3.0");
   });
 });

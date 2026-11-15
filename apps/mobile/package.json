@@ -17,7 +17,7 @@
     "cap:sync": "vite build && cap sync",
     "cap:android": "vite build && cap sync android && cap open android",
     "cap:ios": "vite build && cap sync ios && cap open ios",
-    "release": "vite build && bun --env-file=../../.env scripts/release.ts"
+    "release": "bun run --filter @stariva/storage build && vite build && bun --env-file=../../.env scripts/release.ts"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

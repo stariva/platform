@@ -30,8 +30,6 @@ export function useAppUpdate(): AppUpdate {
   const [status, setStatus] = useState<UpdateStatus>({ kind: "none" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const statusRef = useRef(status);
-  statusRef.current = status;
   const busyRef = useRef(false);
 
   const run = useCallback(
@@ -76,7 +74,7 @@ export function useAppUpdate(): AppUpdate {
   const check = useCallback(() => run(false), [run]);
 
   const apply = useCallback(async () => {
-    const current = statusRef.current;
+    const current = status;
     if (current.kind === "none" || busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
@@ -90,7 +88,7 @@ export function useAppUpdate(): AppUpdate {
       busyRef.current = false;
       setBusy(false);
     }
-  }, []);
+  }, [status]);
 
   return { status, busy, error, check, apply };
 }
