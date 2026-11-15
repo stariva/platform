@@ -259,7 +259,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <FAQJsonLd
         items={
           isKit(product)
-            ? kitFaq(shipsFromLabel(product.slug))
+            ? kitFaq(
+                isPurchasable(product) ? shipsFromLabel(product.slug) : null,
+              )
             : (faq[categorySlug] ?? faq.interior)
         }
       />

@@ -151,10 +151,12 @@ export function ProductDetails({
   // Покупать можно сразу, но отправляем с даты: вместо «1–2 дня» пишем её
   const shipsFrom = shipsFromLabel(product.slug);
   const faqItems = kit
-    ? kitFaq(shipsFrom).map(({ question, answer }) => ({
-        q: question,
-        a: answer,
-      }))
+    ? kitFaq(isPurchasable(product) ? shipsFrom : null).map(
+        ({ question, answer }) => ({
+          q: question,
+          a: answer,
+        }),
+      )
     : (faq[categorySlug] ?? faq.interior);
   // Два независимых способа купить: готовое со склада и сплести под заказ.
   // Одежду готовой не продаём — только на заказ
