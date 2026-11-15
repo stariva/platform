@@ -194,14 +194,16 @@ export default async function UserPage({
             initialName={user.name}
             initialEmailVerified={user.emailVerified}
           />
-          <UserAccess
-            userId={user.id}
-            access={user.access.map((row) => ({
-              ...row,
-              grantedAt: row.grantedAt.toISOString(),
-            }))}
-            workshops={workshops.map(({ slug, title }) => ({ slug, title }))}
-          />
+          <div id="access" className="scroll-mt-20">
+            <UserAccess
+              userId={user.id}
+              access={user.access.map((row) => ({
+                ...row,
+                grantedAt: row.grantedAt.toISOString(),
+              }))}
+              workshops={workshops.map(({ slug, title }) => ({ slug, title }))}
+            />
+          </div>
         </div>
 
         <UserLoginHistory
@@ -211,26 +213,28 @@ export default async function UserPage({
           limit={loginLimit}
         />
 
-        <OrdersTable
-          title="Заказы на мастер-классы"
-          rows={user.workshopOrders.map((order) => ({
-            id: order.id,
-            label: order.workshopTitle ?? order.workshopSlug,
-            amount: order.amount,
-            status: order.status,
-            createdAt: order.createdAt,
-          }))}
-        />
-        <OrdersTable
-          title="Заказы на товары"
-          rows={user.productOrders.map((order) => ({
-            id: order.id,
-            label: "Заказ из каталога",
-            amount: order.amountTotal,
-            status: order.status,
-            createdAt: order.createdAt,
-          }))}
-        />
+        <div id="orders" className="scroll-mt-20 space-y-4">
+          <OrdersTable
+            title="Заказы на мастер-классы"
+            rows={user.workshopOrders.map((order) => ({
+              id: order.id,
+              label: order.workshopTitle ?? order.workshopSlug,
+              amount: order.amount,
+              status: order.status,
+              createdAt: order.createdAt,
+            }))}
+          />
+          <OrdersTable
+            title="Заказы на товары"
+            rows={user.productOrders.map((order) => ({
+              id: order.id,
+              label: "Заказ из каталога",
+              amount: order.amountTotal,
+              status: order.status,
+              createdAt: order.createdAt,
+            }))}
+          />
+        </div>
 
         <Card>
           <CardHeader>
