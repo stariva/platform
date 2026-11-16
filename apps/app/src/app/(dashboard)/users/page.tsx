@@ -211,10 +211,20 @@ export default async function UsersPage({
                     )}
                   </TableCell>
                   <TableCell className="text-right text-sm tabular-nums">
-                    {item.productOrdersCount + item.workshopOrdersCount}
+                    <Link
+                      href={`/users/${item.id}#orders`}
+                      className="hover:underline"
+                    >
+                      {item.productOrdersCount + item.workshopOrdersCount}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-right text-sm tabular-nums">
-                    {item.coursesCount}
+                    <Link
+                      href={`/users/${item.id}#access`}
+                      className="hover:underline"
+                    >
+                      {item.coursesCount}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {dateFormat.format(item.createdAt)}

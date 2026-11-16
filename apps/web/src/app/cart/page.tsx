@@ -35,7 +35,12 @@ import {
   type CartLineState,
   useCartValidation,
 } from "@/lib/cart/use-cart-validation";
-import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
+import {
+  IN_STOCK_HREF,
+  IN_STOCK_SHIP_DAYS,
+  pluralItems,
+  shipsFromLabel,
+} from "@/lib/in-stock";
 import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { CartItemRow } from "./cart-item-row";
 import { CartSummary, MobileCheckoutBar } from "./cart-summary";
@@ -90,6 +95,13 @@ export default function CartPage() {
           leadTimeDays: leadTimes.get(cartLineKey(item)),
         })),
       ),
+      // Одна отправка на секцию: если в ней есть товар с датой, ждёт весь заказ
+      shipsFrom:
+        kind === "stock"
+          ? (buyable
+              .map((item) => shipsFromLabel(item.productSlug))
+              .find((label) => label !== null) ?? null)
+          : null,
     };
   }).filter((section) => section.items.length > 0);
   // Мобильная панель — только когда оформление одно: при двух секциях
@@ -257,6 +269,7 @@ export default function CartPage() {
                         removeUnavailable(section.unavailable)
                       }
                       ctaRef={single ? ctaRef : undefined}
+                      shipsFrom={section.shipsFrom}
                     />
                   </div>
                 </section>

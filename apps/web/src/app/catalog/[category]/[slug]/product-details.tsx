@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarClockIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { descriptionWithoutLead } from "@/lib/catalog/description-lead";
-import { KIT_FAQ } from "@/lib/catalog/product-faq";
+import { kitFaq } from "@/lib/catalog/product-faq";
 import type { RatingSummary } from "@/lib/catalog/service";
 import type { Category, Product } from "@/lib/catalog/types";
 import { CONTACTS } from "@/lib/contacts";
@@ -27,6 +28,7 @@ import {
   isPurchasable,
   pluralItems,
   pluralKits,
+  shipsFromLabel,
 } from "@/lib/in-stock";
 import {
   getProductMadeToOrder,
@@ -147,8 +149,15 @@ export function ProductDetails({
   const faq = categoryFaq(madeToOrderLeadTime(product));
   // Набор покупатель плетёт сам: тексты про готовое изделие ему не подходят
   const kit = isKit(product);
+  // Покупать можно сразу, но отправляем с даты: вместо «1–2 дня» пишем её
+  const shipsFrom = shipsFromLabel(product.slug);
   const faqItems = kit
-    ? KIT_FAQ.map(({ question, answer }) => ({ q: question, a: answer }))
+    ? kitFaq(isPurchasable(product) ? shipsFrom : null).map(
+        ({ question, answer }) => ({
+          q: question,
+          a: answer,
+        }),
+      )
     : (faq[categorySlug] ?? faq.interior);
   // Два независимых способа купить: готовое со склада и сплести под заказ.
   // Одежду готовой не продаём — только на заказ
@@ -353,11 +362,31 @@ export function ProductDetails({
                 <div className="mb-4 rounded-xl border border-sage/30 bg-sage/5 p-5">
                   <div className="flex items-center gap-2 label-caps text-[11px] text-sage mb-2">
                     <span className="size-1.5 rounded-full bg-sage" />В наличии
-                    · отправим за {IN_STOCK_SHIP_DAYS}
+                    {!shipsFrom && <> · отправим за {IN_STOCK_SHIP_DAYS}</>}
                   </div>
                   <h2 className="font-serif text-xl text-espresso mb-1.5">
                     {kit ? "Набор для плетения" : "Готовое изделие"}
                   </h2>
+                  {shipsFrom && (
+                    <div
+                      role="note"
+                      className="mb-3 flex items-center gap-3 rounded-lg border border-terracotta/40 bg-terracotta/10 px-4 py-3"
+                    >
+                      <CalendarClockIcon
+                        className="size-6 shrink-0 text-terracotta"
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                      />
+                      <p className="leading-tight">
+                        <span className="block text-base font-semibold text-espresso">
+                          Отправка с {shipsFrom}
+                        </span>
+                        <span className="block text-[13px] text-taupe">
+                          Заказать и оплатить можно уже сейчас
+                        </span>
+                      </p>
+                    </div>
+                  )}
                   {kit ? (
                     <p className="text-taupe text-[13px] leading-relaxed mb-5">
                       {product.stockAvailable === 1

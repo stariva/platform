@@ -2,6 +2,7 @@
 
 import {
   ArrowRightIcon,
+  CalendarClockIcon,
   LockKeyholeIcon,
   PackageCheckIcon,
   RulerIcon,
@@ -86,6 +87,8 @@ interface CartSummaryProps {
   leadTime?: string;
   /** Кнопка оформления — по ней мобильная панель понимает, что итог на экране */
   ctaRef?: Ref<HTMLDivElement>;
+  /** «18 ноября»: в заказе есть товар, который отправим не сразу */
+  shipsFrom?: string | null;
 }
 
 export function CartSummary({
@@ -97,9 +100,15 @@ export function CartSummary({
   onRemoveUnavailable,
   leadTime = MADE_TO_ORDER_DAYS,
   ctaRef,
+  shipsFrom,
 }: CartSummaryProps) {
   const blocked = unavailableCount > 0 || count === 0;
   const copy = COPY[kind];
+  // Дату отправки показываем отдельной плашкой над кнопкой, в списке она лишняя
+  const allPerks = copy.perks(leadTime);
+  const perks = shipsFrom
+    ? allPerks.filter((perk) => perk.Icon !== PackageCheckIcon)
+    : allPerks;
 
   return (
     <aside className="lg:sticky lg:top-28 space-y-4">
@@ -127,6 +136,22 @@ export function CartSummary({
             {formatPrice(subtotal / 100)}
           </span>
         </div>
+
+        {shipsFrom && (
+          <div
+            role="note"
+            className="mt-5 flex items-center gap-3 rounded-xl border border-terracotta/40 bg-terracotta/10 px-4 py-3"
+          >
+            <CalendarClockIcon
+              className="size-6 shrink-0 text-terracotta"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+            <p className="text-sm font-semibold leading-snug text-espresso">
+              Заказ отправим с {shipsFrom}
+            </p>
+          </div>
+        )}
 
         {unavailableCount > 0 && (
           <div className="mt-5 rounded-xl bg-parchment px-4 py-3 text-sm text-espresso">
@@ -163,7 +188,7 @@ export function CartSummary({
       </div>
 
       <ul className="px-1 space-y-3 text-[13px] text-taupe">
-        {copy.perks(leadTime).map(({ Icon, text }) => (
+        {perks.map(({ Icon, text }) => (
           <li key={text} className="flex gap-3">
             <Icon
               className="size-4 shrink-0 mt-px text-espresso"

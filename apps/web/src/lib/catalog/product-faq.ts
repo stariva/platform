@@ -46,3 +46,21 @@ export const KIT_FAQ: ProductFaqItem[] = [
     answer: `Наборы в наличии отправляем за ${IN_STOCK_SHIP_DAYS}. Доставка по России через Ozon. Если урок уже вышел, при покупке на сайте ссылка на него придёт на почту сразу после оплаты, и начать можно, пока набор в пути.`,
   },
 ];
+
+const WAIT_QUESTION = "Как долго ждать заказ?";
+
+/**
+ * Вопросы набора. Пока товар не отправляем (см. `shipsFromLabel`), в ответе
+ * про сроки стоит дата отправки, а не «за 1–2 дня».
+ */
+export function kitFaq(shipsFrom: string | null): ProductFaqItem[] {
+  if (!shipsFrom) return KIT_FAQ;
+  return KIT_FAQ.map((item) =>
+    item.question === WAIT_QUESTION
+      ? {
+          question: item.question,
+          answer: `Заказ можно оформить и оплатить уже сейчас, отправим с ${shipsFrom}. Доставка по России через Ozon. Если урок уже вышел, при покупке на сайте ссылка на него придёт на почту сразу после оплаты, и начать можно, пока набор готовится к отправке.`,
+        }
+      : item,
+  );
+}

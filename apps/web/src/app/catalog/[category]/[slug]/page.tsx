@@ -11,7 +11,7 @@ import {
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Reviews } from "@/components/stariva/reviews";
-import { KIT_FAQ } from "@/lib/catalog/product-faq";
+import { kitFaq } from "@/lib/catalog/product-faq";
 import {
   productMetaDescription,
   productMetaTitle,
@@ -23,7 +23,13 @@ import {
   getReviews,
   summarizeRatings,
 } from "@/lib/catalog/service";
-import { IN_STOCK_SHIP_DAYS_RANGE, isKit, isPurchasable } from "@/lib/in-stock";
+import {
+  IN_STOCK_SHIP_DAYS_RANGE,
+  isKit,
+  isPurchasable,
+  shipsFromHandlingDays,
+  shipsFromLabel,
+} from "@/lib/in-stock";
 import {
   madeToOrderLeadTime,
   madeToOrderLeadTimeDays,
@@ -239,7 +245,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         madeToOrder={product.madeToOrder}
         handlingDays={
           isPurchasable(product)
-            ? IN_STOCK_SHIP_DAYS_RANGE
+            ? (shipsFromHandlingDays(product.slug) ?? IN_STOCK_SHIP_DAYS_RANGE)
             : madeToOrderLeadTimeDays(product)
         }
         url={url}
@@ -251,7 +257,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
         reviews={markupReviews}
       />
       <FAQJsonLd
-        items={isKit(product) ? KIT_FAQ : (faq[categorySlug] ?? faq.interior)}
+        items={
+          isKit(product)
+            ? kitFaq(
+                isPurchasable(product) ? shipsFromLabel(product.slug) : null,
+              )
+            : (faq[categorySlug] ?? faq.interior)
+        }
       />
       <ProductDetails
         product={product}

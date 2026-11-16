@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "@stariva/ui";
 import { notFound } from "next/navigation";
-import { ChatsTable } from "~/components/chats/chats-table";
 import { SiteHeader } from "~/components/layout";
 import { UserAccess } from "~/components/users/user-access";
 import { UserAvatar } from "~/components/users/user-avatar";
@@ -152,13 +151,12 @@ export default async function UserPage({
     ? loginTypeParam[0]
     : loginTypeParam;
   const loginType = LOGIN_TYPES.find((value) => value === requestedType);
-  const [user, workshops, chats, loginHistory] = await Promise.all([
+  const [user, workshops, loginHistory] = await Promise.all([
     api.admin.users.byId({ id }).catch((error) => {
       if ((error as { code?: string }).code === "NOT_FOUND") notFound();
       throw error;
     }),
     api.admin.workshops.list(),
-    api.admin.chats.list({ userId: id, limit: 20 }),
     api.admin.users.loginHistory({ id, type: loginType, limit: loginLimit }),
   ]);
 
@@ -194,14 +192,16 @@ export default async function UserPage({
             initialName={user.name}
             initialEmailVerified={user.emailVerified}
           />
-          <UserAccess
-            userId={user.id}
-            access={user.access.map((row) => ({
-              ...row,
-              grantedAt: row.grantedAt.toISOString(),
-            }))}
-            workshops={workshops.map(({ slug, title }) => ({ slug, title }))}
-          />
+          <div id="access" className="scroll-mt-20">
+            <UserAccess
+              userId={user.id}
+              access={user.access.map((row) => ({
+                ...row,
+                grantedAt: row.grantedAt.toISOString(),
+              }))}
+              workshops={workshops.map(({ slug, title }) => ({ slug, title }))}
+            />
+          </div>
         </div>
 
         <UserLoginHistory
@@ -211,39 +211,28 @@ export default async function UserPage({
           limit={loginLimit}
         />
 
-        <OrdersTable
-          title="Заказы на мастер-классы"
-          rows={user.workshopOrders.map((order) => ({
-            id: order.id,
-            label: order.workshopTitle ?? order.workshopSlug,
-            amount: order.amount,
-            status: order.status,
-            createdAt: order.createdAt,
-          }))}
-        />
-        <OrdersTable
-          title="Заказы на товары"
-          rows={user.productOrders.map((order) => ({
-            id: order.id,
-            label: "Заказ из каталога",
-            amount: order.amountTotal,
-            status: order.status,
-            createdAt: order.createdAt,
-          }))}
-        />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Чат с Никой
-              {chats.total > chats.items.length &&
-                ` · последние ${chats.items.length} из ${chats.total}`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChatsTable rows={chats.items} showUser={false} />
-          </CardContent>
-        </Card>
+        <div id="orders" className="scroll-mt-20 space-y-4">
+          <OrdersTable
+            title="Заказы на мастер-классы"
+            rows={user.workshopOrders.map((order) => ({
+              id: order.id,
+              label: order.workshopTitle ?? order.workshopSlug,
+              amount: order.amount,
+              status: order.status,
+              createdAt: order.createdAt,
+            }))}
+          />
+          <OrdersTable
+            title="Заказы на товары"
+            rows={user.productOrders.map((order) => ({
+              id: order.id,
+              label: "Заказ из каталога",
+              amount: order.amountTotal,
+              status: order.status,
+              createdAt: order.createdAt,
+            }))}
+          />
+        </div>
 
         <UserDangerZone
           id={user.id}
