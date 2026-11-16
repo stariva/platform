@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import {
   ConsentCheckbox,
   OfferAcceptanceNote,
@@ -88,6 +88,25 @@ export function WorkshopPurchase({
   const [notice, setNotice] = useState<Notice>(null);
   const ids = useId();
   const emailId = `${ids}-email`;
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+
+  // Сообщение под кнопкой легко не заметить (особенно на телефоне, где оно
+  // уходит за нижний край экрана) — подводим к нему экран.
+  // Пока идёт проверка доступа, вместо формы крутится спиннер и абзаца нет:
+  // эффект должен сработать и когда форма вернулась, а сообщение уже есть.
+  const checkingAccess = sessionPending || (Boolean(session) && owned === null);
+  useEffect(() => {
+    if (!notice || checkingAccess) return;
+    // Тем, кто просит меньше движения, экран переводим без анимации. "auto"
+    // тут не подходит: он берёт глобальный `scroll-behavior: smooth` с html.
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    noticeRef.current?.scrollIntoView({
+      behavior: reduceMotion ? "instant" : "smooth",
+      block: "center",
+    });
+  }, [notice, checkingAccess]);
 
   useEffect(() => {
     setEmail((current) => current || readEmailDraft());
@@ -201,7 +220,7 @@ export function WorkshopPurchase({
     }
   }
 
-  if (sessionPending || (session && owned === null)) {
+  if (checkingAccess) {
     return (
       <div className="flex items-center justify-center w-full py-4 mb-3">
         <Spinner className="text-taupe" />
@@ -326,11 +345,12 @@ export function WorkshopPurchase({
       <div aria-live="polite">
         {notice ? (
           <p
+            ref={noticeRef}
             role={notice.tone === "error" ? "alert" : "status"}
             className={
               notice.tone === "error"
-                ? "mt-3 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
-                : "mt-3 rounded-xl bg-sage/15 px-4 py-3 text-sm text-espresso"
+                ? "mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm leading-relaxed text-destructive"
+                : "mt-3 rounded-xl border border-sage/40 bg-sage/15 px-4 py-3 text-sm leading-relaxed text-espresso"
             }
           >
             {notice.text}

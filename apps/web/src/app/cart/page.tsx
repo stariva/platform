@@ -41,6 +41,7 @@ import {
   pluralItems,
   shipsFromLabel,
 } from "@/lib/in-stock";
+import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { CartItemRow } from "./cart-item-row";
 import { CartSummary, MobileCheckoutBar } from "./cart-summary";
 
@@ -68,7 +69,8 @@ export default function CartPage() {
     setQty,
     clear,
   } = useCart();
-  const { states, loading, notices, dismissNotices } = useCartValidation();
+  const { states, leadTimes, loading, notices, dismissNotices } =
+    useCartValidation();
   const ctaRef = useRef<HTMLDivElement>(null);
 
   const stateOf = (item: PricedCartItem): CartLineState =>
@@ -87,6 +89,12 @@ export default function CartPage() {
       ),
       subtotal: buyable.reduce((sum, i) => sum + i.price * i.quantity, 0),
       count: buyable.reduce((sum, i) => sum + i.quantity, 0),
+      // Срок берём из изделий; у тех, у кого своего нет, — общий
+      leadTime: madeToOrderLeadTimeOf(
+        buyable.map((item) => ({
+          leadTimeDays: leadTimes.get(cartLineKey(item)),
+        })),
+      ),
       // Одна отправка на секцию: если в ней есть товар с датой, ждёт весь заказ
       shipsFrom:
         kind === "stock"
@@ -256,6 +264,7 @@ export default function CartPage() {
                       count={section.count}
                       unavailableCount={section.unavailable.length}
                       checking={loading}
+                      leadTime={section.leadTime}
                       onRemoveUnavailable={() =>
                         removeUnavailable(section.unavailable)
                       }
