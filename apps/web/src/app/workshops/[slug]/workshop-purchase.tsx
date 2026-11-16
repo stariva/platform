@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import {
   ConsentCheckbox,
   OfferAcceptanceNote,
@@ -88,6 +88,15 @@ export function WorkshopPurchase({
   const [notice, setNotice] = useState<Notice>(null);
   const ids = useId();
   const emailId = `${ids}-email`;
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+
+  // Сообщение под кнопкой легко не заметить (особенно на телефоне, где оно
+  // уходит за нижний край экрана) — подводим к нему экран.
+  useEffect(() => {
+    if (notice) {
+      noticeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [notice]);
 
   useEffect(() => {
     setEmail((current) => current || readEmailDraft());
@@ -326,11 +335,12 @@ export function WorkshopPurchase({
       <div aria-live="polite">
         {notice ? (
           <p
+            ref={noticeRef}
             role={notice.tone === "error" ? "alert" : "status"}
             className={
               notice.tone === "error"
-                ? "mt-3 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
-                : "mt-3 rounded-xl bg-sage/15 px-4 py-3 text-sm text-espresso"
+                ? "mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm leading-relaxed text-destructive"
+                : "mt-3 rounded-xl border border-sage/40 bg-sage/15 px-4 py-3 text-sm leading-relaxed text-espresso"
             }
           >
             {notice.text}
