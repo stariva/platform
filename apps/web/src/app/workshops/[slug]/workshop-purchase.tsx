@@ -97,12 +97,13 @@ export function WorkshopPurchase({
   const checkingAccess = sessionPending || (Boolean(session) && owned === null);
   useEffect(() => {
     if (!notice || checkingAccess) return;
-    // Тем, кто просит меньше движения, экран переводим без анимации
+    // Тем, кто просит меньше движения, экран переводим без анимации. "auto"
+    // тут не подходит: он берёт глобальный `scroll-behavior: smooth` с html.
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
     noticeRef.current?.scrollIntoView({
-      behavior: reduceMotion ? "auto" : "smooth",
+      behavior: reduceMotion ? "instant" : "smooth",
       block: "center",
     });
   }, [notice, checkingAccess]);
