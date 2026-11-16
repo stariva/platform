@@ -92,11 +92,20 @@ export function WorkshopPurchase({
 
   // Сообщение под кнопкой легко не заметить (особенно на телефоне, где оно
   // уходит за нижний край экрана) — подводим к нему экран.
+  // Пока идёт проверка доступа, вместо формы крутится спиннер и абзаца нет:
+  // эффект должен сработать и когда форма вернулась, а сообщение уже есть.
+  const checkingAccess = sessionPending || (Boolean(session) && owned === null);
   useEffect(() => {
-    if (notice) {
-      noticeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [notice]);
+    if (!notice || checkingAccess) return;
+    // Тем, кто просит меньше движения, экран переводим без анимации
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    noticeRef.current?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "center",
+    });
+  }, [notice, checkingAccess]);
 
   useEffect(() => {
     setEmail((current) => current || readEmailDraft());
@@ -210,7 +219,7 @@ export function WorkshopPurchase({
     }
   }
 
-  if (sessionPending || (session && owned === null)) {
+  if (checkingAccess) {
     return (
       <div className="flex items-center justify-center w-full py-4 mb-3">
         <Spinner className="text-taupe" />
