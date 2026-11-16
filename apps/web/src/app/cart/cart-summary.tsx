@@ -28,7 +28,7 @@ const COPY: Record<
     checkoutLabel: string;
     checkoutHref: string;
     unavailable: (count: number) => string;
-    perks: { Icon: typeof TruckIcon; text: string }[];
+    perks: (leadTime: string) => { Icon: typeof TruckIcon; text: string }[];
   }
 > = {
   stock: {
@@ -41,7 +41,7 @@ const COPY: Record<
       count === 1
         ? "Одного изделия уже нет в наличии."
         : `${count} ${pluralItems(count)} уже нет в наличии.`,
-    perks: [
+    perks: () => [
       { Icon: PackageCheckIcon, text: `Отправим за ${IN_STOCK_SHIP_DAYS}` },
       { Icon: TruckIcon, text: "Доставка в пункт выдачи Ozon по всей России" },
       { Icon: LockKeyholeIcon, text: "Безопасная онлайн-оплата через ЮKassa" },
@@ -57,7 +57,7 @@ const COPY: Record<
       count === 1
         ? "Одно изделие снято с продажи."
         : `${count} ${pluralItems(count)} сняты с продажи.`,
-    perks: [
+    perks: (leadTime) => [
       {
         Icon: RulerIcon,
         text: "Сейчас без оплаты: мастер свяжется и согласует мерки, цену и доставку",
@@ -68,7 +68,7 @@ const COPY: Record<
       },
       {
         Icon: PackageCheckIcon,
-        text: `Сплетём вручную, обычно за ${MADE_TO_ORDER_DAYS}`,
+        text: `Сплетём вручную, обычно за ${leadTime}`,
       },
     ],
   },
@@ -83,6 +83,8 @@ interface CartSummaryProps {
   unavailableCount: number;
   checking: boolean;
   onRemoveUnavailable: () => void;
+  /** Срок изготовления изделий под заказ: из изделий в корзине, иначе общий */
+  leadTime?: string;
   /** Кнопка оформления — по ней мобильная панель понимает, что итог на экране */
   ctaRef?: Ref<HTMLDivElement>;
   /** «18 ноября»: в заказе есть товар, который отправим не сразу */
@@ -96,15 +98,17 @@ export function CartSummary({
   unavailableCount,
   checking,
   onRemoveUnavailable,
+  leadTime = MADE_TO_ORDER_DAYS,
   ctaRef,
   shipsFrom,
 }: CartSummaryProps) {
   const blocked = unavailableCount > 0 || count === 0;
   const copy = COPY[kind];
   // Дату отправки показываем отдельной плашкой над кнопкой, в списке она лишняя
+  const allPerks = copy.perks(leadTime);
   const perks = shipsFrom
-    ? copy.perks.filter((perk) => perk.Icon !== PackageCheckIcon)
-    : copy.perks;
+    ? allPerks.filter((perk) => perk.Icon !== PackageCheckIcon)
+    : allPerks;
 
   return (
     <aside className="lg:sticky lg:top-28 space-y-4">

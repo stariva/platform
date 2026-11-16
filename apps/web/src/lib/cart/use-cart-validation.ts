@@ -140,8 +140,21 @@ export function useCartValidation() {
     return map;
   }, [items, lines]);
 
+  // Срок изготовления из каталога по ключу строки; у изделий без своего срока записи нет
+  const leadTimes = useMemo(() => {
+    const map = new Map<string, { min: number; max: number }>();
+    for (const item of items) {
+      const line = lines.get(validationLineKey(item));
+      if (line?.available && line.leadTimeDays) {
+        map.set(cartLineKey(item), line.leadTimeDays);
+      }
+    }
+    return map;
+  }, [items, lines]);
+
   return {
     states,
+    leadTimes,
     loading,
     notices,
     dismissNotices: () => setNotices([]),

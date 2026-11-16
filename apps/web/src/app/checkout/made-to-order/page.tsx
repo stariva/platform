@@ -30,8 +30,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { reachGoal } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
+import { useCartValidation } from "@/lib/cart/use-cart-validation";
 import { rememberOrderPhone } from "@/lib/commerce/order-phone";
-import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
+import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
 import { formErrorMessage, webApi } from "@/lib/web-api";
 
@@ -53,6 +54,11 @@ export default function MadeToOrderCheckoutPage() {
   );
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const [submitting, setSubmitting] = useState(false);
+  // Срок — из изделий в заказе: у кого в каталоге свой срок, берём его, иначе общий
+  const { leadTimes } = useCartValidation();
+  const leadTime = madeToOrderLeadTimeOf(
+    items.map((item) => ({ leadTimeDays: leadTimes.get(cartLineKey(item)) })),
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -191,10 +197,10 @@ export default function MadeToOrderCheckoutPage() {
               странице заказа откроется предоплата 50%.
             </li>
             <li>
-              Изделие плетётся вручную, обычно за {MADE_TO_ORDER_DAYS}. Когда
-              оно готово, вы выбираете на странице заказа пункт выдачи Ozon, и
-              сайт сразу считает доставку. Вы вносите доплату — остаток и
-              доставку, и мастер отправляет заказ.
+              Изделие плетётся вручную, обычно за {leadTime}. Когда оно готово,
+              вы выбираете на странице заказа пункт выдачи Ozon, и сайт сразу
+              считает доставку. Вы вносите доплату — остаток и доставку, и
+              мастер отправляет заказ.
             </li>
           </ol>
 
