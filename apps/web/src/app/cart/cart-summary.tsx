@@ -27,7 +27,7 @@ const COPY: Record<
     checkoutLabel: string;
     checkoutHref: string;
     unavailable: (count: number) => string;
-    perks: { Icon: typeof TruckIcon; text: string }[];
+    perks: (leadTime: string) => { Icon: typeof TruckIcon; text: string }[];
   }
 > = {
   stock: {
@@ -40,7 +40,7 @@ const COPY: Record<
       count === 1
         ? "Одного изделия уже нет в наличии."
         : `${count} ${pluralItems(count)} уже нет в наличии.`,
-    perks: [
+    perks: () => [
       { Icon: PackageCheckIcon, text: `Отправим за ${IN_STOCK_SHIP_DAYS}` },
       { Icon: TruckIcon, text: "Доставка в пункт выдачи Ozon по всей России" },
       { Icon: LockKeyholeIcon, text: "Безопасная онлайн-оплата через ЮKassa" },
@@ -56,7 +56,7 @@ const COPY: Record<
       count === 1
         ? "Одно изделие снято с продажи."
         : `${count} ${pluralItems(count)} сняты с продажи.`,
-    perks: [
+    perks: (leadTime) => [
       {
         Icon: RulerIcon,
         text: "Сейчас без оплаты: мастер свяжется и согласует мерки, цену и доставку",
@@ -67,7 +67,7 @@ const COPY: Record<
       },
       {
         Icon: PackageCheckIcon,
-        text: `Сплетём вручную, обычно за ${MADE_TO_ORDER_DAYS}`,
+        text: `Сплетём вручную, обычно за ${leadTime}`,
       },
     ],
   },
@@ -82,6 +82,8 @@ interface CartSummaryProps {
   unavailableCount: number;
   checking: boolean;
   onRemoveUnavailable: () => void;
+  /** Срок изготовления изделий под заказ: из изделий в корзине, иначе общий */
+  leadTime?: string;
   /** Кнопка оформления — по ней мобильная панель понимает, что итог на экране */
   ctaRef?: Ref<HTMLDivElement>;
 }
@@ -93,6 +95,7 @@ export function CartSummary({
   unavailableCount,
   checking,
   onRemoveUnavailable,
+  leadTime = MADE_TO_ORDER_DAYS,
   ctaRef,
 }: CartSummaryProps) {
   const blocked = unavailableCount > 0 || count === 0;
@@ -160,7 +163,7 @@ export function CartSummary({
       </div>
 
       <ul className="px-1 space-y-3 text-[13px] text-taupe">
-        {copy.perks.map(({ Icon, text }) => (
+        {copy.perks(leadTime).map(({ Icon, text }) => (
           <li key={text} className="flex gap-3">
             <Icon
               className="size-4 shrink-0 mt-px text-espresso"

@@ -84,6 +84,9 @@ export async function POST(request: NextRequest) {
           image: product.images[0] ?? "",
           price,
           maxQuantity: MAX_MADE_TO_ORDER_QUANTITY,
+          ...(product.leadTimeDays
+            ? { leadTimeDays: product.leadTimeDays }
+            : {}),
         };
       }
 

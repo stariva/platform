@@ -169,6 +169,20 @@ test("made-to-order lines ignore stock and keep a separate line", async () => {
   });
 });
 
+test("made-to-order line carries the product's own lead time", async () => {
+  catalog = {
+    products: [{ ...product, leadTimeDays: { min: 5, max: 7 } }],
+    status: "available",
+  };
+
+  const res = await POST(request({ lines: [madeToOrder(product.slug)] }));
+  const { lines } = (await res.json()) as {
+    lines: { leadTimeDays?: { min: number; max: number } }[];
+  };
+
+  assert.deepEqual(lines[0]?.leadTimeDays, { min: 5, max: 7 });
+});
+
 test("reports a catalog outage instead of marking everything missing", async () => {
   catalog = { products: [], status: "unavailable" };
 

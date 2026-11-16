@@ -36,6 +36,7 @@ import {
   useCartValidation,
 } from "@/lib/cart/use-cart-validation";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
+import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { CartItemRow } from "./cart-item-row";
 import { CartSummary, MobileCheckoutBar } from "./cart-summary";
 
@@ -63,7 +64,8 @@ export default function CartPage() {
     setQty,
     clear,
   } = useCart();
-  const { states, loading, notices, dismissNotices } = useCartValidation();
+  const { states, leadTimes, loading, notices, dismissNotices } =
+    useCartValidation();
   const ctaRef = useRef<HTMLDivElement>(null);
 
   const stateOf = (item: PricedCartItem): CartLineState =>
@@ -82,6 +84,12 @@ export default function CartPage() {
       ),
       subtotal: buyable.reduce((sum, i) => sum + i.price * i.quantity, 0),
       count: buyable.reduce((sum, i) => sum + i.quantity, 0),
+      // Срок берём из изделий; у тех, у кого своего нет, — общий
+      leadTime: madeToOrderLeadTimeOf(
+        buyable.map((item) => ({
+          leadTimeDays: leadTimes.get(cartLineKey(item)),
+        })),
+      ),
     };
   }).filter((section) => section.items.length > 0);
   // Мобильная панель — только когда оформление одно: при двух секциях
@@ -244,6 +252,7 @@ export default function CartPage() {
                       count={section.count}
                       unavailableCount={section.unavailable.length}
                       checking={loading}
+                      leadTime={section.leadTime}
                       onRemoveUnavailable={() =>
                         removeUnavailable(section.unavailable)
                       }
