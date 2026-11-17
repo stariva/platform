@@ -286,7 +286,7 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="theme-dark min-h-dvh bg-bg text-fg">
+    <div className="min-h-dvh bg-bg text-fg">
       <header className="flex items-center gap-1 px-2 pt-[env(safe-area-inset-top)]">
         <button
           type="button"
