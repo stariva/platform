@@ -54,3 +54,6 @@ dist/
 
 # tanstack
 .tanstack
+
+# Playwright MCP local traces
+.playwright-mcp/
