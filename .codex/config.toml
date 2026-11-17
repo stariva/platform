@@ -15,7 +15,7 @@ network_access = true                # нужно для npm install и чтен
 # Актуальная документация библиотек (React, Capacitor, Tailwind, TanStack…)
 [mcp_servers.context7]
 command = "cmd"
-args = ["/c", "npx", "-y", "@upstash/context7-mcp"]
+args = ["/c", "npx", "-y", "@upstash/context7-mcp", "--api-key", "ctx7sk-5ba1003a-bb41-4f8b-86ad-8a69a67a84be"]
 
 # Браузер: открывает приложение в мобильном вьюпорте, делает скриншоты, кликает
 [mcp_servers.playwright]
