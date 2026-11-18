@@ -23,6 +23,11 @@
     "indentWidth": 2,
     "lineWidth": 80
   },
+  "markdown": {
+    "parser": {
+      "frontmatter": true
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
