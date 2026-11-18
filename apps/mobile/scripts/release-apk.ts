@@ -5,10 +5,10 @@
  *   bun run apk:release -- --version-code 12 --version-name 1.2.0
  *   bun run apk:release -- --out ./builds --dry-run
  *
- * Шаги: проверить ключ подписи и SDK → (по флагам) поднять версии оболочки в
- * Android и iOS → vite build → cap sync android → gradlew assembleRelease →
+ * Шаги: проверить ключ подписи, SDK и JDK → (по флагам) поднять версии
+ * оболочки в Android и iOS → vite build → cap sync android → gradlew assembleRelease →
  * скопировать APK в --out (по умолчанию apps/mobile/apk) → проверить подпись
- * через apksigner.
+ * через apksigner. Если сборка упала, версии оболочки откатываются.
  *
  * Ключ берётся из env или gradle.properties — из тех же источников, что
  * использует android/app/build.gradle и workflow «Mobile release»:
@@ -51,8 +51,15 @@ const { values } = parseArgs({
   },
 });
 
+/** Откат версий оболочки, если сборка не дошла до APK. */
+let restoreVersions: (() => void) | undefined;
+
 function fail(message: string): never {
   console.error(`✗ ${message}`);
+  if (restoreVersions) {
+    restoreVersions();
+    console.error("Версии оболочки возвращены к прежним");
+  }
   process.exit(1);
 }
 
@@ -65,10 +72,18 @@ function run(cmd: string, args: string[], cwd = root) {
   if (r.status !== 0) fail(`${cmd} ${args.join(" ")} — код ${r.status}`);
 }
 
+/**
+ * Свойство так, как его увидит findProperty в build.gradle: ORG_GRADLE_PROJECT_*
+ * из env, затем gradle.properties в Gradle user home, затем проектный.
+ */
 function gradleProperty(name: string): string | undefined {
+  const fromEnv = process.env[`ORG_GRADLE_PROJECT_${name}`];
+  if (fromEnv) return fromEnv;
+  const gradleUserHome =
+    process.env.GRADLE_USER_HOME || join(homedir(), ".gradle");
   for (const file of [
+    join(gradleUserHome, "gradle.properties"),
     join(androidDir, "gradle.properties"),
-    join(homedir(), ".gradle", "gradle.properties"),
   ]) {
     if (!existsSync(file)) continue;
     const line = readFileSync(file, "utf8")
@@ -118,36 +133,12 @@ if (values["version-name"] !== undefined) {
   versionName = name;
 }
 
-if (versionCode !== oldCode || values["version-name"] !== undefined) {
-  if (values["dry-run"]) {
-    console.log(
-      `Оболочка: versionCode ${oldCode} → ${versionCode}, versionName ${versionName}`,
-    );
-  } else {
-    writeFileSync(
-      gradlePath,
-      gradle
-        .replace(/versionCode \d+/, `versionCode ${versionCode}`)
-        .replace(/versionName "[^"]*"/, `versionName "${versionName}"`),
-    );
-    // Тест native-config.test.ts требует одинаковых версий на Android и iOS —
-    // обновляем оба значения в Xcode, чтобы сборка не ломала checks
-    writeFileSync(
-      pbxprojPath,
-      readFileSync(pbxprojPath, "utf8")
-        .replace(
-          /MARKETING_VERSION = [^;]+;/g,
-          `MARKETING_VERSION = ${versionName};`,
-        )
-        .replace(
-          /CURRENT_PROJECT_VERSION = [^;]+;/g,
-          `CURRENT_PROJECT_VERSION = ${versionCode};`,
-        ),
-    );
-    console.log(
-      `Версии оболочки: versionCode ${versionCode}, versionName ${versionName} (Android + iOS)`,
-    );
-  }
+const bumpVersions =
+  versionCode !== oldCode || values["version-name"] !== undefined;
+if (bumpVersions && values["dry-run"]) {
+  console.log(
+    `Оболочка: versionCode ${oldCode} → ${versionCode}, versionName ${versionName}`,
+  );
 }
 
 // --- Подпись и SDK -----------------------------------------------------------
@@ -184,18 +175,24 @@ if (!existsSync(sdk)) {
   process.env.ANDROID_HOME = sdk;
 }
 
-const java = spawnSync("java", ["-version"], {
+// gradlew берёт java из JAVA_HOME, а без него — из PATH; проверяем тот же
+const javaHome = process.env.JAVA_HOME;
+const javaBin = javaHome
+  ? join(javaHome, "bin", isWindows ? "java.exe" : "java")
+  : "java";
+const javaSource = javaHome ? `JAVA_HOME (${javaBin})` : "PATH";
+const java = spawnSync(javaBin, ["-version"], {
   encoding: "utf8",
-  shell: isWindows,
+  shell: isWindows && !javaHome,
 });
-const javaVersion = /version "(\d+)(?:\.(\d+))?"/.exec(
+const javaVersion = /version "(\d+)(?:\.(\d+))?/.exec(
   `${java.stdout ?? ""}${java.stderr ?? ""}`,
 );
 const major = javaVersion?.[1] === "1" ? javaVersion?.[2] : javaVersion?.[1];
 if (!major) {
   if (values["dry-run"])
-    warn("Java не найден в PATH. Для Capacitor 8 нужен JDK 21");
-  else fail("Java не найден в PATH. Для Capacitor 8 нужен JDK 21");
+    warn(`Java не найден в ${javaSource}. Для Capacitor 8 нужен JDK 21`);
+  else fail(`Java не найден в ${javaSource}. Для Capacitor 8 нужен JDK 21`);
 }
 if (major && +major < 21)
   warn(`Java ${major}, а плагины Capacitor 8 собираются под JDK 21`);
@@ -222,6 +219,37 @@ if (values["dry-run"]) {
   process.exit(0);
 }
 
+if (bumpVersions) {
+  const pbxproj = readFileSync(pbxprojPath, "utf8");
+  restoreVersions = () => {
+    writeFileSync(gradlePath, gradle);
+    writeFileSync(pbxprojPath, pbxproj);
+  };
+  writeFileSync(
+    gradlePath,
+    gradle
+      .replace(/versionCode \d+/, `versionCode ${versionCode}`)
+      .replace(/versionName "[^"]*"/, `versionName "${versionName}"`),
+  );
+  // Тест native-config.test.ts требует одинаковых версий на Android и iOS —
+  // обновляем оба значения в Xcode, чтобы сборка не ломала checks
+  writeFileSync(
+    pbxprojPath,
+    pbxproj
+      .replace(
+        /MARKETING_VERSION = [^;]+;/g,
+        `MARKETING_VERSION = ${versionName};`,
+      )
+      .replace(
+        /CURRENT_PROJECT_VERSION = [^;]+;/g,
+        `CURRENT_PROJECT_VERSION = ${versionCode};`,
+      ),
+  );
+  console.log(
+    `Версии оболочки: versionCode ${versionCode}, versionName ${versionName} (Android + iOS)`,
+  );
+}
+
 console.log("Собираю веб-бандл и синхронизирую Android…");
 run("bun", ["run", "build"]);
 run("bun", ["x", "cap", "sync", "android"]);
@@ -236,6 +264,7 @@ run(
 if (!existsSync(apkSrc)) fail(`APK не найден: ${apkSrc}`);
 mkdirSync(outDir, { recursive: true });
 copyFileSync(apkSrc, apkDst);
+restoreVersions = undefined;
 
 // Подписан ли файл тем ключом — проверяем apksigner из SDK, если он есть
 const buildToolsDir = join(sdk, "build-tools");
