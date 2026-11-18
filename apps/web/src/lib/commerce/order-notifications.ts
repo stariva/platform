@@ -1,11 +1,11 @@
 import type { productOrders } from "@stariva/db/schema";
 import { sendOrderStatusEmail } from "@stariva/emails";
-import { baseEnv, env } from "@/env";
 import {
   deliverNotification,
   type Notification,
 } from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
+import { staffEmailDelivery } from "@/lib/email/staff-config";
 import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { siteUrl } from "@/lib/workshops/notifications";
 import { paymentOutcome } from "./made-to-order-flow";
@@ -49,9 +49,7 @@ function send(
   };
   return deliverNotification(notification, {
     ...telegramStaffConfig(),
-    emailKey: baseEnv.RESEND_API_KEY,
-    emailFrom: env.ORDER_EMAIL_FROM,
-    emailTo: env.ORDER_EMAIL_TO,
+    ...staffEmailDelivery(),
   });
 }
 

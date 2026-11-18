@@ -4,6 +4,7 @@ import {
   type DeliveryConfig,
   deliverNotification,
   missingEmailSettings,
+  type NotificationEmail,
 } from "./delivery";
 
 const notification = {
@@ -15,20 +16,32 @@ const notification = {
 const config: DeliveryConfig = {
   telegramToken: "test",
   telegramChatId: "test",
-  emailKey: "test",
   emailFrom: "from@example.test",
   emailTo: "to@example.test",
+  emailSend: async () => {},
 };
 function fakeFetch(
   handler: (url: string, init?: RequestInit) => Response | Promise<Response>,
 ): typeof fetch {
   return handler as unknown as typeof fetch;
 }
+/** emailSend, который запоминает письма и может падать. */
+function spyEmailSend(fail?: Error) {
+  const mails: NotificationEmail[] = [];
+  return {
+    mails,
+    send: async (mail: NotificationEmail) => {
+      if (fail) throw fail;
+      mails.push(mail);
+    },
+  };
+}
 test("both providers failing HTTP or transport never counts as delivered", async () => {
+  const email = spyEmailSend(new Error("email_failed"));
   assert.equal(
     await deliverNotification(
       notification,
-      config,
+      { ...config, emailSend: email.send },
       fakeFetch(() => new Response("failure", { status: 500 })),
     ),
     false,
@@ -36,7 +49,7 @@ test("both providers failing HTTP or transport never counts as delivered", async
   assert.equal(
     await deliverNotification(
       notification,
-      config,
+      { ...config, emailSend: email.send },
       fakeFetch(() => {
         throw new Error("offline");
       }),
@@ -47,36 +60,32 @@ test("both providers failing HTTP or transport never counts as delivered", async
 test("email alone does not count as delivered when Telegram is configured and fails", async () => {
   const original = console.error;
   console.error = () => {};
+  const email = spyEmailSend();
   try {
     assert.equal(
       await deliverNotification(
         notification,
-        config,
-        fakeFetch((url) =>
-          url.includes("resend")
-            ? Response.json({ id: "receipt" })
-            : Response.json({ ok: false }),
-        ),
+        { ...config, emailSend: email.send },
+        fakeFetch(() => Response.json({ ok: false })),
       ),
       false,
     );
   } finally {
     console.error = original;
   }
+  assert.equal(email.mails.length, 1);
 });
-test("a validated email receipt is enough when Telegram is not configured", async () => {
+test("a delivered email is enough when Telegram is not configured", async () => {
+  const email = spyEmailSend();
   assert.equal(
-    await deliverNotification(
-      notification,
-      {
-        emailKey: "test",
-        emailFrom: "from@example.test",
-        emailTo: "to@example.test",
-      },
-      fakeFetch(() => Response.json({ id: "receipt" })),
-    ),
+    await deliverNotification(notification, {
+      emailFrom: "from@example.test",
+      emailTo: "to@example.test",
+      emailSend: email.send,
+    }),
     true,
   );
+  assert.equal(email.mails[0]?.to, "to@example.test");
 });
 test("HTTP 200 without a provider acknowledgement is not delivery", async () => {
   assert.equal(
@@ -89,39 +98,31 @@ test("HTTP 200 without a provider acknowledgement is not delivery", async () => 
   );
 });
 test("missing recipient is not a configured email channel", async () => {
-  let called = false;
+  const email = spyEmailSend();
   assert.equal(
-    await deliverNotification(
-      notification,
-      { emailKey: "test", emailFrom: "from@example.test" },
-      fakeFetch(() => {
-        called = true;
-        return Response.json({ id: "receipt" });
-      }),
-    ),
+    await deliverNotification(notification, {
+      emailFrom: "from@example.test",
+      emailSend: email.send,
+    }),
     false,
   );
-  assert.equal(called, false);
+  assert.equal(email.mails.length, 0);
 });
 test("email retains photo and escapes user content, with stable retry key", async () => {
+  const email = spyEmailSend();
   await deliverNotification(
     { ...notification, photoBase64: "dGVzdA==", photoType: "image/png" },
     {
-      emailKey: "test",
       emailFrom: "from@example.test",
       emailTo: "to@example.test",
+      emailSend: email.send,
     },
-    fakeFetch((_url, init) => {
-      const payload = JSON.parse(String(init?.body));
-      assert.ok(payload.html.includes("&amp; &lt;эскиз&gt;"));
-      assert.equal(payload.attachments[0].content, "dGVzdA==");
-      assert.equal(
-        new Headers(init?.headers).get("Idempotency-Key"),
-        "custom-order/test-request",
-      );
-      return Response.json({ id: "receipt" });
-    }),
   );
+  const mail = email.mails[0];
+  assert.ok(mail?.html.includes("&amp; &lt;эскиз&gt;"));
+  assert.equal(mail?.attachments?.[0]?.filename, "inspiration.png");
+  assert.deepEqual(mail?.attachments?.[0]?.content, Buffer.from("test"));
+  assert.equal(mail?.idempotencyKey, "custom-order/test-request");
 });
 test("long Telegram messages use complete plain text chunks and failed photo remains pending", async () => {
   const parts: string[] = [];
@@ -148,10 +149,9 @@ test("long Telegram messages use complete plain text chunks and failed photo rem
 });
 test("missing email settings are named for the log", () => {
   assert.deepEqual(missingEmailSettings(config), []);
-  assert.deepEqual(
-    missingEmailSettings({ ...config, emailKey: undefined, emailTo: "" }),
-    ["RESEND_API_KEY", "ORDER_EMAIL_TO"],
-  );
+  assert.deepEqual(missingEmailSettings({ ...config, emailTo: "" }), [
+    "ORDER_EMAIL_TO",
+  ]);
 });
 test("a failed channel is logged even when the other one delivered", async () => {
   const errors: unknown[][] = [];
@@ -161,12 +161,8 @@ test("a failed channel is logged even when the other one delivered", async () =>
     assert.equal(
       await deliverNotification(
         notification,
-        config,
-        fakeFetch((url) =>
-          url.includes("resend")
-            ? new Response("failure", { status: 500 })
-            : Response.json({ ok: true }),
-        ),
+        { ...config, emailSend: spyEmailSend(new Error("email_failed")).send },
+        fakeFetch(() => Response.json({ ok: true })),
       ),
       true,
     );
@@ -183,9 +179,7 @@ test("Telegram requests go to api.telegram.org", async () => {
     config,
     fakeFetch((url) => {
       urls.push(url);
-      return url.includes("resend")
-        ? Response.json({ id: "receipt" })
-        : Response.json({ ok: true });
+      return Response.json({ ok: true });
     }),
   );
   assert.ok(urls.includes("https://api.telegram.org/bottest/sendMessage"));

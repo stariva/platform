@@ -27,18 +27,20 @@ let checklistResult: "ok" | "not_found" | "forbidden" = "ok";
 let checklistCalls: unknown[] = [];
 
 mock.module("../services/mobile-courses", () => ({
-  listCatalogCourses: async () => [{
-    slug: "lampshade",
-    title: "Абажур",
-    subtitle: "",
-    description: "Видеокурс",
-    cover: "/images/lampshade.jpg",
-    category: "lampshades",
-    level: "beginner",
-    priceKopecks: 99000,
-    lessonCount: 4,
-    isPreorder: false,
-  }],
+  listCatalogCourses: async () => [
+    {
+      slug: "lampshade",
+      title: "Абажур",
+      subtitle: "",
+      description: "Видеокурс",
+      cover: "/images/lampshade.jpg",
+      category: "lampshades",
+      level: "beginner",
+      priceKopecks: 99000,
+      lessonCount: 4,
+      isPreorder: false,
+    },
+  ],
   listMobileCourses: async () => ({ courses: [], resume: null, demo: null }),
   getLessonDetails: async () => lessonResult,
   saveLessonChecklist: async (input: unknown) => {

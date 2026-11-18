@@ -6,7 +6,7 @@ import type Mail from "nodemailer/lib/mailer";
 import type { ReactNode } from "react";
 
 import { env } from "./env";
-import { recordEmail } from "./log";
+import { recordEmail, wasEmailSent } from "./log";
 import { errorText } from "./log-row";
 import {
   newOpenToken,
@@ -38,6 +38,7 @@ export interface Emails {
 }
 
 export type EmailHtml = {
+  attachments?: EmailAttachment[];
   html: string;
   subject: string;
   to: string[];
@@ -79,6 +80,7 @@ export const sendEmailHtml = async (email: EmailHtml) =>
     from: email.from ?? env.EMAIL_FROM,
     subject: email.subject,
     html: email.html,
+    attachments: email.attachments,
     idempotencyKey: email.idempotencyKey,
   });
 
@@ -121,6 +123,15 @@ async function prepare(email: OutgoingEmail & { openToken?: string }): Promise<{
  * наружу, только когда не отправил ни один.
  */
 async function deliver(original: OutgoingEmail & { openToken?: string }) {
+  if (
+    original.idempotencyKey &&
+    (await wasEmailSent(original.idempotencyKey))
+  ) {
+    logger.info("email.duplicate_skipped", {
+      idempotencyKey: original.idempotencyKey,
+    });
+    return;
+  }
   const startedAt = Date.now();
   const attempts: EmailAttempt[] = [];
   const { email, html, openToken } = await prepare(original);

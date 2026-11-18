@@ -1,4 +1,5 @@
-import { baseEnv, env } from "@/env";
+import { isEmailConfigured, sendEmailHtml } from "@stariva/emails";
+import { env } from "@/env";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { telegramApiUrl } from "@/lib/telegram/api-url";
 import { telegramFetch } from "@/lib/telegram/fetch";
@@ -60,25 +61,18 @@ async function sendEmailNotification(
   email: string,
   source?: string,
 ): Promise<void> {
-  const apiKey = baseEnv.RESEND_API_KEY;
   const to = env.ORDER_EMAIL_TO;
   const from = env.ORDER_EMAIL_FROM;
-  if (!apiKey || !to || !from) return; // email — необязательный канал
+  // email — необязательный канал: без адресов или провайдера просто молчим
+  if (!to || !from || !isEmailConfigured()) return;
 
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to,
-      subject: "Новая подписка на рассылку — Stariva",
-      html: `Новый подписчик: <b>${escapeHtml(email)}</b>${
-        source ? `<br>Источник: ${escapeHtml(source)}` : ""
-      }`,
-    }),
+  await sendEmailHtml({
+    from,
+    to: [to],
+    subject: "Новая подписка на рассылку — Stariva",
+    html: `Новый подписчик: <b>${escapeHtml(email)}</b>${
+      source ? `<br>Источник: ${escapeHtml(source)}` : ""
+    }`,
   }).catch(() => {
     // email — необязательный канал, ошибку не эскалируем
   });
