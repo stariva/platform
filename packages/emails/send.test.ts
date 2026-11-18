@@ -19,7 +19,8 @@ const env: Record<string, unknown> = {
 };
 const recordEmail = mock(async (_entry: unknown) => {});
 mock.module("./env", () => ({ env }));
-mock.module("./log", () => ({ recordEmail }));
+const wasEmailSent = mock(async (_key: string) => false);
+mock.module("./log", () => ({ recordEmail, wasEmailSent }));
 mock.module("resend", () => ({
   Resend: class {
     emails = { send };
@@ -88,6 +89,7 @@ function resetMocks() {
   smtp.mockClear();
   postbox.mockClear();
   recordEmail.mockClear();
+  wasEmailSent.mockClear();
   globalThis.fetch = postbox as unknown as typeof fetch;
 }
 
@@ -97,6 +99,29 @@ function restore() {
   env.EMAIL_FALLBACK_PROVIDER = undefined;
   env.POSTBOX_SECRET_ACCESS_KEY = "synthetic-secret";
 }
+
+test("skips an email whose idempotency key was already sent", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  env.EMAIL_FALLBACK_PROVIDER = "resend";
+  try {
+    wasEmailSent.mockImplementationOnce(async () => true);
+    await sendEmail({ ...email, idempotencyKey: "custom-order/1" });
+    expect(wasEmailSent).toHaveBeenCalledWith("custom-order/1");
+    expect(postbox).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    expect(recordEmail).not.toHaveBeenCalled();
+
+    await sendEmail({ ...email, idempotencyKey: "custom-order/2" });
+    expect(postbox).toHaveBeenCalledTimes(1);
+
+    await sendEmail(email);
+    expect(wasEmailSent).toHaveBeenCalledTimes(2);
+    expect(postbox).toHaveBeenCalledTimes(2);
+  } finally {
+    restore();
+  }
+});
 
 test("sends through the Postbox REST API when it is the default provider", async () => {
   resetMocks();

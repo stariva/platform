@@ -92,6 +92,8 @@ export const emailLog = pgTable(
     index("email_log_workshop_order_idx").on(table.workshopOrderId),
     uniqueIndex("email_log_message_id_uq").on(table.messageId),
     index("email_log_open_token_idx").on(table.openToken),
+    // Повтор с тем же ключом не шлёт письмо второй раз: Postbox ключа не знает
+    index("email_log_idempotency_key_idx").on(table.idempotencyKey),
   ],
 );
 

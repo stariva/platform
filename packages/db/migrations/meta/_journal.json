@@ -484,6 +484,13 @@
       "when": 1794988226957,
       "tag": "0068_dry_shaman",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1795031468198,
+      "tag": "0069_email_log_idempotency_key",
+      "breakpoints": true
     }
   ]
 }
