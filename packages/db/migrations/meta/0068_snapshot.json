@@ -5970,7 +5970,7 @@
     "public.product_contact_channel": {
       "name": "product_contact_channel",
       "schema": "public",
-      "values": ["telegram", "whatsapp", "max", "email"]
+      "values": ["telegram", "whatsapp", "max", "phone", "email"]
     },
     "public.product_delivery_method": {
       "name": "product_delivery_method",

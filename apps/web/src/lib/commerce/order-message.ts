@@ -31,6 +31,7 @@ const CONTACT_CHANNEL_LABELS: Record<
   whatsapp: "WhatsApp",
   max: "MAX",
   email: "Email",
+  phone: "Звонок",
 };
 
 /** Куда писать мастеру: выбранный покупателем канал и ник, если он нужен. */
@@ -42,8 +43,10 @@ function preferredContactLine(order: OrderRow): string | null {
     const username = order.contactMessenger.replace(/^@/, "");
     return `Связь: ${label} — ${order.contactMessenger} (https://t.me/${username})`;
   }
-  if (channel === "email" && order.contactEmail) {
-    return `Связь: ${label} — ${order.contactEmail}`;
+  if (channel === "email") {
+    return order.contactEmail
+      ? `Связь: ${label} — ${order.contactEmail}`
+      : null;
   }
   return `Связь: ${label} — ${order.contactPhone}`;
 }

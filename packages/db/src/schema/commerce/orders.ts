@@ -43,6 +43,7 @@ export const productContactChannel = pgEnum("product_contact_channel", [
   "telegram",
   "whatsapp",
   "max",
+  "phone", // Старые заказы и вкладки; новая форма предлагает email.
   "email",
 ]);
 
