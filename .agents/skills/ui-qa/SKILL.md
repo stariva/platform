@@ -1,4 +1,5 @@
 ---
+
 name: ui-qa
 description: Use after building or changing any screen to visually verify it with the Playwright MCP at mobile viewports in light and dark themes, then fix problems and re-check.
 ---

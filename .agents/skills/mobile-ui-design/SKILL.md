@@ -1,4 +1,5 @@
 ---
+
 name: mobile-ui-design
 description: Use when designing or restyling any screen or component of the Stariva mobile app. Defines the design-token workflow, layout, typography, motion and screen states so the UI looks premium rather than templated.
 ---
@@ -6,6 +7,7 @@ description: Use when designing or restyling any screen or component of the Star
 # Mobile UI design (Stariva)
 
 ## Порядок работы
+
 1. Прочитай `docs/BRIEF.md` (бренд, цвета, референсы). Если пусто — задай вопросы владельцу, не выдумывай бренд.
 2. Если нет `src/styles/tokens.css` — создай его первым: цвета (primary, surface, text, muted, border, success, danger) для light/dark, шкала типографики, радиусы (8/12/20/28), тени (3 уровня), отступы (4/8-сетка), длительности и easing анимаций.
 3. Собери/дополни примитивы в `src/components/ui/` (Button, Card, Chip, Sheet, Skeleton, Input, TabBar, EmptyState). Экраны строй только из них.
@@ -13,6 +15,7 @@ description: Use when designing or restyling any screen or component of the Star
 5. Проверь через навык `ui-qa`.
 
 ## Эстетика
+
 - Выбери один явный визуальный характер (например: тёплый «ремесленный» минимализм, много воздуха, крупные фото) и держи его везде.
 - Выразительная пара шрифтов: display для заголовков + читаемый текстовый. Подключай локально (woff2), не через CDN. Кириллица обязательна.
 - Фото мастер-классов — главный визуальный элемент: крупные скруглённые карточки, aspect-ratio 4/5 или 16/10, градиент под текстом для читаемости.
@@ -20,6 +23,7 @@ description: Use when designing or restyling any screen or component of the Star
 - Избегай: стоковых «фиолетовых градиентов», одинаковых карточек с тенью по умолчанию, мелкого текста (<14 px для основного).
 
 ## Мобильные паттерны
+
 - Tab bar снизу (4–5 пунктов): Главная, Каталог, Мои записи, Избранное, Профиль.
 - Детальный экран: hero-фото с параллаксом, sticky CTA «Записаться» внизу с ценой.
 - Бронирование: bottom sheet с выбором даты/времени/количества мест, итог и кнопка.
@@ -27,10 +31,12 @@ description: Use when designing or restyling any screen or component of the Star
 - Safe-area сверху и снизу, `viewport-fit=cover`, учёт клавиатуры.
 
 ## Анимация
+
 - Длительности 150–300 мс, easing `cubic-bezier(0.22, 1, 0.36, 1)`.
 - Переходы между экранами и появление списков — аккуратно, без «цирка». Учитывай `prefers-reduced-motion`.
 
 ## Чек-лист перед сдачей экрана
+
 - [ ] Все цвета/радиусы/отступы из токенов
 - [ ] Зоны нажатия ≥ 44×44
 - [ ] Light и dark проверены
