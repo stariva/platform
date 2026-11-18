@@ -9,9 +9,11 @@ const {
   DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
+  normalizeTelegramHandle,
   OptionsUnavailableError,
   PaymentCreateFailedError,
   PaymentsUnavailableError,
+  TELEGRAM_HANDLE_ERROR,
 } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
 
@@ -401,6 +403,35 @@ test("an order needs a valid email for the receipt and status updates", async ()
     client.checkout.create({ ...createInput, contactEmail: "anna" }),
   );
   expect(invalid).toMatchObject({ code: "BAD_REQUEST" });
+});
+
+test("made-to-order asks for a Telegram handle when Telegram is chosen", async () => {
+  const client = wireClient({ services: { checkout: checkout() } });
+  const [missing] = await safe(
+    client.checkout.requestMadeToOrder({
+      ...madeToOrderInput,
+      preferredContactChannel: "telegram",
+    }),
+  );
+  expect(missing).toMatchObject({ code: "BAD_REQUEST" });
+  expect(firstIssue(missing)).toBe(TELEGRAM_HANDLE_ERROR);
+
+  const [invalid] = await safe(
+    client.checkout.requestMadeToOrder({
+      ...madeToOrderInput,
+      preferredContactChannel: "telegram",
+      contactMessenger: "https://t.me/StarivaBot?start=abc",
+    }),
+  );
+  expect(invalid).toMatchObject({ code: "BAD_REQUEST" });
+});
+
+test("telegram handle accepts a link, @nick or nick", () => {
+  expect(normalizeTelegramHandle("@anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("t.me/anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("https://t.me/anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("+7 900 123-45-67")).toBeNull();
 });
 
 test("made-to-order requires an email", async () => {

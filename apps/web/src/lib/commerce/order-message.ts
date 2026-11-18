@@ -23,11 +23,35 @@ const money = (kopecks: number) => formatPrice(kopecks / 100);
 const joinLines = (lines: (string | null | undefined | false)[]) =>
   lines.filter((line): line is string => typeof line === "string").join("\n");
 
+const CONTACT_CHANNEL_LABELS: Record<
+  NonNullable<OrderRow["preferredContactChannel"]>,
+  string
+> = {
+  telegram: "Telegram",
+  whatsapp: "WhatsApp",
+  max: "MAX",
+  phone: "Звонок",
+};
+
+/** Куда писать мастеру: выбранный покупателем канал и ник, если он нужен. */
+function preferredContactLine(order: OrderRow): string | null {
+  const channel = order.preferredContactChannel;
+  if (!channel) return null;
+  const label = CONTACT_CHANNEL_LABELS[channel];
+  if (channel === "telegram" && order.contactMessenger) {
+    const username = order.contactMessenger.replace(/^@/, "");
+    return `Связь: ${label} — ${order.contactMessenger} (https://t.me/${username})`;
+  }
+  if (channel === "phone") return "Связь: звонок";
+  return `Связь: ${label} — ${order.contactPhone}`;
+}
+
 function customerLines(order: OrderRow): string[] {
   return [
     `Покупатель: ${order.contactName}`,
     `Телефон: ${order.contactPhone}`,
     order.contactEmail && `Email: ${order.contactEmail}`,
+    preferredContactLine(order),
   ].filter((line): line is string => Boolean(line));
 }
 

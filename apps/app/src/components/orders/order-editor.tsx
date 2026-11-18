@@ -34,6 +34,7 @@ import {
 } from "./order-details";
 import {
   type AdminOrderView,
+  CONTACT_CHANNEL_LABELS,
   dateTime,
   isSafeToDelete,
   KIND_LABELS,
@@ -44,6 +45,7 @@ import {
   statusVariant,
 } from "./order-meta";
 import { ReceiptsPanel } from "./receipts-panel";
+import { whatsappPhone } from "./whatsapp-phone";
 
 type UpdateInput = Parameters<typeof orpc.admin.orders.update.call>[0];
 type OrderStatus = NonNullable<UpdateInput["status"]>;
@@ -175,6 +177,7 @@ export function OrderEditor({
     : [order.status, ...kindStatuses];
 
   const phoneDigits = order.contactPhone.replace(/[^\d+]/g, "");
+  const whatsappNumber = whatsappPhone(order.contactPhone);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
@@ -289,6 +292,35 @@ export function OrderEditor({
                   >
                     {order.contactEmail}
                   </a>
+                </Field>
+              )}
+              {order.preferredContactChannel && (
+                <Field label="Удобная связь">
+                  {order.preferredContactChannel === "telegram" &&
+                  order.contactMessenger ? (
+                    <a
+                      href={`https://t.me/${order.contactMessenger.replace(/^@/, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Telegram · {order.contactMessenger}
+                    </a>
+                  ) : order.preferredContactChannel === "whatsapp" &&
+                    whatsappNumber ? (
+                    <a
+                      href={`https://wa.me/${whatsappNumber}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:underline"
+                    >
+                      WhatsApp · {order.contactPhone}
+                    </a>
+                  ) : order.preferredContactChannel === "whatsapp" ? (
+                    `WhatsApp · ${order.contactPhone}`
+                  ) : (
+                    CONTACT_CHANNEL_LABELS[order.preferredContactChannel]
+                  )}
                 </Field>
               )}
               <Field label="Аккаунт">

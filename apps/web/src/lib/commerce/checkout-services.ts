@@ -1,4 +1,5 @@
 import type { CheckoutQuote, CheckoutServices } from "@stariva/web-api";
+import { normalizeTelegramHandle } from "@stariva/web-api/contract";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
@@ -292,6 +293,11 @@ export const checkoutServices: CheckoutServices = {
       contactName: data.contactName,
       contactPhone: data.contactPhone,
       contactEmail: data.contactEmail,
+      preferredContactChannel: data.preferredContactChannel ?? null,
+      contactMessenger:
+        data.preferredContactChannel === "telegram"
+          ? normalizeTelegramHandle(data.contactMessenger ?? "")
+          : null,
       customerNotes: data.customerNotes,
       deliveryPointId: pointId ?? null,
       pickupPoint: pointInfo?.points[0] ?? null,

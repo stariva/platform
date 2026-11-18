@@ -170,32 +170,83 @@ export const createdOrderSchema = z.object({
 
 export type CreatedOrder = z.infer<typeof createdOrderSchema>;
 
-export const madeToOrderRequestSchema = z.object({
-  contactName: z.string().trim().min(1).max(120),
-  contactPhone: z.string().trim().min(5, "Укажите телефон").max(32),
-  contactEmail: z.email("Укажите email").trim(),
-  customerNotes: z.string().trim().max(1500).optional(),
-  // Пункт выдачи Ozon, куда отправить готовое изделие. Покупатель выбирает
-  // его на странице заказа перед предоплатой; поле осталось для старых вкладок.
-  deliveryPointId: z.string().trim().min(1).max(32).optional(),
-  items: z
-    .array(
-      z.object({
-        productSlug: z.string().min(1),
-        quantity: z.number().int().positive().max(MAX_MADE_TO_ORDER_QUANTITY),
-        // Мерки и комментарий покупатель добавляет на странице заказа.
-        options: z.object({
-          size: z.string().trim().min(1).max(60),
-          color: z.string().trim().min(1).max(60),
+/** Где покупателю удобнее ответить мастеру по заявке. */
+export const madeToOrderContactChannels = [
+  "telegram",
+  "whatsapp",
+  "max",
+  "phone",
+] as const;
+
+export const madeToOrderContactChannelSchema = z.enum(
+  madeToOrderContactChannels,
+  { error: "Выберите, где удобнее ответить" },
+);
+
+export type MadeToOrderContactChannel = z.infer<
+  typeof madeToOrderContactChannelSchema
+>;
+
+export const TELEGRAM_HANDLE_ERROR =
+  "Укажите ник в Telegram, например @anna_star";
+
+/**
+ * Ник из `@anna_star`, `anna_star`, `t.me/anna_star` или
+ * `https://t.me/anna_star`. null — это не ник Telegram: ссылки с параметрами
+ * (например, приглашение в бота) и номера телефонов не подходят.
+ */
+export function normalizeTelegramHandle(value: string): string | null {
+  const trimmed = value.trim();
+  const link = trimmed.match(
+    /^(?:https?:\/\/)?(?:www\.)?(?:t|telegram)\.me\/([^/?#\s]+)\/?$/i,
+  );
+  const handle = (link?.[1] ?? trimmed.replace(/^@/, "")).trim();
+  return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(handle) ? `@${handle}` : null;
+}
+
+export const madeToOrderRequestSchema = z
+  .object({
+    contactName: z.string().trim().min(1).max(120),
+    contactPhone: z.string().trim().min(5, "Укажите телефон").max(32),
+    contactEmail: z.email("Укажите email").trim(),
+    /**
+     * Где удобнее ответить. Необязательно только для старых вкладок: раньше
+     * выбора не было, и мастер звонил на телефон из заявки.
+     */
+    preferredContactChannel: madeToOrderContactChannelSchema.optional(),
+    /** Ник в Telegram; для остальных каналов сервер его не сохраняет. */
+    contactMessenger: z.string().trim().max(120).optional(),
+    customerNotes: z.string().trim().max(1500).optional(),
+    // Пункт выдачи Ozon, куда отправить готовое изделие. Покупатель выбирает
+    // его на странице заказа перед предоплатой; поле осталось для старых вкладок.
+    deliveryPointId: z.string().trim().min(1).max(32).optional(),
+    items: z
+      .array(
+        z.object({
+          productSlug: z.string().min(1),
+          quantity: z.number().int().positive().max(MAX_MADE_TO_ORDER_QUANTITY),
+          // Мерки и комментарий покупатель добавляет на странице заказа.
+          options: z.object({
+            size: z.string().trim().min(1).max(60),
+            color: z.string().trim().min(1).max(60),
+          }),
         }),
-      }),
-    )
-    .min(1)
-    .max(MAX_MADE_TO_ORDER_LINES),
-  // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ). Оферту покупатель
-  // принимает позже — при предоплате, когда цена согласована.
-  personalDataConsent,
-});
+      )
+      .min(1)
+      .max(MAX_MADE_TO_ORDER_LINES),
+    // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ). Оферту покупатель
+    // принимает позже — при предоплате, когда цена согласована.
+    personalDataConsent,
+  })
+  .superRefine((data, ctx) => {
+    if (data.preferredContactChannel !== "telegram") return;
+    if (normalizeTelegramHandle(data.contactMessenger ?? "")) return;
+    ctx.addIssue({
+      code: "custom",
+      path: ["contactMessenger"],
+      message: TELEGRAM_HANDLE_ERROR,
+    });
+  });
 
 export type MadeToOrderRequest = z.infer<typeof madeToOrderRequestSchema>;
 

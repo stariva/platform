@@ -9,7 +9,10 @@ import {
   user,
   type VisitorInfo,
 } from "@stariva/db/schema";
-import type { MadeToOrderParcel } from "@stariva/web-api/contract";
+import type {
+  MadeToOrderContactChannel,
+  MadeToOrderParcel,
+} from "@stariva/web-api/contract";
 import {
   and,
   desc,
@@ -78,6 +81,10 @@ export interface CreateMadeToOrderOrderInput {
   contactName: string;
   contactPhone: string;
   contactEmail?: string;
+  /** Где покупателю удобнее ответить; null — старая вкладка без выбора. */
+  preferredContactChannel?: MadeToOrderContactChannel | null;
+  /** Ник в Telegram; для остальных каналов не сохраняется. */
+  contactMessenger?: string | null;
   customerNotes?: string;
   /** null — пункт покупатель выберет на странице заказа перед предоплатой. */
   deliveryPointId: string | null;
@@ -136,6 +143,8 @@ export async function createMadeToOrderOrder(
       contactName: input.contactName,
       contactPhone: input.contactPhone,
       contactEmail: input.contactEmail ?? null,
+      preferredContactChannel: input.preferredContactChannel ?? null,
+      contactMessenger: input.contactMessenger ?? null,
       status: "requested",
       amountProducts,
       amountDelivery: 0,

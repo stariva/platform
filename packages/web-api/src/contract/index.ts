@@ -49,11 +49,16 @@ export {
   isDeliveryPhone,
   MAX_MADE_TO_ORDER_LINES,
   MAX_MADE_TO_ORDER_QUANTITY,
+  type MadeToOrderContactChannel,
   type MadeToOrderRequest,
   type MadeToOrderRequested,
+  madeToOrderContactChannelSchema,
+  madeToOrderContactChannels,
+  normalizeTelegramHandle,
   OptionsUnavailableError,
   type PhoneCheck,
   type QuoteInput,
+  TELEGRAM_HANDLE_ERROR,
 } from "./checkout";
 export {
   CustomOrderConflictError,

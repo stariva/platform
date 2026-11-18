@@ -38,6 +38,14 @@ export const productOrderPaymentType = pgEnum("product_order_payment_type", [
   "balance",
 ]);
 
+/** Где покупателю удобнее ответить мастеру. */
+export const productContactChannel = pgEnum("product_contact_channel", [
+  "telegram",
+  "whatsapp",
+  "max",
+  "phone",
+]);
+
 export const productDeliveryMethod = pgEnum("product_delivery_method", [
   "pickup",
   "courier",
@@ -71,6 +79,11 @@ export const productOrders = pgTable(
     contactName: text("contact_name").notNull(),
     contactPhone: text("contact_phone").notNull(),
     contactEmail: text("contact_email"),
+    // Под заказ: где покупателю удобнее ответить. null — старые заявки, где
+    // выбора не было, и заказы со склада.
+    preferredContactChannel: productContactChannel("preferred_contact_channel"),
+    // Под заказ: ник в мессенджере, если канал его требует (Telegram).
+    contactMessenger: text("contact_messenger"),
     status: productOrderStatus("status").notNull().default("pending"),
     // Суммы в копейках
     amountProducts: integer("amount_products").notNull(),

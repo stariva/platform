@@ -21,6 +21,8 @@ const order: OrderRow = {
   contactName: "Анна",
   contactPhone: "+7 999 123-45-67",
   contactEmail: null,
+  preferredContactChannel: null,
+  contactMessenger: null,
   status: "requested",
   amountProducts: 700000,
   amountDelivery: 0,
@@ -92,6 +94,32 @@ test("request message lists the buyer, options and the approval step", () => {
   );
   assert.ok(!message.includes("Email:"));
   assert.ok(!message.includes("Пожелания:"));
+});
+
+test("request message says where the buyer prefers to be contacted", () => {
+  const telegram = formatMadeToOrderRequestMessage(
+    {
+      ...order,
+      preferredContactChannel: "telegram",
+      contactMessenger: "@anna_star",
+    },
+    [item],
+  ).message;
+  assert.ok(
+    telegram.includes("Связь: Telegram — @anna_star (https://t.me/anna_star)"),
+  );
+
+  const whatsapp = formatMadeToOrderRequestMessage(
+    { ...order, preferredContactChannel: "whatsapp" },
+    [item],
+  ).message;
+  assert.ok(whatsapp.includes("Связь: WhatsApp — +7 999 123-45-67"));
+
+  const call = formatMadeToOrderRequestMessage(
+    { ...order, preferredContactChannel: "phone" },
+    [item],
+  ).message;
+  assert.ok(call.includes("Связь: звонок"));
 });
 
 test("request message includes wishes and delivery when given", () => {
