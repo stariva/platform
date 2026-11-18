@@ -1,5 +1,4 @@
 ---
-
 name: capacitor-workflow
 description: Use when initializing the project, adding native platforms or Capacitor plugins, syncing, building Android, configuring icons/splash/permissions, or preparing store releases for the Stariva app.
 ---

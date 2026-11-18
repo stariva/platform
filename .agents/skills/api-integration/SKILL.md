@@ -1,5 +1,4 @@
 ---
-
 name: api-integration
 description: Use when connecting the Stariva app to the existing website REST/GraphQL API, defining types, auth, caching, error handling, or writing mocks while the API contract is incomplete.
 ---

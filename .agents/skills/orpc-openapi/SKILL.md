@@ -1,5 +1,4 @@
 ---
-
 name: orpc-openapi
 description: "Expose an oRPC router as a spec-compliant OpenAPI HTTP API. Use when a project depends on @orpc/openapi, or for defining REST-style routes on oRPC procedures (openapi() metadata or .route with method, path, successStatus), serving them with OpenAPIHandler alongside RPCHandler, coercing query and path strings with Smart Coercion, calling an OpenAPI-shaped API with OpenAPILink, generating an OpenAPI 3.2 (or 3.1, 3.0) document with OpenAPIGenerator, or serving Scalar or Swagger docs with the OpenAPI Reference plugin. Biases toward retrieval from the oRPC docs over pre-trained knowledge. For contract-first work (defining contracts with oc, implementing them with implement, or generating a contract from an existing OpenAPI spec), use the orpc-contract skill; for plain RPC serving, core builder, middleware, or client work with no REST exposure, use the orpc skill instead."
 license: MIT

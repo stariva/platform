@@ -1,5 +1,4 @@
 ---
-
 name: mobile-ui-design
 description: Use when designing or restyling any screen or component of the Stariva mobile app. Defines the design-token workflow, layout, typography, motion and screen states so the UI looks premium rather than templated.
 ---

@@ -28,7 +28,7 @@
     "@capacitor/ios": "^8.6.2",
     "@capacitor/preferences": "^8.0.1",
     "@capgo/capacitor-updater": "^8.54.2",
-    "@orpc/client": "2.0.0-beta.50",
+    "@orpc/client": "2.0.0-beta.51",
     "@stariva/auth": "workspace:*",
     "@stariva/web-api": "workspace:*",
     "@tanstack/react-query": "^5.107.1",
