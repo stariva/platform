@@ -120,11 +120,27 @@ export const mobileCourseSchema = z.object({
   slug: z.string(),
   title: z.string(),
   cover: z.string(),
+  /** Первый доступный урок, чтобы открыть купленный курс без истории просмотра. */
+  firstLessonId: z.string().nullable(),
   lessonCount: z.number().int(),
   completedLessons: z.number().int(),
 });
 
 export type MobileCourse = z.infer<typeof mobileCourseSchema>;
+
+export const catalogCourseSchema = z.object({
+  slug: z.string(),
+  title: z.string(),
+  subtitle: z.string(),
+  description: z.string(),
+  cover: z.string(),
+  category: z.enum(["lampshades", "clothing", "interior"]),
+  level: z.enum(["beginner", "intermediate", "advanced"]),
+  priceKopecks: z.number().int().nonnegative(),
+  lessonCount: z.number().int().nonnegative(),
+  isPreorder: z.boolean(),
+});
+export type CatalogCourse = z.infer<typeof catalogCourseSchema>;
 
 /** Главный экран приложения: курсы, «Продолжить плетение» и демо-урок. */
 export const mobileCoursesSchema = z.object({
@@ -164,6 +180,8 @@ export const appReleaseSchema = z.object({
 export type AppRelease = z.infer<typeof appReleaseSchema>;
 
 export const accountContract = {
+  /** Опубликованные видеокурсы для мобильной витрины; доступно без входа. */
+  catalogCourses: oc.output(z.array(catalogCourseSchema)),
   /** Вошёл ли посетитель и купил ли он мастер-класс. */
   workshopAccess: oc
     .input(z.object({ slug: workshopSlug }))

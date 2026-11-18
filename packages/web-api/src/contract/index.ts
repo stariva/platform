@@ -7,6 +7,7 @@ import { jobsContract } from "./jobs";
 import { ordersContract } from "./orders";
 
 export {
+  type CatalogCourse,
   type AppRelease,
   FilesUnavailableError,
   type LessonDetails,

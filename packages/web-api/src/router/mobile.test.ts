@@ -27,6 +27,18 @@ let checklistResult: "ok" | "not_found" | "forbidden" = "ok";
 let checklistCalls: unknown[] = [];
 
 mock.module("../services/mobile-courses", () => ({
+  listCatalogCourses: async () => [{
+    slug: "lampshade",
+    title: "Абажур",
+    subtitle: "",
+    description: "Видеокурс",
+    cover: "/images/lampshade.jpg",
+    category: "lampshades",
+    level: "beginner",
+    priceKopecks: 99000,
+    lessonCount: 4,
+    isPreorder: false,
+  }],
   listMobileCourses: async () => ({ courses: [], resume: null, demo: null }),
   getLessonDetails: async () => lessonResult,
   saveLessonChecklist: async (input: unknown) => {
@@ -42,6 +54,11 @@ const { lastStatus, wireClient } = await import("../testing/wire-client");
 
 const session = { user: { id: "user-1" } } as Session;
 const lesson = { slug: "lampshade", lessonId: "lesson-1" };
+
+test("catalog is available before sign-in", async () => {
+  const courses = await wireClient().account.catalogCourses();
+  expect(courses[0]).toMatchObject({ slug: "lampshade", priceKopecks: 99000 });
+});
 
 test("my courses require a session", async () => {
   const [error] = await safe(wireClient().account.myCourses());

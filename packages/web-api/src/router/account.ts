@@ -9,6 +9,7 @@ import {
 import {
   getLatestRelease,
   getLessonDetails,
+  listCatalogCourses,
   listMobileCourses,
   saveLessonChecklist as saveChecklist,
 } from "../services/mobile-courses";
@@ -51,6 +52,8 @@ const myCourses = account.myCourses.handler(async ({ context }) => {
   if (!user) throw new ORPCError("UNAUTHORIZED");
   return listMobileCourses(user.id);
 });
+
+const catalogCourses = account.catalogCourses.handler(() => listCatalogCourses());
 
 const lessonDetails = account.lessonDetails.handler(
   async ({ input, context, errors }) => {
@@ -186,6 +189,7 @@ const saveWorkshopReview = account.saveWorkshopReview.handler(
 );
 
 export const accountRouter = {
+  catalogCourses,
   workshopAccess,
   myCourses,
   lessonDetails,
