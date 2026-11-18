@@ -19,6 +19,7 @@ Vite + React внутри оболочки Capacitor 8 (`ru.stariva.workshops`).
 
 ```bash
 bun run dev            # веб-версия, API проксируется на :3000
+bun run dev:android    # эмулятор (поднимет, если спит) + build + sync + APK + установка и запуск
 bun run cap:android    # build + sync + открыть Android Studio
 bun run cap:ios        # build + sync + открыть Xcode
 bun run cap:sync       # только build + sync обоих платформ
