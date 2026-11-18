@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "cap:sync": "vite build && cap sync",
+    "apk:release": "bun scripts/release-apk.ts",
     "dev:android": "bun scripts/dev-android.ts",
     "cap:android": "vite build && cap sync android && cap open android",
     "cap:ios": "vite build && cap sync ios && cap open ios",

@@ -23,6 +23,7 @@ bun run dev:android    # эмулятор (поднимет, если спит) 
 bun run cap:android    # build + sync + открыть Android Studio
 bun run cap:ios        # build + sync + открыть Xcode
 bun run cap:sync       # только build + sync обоих платформ
+bun run apk:release    # подписанный production APK (см. ниже)
 bun test               # версии, решение об обновлении, согласованность нативных конфигов
 ```
 
@@ -83,12 +84,20 @@ App Store (куда вести iOS, когда оболочка устарела
 ## Выпуск новой оболочки (нативные изменения, новый плагин)
 
 1. Поднять `versionName`/`versionCode` (Android) и `MARKETING_VERSION`/
-   `CURRENT_PROJECT_VERSION` (iOS), `bun run cap:sync`.
-2. Android: собрать подписанный release-APK (`./gradlew assembleRelease` с
-   `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-   `ANDROID_KEY_PASSWORD`). **Ключ подписи один на всю жизнь приложения** и
-   хранится вне git: APK с другим ключом не встанет поверх установленного.
-   Без локального SDK то же делает workflow «Mobile release»
+   `CURRENT_PROJECT_VERSION` (iOS), `bun run cap:sync`. Проще один раз
+   передать версии в команду сборки: `bun run apk:release -- --version-code 12
+   --version-name 1.2.0` — она сама поправит оба файла (Android и iOS) и
+   соберёт APK. `--version-code` обязан быть больше текущего.
+2. Android: собрать подписанный release-APK — `bun run apk:release`. Команда
+   проверит keystore и SDK, соберёт бандл, сделает `cap sync android`,
+   запустит `assembleRelease`, проверит подпись через `apksigner` и положит
+   готовый файл в `apps/mobile/apk/stariva-<version>-<code>.apk` (папка
+   игнорируется git; переопределяется флагом `--out`). `--dry-run` только
+   покажет план. Нужны `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`,
+   `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` — в env или `gradle.properties`.
+   **Ключ подписи один на всю жизнь приложения** и хранится вне git: APK с
+   другим ключом не встанет поверх установленного. Без локального SDK то же
+   делает workflow «Mobile release»
    (`.github/workflows/mobile-release.yml`, запуск вручную с `version_code`/
    `version_name`) — keystore лежит в секретах `ANDROID_KEYSTORE_*`, готовый
    APK приходит артефактом и GitHub Release.
