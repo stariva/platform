@@ -14,6 +14,8 @@ export interface WorkshopLesson {
   videoKey: string;
   /** Бесплатный урок-превью (доступен без покупки). */
   free: boolean;
+  /** Схемы и фото узлов к уроку; файлы — в закрытом бакете. */
+  attachments?: { label: string; key: string; kind: "pdf" | "image" }[];
 }
 
 /** Урок в виде, удобном для страниц и плеера. */

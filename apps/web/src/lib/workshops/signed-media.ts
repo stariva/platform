@@ -17,6 +17,10 @@ import {
   signHlsGrant,
 } from "@/lib/workshops/hls-token";
 import {
+  MATERIAL_GRANT_TTL_SECONDS,
+  signMaterialGrant,
+} from "@/lib/workshops/material-token";
+import {
   isVideoSignRateLimited,
   logVideoAccess,
 } from "@/lib/workshops/video-access";
@@ -115,36 +119,89 @@ async function signLessonVideo({
   };
 }
 
+const IMAGE_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  avif: "image/avif",
+};
+
+interface CourseFile {
+  key: string;
+  label: string;
+  kind: "pdf" | "image";
+}
+
+/** Расширение и тип файла: PDF курса — всегда PDF, фото схемы — по ключу. */
+function fileType(file: CourseFile): {
+  extension: string;
+  contentType: string;
+} {
+  if (file.kind === "pdf") {
+    return { extension: "pdf", contentType: "application/pdf" };
+  }
+  const extension = file.key.split(".").at(-1)?.toLowerCase() ?? "";
+  const contentType = IMAGE_TYPES[extension];
+  return contentType
+    ? { extension, contentType }
+    : { extension: "bin", contentType: "application/octet-stream" };
+}
+
 /** Стабильный идентификатор материала: учитывает весь ключ, включая каталог. */
-function materialFileId(key: string): string {
-  return `${createHash("sha256").update(key).digest("hex")}.pdf`;
+function materialFileId(file: CourseFile): string {
+  const hash = createHash("sha256").update(file.key).digest("hex");
+  return `${hash}.${fileType(file).extension}`;
 }
 
 /**
- * Проверяет доступ к PDF-материалу курса. Файл обязан быть в материалах
- * запрошенного мастер-класса — это защищает от попыток скачать произвольный
- * объект из бакета.
+ * Проверяет доступ к материалу курса: PDF из материалов или схеме из урока.
+ * Файл обязан быть в материалах запрошенного мастер-класса — это защищает от
+ * попыток скачать произвольный объект из бакета.
  */
 async function authorizeMaterial(
   slug: string,
-  matches: (key: string) => boolean,
+  matches: (file: CourseFile) => boolean,
   userId: string | null,
 ): Promise<
-  | { status: "ok"; key: string; label: string }
+  | {
+      status: "ok";
+      key: string;
+      label: string;
+      fileId: string;
+      contentType: string;
+      extension: string;
+    }
   | Exclude<MaterialUrlResult, { status: "ok" }>
 > {
   const workshop = await getWorkshopBySlug(slug, "owned");
-  const material = workshop?.materialFiles?.find((file) => matches(file.key));
+  const files: CourseFile[] = [
+    ...(workshop?.materialFiles ?? []).map((file) => ({
+      key: file.key,
+      label: file.label,
+      kind: "pdf" as const,
+    })),
+    ...(workshop?.lessons ?? []).flatMap((lesson) => lesson.attachments ?? []),
+  ];
+  const material = files.find(matches);
   if (!material) return { status: "not_found" };
   if (!userId) return { status: "unauthorized" };
   if (!(await canWatchCourse(userId, slug))) return { status: "forbidden" };
   if (!isStorageConfigured()) return { status: "files_unavailable" };
-  return { status: "ok", key: material.key, label: material.label };
+  return {
+    status: "ok",
+    key: material.key,
+    label: material.label,
+    fileId: materialFileId(material),
+    ...fileType(material),
+  };
 }
 
 /**
- * Ссылка на PDF-материал курса — на адрес сайта, а не в бакет: файл отдаёт
- * /api/workshops/[slug]/materials/[file], ещё раз проверив доступ.
+ * Ссылка на материал курса — на адрес сайта, а не в бакет: файл отдаёт
+ * /api/workshops/[slug]/materials/[file], ещё раз проверив доступ. В ссылке —
+ * короткий пропуск: приложение открывает её без cookie сайта.
  */
 async function signMaterial({
   slug,
@@ -153,12 +210,24 @@ async function signMaterial({
 }: Parameters<
   WorkshopFileServices["signMaterial"]
 >[0]): Promise<MaterialUrlResult> {
-  const result = await authorizeMaterial(slug, (k) => k === key, userId);
+  const result = await authorizeMaterial(
+    slug,
+    (file) => file.key === key,
+    userId,
+  );
   if (result.status !== "ok") return result;
-  return {
-    status: "ok",
-    url: `/api/workshops/${encodeURIComponent(slug)}/materials/${materialFileId(key)}`,
-  };
+  const url = `/api/workshops/${encodeURIComponent(slug)}/materials/${result.fileId}`;
+  if (!userId || !env.AUTH_SECRET) return { status: "ok", url };
+  const token = signMaterialGrant(
+    {
+      slug,
+      file: result.fileId,
+      userId,
+      expiresAt: Math.floor(Date.now() / 1000) + MATERIAL_GRANT_TTL_SECONDS,
+    },
+    env.AUTH_SECRET,
+  );
+  return { status: "ok", url: `${url}?token=${token}` };
 }
 
 /** Материал курса по идентификатору из адреса — для маршрута, который его отдаёт. */
@@ -169,7 +238,7 @@ export function findMaterialFile(
 ) {
   return authorizeMaterial(
     slug,
-    (key) => materialFileId(key) === fileId,
+    (file) => materialFileId(file) === fileId,
     userId,
   );
 }

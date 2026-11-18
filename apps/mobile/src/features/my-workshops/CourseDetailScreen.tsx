@@ -1,19 +1,20 @@
 import type { MobileCourse } from "@stariva/web-api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, CircleCheck, Play, Star } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Button, ProgressBar } from "@/components/ui/Primitives";
 import { API_URL, api } from "@/lib/api";
 import { native } from "@/lib/native";
+import { useMyCourses } from "./queries";
 
 export function CourseDetailScreen({
-  course,
-  resumeLessonId,
+  course: selected,
+  userId,
   onBack,
   onLesson,
 }: {
   course: MobileCourse;
-  resumeLessonId: string | null;
+  userId: string | null;
   onBack: () => void;
   onLesson: (id: string) => void;
 }) {
@@ -21,12 +22,39 @@ export function CourseDetailScreen({
   const [text, setText] = useState("");
   const [feedback, setFeedback] = useState("");
   const queryClient = useQueryClient();
+  // Прогресс берём из свежего списка: после урока снимок из списка устарел
+  const myCourses = useMyCourses(userId);
+  const course =
+    myCourses.data?.courses.find((item) => item.slug === selected.slug) ??
+    selected;
+  const resumeLessonId =
+    myCourses.data?.resume?.slug === course.slug
+      ? myCourses.data.resume.lessonId
+      : null;
+  const completed =
+    course.lessonCount > 0 && course.completedLessons >= course.lessonCount;
+  // Отзыв на курс один: повторная отправка его заменяет, поэтому прежние
+  // оценку, текст, имя и фото берём из уже оставленного
+  const existingReview = useQuery({
+    queryKey: ["workshop-review", course.slug],
+    queryFn: () => api.account.workshopReview({ slug: course.slug }),
+    enabled: completed,
+  });
+  useEffect(() => {
+    if (!existingReview.data) return;
+    const { rating: savedRating, text: savedText } = existingReview.data;
+    setRating((current) => current || savedRating);
+    setText((current) => current || savedText);
+  }, [existingReview.data]);
   const firstLessonId = resumeLessonId ?? course.firstLessonId;
   const lessons = useQuery({
     queryKey: ["lesson", course.slug, firstLessonId],
     queryFn: () => {
       if (!firstLessonId) throw new Error("У курса пока нет уроков");
-      return api.account.lessonDetails({ slug: course.slug, lessonId: firstLessonId });
+      return api.account.lessonDetails({
+        slug: course.slug,
+        lessonId: firstLessonId,
+      });
     },
     enabled: Boolean(firstLessonId),
   });
@@ -36,12 +64,13 @@ export function CourseDetailScreen({
         slug: course.slug,
         rating,
         text,
-        reviewerName: "Участник Stariva",
-        keepPhotos: [],
+        reviewerName: existingReview.data?.reviewerName || "Участник Stariva",
+        keepPhotos: existingReview.data?.photos ?? [],
         photos: [],
         publishConsent: true,
       }),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      queryClient.setQueryData(["workshop-review", course.slug], saved);
       setFeedback("Спасибо! Отзыв отправлен на проверку.");
       void queryClient.invalidateQueries({ queryKey: ["my-courses"] });
     },
@@ -104,7 +133,11 @@ export function CourseDetailScreen({
                   className="flex min-h-16 w-full items-center gap-3 rounded-[var(--radius-md)] bg-surface px-4 text-left ring-1 ring-line"
                 >
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-sm font-semibold">
-                    {lesson.completed ? <CircleCheck size={19} className="text-sage" /> : index + 1}
+                    {lesson.completed ? (
+                      <CircleCheck size={19} className="text-sage" />
+                    ) : (
+                      index + 1
+                    )}
                   </span>
                   <span className="flex-1 font-medium">{lesson.title}</span>
                   <Play size={17} className="text-accent" />
@@ -140,66 +173,68 @@ export function CourseDetailScreen({
         >
           Поделиться курсом
         </Button>
-        {course.lessonCount > 0 &&
-          course.completedLessons >= course.lessonCount && (
-            <section className="mt-10">
-              <h2 className="section-title">Поделитесь впечатлением</h2>
-              <p className="mt-2 text-sm text-muted">
-                Ваш отзыв поможет другим начать.
+        {completed && (
+          <section className="mt-10">
+            <h2 className="section-title">Поделитесь впечатлением</h2>
+            <p className="mt-2 text-sm text-muted">
+              Ваш отзыв поможет другим начать.
+            </p>
+            <fieldset aria-label="Оценка" className="mt-4 flex gap-1">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={`${value} из 5`}
+                  aria-pressed={rating === value}
+                  onClick={() => setRating(value)}
+                  className="flex size-12 items-center justify-center"
+                >
+                  <Star
+                    size={25}
+                    fill={value <= rating ? "currentColor" : "none"}
+                    className="text-accent"
+                  />
+                </button>
+              ))}
+            </fieldset>
+            <label
+              className="mt-4 block text-sm font-medium"
+              htmlFor="review-text"
+            >
+              Ваш отзыв
+            </label>
+            <textarea
+              id="review-text"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              rows={4}
+              maxLength={3000}
+              className="mt-2 w-full rounded-[var(--radius-md)] bg-surface p-4 text-sm ring-1 ring-line"
+              placeholder="Что понравилось? Что удалось создать?"
+            />
+            <p className="mt-2 text-xs text-muted">
+              Отправляя отзыв, вы соглашаетесь с его публикацией после проверки.
+            </p>
+            <Button
+              className="mt-4 w-full"
+              disabled={
+                // Пока прежний отзыв не загружен, не отправляем: потеряем его фото
+                !existingReview.isSuccess ||
+                rating === 0 ||
+                text.trim().length < 10 ||
+                review.isPending
+              }
+              onClick={() => review.mutate()}
+            >
+              {review.isPending ? "Отправляем…" : "Отправить отзыв"}
+            </Button>
+            {feedback && (
+              <p role="status" className="mt-3 text-sm">
+                {feedback}
               </p>
-              <fieldset aria-label="Оценка" className="mt-4 flex gap-1">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-label={`${value} из 5`}
-                    aria-pressed={rating === value}
-                    onClick={() => setRating(value)}
-                    className="flex size-12 items-center justify-center"
-                  >
-                    <Star
-                      size={25}
-                      fill={value <= rating ? "currentColor" : "none"}
-                      className="text-accent"
-                    />
-                  </button>
-                ))}
-              </fieldset>
-              <label
-                className="mt-4 block text-sm font-medium"
-                htmlFor="review-text"
-              >
-                Ваш отзыв
-              </label>
-              <textarea
-                id="review-text"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-                rows={4}
-                maxLength={3000}
-                className="mt-2 w-full rounded-[var(--radius-md)] bg-surface p-4 text-sm ring-1 ring-line"
-                placeholder="Что понравилось? Что удалось создать?"
-              />
-              <p className="mt-2 text-xs text-muted">
-                Отправляя отзыв, вы соглашаетесь с его публикацией после
-                проверки.
-              </p>
-              <Button
-                className="mt-4 w-full"
-                disabled={
-                  rating === 0 || text.trim().length < 10 || review.isPending
-                }
-                onClick={() => review.mutate()}
-              >
-                {review.isPending ? "Отправляем…" : "Отправить отзыв"}
-              </Button>
-              {feedback && (
-                <p role="status" className="mt-3 text-sm">
-                  {feedback}
-                </p>
-              )}
-            </section>
-          )}
+            )}
+          </section>
+        )}
       </div>
     </main>
   );

@@ -1,8 +1,8 @@
+import { Preferences } from "@capacitor/preferences";
 import type { MobileCourses } from "@stariva/web-api/contract";
 import { useQuery } from "@tanstack/react-query";
-import { Preferences } from "@capacitor/preferences";
-import { api } from "@/lib/api";
 import { mobileCoursesCacheSchema } from "@/api/schemas";
+import { api } from "@/lib/api";
 
 const cacheKey = (userId: string) => `stariva:my-courses:${userId}`;
 export function useMyCourses(userId: string | null) {
@@ -33,5 +33,7 @@ export function useMyCourses(userId: string | null) {
       return data;
     },
     staleTime: 60_000,
+    // Без сети запрос не ставим на паузу: queryFn достанет курсы из кэша
+    networkMode: "offlineFirst",
   });
 }
