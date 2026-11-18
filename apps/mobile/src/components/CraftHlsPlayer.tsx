@@ -2,6 +2,8 @@ import { KeepAwake } from "@capacitor-community/keep-awake";
 import Hls from "hls.js";
 import {
   FlipHorizontal2,
+  Maximize2,
+  Minimize2,
   Pause,
   Play,
   RotateCcw,
@@ -86,6 +88,7 @@ export function CraftHlsPlayer({
   ref,
 }: CraftHlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
   const [time, setTime] = useState(0);
@@ -97,6 +100,7 @@ export function CraftHlsPlayer({
   const [loopB, setLoopB] = useState<number | null>(null);
   const [wake, setWake] = useState<WakeState>("off");
   const [failed, setFailed] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   // Колбэки и состояние для обработчиков, которые не должны пересоздаваться
@@ -128,6 +132,23 @@ export function CraftHlsPlayer({
   const startAtRef = useRef(startAt);
 
   const currentTime = () => videoRef.current?.currentTime ?? 0;
+
+  useEffect(() => {
+    const updateFullscreen = () => setFullscreen(document.fullscreenElement === playerRef.current);
+    document.addEventListener("fullscreenchange", updateFullscreen);
+    return () => document.removeEventListener("fullscreenchange", updateFullscreen);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    if (document.fullscreenElement === playerRef.current) {
+      await document.exitFullscreen();
+    } else if (playerRef.current?.requestFullscreen) {
+      await playerRef.current.requestFullscreen();
+    } else {
+      const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+      video?.webkitEnterFullscreen?.();
+    }
+  };
 
   const seekTo = useCallback((seconds: number) => {
     const video = videoRef.current;
@@ -421,7 +442,7 @@ export function CraftHlsPlayer({
   const loopActive = loopA !== null && loopB !== null;
 
   return (
-    <div className="bg-bg text-fg">
+    <div ref={playerRef} className={fullscreen ? "flex min-h-dvh flex-col justify-center overflow-y-auto bg-bg text-fg" : "bg-bg text-fg"}>
       <div className="relative bg-black">
         <video
           ref={videoRef}
@@ -447,12 +468,20 @@ export function CraftHlsPlayer({
             setTime(e.currentTarget.currentTime);
             latest.current.onTimeUpdate?.(e.currentTarget.currentTime);
           }}
-          className={`mx-auto aspect-video max-h-[34dvh] w-full object-contain ${
+          className={`mx-auto aspect-video w-full object-contain ${fullscreen ? "max-h-[60dvh]" : "max-h-[34dvh]"} ${
             mirrored ? "scale-x-[-1]" : ""
           }`}
         >
           <track kind="captions" />
         </video>
+        <button
+          type="button"
+          aria-label={fullscreen ? "Выйти из полноэкранного режима" : "На весь экран"}
+          onClick={() => void toggleFullscreen().catch(() => {})}
+          className="absolute top-2 right-2 flex size-11 items-center justify-center rounded-full bg-black/60 text-white"
+        >
+          {fullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+        </button>
 
         <div
           role="status"

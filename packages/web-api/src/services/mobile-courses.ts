@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, db, desc, eq, inArray, ne } from "@stariva/db";
+import { and, db, desc, eq, inArray, ne, asc } from "@stariva/db";
 import {
   appReleases,
   courseAccess,
@@ -9,6 +9,7 @@ import {
 } from "@stariva/db/schema";
 import type {
   AppRelease,
+  CatalogCourse,
   LessonDetails,
   LessonSummary,
   MobileCourse,
@@ -17,6 +18,40 @@ import type {
 import { canWatchCourse } from "./course-access";
 
 type Lesson = WorkshopRow["lessons"][number];
+
+/** Та же витрина, что на сайте: только опубликованные и доступные к покупке курсы. */
+export async function listCatalogCourses(): Promise<CatalogCourse[]> {
+  const rows = await db
+    .select()
+    .from(workshops)
+    .where(eq(workshops.status, "published"))
+    .orderBy(asc(workshops.sortOrder), asc(workshops.createdAt));
+  const now = Date.now();
+  const releaseBySlug = new Map(rows.map((row) => [row.slug, row.releaseAt]));
+  const mainReleaseAt = releaseBySlug.get("elka-makrame");
+  return rows
+    // Пока большая ёлка идёт подарком к предзаказу основной, сайт её не продаёт.
+    .filter((row) =>
+      row.slug !== "elka-makrame-bolshaya" ||
+      !mainReleaseAt ||
+      mainReleaseAt.getTime() <= now,
+    )
+    .map((row) => ({
+    slug: row.slug,
+    title: row.title,
+    subtitle: row.subtitle,
+    description: row.description,
+    cover: row.cover,
+    category: row.category,
+    level: row.level,
+    priceKopecks:
+      (!row.releaseAt || row.releaseAt.getTime() <= now)
+        ? (row.priceAfterRelease ?? row.price)
+        : row.price,
+    lessonCount: row.lessons.length,
+    isPreorder: Boolean(row.releaseAt && row.releaseAt.getTime() > now),
+  }));
+}
 
 /** Видят купившие: опубликованный курс или архивный, но не черновик. */
 async function findVisibleWorkshop(slug: string) {
@@ -83,6 +118,7 @@ export async function listMobileCourses(
       slug,
       title: workshop.title,
       cover: workshop.cover,
+      firstLessonId: workshop.lessons[0]?.id ?? null,
       lessonCount: workshop.lessons.length,
       completedLessons,
     });
