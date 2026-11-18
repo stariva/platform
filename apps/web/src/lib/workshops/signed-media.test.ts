@@ -1,6 +1,7 @@
 import { mock, test } from "bun:test";
 import assert from "node:assert/strict";
 import { sessionFingerprint, verifyHlsGrant } from "@/lib/workshops/hls-token";
+import { verifyMaterialGrant } from "@/lib/workshops/material-token";
 
 const secret = "synthetic-hls-test-secret";
 const config = await import("@stariva/config");
@@ -52,6 +53,13 @@ mock.module("@/lib/workshops/workshops-db", () => ({
         durationSeconds: 60,
         videoKey: "workshops/test/lesson.mp4",
         free,
+        attachments: [
+          {
+            key: "workshops/test/lessons/knot.png",
+            label: "Схема узла",
+            kind: "image",
+          },
+        ],
       },
     ],
   }),
@@ -142,11 +150,43 @@ test("materials link to the site only for the course's own files", async () => {
   owned = true;
   const result = await material("brief.pdf", "user");
   assert.ok(result.status === "ok");
+  const url = new URL(result.url, "https://stariva.test");
   assert.match(
-    result.url,
+    url.pathname,
     /^\/api\/workshops\/test\/materials\/[a-f0-9]{64}\.pdf$/,
   );
+  // Пропуск в ссылке — на этот файл и этого покупателя
+  const grant = verifyMaterialGrant(
+    url.searchParams.get("token") ?? "",
+    secret,
+  );
+  assert.equal(grant?.slug, "test");
+  assert.equal(grant?.file, url.pathname.split("/").at(-1));
+  assert.equal(grant?.userId, "user");
 });
+
+test("lesson attachments are served like course materials, as images", async () => {
+  const { findMaterialFile } = await import("./signed-media");
+  const result = await workshopFileServices.signMaterial({
+    slug: "test",
+    key: "workshops/test/lessons/knot.png",
+    userId: "user",
+  });
+  assert.ok(result.status === "ok");
+  const fileId = fileIdOf(result.url);
+  assert.match(fileId, /^[a-f0-9]{64}\.png$/);
+  assert.deepEqual(await findMaterialFile("test", fileId, "user"), {
+    status: "ok",
+    key: "workshops/test/lessons/knot.png",
+    label: "Схема узла",
+    fileId,
+    extension: "png",
+    contentType: "image/png",
+  });
+});
+
+const fileIdOf = (url: string) =>
+  new URL(url, "https://stariva.test").pathname.split("/").at(-1) ?? "";
 
 test("material files are found by their identifier in the site link", async () => {
   const { findMaterialFile } = await import("./signed-media");
@@ -156,11 +196,14 @@ test("material files are found by their identifier in the site link", async () =
     userId: "user",
   });
   assert.ok(result.status === "ok");
-  const fileId = result.url.split("/").at(-1) ?? "";
+  const fileId = fileIdOf(result.url);
   assert.deepEqual(await findMaterialFile("test", fileId, "user"), {
     status: "ok",
     key: "brief.pdf",
     label: "Бриф",
+    fileId,
+    extension: "pdf",
+    contentType: "application/pdf",
   });
   assert.deepEqual(await findMaterialFile("test", "other.pdf", "user"), {
     status: "not_found",
@@ -192,10 +235,13 @@ test("materials with the same filename resolve to their own storage keys", async
     });
     assert.ok(result.status === "ok");
     urls.add(result.url);
-    const file = decodeURIComponent(result.url.split("/").at(-1) ?? "");
+    const file = fileIdOf(result.url);
     assert.deepEqual(await findMaterialFile("test", file, "user"), {
       status: "ok",
       ...material,
+      fileId: file,
+      extension: "pdf",
+      contentType: "application/pdf",
     });
   }
   assert.equal(urls.size, 2);

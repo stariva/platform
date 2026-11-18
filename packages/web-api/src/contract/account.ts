@@ -271,6 +271,15 @@ export const accountContract = {
     .output(z.object({ url: z.string() })),
 
   /**
+   * Уже оставленный отзыв о мастер-классе — чтобы форма показала его и не
+   * потеряла фото при повторной отправке. null — ещё не оставлял. Без входа
+   * UNAUTHORIZED.
+   */
+  workshopReview: oc
+    .input(z.object({ slug: workshopSlug }))
+    .output(workshopReviewSchema.nullable()),
+
+  /**
    * Отзыв купившего о мастер-классе: один на курс, повторная отправка его
    * заменяет. На сайт попадает только после проверки, правка опубликованного
    * отправляет его на проверку снова. Не купившим — FORBIDDEN.

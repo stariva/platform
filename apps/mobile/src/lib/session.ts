@@ -1,4 +1,6 @@
+import { Preferences } from "@capacitor/preferences";
 import { useSyncExternalStore } from "react";
+import { z } from "zod";
 import { API_URL, api } from "@/lib/api";
 import {
   type AuthClient,
@@ -19,6 +21,40 @@ export const authClient: AuthClient = createAuthClient({
   fetchFormToken: async () => (await api.forms.formToken()).token,
 });
 
+/**
+ * Последний вошедший пользователь: без сети при запуске сервер его не назовёт,
+ * а по его id лежит кэш купленных курсов.
+ */
+const SESSION_USER_KEY = "stariva.session-user";
+const sessionUserSchema = z.object({
+  id: z.string().min(1),
+  email: z.string(),
+  name: z.string(),
+}) satisfies z.ZodType<SessionUser>;
+
+async function rememberUser(user: SessionUser | null): Promise<void> {
+  if (!user) return;
+  await Preferences.set({
+    key: SESSION_USER_KEY,
+    value: JSON.stringify(user),
+  }).catch(() => {});
+}
+
+async function lastUser(): Promise<SessionUser | null> {
+  try {
+    const { value } = await Preferences.get({ key: SESSION_USER_KEY });
+    if (value) {
+      const parsed = sessionUserSchema.safeParse(JSON.parse(value));
+      if (parsed.success) return parsed.data;
+    }
+  } catch {}
+  return null;
+}
+
+async function forgetUser(): Promise<void> {
+  await Preferences.remove({ key: SESSION_USER_KEY }).catch(() => {});
+}
+
 let state: SessionState = { status: "loading" };
 const listeners = new Set<() => void>();
 
@@ -32,13 +68,15 @@ export async function startSession(): Promise<void> {
   const check = await authClient.checkSession();
   if (check.status === "signed-in") {
     setState({ status: "signed-in", user: check.user });
+    await rememberUser(check.user);
   } else if (check.status === "signed-out") {
+    await forgetUser();
     setState({ status: "signed-out" });
   } else {
-    // Сервера нет — пускаем с тем, что есть: урок из кеша ещё можно смотреть
+    // Сервера нет — пускаем с тем, что есть: урок и курсы из кеша ещё можно смотреть
     setState(
       (await tokens.get())
-        ? { status: "signed-in", user: null }
+        ? { status: "signed-in", user: await lastUser() }
         : { status: "signed-out" },
     );
   }
@@ -47,16 +85,19 @@ export async function startSession(): Promise<void> {
 /** После успешного входа по коду. */
 export function signedIn(user: SessionUser | null) {
   setState({ status: "signed-in", user });
+  void rememberUser(user);
 }
 
 /** Сервер ответил «нужно войти»: токен недействителен — стираем его и показываем вход. */
 export async function expireSession(): Promise<void> {
   await tokens.clear();
+  await forgetUser();
   setState({ status: "signed-out" });
 }
 
 export async function signOut(): Promise<void> {
   await authClient.signOut();
+  await forgetUser();
   setState({ status: "signed-out" });
 }
 
