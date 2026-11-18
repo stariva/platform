@@ -90,7 +90,7 @@ function onlineDevices(): string[] {
     .split(/\r?\n/)
     .slice(1)
     .filter((line) => line.trimEnd().endsWith("\tdevice"))
-    .map((line) => line.split("\t")[0]);
+    .map((line) => line.split("\t")[0] ?? "");
 }
 
 if (onlineDevices().length === 0) {
