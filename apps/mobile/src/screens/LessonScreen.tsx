@@ -1,6 +1,6 @@
 import type { LessonDetails } from "@stariva/web-api/contract";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, Circle, CircleCheck } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Circle, CircleCheck, Download } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CraftHlsPlayer,
@@ -10,12 +10,13 @@ import {
 import { absoluteUrl, api, errorMessage } from "@/lib/api";
 import { activeChapterIndex, formatTime } from "@/lib/format";
 
-type Tab = "chapters" | "checklist" | "lessons";
+type Tab = "chapters" | "checklist" | "lessons" | "files";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "chapters", label: "Таймкоды" },
   { id: "checklist", label: "Нарезка" },
   { id: "lessons", label: "Уроки" },
+  { id: "files", label: "Схемы" },
 ];
 
 /** Пауза после последней отметки, чтобы не слать запрос на каждый тап. */
@@ -94,11 +95,7 @@ interface LessonScreenProps {
   onBack: () => void;
 }
 
-/**
- * Экран урока: липкий плеер сверху, под ним вкладки с таймкодами-главами,
- * чек-листом нарезки шнура и списком уроков курса. Тёмная тема включена
- * всегда: экран смотрят подолгу, а свет от телефона не должен слепить.
- */
+/** Экран видеоурока с плеером, главами, списком уроков и материалами. */
 export function LessonScreen(props: LessonScreenProps) {
   return <LessonContent key={`${props.slug}:${props.lessonId}`} {...props} />;
 }
@@ -206,9 +203,15 @@ function LessonContent({
 
   const lesson = details.data;
   const activeChapter = activeChapterIndex(lesson.chapters, time);
+  const currentIndex = lesson.lessons.findIndex((item) => item.id === lessonId);
+  const nextLesson = lesson.lessons[currentIndex + 1];
 
   return (
     <Shell onBack={onBack} title={lesson.title}>
+      <div className="px-4 pb-3">
+        <p className="text-xs font-bold uppercase tracking-[.16em] text-accent">{lesson.workshopTitle}</p>
+        <p className="mt-1 text-sm text-muted">Урок {currentIndex + 1} из {lesson.lessons.length}</p>
+      </div>
       {/* Плеер остаётся на месте, пока листаешь вкладки */}
       <div className="sticky top-0 z-10 border-b border-line bg-bg">
         <CraftHlsPlayer
@@ -227,7 +230,7 @@ function LessonContent({
         />
       </div>
 
-      <div role="tablist" className="grid grid-cols-3 gap-2 px-4 pt-4">
+      <div role="tablist" className="grid grid-cols-4 gap-2 px-4 pt-4">
         {TABS.map(({ id, label }) => (
           <button
             key={id}
@@ -235,7 +238,7 @@ function LessonContent({
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`min-h-12 rounded-2xl text-sm font-semibold ${
+            className={`min-h-12 rounded-2xl px-1 text-xs font-semibold ${
               tab === id
                 ? "bg-fg text-bg"
                 : "bg-surface text-muted ring-1 ring-line"
@@ -271,6 +274,39 @@ function LessonContent({
             onSelect={onSelectLesson}
           />
         )}
+        {tab === "files" && (
+          <div className="space-y-2">
+            {lesson.attachments.length ? lesson.attachments.map((file) => (
+              <button
+                key={file.key}
+                type="button"
+                onClick={async () => {
+                  try {
+                    const result = await api.account.materialUrl({ slug, key: file.key });
+                    window.location.href = absoluteUrl(result.url);
+                  } catch (error) {
+                    window.alert(errorMessage(error, "Не удалось открыть материал"));
+                  }
+                }}
+                className="flex min-h-14 w-full items-center gap-3 rounded-2xl bg-surface px-4 text-left ring-1 ring-line"
+              >
+                <Download size={21} className="text-accent" />
+                <span className="flex-1 font-medium">{file.label}</span>
+                <span className="text-xs uppercase text-muted">{file.kind}</span>
+              </button>
+            )) : <Empty>Для этого урока схем пока нет</Empty>}
+          </div>
+        )}
+        {nextLesson && (
+          <button
+            type="button"
+            onClick={() => onSelectLesson(nextLesson.id)}
+            className="mt-8 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-accent px-4 text-left font-semibold text-accent-fg"
+          >
+            <span>Следующий урок: {nextLesson.title}</span>
+            <ArrowRight size={20} className="shrink-0" />
+          </button>
+        )}
       </div>
     </Shell>
   );
@@ -286,7 +322,7 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="theme-dark min-h-dvh bg-bg text-fg">
+    <div className="min-h-dvh bg-bg text-fg">
       <header className="flex items-center gap-1 px-2 pt-[env(safe-area-inset-top)]">
         <button
           type="button"

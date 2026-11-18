@@ -10,10 +10,10 @@ const RESEND_SECONDS = 60;
 type Step = "email" | "code";
 
 const primaryButton =
-  "min-h-12 w-full rounded-2xl bg-accent font-medium text-accent-fg disabled:opacity-60";
+  "min-h-12 w-full rounded-[var(--radius-md)] bg-accent font-semibold text-accent-fg disabled:opacity-60";
 const textButton = "min-h-12 text-sm text-muted underline underline-offset-4";
 const inputClass =
-  "min-h-12 w-full rounded-xl bg-surface px-4 text-base ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-accent";
+  "min-h-12 w-full rounded-[var(--radius-md)] bg-surface px-4 text-base ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-accent";
 
 /**
  * Вход в аккаунт сайта: почта → код из письма. Тот же аккаунт, что и на
@@ -95,15 +95,30 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="min-h-dvh bg-bg px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-fg">
-      <h1 className="text-2xl font-semibold">Вход в Stariva</h1>
-      <p className="mt-2 text-sm text-muted">
+    <div className="min-h-dvh bg-bg px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(7rem,env(safe-area-inset-bottom))] text-fg">
+      <span className="text-xs font-bold uppercase tracking-[.25em] text-accent">
+        Stariva · ваш мир творчества
+      </span>
+      <h1 className="display mt-4">
+        Творчество
+        <br />
+        продолжается здесь
+      </h1>
+      <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
         Войдите в тот же аккаунт, что и на stariva.ru, — купленные мастер-классы
         появятся здесь.
       </p>
+      <div className="relative mt-6 h-40 overflow-hidden rounded-[var(--radius-xl)]">
+        <img
+          src="/images/workshop-tree.png"
+          alt="Руки плетут украшение макраме"
+          className="h-full w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
+      </div>
 
       {step === "email" ? (
-        <form onSubmit={submitEmail} noValidate className="mt-8 space-y-4">
+        <form onSubmit={submitEmail} noValidate className="mt-7 space-y-4">
           <div>
             <label htmlFor={emailId} className="mb-1.5 block text-sm">
               Email
@@ -133,7 +148,7 @@ export function LoginScreen() {
           <Notice id={`${ids}-error`} error={error} info={info} />
         </form>
       ) : (
-        <div className="mt-8 space-y-4">
+        <div className="mt-7 space-y-4">
           <p className="text-sm text-muted">
             Отправили код на{" "}
             <span className="font-medium text-fg">{address}</span>.{" "}

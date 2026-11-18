@@ -1,51 +1,15 @@
 @import "tailwindcss";
-
-/*
- * Палитра Stariva: льняной фон и графитово-хвойная тёмная тема. Экран
- * плеера включает тёмную тему сам (класс .theme-dark) — глазам комфортнее,
- * когда руки заняты и телефон лежит перед лицом.
- */
-:root {
-  --bg: #faf7f2;
-  --surface: #ffffff;
-  --fg: #2a2723;
-  --muted: #6f675d;
-  --line: #e6dfd4;
-  --accent: #c86d51;
-  --accent-fg: #ffffff;
-  --sage: #5c7457;
-}
-
-.theme-dark {
-  --bg: #181a18;
-  --surface: #222522;
-  --fg: #f3efe8;
-  --muted: #a8a196;
-  --line: #333733;
-  --accent: #d9856a;
-  --accent-fg: #181a18;
-  --sage: #8aa885;
-}
-
-@theme inline {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-fg: var(--fg);
-  --color-muted: var(--muted);
-  --color-line: var(--line);
-  --color-accent: var(--accent);
-  --color-accent-fg: var(--accent-fg);
-  --color-sage: var(--sage);
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-
-html,
-body,
-#root {
-  min-height: 100dvh;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-sans);
-  -webkit-tap-highlight-color: transparent;
-}
+@import "./styles/tokens.css";
+@theme inline{--color-bg:var(--bg);--color-surface:var(--surface);--color-surface-soft:var(--surface-soft);--color-fg:var(--fg);--color-muted:var(--muted);--color-line:var(--line);--color-accent:var(--accent);--color-accent-fg:var(--accent-fg);--color-sage:var(--sage);--color-danger:var(--danger);--font-sans:Inter,system-ui,sans-serif;--font-display:Cormorant,Georgia,serif}
+html,body,#root{min-height:100dvh;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button,a,input{touch-action:manipulation}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.screen{min-height:100dvh;padding:calc(env(safe-area-inset-top) + var(--space-5)) var(--space-5) calc(env(safe-area-inset-bottom) + 100px);animation:screen-in var(--duration-normal) var(--ease)}
+.display{font-family:Cormorant,Georgia,serif;font-weight:600;font-size:clamp(2.65rem,11vw,3.5rem);line-height:.93;letter-spacing:-.025em}
+.section-title{font-family:Cormorant,Georgia,serif;font-size:2rem;font-weight:600;line-height:1}
+.glass{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px)}
+.skeleton{background:linear-gradient(90deg,var(--surface-soft),var(--surface),var(--surface-soft));background-size:200% 100%;animation:shimmer 1.5s infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+@keyframes screen-in{from{opacity:.5;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+@media(max-width:430px){html{scrollbar-width:none}html::-webkit-scrollbar{display:none}}
