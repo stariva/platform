@@ -55,7 +55,7 @@ export function SegmentedControl<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div role="tablist" className="grid grid-cols-2 gap-2">
+    <div role="tablist" className="grid grid-cols-3 gap-2">
       {items.map((item) => (
         <button
           key={item.id}

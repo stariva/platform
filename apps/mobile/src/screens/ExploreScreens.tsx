@@ -2,7 +2,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Heart,
-  MapPin,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
@@ -14,9 +13,12 @@ import {
   Button,
   Chip,
   EmptyState,
+  ErrorState,
+  Skeleton,
 } from "@/components/ui/Primitives";
 import { API_URL } from "@/lib/api";
-import { catalogWorkshops, type CatalogWorkshop } from "@/lib/catalog";
+import { useCatalog, type CatalogWorkshop } from "@/lib/catalog";
+import { native } from "@/lib/native";
 
 export function HomeScreen({
   onCatalog,
@@ -25,23 +27,30 @@ export function HomeScreen({
   onCatalog: () => void;
   onOpen: (workshop: CatalogWorkshop) => void;
 }) {
+  const catalog = useCatalog();
+  const featured = catalog.data?.[0];
   return (
     <main className="screen">
       <div className="mb-7 flex items-center justify-between">
         <span className="text-sm font-bold uppercase tracking-[.25em] text-accent">
           Stariva
         </span>
-        <span className="text-xs text-muted">Творчество рядом</span>
+        <span className="text-xs text-muted">Видеоуроки по макраме</span>
       </div>
       <h1 className="display max-w-xs">Время создавать прекрасное</h1>
       <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-        Мастер-классы по макраме, к которым хочется возвращаться.
+        Учитесь в своём темпе. Продолжайте с нужного места, повторяйте сложные узлы и возвращайтесь к урокам когда угодно.
       </p>
       <div className="mt-7">
-        <WorkshopCard
-          workshop={catalogWorkshops[0]}
-          onOpen={() => onOpen(catalogWorkshops[0])}
-        />
+        {featured ? (
+          <WorkshopCard workshop={featured} onOpen={() => onOpen(featured)} />
+        ) : catalog.isLoading ? (
+          <Skeleton className="aspect-[4/5]" />
+        ) : catalog.isError ? (
+          <ErrorState message="Не удалось загрузить видеокурсы." onRetry={() => void catalog.refetch()} />
+        ) : (
+          <EmptyState title="Курсы скоро появятся" description="Опубликованные мастер-классы будут здесь." />
+        )}
       </div>
       <section className="mt-9">
         <h2 className="section-title">По душе</h2>
@@ -57,7 +66,7 @@ export function HomeScreen({
         </Button>
       </div>
       <div className="mt-4 space-y-3">
-        {catalogWorkshops.slice(1).map((workshop) => (
+        {catalog.data?.slice(1, 4).map((workshop) => (
           <WorkshopCard
             key={workshop.id}
             workshop={workshop}
@@ -75,12 +84,13 @@ export function CatalogScreen({
 }: {
   onOpen: (workshop: CatalogWorkshop) => void;
 }) {
+  const catalog = useCatalog();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Все");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSort] = useState<"default" | "name">("default");
   const items = useMemo(() => {
-    const list = catalogWorkshops.filter(
+    const list = (catalog.data ?? []).filter(
       (w) =>
         (category === "Все" || w.category === category) &&
         w.title
@@ -90,7 +100,7 @@ export function CatalogScreen({
     return sort === "name"
       ? [...list].sort((a, b) => a.title.localeCompare(b.title, "ru-RU"))
       : list;
-  }, [search, category, sort]);
+  }, [catalog.data, search, category, sort]);
   return (
     <main className="screen">
       <span className="text-xs font-bold uppercase tracking-[.25em] text-accent">
@@ -98,7 +108,7 @@ export function CatalogScreen({
       </span>
       <h1 className="display mt-3">Найдите своё</h1>
       <p className="mt-3 text-sm text-muted">
-        Плетение, которое впишется в вашу жизнь.
+        Видеокурсы по макраме. Выберите проект, оплатите на сайте и смотрите здесь.
       </p>
       <div className="mt-7 flex gap-2">
         <label className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] bg-surface px-4 ring-1 ring-line">
@@ -120,8 +130,8 @@ export function CatalogScreen({
           <SlidersHorizontal size={20} />
         </Button>
       </div>
-      <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
-        {["Все", "Декор", "Одежда"].map((value) => (
+      <div className="mt-5 flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+        {["Все", "Абажуры", "Декор интерьера", "Одежда"].map((value) => (
           <Chip
             key={value}
             active={category === value}
@@ -145,7 +155,9 @@ export function CatalogScreen({
           />
         ))}
       </div>
-      {items.length === 0 && (
+      {catalog.isLoading && <div className="mt-4 grid grid-cols-2 gap-3"><Skeleton className="h-64" /><Skeleton className="h-64" /></div>}
+      {catalog.isError && <div className="mt-6"><ErrorState message="Не удалось загрузить каталог." onRetry={() => void catalog.refetch()} /></div>}
+      {!catalog.isLoading && !catalog.isError && items.length === 0 && (
         <div className="mt-6">
           <EmptyState
             title="Пока ничего"
@@ -163,10 +175,6 @@ export function CatalogScreen({
           />
         </div>
       )}
-      <p className="mt-6 text-xs leading-relaxed text-muted">
-        Это подборка для знакомства. Актуальная стоимость и полный каталог
-        доступны на сайте Stariva.
-      </p>
       <BottomSheet
         title="Фильтры"
         open={filtersOpen}
@@ -200,7 +208,6 @@ export function DetailScreen({
   favorite: boolean;
   onToggleFavorite: () => void;
 }) {
-  const [bookingOpen, setBookingOpen] = useState(false);
   return (
     <main className="min-h-dvh bg-bg pb-28 text-fg">
       <div className="relative">
@@ -257,44 +264,27 @@ export function DetailScreen({
             свой прогресс.
           </p>
         </section>
-        <section className="mt-8">
-          <h2 className="section-title">Место занятий</h2>
-          <p className="mt-3 flex items-center gap-2 text-sm text-muted">
-            <MapPin size={18} />
-            Где вам удобно — доступ онлайн
-          </p>
-        </section>
+        <p className="mt-7 text-sm text-muted">
+          {workshop.length} · {workshop.isPreorder ? "Предзаказ" : "Доступ онлайн"}
+        </p>
       </div>
       <div className="glass fixed inset-x-0 bottom-0 z-30 border-t border-line px-5 py-3 pb-[max(.75rem,env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-4">
           <span className="min-w-0 flex-1 text-xs text-muted">
-            Актуальная цена
+            Стоимость курса
             <br />
-            <strong className="text-sm text-fg">на сайте Stariva</strong>
+            <strong className="text-sm text-fg">{workshop.price}</strong>
           </span>
-          <Button onClick={() => setBookingOpen(true)}>
-            Подробнее <ArrowRight size={18} />
-          </Button>
+          <a href={`${API_URL || "https://stariva.ru"}${workshop.href}`} target="_blank" rel="noreferrer"
+            onClick={(event) => {
+              event.preventDefault();
+              void native.openExternal(event.currentTarget.href);
+            }}
+            className="flex min-h-12 items-center gap-2 rounded-[var(--radius-md)] bg-accent px-5 text-sm font-semibold text-accent-fg">
+            Посмотреть и купить <ArrowRight size={18} />
+          </a>
         </div>
       </div>
-      <BottomSheet
-        title="Продолжить на сайте"
-        open={bookingOpen}
-        onClose={() => setBookingOpen(false)}
-      >
-        <p className="text-sm leading-relaxed text-muted">
-          Этот мастер-класс проходит онлайн. На сайте можно проверить цену,
-          программу и оформить покупку в существующей системе Stariva.
-        </p>
-        <a
-          href={`${API_URL || "https://stariva.ru"}/workshops`}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-6 flex min-h-12 items-center justify-center rounded-[var(--radius-md)] bg-accent px-5 font-semibold text-accent-fg"
-        >
-          Открыть мастер-классы <ArrowRight size={18} className="ml-2" />
-        </a>
-      </BottomSheet>
     </main>
   );
 }

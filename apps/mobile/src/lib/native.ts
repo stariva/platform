@@ -1,3 +1,4 @@
+import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 
 /** Web APIs работают в браузере и WebView; нативные плагины можно подключить здесь без изменения экранов. */
@@ -10,17 +11,8 @@ export const native = {
     if (navigator.share) await navigator.share({ title, url });
     else if (navigator.clipboard) await navigator.clipboard.writeText(url);
   },
-  calendarUrl: (
-    title: string,
-    startsAt: string,
-    endsAt: string,
-    details: string,
-  ) => {
-    const format = (value: string) =>
-      new Date(value)
-        .toISOString()
-        .replace(/[-:]/g, "")
-        .replace(/\.\d{3}/, "");
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${format(startsAt)}/${format(endsAt)}&details=${encodeURIComponent(details)}`;
+  openExternal: async (url: string) => {
+    if (Capacitor.isNativePlatform()) await Browser.open({ url });
+    else window.open(url, "_blank", "noopener,noreferrer");
   },
 };

@@ -2,7 +2,6 @@ import type { MobileCourses } from "@stariva/web-api/contract";
 import { useQuery } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
 import { api } from "@/lib/api";
-import { mockBookings } from "@/api/mocks/bookings";
 import { mobileCoursesCacheSchema } from "@/api/schemas";
 
 const cacheKey = (userId: string) => `stariva:my-courses:${userId}`;
@@ -33,14 +32,6 @@ export function useMyCourses(userId: string | null) {
         }).catch(() => {});
       return data;
     },
-    staleTime: 60_000,
-  });
-}
-
-export function useBookings() {
-  return useQuery({
-    queryKey: ["bookings"],
-    queryFn: mockBookings.list,
     staleTime: 60_000,
   });
 }

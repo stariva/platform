@@ -10,7 +10,7 @@ import { Compass, Heart, House, UserRound, Video } from "lucide-react";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { Avatar, Button, EmptyState } from "@/components/ui/Primitives";
 import type { CatalogWorkshop } from "@/lib/catalog";
-import { catalogWorkshops } from "@/lib/catalog";
+import { useCatalog } from "@/lib/catalog";
 import { WorkshopCard } from "@/components/ui/WorkshopCard";
 import { native } from "@/lib/native";
 import {
@@ -30,8 +30,6 @@ import {
 import { MyWorkshopsScreen } from "@/features/my-workshops/MyWorkshopsScreen";
 import { CourseDetailScreen } from "@/features/my-workshops/CourseDetailScreen";
 import type { MobileCourse, MobileCourses } from "@stariva/web-api/contract";
-import type { Booking } from "@/api/schemas";
-import { BookingDetailScreen } from "@/features/my-workshops/BookingDetailScreen";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -64,8 +62,7 @@ function App() {
   const [selectedCourse, setSelectedCourse] = useState<MobileCourse | null>(
     null,
   );
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const routeKey = `${section}:${selected?.id ?? ""}:${selectedCourse?.slug ?? ""}:${selectedBooking?.id ?? ""}:${lessonId}`;
+  const routeKey = `${section}:${selected?.id ?? ""}:${selectedCourse?.slug ?? ""}:${lessonId}`;
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       return JSON.parse(
@@ -83,6 +80,7 @@ function App() {
 
   const update = useAppUpdate();
   const session = useSession();
+  const catalog = useCatalog();
 
   useEffect(() => {
     void startSession();
@@ -124,13 +122,6 @@ function App() {
             window.history.replaceState(window.history.state, "", url);
           } else window.history.back();
         }}
-      />
-    );
-  } else if (selectedBooking) {
-    screen = (
-      <BookingDetailScreen
-        booking={selectedBooking}
-        onBack={() => setSelectedBooking(null)}
       />
     );
   } else if (selectedCourse) {
@@ -192,7 +183,15 @@ function App() {
             onCatalog={() => setSection("catalog")}
             onCourse={setSelectedCourse}
             favoriteCount={favorites.length}
-            onBooking={setSelectedBooking}
+            onPlayCourse={(course, id) => {
+              setSelectedCourse(course);
+              const url = new URL(window.location.href);
+              url.searchParams.set("slug", course.slug);
+              url.searchParams.set("lesson", id);
+              window.history.pushState({}, "", url);
+              setSlug(course.slug);
+              setLessonId(id);
+            }}
           />
         );
     else if (section === "favorites")
@@ -201,7 +200,7 @@ function App() {
           <h1 className="display">Избранное</h1>
           {favorites.length ? (
             <div className="mt-7 space-y-3">
-              {catalogWorkshops
+              {(catalog.data ?? [])
                 .filter((item) => favorites.includes(item.id))
                 .map((item) => (
                   <WorkshopCard
@@ -266,13 +265,6 @@ function App() {
               </button>
             ))}
           </fieldset>
-          <section className="mt-9 rounded-[var(--radius-lg)] bg-surface p-5">
-            <h2 className="section-title">Напоминания</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Настройки напоминаний появятся вместе с расписанием очных занятий.
-              Для онлайн-курсов даты не назначены.
-            </p>
-          </section>
           <div className="mt-7">
             {session.status === "signed-in" ? (
               <Button

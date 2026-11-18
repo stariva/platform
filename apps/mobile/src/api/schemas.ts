@@ -6,6 +6,7 @@ export const mobileCoursesCacheSchema = z.object({
       slug: z.string(),
       title: z.string(),
       cover: z.string(),
+      firstLessonId: z.string().nullable().default(null),
       lessonCount: z.number().int(),
       completedLessons: z.number().int(),
     }),
@@ -28,21 +29,3 @@ export const mobileCoursesCacheSchema = z.object({
     })
     .nullable(),
 });
-
-export const bookingSchema = z.object({
-  id: z.string(),
-  workshopId: z.string(),
-  title: z.string(),
-  image: z.string(),
-  host: z.string(),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime(),
-  address: z.string(),
-  seats: z.number().int().positive(),
-  status: z.enum(["confirmed", "pending_payment", "cancelled", "completed"]),
-  whatToBring: z.array(z.string()),
-  organizerEmail: z.email(),
-  cancellationPolicy: z.string(),
-  ticketCode: z.string().nullable(),
-});
-export type Booking = z.infer<typeof bookingSchema>;

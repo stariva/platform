@@ -1,6 +1,6 @@
 import type { MobileCourse } from "@stariva/web-api/contract";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Play, Star } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight, CircleCheck, Play, Star } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, ProgressBar } from "@/components/ui/Primitives";
 import { API_URL, api } from "@/lib/api";
@@ -21,6 +21,15 @@ export function CourseDetailScreen({
   const [text, setText] = useState("");
   const [feedback, setFeedback] = useState("");
   const queryClient = useQueryClient();
+  const firstLessonId = resumeLessonId ?? course.firstLessonId;
+  const lessons = useQuery({
+    queryKey: ["lesson", course.slug, firstLessonId],
+    queryFn: () => {
+      if (!firstLessonId) throw new Error("У курса пока нет уроков");
+      return api.account.lessonDetails({ slug: course.slug, lessonId: firstLessonId });
+    },
+    enabled: Boolean(firstLessonId),
+  });
   const review = useMutation({
     mutationFn: () =>
       api.account.saveWorkshopReview({
@@ -41,7 +50,7 @@ export function CourseDetailScreen({
   });
   const cover = /^https?:\/\//.test(course.cover)
     ? course.cover
-    : `${API_URL || "https://stariva.ru"}${course.cover.startsWith("/") ? "" : "/"}${course.cover}`;
+    : `${API_URL}${course.cover.startsWith("/") ? "" : "/"}${course.cover}`;
   return (
     <main className="min-h-dvh bg-bg pb-24 text-fg">
       <div className="relative">
@@ -70,24 +79,48 @@ export function CourseDetailScreen({
             }
           />
         </div>
-        {resumeLessonId ? (
+        {firstLessonId ? (
           <Button
             className="mt-7 w-full"
-            onClick={() => onLesson(resumeLessonId)}
+            onClick={() => onLesson(firstLessonId)}
           >
             <Play size={19} />
-            Продолжить урок
+            {resumeLessonId ? "Продолжить просмотр" : "Начать просмотр"}
           </Button>
         ) : (
           <div className="mt-7 rounded-[var(--radius-lg)] bg-surface p-5 text-sm text-muted">
-            Список уроков пока доступен на сайте. Мобильному API нужен
-            идентификатор первого урока курса.
+            Уроки этого курса пока готовятся.
           </div>
+        )}
+        {lessons.data && (
+          <section className="mt-9">
+            <h2 className="section-title">Уроки курса</h2>
+            <div className="mt-4 space-y-2">
+              {lessons.data.lessons.map((lesson, index) => (
+                <button
+                  key={lesson.id}
+                  type="button"
+                  onClick={() => onLesson(lesson.id)}
+                  className="flex min-h-16 w-full items-center gap-3 rounded-[var(--radius-md)] bg-surface px-4 text-left ring-1 ring-line"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-sm font-semibold">
+                    {lesson.completed ? <CircleCheck size={19} className="text-sage" /> : index + 1}
+                  </span>
+                  <span className="flex-1 font-medium">{lesson.title}</span>
+                  <Play size={17} className="text-accent" />
+                </button>
+              ))}
+            </div>
+          </section>
         )}
         <a
           href={`${API_URL || "https://stariva.ru"}/workshops/${course.slug}`}
           target="_blank"
           rel="noreferrer"
+          onClick={(event) => {
+            event.preventDefault();
+            void native.openExternal(event.currentTarget.href);
+          }}
           className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-surface px-5 text-sm font-semibold ring-1 ring-line"
         >
           Открыть курс на сайте <ArrowRight size={18} />

@@ -1,3 +1,7 @@
+import type { CatalogCourse } from "@stariva/web-api/contract";
+import { useQuery } from "@tanstack/react-query";
+import { absoluteUrl, api } from "@/lib/api";
+
 export interface CatalogWorkshop {
   id: string;
   title: string;
@@ -6,37 +10,47 @@ export interface CatalogWorkshop {
   description: string;
   level: string;
   length: string;
+  price: string;
+  href: string;
+  isPreorder: boolean;
 }
-/** Визуальная подборка, пока мобильный публичный каталог не доступен через API. */
-export const catalogWorkshops: [CatalogWorkshop, ...CatalogWorkshop[]] = [
-  {
-    id: "tree",
-    title: "Плетёная ёлка",
-    category: "Декор",
-    image: "/images/workshop-tree.png",
-    description:
-      "Создайте праздничный декор своими руками — от первого узла до последней детали.",
-    level: "Для начинающих",
-    length: "В своём темпе",
-  },
-  {
-    id: "tunic",
-    title: "Туника из макраме",
-    category: "Одежда",
-    image: "/images/workshop-tunic.png",
-    description:
-      "Лёгкая вещь с характером: освоите узоры и соберёте цельный образ.",
-    level: "С опытом",
-    length: "В своём темпе",
-  },
-  {
-    id: "mini",
-    title: "Платье мини",
-    category: "Одежда",
-    image: "/images/workshop-mini.png",
-    description:
-      "Выразительный силуэт и удовольствие от каждого этапа плетения.",
-    level: "С опытом",
-    length: "В своём темпе",
-  },
-];
+
+const categories: Record<CatalogCourse["category"], string> = {
+  lampshades: "Абажуры",
+  clothing: "Одежда",
+  interior: "Декор интерьера",
+};
+const levels: Record<CatalogCourse["level"], string> = {
+  beginner: "Для начинающих",
+  intermediate: "Средний уровень",
+  advanced: "Для опытных",
+};
+
+function toWorkshop(course: CatalogCourse): CatalogWorkshop {
+  return {
+    id: course.slug,
+    title: course.title,
+    category: categories[course.category],
+    image: absoluteUrl(course.cover),
+    description: course.description || course.subtitle,
+    level: levels[course.level],
+    length: `${course.lessonCount} уроков`,
+    price: course.priceKopecks
+      ? new Intl.NumberFormat("ru-RU", {
+          style: "currency",
+          currency: "RUB",
+          maximumFractionDigits: 0,
+        }).format(course.priceKopecks / 100)
+      : "Бесплатно",
+    href: `/workshops/${course.slug}`,
+    isPreorder: course.isPreorder,
+  };
+}
+
+export function useCatalog() {
+  return useQuery({
+    queryKey: ["catalog-courses"],
+    queryFn: async () => (await api.account.catalogCourses()).map(toWorkshop),
+    staleTime: 5 * 60_000,
+  });
+}
