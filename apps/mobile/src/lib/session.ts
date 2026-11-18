@@ -1,5 +1,6 @@
 import { Preferences } from "@capacitor/preferences";
 import { useSyncExternalStore } from "react";
+import { z } from "zod";
 import { API_URL, api } from "@/lib/api";
 import {
   type AuthClient,
@@ -25,6 +26,11 @@ export const authClient: AuthClient = createAuthClient({
  * а по его id лежит кэш купленных курсов.
  */
 const SESSION_USER_KEY = "stariva.session-user";
+const sessionUserSchema = z.object({
+  id: z.string().min(1),
+  email: z.string(),
+  name: z.string(),
+}) satisfies z.ZodType<SessionUser>;
 
 async function rememberUser(user: SessionUser | null): Promise<void> {
   if (!user) return;
@@ -37,13 +43,9 @@ async function rememberUser(user: SessionUser | null): Promise<void> {
 async function lastUser(): Promise<SessionUser | null> {
   try {
     const { value } = await Preferences.get({ key: SESSION_USER_KEY });
-    const user = value ? (JSON.parse(value) as Partial<SessionUser>) : null;
-    if (
-      typeof user?.id === "string" &&
-      typeof user.email === "string" &&
-      typeof user.name === "string"
-    ) {
-      return { id: user.id, email: user.email, name: user.name };
+    if (value) {
+      const parsed = sessionUserSchema.safeParse(JSON.parse(value));
+      if (parsed.success) return parsed.data;
     }
   } catch {}
   return null;

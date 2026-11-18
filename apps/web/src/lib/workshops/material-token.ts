@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { z } from "zod";
 
 /**
  * Пропуск к материалу курса в адресе ссылки. Приложение входит bearer-токеном,
@@ -38,6 +39,13 @@ export function signMaterialGrant(grant: MaterialGrant, secret: string) {
   return `${payload}.${sign(payload, secret).toString("base64url")}`;
 }
 
+const grantPayloadSchema = z.object({
+  s: z.string().min(1),
+  f: z.string().min(1),
+  u: z.string().min(1),
+  e: z.number().int(),
+});
+
 /** Разбирает пропуск. null — подделан, повреждён или истёк. */
 export function verifyMaterialGrant(
   token: string,
@@ -59,9 +67,22 @@ export function verifyMaterialGrant(
   } catch {
     return null;
   }
-  const { s, f, u, e } = (data ?? {}) as Record<string, unknown>;
-  if (typeof s !== "string" || typeof f !== "string") return null;
-  if (typeof u !== "string" || typeof e !== "number") return null;
-  if (e <= nowSeconds) return null;
+  const parsed = grantPayloadSchema.safeParse(data);
+  if (!parsed.success || parsed.data.e <= nowSeconds) return null;
+  const { s, f, u, e } = parsed.data;
   return { slug: s, file: f, userId: u, expiresAt: e };
+}
+
+/** Владелец действительного пропуска именно к этому файлу курса, иначе null. */
+export function grantedMaterialUser(
+  token: string | null,
+  secret: string | undefined,
+  slug: string,
+  file: string,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): string | null {
+  if (!token || !secret) return null;
+  const grant = verifyMaterialGrant(token, secret, nowSeconds);
+  if (!grant || grant.slug !== slug || grant.file !== file) return null;
+  return grant.userId;
 }
