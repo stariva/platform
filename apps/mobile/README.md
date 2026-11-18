@@ -1,4 +1,4 @@
-# Stariva Мастер-классы — мобильное приложение
+# Stariva — мобильное приложение
 
 Vite + React внутри оболочки Capacitor 8 (`ru.stariva.workshops`). Веб-бандл
 лежит в приложении и обновляется по воздуху через `@capgo/capacitor-updater`;

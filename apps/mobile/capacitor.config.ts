@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
- * Нативная оболочка «Stariva Мастер-классы». Веб-бандл (`dist`) лежит внутри
+ * Нативная оболочка «Stariva». Веб-бандл (`dist`) лежит внутри
  * приложения и обновляется по воздуху: см. `src/lib/updates.ts` и
  * `scripts/release.ts`.
  *
@@ -10,7 +10,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  */
 const config: CapacitorConfig = {
   appId: "ru.stariva.workshops",
-  appName: "Stariva Мастер-классы",
+  appName: "Stariva",
   webDir: "dist",
   server: {
     // Бандл открывается как https://localhost (а не http://), иначе WebView

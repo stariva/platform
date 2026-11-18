@@ -1,5 +1,5 @@
 /**
- * Собирает подписанный релизный APK «Stariva Мастер-классы» локально.
+ * Собирает подписанный релизный APK «Stariva» локально.
  *
  *   bun run apk:release
  *   bun run apk:release -- --version-code 12 --version-name 1.2.0
