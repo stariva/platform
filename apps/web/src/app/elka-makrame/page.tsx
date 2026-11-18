@@ -9,6 +9,7 @@ import {
   FAQJsonLd,
 } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
+import { getProductsResult } from "@/lib/catalog/service";
 import { WORKSHOP_PATH, WORKSHOP_SLUG } from "@/lib/elka/data";
 import { loadBigTreeWorkshop, loadElkaData } from "@/lib/elka/load";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
@@ -16,6 +17,7 @@ import { getBundle } from "@/lib/workshops/bundles";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { KOMBO_SLUG } from "../elka-makrame-kombo/_data";
 import { ElkaAuthor } from "./_components/elka-author";
+import { ElkaKit } from "./_components/elka-kit";
 import { ElkaReadyTrees } from "./_components/elka-ready-trees";
 import { ElkaTariffs } from "./_components/elka-tariffs";
 import { ElkaWorkshop, workshopOffer } from "./_components/elka-workshop";
@@ -82,10 +84,14 @@ const METADATA: Metadata = {
 };
 
 export default async function ElkaMakramePage() {
-  const [{ trees: treesResult, workshop }, bigTree] = await Promise.all([
+  const [{ trees: treesResult, workshop }, bigTree, catalog] = await Promise.all([
     loadElkaData("elka_workshop"),
     loadBigTreeWorkshop(),
+    getProductsResult(),
   ]);
+  const kit = catalog.products.find(
+    (product) => product.slug === "nabor-makrame-elka",
+  );
   const trees = treesResult.products;
   const reviewProductId = trees[0]?.id;
   const treePrices = trees.map((tree) => tree.price).filter((p) => p > 0);
@@ -130,6 +136,9 @@ export default async function ElkaMakramePage() {
         />
         {tariffs ? (
           <ElkaTariffs {...tariffs} bundle={getBundle(KOMBO_SLUG)} />
+        ) : null}
+        {kit || catalog.status === "unavailable" ? (
+          <ElkaKit product={kit} />
         ) : null}
         <ElkaCustomerLooks
           source="elka_workshop"
