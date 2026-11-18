@@ -176,7 +176,10 @@ if (!existsSync(sdk)) {
 }
 
 // gradlew берёт java из JAVA_HOME, а без него — из PATH; проверяем тот же
-const javaHome = process.env.JAVA_HOME;
+// gradlew.bat снимает кавычки с JAVA_HOME — повторяем
+const javaHome = isWindows
+  ? process.env.JAVA_HOME?.replace(/"/g, "")
+  : process.env.JAVA_HOME;
 const javaBin = javaHome
   ? join(javaHome, "bin", isWindows ? "java.exe" : "java")
   : "java";
