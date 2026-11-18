@@ -71,13 +71,17 @@ const formSchema = z
       .min(1, "Введите email")
       .email("Некорректный email"),
     preferredContactChannel: madeToOrderContactChannelSchema,
-    contactMessenger: z.string().trim().max(120).optional(),
+    contactMessenger: z.string().trim().optional(),
     notes: z.string().trim().max(1500).optional(),
     personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
   })
   .superRefine((data, ctx) => {
     if (data.preferredContactChannel !== "telegram") return;
-    if (normalizeTelegramHandle(data.contactMessenger ?? "")) return;
+    if (
+      (data.contactMessenger?.length ?? 0) <= 120 &&
+      normalizeTelegramHandle(data.contactMessenger ?? "")
+    )
+      return;
     ctx.addIssue({
       code: "custom",
       path: ["contactMessenger"],
@@ -364,11 +368,18 @@ export default function MadeToOrderCheckoutPage() {
               <FormField
                 control={form.control}
                 name="preferredContactChannel"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
-                    <fieldset disabled={submitting} className="space-y-2">
+                    <fieldset
+                      disabled={submitting}
+                      aria-invalid={!!fieldState.error}
+                      aria-describedby={
+                        fieldState.error ? "contact-channel-error" : undefined
+                      }
+                      className="space-y-2"
+                    >
                       <legend className="text-sm font-medium leading-none">
-                        Где удобнее ответить?
+                        Где удобнее ответить? (обязательно)
                       </legend>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         {CONTACT_CHANNELS.map(({ id, label, Icon }) => {
@@ -387,6 +398,7 @@ export default function MadeToOrderCheckoutPage() {
                               <input
                                 type="radio"
                                 name={field.name}
+                                required
                                 value={id}
                                 checked={selected}
                                 onChange={() => field.onChange(id)}
@@ -421,7 +433,7 @@ export default function MadeToOrderCheckoutPage() {
                       {contactChannel === "phone" &&
                         `Позвоним в рабочее время: ${CONTACTS.hours}.`}
                     </p>
-                    <FormMessage />
+                    <FormMessage id="contact-channel-error" />
                   </FormItem>
                 )}
               />

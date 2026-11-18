@@ -36,6 +36,7 @@
     "better-auth": "1.7.25",
     "date-fns": "^4.4.0",
     "geist": "1.9.2",
+    "libphonenumber-js": "^1.13.16",
     "lucide-react": "1.73.0",
     "next": "16.4.6",
     "qr": "0.7.2",

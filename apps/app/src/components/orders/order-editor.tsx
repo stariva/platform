@@ -45,6 +45,7 @@ import {
   statusVariant,
 } from "./order-meta";
 import { ReceiptsPanel } from "./receipts-panel";
+import { whatsappPhone } from "./whatsapp-phone";
 
 type UpdateInput = Parameters<typeof orpc.admin.orders.update.call>[0];
 type OrderStatus = NonNullable<UpdateInput["status"]>;
@@ -176,6 +177,7 @@ export function OrderEditor({
     : [order.status, ...kindStatuses];
 
   const phoneDigits = order.contactPhone.replace(/[^\d+]/g, "");
+  const whatsappNumber = whatsappPhone(order.contactPhone);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
@@ -304,15 +306,18 @@ export function OrderEditor({
                     >
                       Telegram · {order.contactMessenger}
                     </a>
-                  ) : order.preferredContactChannel === "whatsapp" ? (
+                  ) : order.preferredContactChannel === "whatsapp" &&
+                    whatsappNumber ? (
                     <a
-                      href={`https://wa.me/${order.contactPhone.replace(/\D/g, "")}`}
+                      href={`https://wa.me/${whatsappNumber}`}
                       target="_blank"
                       rel="noreferrer"
                       className="underline-offset-4 hover:underline"
                     >
                       WhatsApp · {order.contactPhone}
                     </a>
+                  ) : order.preferredContactChannel === "whatsapp" ? (
+                    `WhatsApp · ${order.contactPhone}`
                   ) : (
                     CONTACT_CHANNEL_LABELS[order.preferredContactChannel]
                   )}
