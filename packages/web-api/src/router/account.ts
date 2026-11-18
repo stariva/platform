@@ -13,7 +13,10 @@ import {
   listMobileCourses,
   saveLessonChecklist as saveChecklist,
 } from "../services/mobile-courses";
-import { saveWorkshopReview as saveReview } from "../services/workshop-reviews";
+import {
+  getWorkshopReview,
+  saveWorkshopReview as saveReview,
+} from "../services/workshop-reviews";
 
 const workshopAccess = account.workshopAccess.handler(
   async ({ input, context }) => {
@@ -53,7 +56,9 @@ const myCourses = account.myCourses.handler(async ({ context }) => {
   return listMobileCourses(user.id);
 });
 
-const catalogCourses = account.catalogCourses.handler(() => listCatalogCourses());
+const catalogCourses = account.catalogCourses.handler(() =>
+  listCatalogCourses(),
+);
 
 const lessonDetails = account.lessonDetails.handler(
   async ({ input, context, errors }) => {
@@ -144,6 +149,14 @@ function workshopReviewPages(slug: string): string[] {
   return [`/workshops/${slug}`, "/reviews"];
 }
 
+const workshopReview = account.workshopReview.handler(
+  async ({ input, context }) => {
+    const user = context.session?.user;
+    if (!user) throw new ORPCError("UNAUTHORIZED");
+    return getWorkshopReview(user.id, input.slug);
+  },
+);
+
 const saveWorkshopReview = account.saveWorkshopReview.handler(
   async ({ input, context, errors }) => {
     const user = context.session?.user;
@@ -198,5 +211,6 @@ export const accountRouter = {
   saveLessonProgress,
   lessonVideo,
   materialUrl,
+  workshopReview,
   saveWorkshopReview,
 };

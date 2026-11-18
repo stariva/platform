@@ -1,6 +1,8 @@
+import { env } from "@stariva/config";
 import { getObjectStream } from "@stariva/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
+import { verifyMaterialGrant } from "@/lib/workshops/material-token";
 import { findMaterialFile } from "@/lib/workshops/signed-media";
 
 export const runtime = "nodejs";
@@ -13,8 +15,10 @@ const ERROR_STATUS = {
 } as const;
 
 /**
- * PDF-материал курса по адресу сайта, а не бакета: проверяем покупку и отдаём
- * файл потоком. Ссылку на этот адрес выдаёт account.materialUrl.
+ * Материал курса (PDF или схема урока) по адресу сайта, а не бакета:
+ * проверяем покупку и отдаём файл потоком. Ссылку на этот адрес выдаёт
+ * account.materialUrl. Покупателя узнаём по cookie сессии или, если её нет
+ * (приложение входит bearer-токеном), по пропуску из ссылки.
  */
 export async function GET(
   request: NextRequest,
@@ -22,7 +26,11 @@ export async function GET(
 ) {
   const { slug, file } = await params;
   const session = await auth.api.getSession({ headers: request.headers });
-  const material = await findMaterialFile(slug, file, session?.user.id ?? null);
+  const material = await findMaterialFile(
+    slug,
+    file,
+    session?.user.id ?? grantedUserId(request, slug, file),
+  );
   if (material.status !== "ok") {
     return NextResponse.json(
       { error: material.status },
@@ -32,10 +40,10 @@ export async function GET(
 
   try {
     const { body, contentLength } = await getObjectStream(material.key);
-    const name = `${material.label}.pdf`;
+    const name = `${material.label}.${material.extension}`;
     return new Response(body, {
       headers: {
-        "Content-Type": "application/pdf",
+        "Content-Type": material.contentType,
         // Открываем в браузере; при сохранении — понятное имя вместо ключа
         "Content-Disposition": `inline; filename="${file}"; filename*=UTF-8''${encodeURIComponent(name)}`,
         ...(contentLength ? { "Content-Length": String(contentLength) } : {}),
@@ -51,4 +59,17 @@ export async function GET(
     );
     return NextResponse.json({ error: "unavailable" }, { status: 502 });
   }
+}
+
+/** Владелец пропуска из ссылки, если пропуск выдан на этот файл и не истёк. */
+function grantedUserId(
+  request: NextRequest,
+  slug: string,
+  file: string,
+): string | null {
+  const token = request.nextUrl.searchParams.get("token");
+  if (!token || !env.AUTH_SECRET) return null;
+  const grant = verifyMaterialGrant(token, env.AUTH_SECRET);
+  if (!grant || grant.slug !== slug || grant.file !== file) return null;
+  return grant.userId;
 }

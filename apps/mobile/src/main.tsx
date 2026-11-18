@@ -1,17 +1,20 @@
 import { ORPCError } from "@orpc/client";
+import type { MobileCourse } from "@stariva/web-api/contract";
 import {
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import { Compass, Heart, House, UserRound, Video } from "lucide-react";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Compass, Heart, House, UserRound, Video } from "lucide-react";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { Avatar, Button, EmptyState } from "@/components/ui/Primitives";
+import { WorkshopCard } from "@/components/ui/WorkshopCard";
+import { CourseDetailScreen } from "@/features/my-workshops/CourseDetailScreen";
+import { MyWorkshopsScreen } from "@/features/my-workshops/MyWorkshopsScreen";
 import type { CatalogWorkshop } from "@/lib/catalog";
 import { useCatalog } from "@/lib/catalog";
-import { WorkshopCard } from "@/components/ui/WorkshopCard";
 import { native } from "@/lib/native";
 import {
   expireSession,
@@ -20,16 +23,13 @@ import {
   useSession,
 } from "@/lib/session";
 import { useAppUpdate } from "@/lib/use-app-update";
-import { LessonScreen } from "@/screens/LessonScreen";
-import { LoginScreen } from "@/screens/LoginScreen";
 import {
   CatalogScreen,
   DetailScreen,
   HomeScreen,
 } from "@/screens/ExploreScreens";
-import { MyWorkshopsScreen } from "@/features/my-workshops/MyWorkshopsScreen";
-import { CourseDetailScreen } from "@/features/my-workshops/CourseDetailScreen";
-import type { MobileCourse, MobileCourses } from "@stariva/web-api/contract";
+import { LessonScreen } from "@/screens/LessonScreen";
+import { LoginScreen } from "@/screens/LoginScreen";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -114,6 +114,9 @@ function App() {
           setLessonId(id);
         }}
         onBack={() => {
+          // Урок мог добавить пройденный: список курсов и уроков обновляем
+          void queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+          void queryClient.invalidateQueries({ queryKey: ["lesson", slug] });
           if (selectedCourse) {
             setLessonId("");
             const url = new URL(window.location.href);
@@ -125,16 +128,12 @@ function App() {
       />
     );
   } else if (selectedCourse) {
-    const data = queryClient.getQueryData<MobileCourses>([
-      "my-courses",
-      session.status === "signed-in" ? (session.user?.id ?? null) : null,
-    ]);
-    const resumeLessonId =
-      data?.resume?.slug === selectedCourse.slug ? data.resume.lessonId : null;
     screen = (
       <CourseDetailScreen
         course={selectedCourse}
-        resumeLessonId={resumeLessonId}
+        userId={
+          session.status === "signed-in" ? (session.user?.id ?? null) : null
+        }
         onBack={() => setSelectedCourse(null)}
         onLesson={(id) => {
           const url = new URL(window.location.href);

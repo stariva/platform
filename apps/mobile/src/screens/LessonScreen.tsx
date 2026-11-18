@@ -1,6 +1,13 @@
 import type { LessonDetails } from "@stariva/web-api/contract";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, ChevronLeft, Circle, CircleCheck, Download } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  Circle,
+  CircleCheck,
+  Download,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CraftHlsPlayer,
@@ -9,6 +16,7 @@ import {
 } from "@/components/CraftHlsPlayer";
 import { absoluteUrl, api, errorMessage } from "@/lib/api";
 import { activeChapterIndex, formatTime } from "@/lib/format";
+import { native } from "@/lib/native";
 
 type Tab = "chapters" | "checklist" | "lessons" | "files";
 
@@ -209,8 +217,12 @@ function LessonContent({
   return (
     <Shell onBack={onBack} title={lesson.title}>
       <div className="px-4 pb-3">
-        <p className="text-xs font-bold uppercase tracking-[.16em] text-accent">{lesson.workshopTitle}</p>
-        <p className="mt-1 text-sm text-muted">Урок {currentIndex + 1} из {lesson.lessons.length}</p>
+        <p className="text-xs font-bold uppercase tracking-[.16em] text-accent">
+          {lesson.workshopTitle}
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          Урок {currentIndex + 1} из {lesson.lessons.length}
+        </p>
       </div>
       {/* Плеер остаётся на месте, пока листаешь вкладки */}
       <div className="sticky top-0 z-10 border-b border-line bg-bg">
@@ -276,25 +288,38 @@ function LessonContent({
         )}
         {tab === "files" && (
           <div className="space-y-2">
-            {lesson.attachments.length ? lesson.attachments.map((file) => (
-              <button
-                key={file.key}
-                type="button"
-                onClick={async () => {
-                  try {
-                    const result = await api.account.materialUrl({ slug, key: file.key });
-                    window.location.href = absoluteUrl(result.url);
-                  } catch (error) {
-                    window.alert(errorMessage(error, "Не удалось открыть материал"));
-                  }
-                }}
-                className="flex min-h-14 w-full items-center gap-3 rounded-2xl bg-surface px-4 text-left ring-1 ring-line"
-              >
-                <Download size={21} className="text-accent" />
-                <span className="flex-1 font-medium">{file.label}</span>
-                <span className="text-xs uppercase text-muted">{file.kind}</span>
-              </button>
-            )) : <Empty>Для этого урока схем пока нет</Empty>}
+            {lesson.attachments.length ? (
+              lesson.attachments.map((file) => (
+                <button
+                  key={file.key}
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const result = await api.account.materialUrl({
+                        slug,
+                        key: file.key,
+                      });
+                      // Не уходим из приложения: файл открывается в браузере
+                      // системы, вход — по пропуску в ссылке
+                      await native.openExternal(absoluteUrl(result.url));
+                    } catch (error) {
+                      window.alert(
+                        errorMessage(error, "Не удалось открыть материал"),
+                      );
+                    }
+                  }}
+                  className="flex min-h-14 w-full items-center gap-3 rounded-2xl bg-surface px-4 text-left ring-1 ring-line"
+                >
+                  <Download size={21} className="text-accent" />
+                  <span className="flex-1 font-medium">{file.label}</span>
+                  <span className="text-xs uppercase text-muted">
+                    {file.kind}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <Empty>Для этого урока схем пока нет</Empty>
+            )}
           </div>
         )}
         {nextLesson && (

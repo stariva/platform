@@ -37,7 +37,8 @@ let reviewResult: ReviewResult = {
 };
 let reviewCalls: ReviewInput[] = [];
 mock.module("../services/workshop-reviews", () => ({
-  getWorkshopReview: async () => null,
+  getWorkshopReview: async (userId: string, slug: string) =>
+    userId === "user-1" && slug === "elka-makrame" ? savedReview : null,
   saveWorkshopReview: async (input: ReviewInput) => {
     reviewCalls.push(input);
     return reviewResult;
@@ -227,6 +228,20 @@ const reviewRequest = {
 const reviewSession = {
   user: { id: "user-1", email: "anna@example.test" },
 } as Session;
+
+test("the buyer's existing review is returned so the form keeps its photos", async () => {
+  const client = wireClient({ session: reviewSession }).account;
+  expect(await client.workshopReview({ slug: "elka-makrame" })).toEqual(
+    savedReview,
+  );
+  expect(await client.workshopReview({ slug: "lampshade" })).toBeNull();
+
+  const [error] = await safe(
+    wireClient().account.workshopReview({ slug: "elka-makrame" }),
+  );
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(lastStatus()).toBe(401);
+});
 
 test("a review requires a session", async () => {
   reviewCalls = [];
