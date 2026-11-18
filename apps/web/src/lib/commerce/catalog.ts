@@ -7,6 +7,7 @@ import {
   isMadeToOrderSize,
 } from "@/lib/made-to-order";
 import { applyBundlePricing } from "./bundles";
+import { elkaKitPrice } from "./elka-kit-price";
 import {
   MAX_MADE_TO_ORDER_QUANTITY,
   type MadeToOrderOptions,
@@ -153,6 +154,7 @@ export async function resolveMadeToOrderItems(
 /** Resolves all price and fulfillment data from the server-side catalog. */
 export async function resolveCatalogItems(
   requestedItems: RequestedCatalogItem[],
+  options: { elkaKitOwner?: boolean } = {},
 ): Promise<ResolvedCatalogItem[]> {
   const { products, status } = await getProductsResult();
   // Каталог недоступен — это сбой, а не отсутствие товаров: иначе
@@ -199,5 +201,12 @@ export async function resolveCatalogItems(
     throw new CatalogItemsUnavailableError(unavailable);
   }
   // Цены комплектов считает сервер: сумма заказа и платёж берутся отсюда
-  return applyBundlePricing(resolved);
+  return applyBundlePricing(resolved).map((item) => ({
+    ...item,
+    price: elkaKitPrice(
+      item.productSlug,
+      item.price,
+      options.elkaKitOwner ?? false,
+    ),
+  }));
 }

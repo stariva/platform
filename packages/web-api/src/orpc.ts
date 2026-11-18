@@ -173,6 +173,7 @@ export interface CheckoutServices {
     | { status: "unconfigured" }
     | { status: "delivery_unavailable" }
     | { status: "delivery_price_changed" }
+    | { status: "products_price_changed" }
     | { status: "payment_failed" }
     | CheckoutRejection
   >;

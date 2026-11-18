@@ -38,6 +38,7 @@ export function useCartValidation() {
   }, [lines, setUnavailableKeys]);
   useEffect(() => () => setUnavailableKeys(new Set()), [setUnavailableKeys]);
   const [loading, setLoading] = useState(false);
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [notices, setNotices] = useState<string[]>([]);
 
   const itemsRef = useRef<PricedCartItem[]>(items);
@@ -62,6 +63,7 @@ export function useCartValidation() {
     [items],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshAttempt запускает повторную проверку после изменения цены на сервере
   useEffect(() => {
     if (!hydrated) return;
     const keys = productKey ? productKey.split("\n") : [];
@@ -122,7 +124,7 @@ export function useCartValidation() {
       controller.abort();
       setLoading(false);
     };
-  }, [hydrated, productKey, syncWithCatalog]);
+  }, [hydrated, productKey, refreshAttempt, syncWithCatalog]);
 
   const states = useMemo(() => {
     const map = new Map<string, CartLineState>();
@@ -156,6 +158,10 @@ export function useCartValidation() {
     states,
     leadTimes,
     loading,
+    refresh: () => {
+      checked.current.clear();
+      setRefreshAttempt((attempt) => attempt + 1);
+    },
     notices,
     dismissNotices: () => setNotices([]),
   };

@@ -13,6 +13,7 @@ const {
   OptionsUnavailableError,
   PaymentCreateFailedError,
   PaymentsUnavailableError,
+  ProductsPriceChangedError,
   TELEGRAM_HANDLE_ERROR,
 } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
@@ -322,6 +323,7 @@ test("maps every create failure to its own error", async () => {
     [{ status: "check_failed" }, CheckoutCheckFailedError, 502],
     [{ status: "delivery_unavailable" }, DeliveryNotAvailableError, 400],
     [{ status: "delivery_price_changed" }, DeliveryPriceChangedError, 409],
+    [{ status: "products_price_changed" }, ProductsPriceChangedError, 409],
     [{ status: "payment_failed" }, PaymentCreateFailedError, 502],
     [
       { status: "items_unavailable", unavailableProductSlugs: ["elka"] },

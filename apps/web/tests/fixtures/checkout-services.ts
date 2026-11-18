@@ -9,12 +9,22 @@ const item = {
   quantity: 1,
 };
 
+let eligible = false;
+const hasPurchasedElkaWorkshop = mock(async (_userId: string) => eligible);
+mock.module("../../src/lib/commerce/elka-kit-offer", () => ({
+  hasPurchasedElkaWorkshop,
+}));
+
+const resolveCatalogItems = mock(
+  async (_requested: unknown, _options?: { elkaKitOwner?: boolean }) => [item],
+);
+
 mock.module("../../src/lib/commerce/catalog", () => ({
   CatalogItemsUnavailableError: class extends Error {
     productSlugs: string[] = [];
   },
   MadeToOrderOptionsError: class extends Error {},
-  resolveCatalogItems: async () => [item],
+  resolveCatalogItems,
   resolveMadeToOrderItems: async () => [],
 }));
 const createProductOrder = mock(async (_input: unknown) => ({
@@ -162,6 +172,30 @@ await test("create refuses to charge more delivery than the buyer saw", async ()
   expect(result).toEqual({ status: "delivery_price_changed" });
   expect(createProductOrder).not.toHaveBeenCalled();
   expect(createPayment).not.toHaveBeenCalled();
+});
+
+await test("create refuses to charge more for products than the buyer saw", async () => {
+  const result = await checkoutServices.create({
+    ...createInput,
+    expectedProductsKopecks: 9_000,
+  });
+  expect(result).toEqual({ status: "products_price_changed" });
+  expect(createProductOrder).not.toHaveBeenCalled();
+  expect(createPayment).not.toHaveBeenCalled();
+});
+
+await test("create passes verified workshop ownership to catalog pricing", async () => {
+  eligible = true;
+  const result = await checkoutServices.create({
+    ...createInput,
+    userId: "owner-1",
+    expectedProductsKopecks: 10_000,
+  });
+  expect(result.status).toBe("ok");
+  expect(hasPurchasedElkaWorkshop).toHaveBeenCalledWith("owner-1");
+  expect(resolveCatalogItems.mock.calls[0]?.[1]).toEqual({
+    elkaKitOwner: true,
+  });
 });
 
 await test("create goes ahead when the delivery price matches what the buyer saw", async () => {

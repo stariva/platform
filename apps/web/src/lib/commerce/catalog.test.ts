@@ -74,6 +74,34 @@ test("resolves in-stock items with kopeck prices", async () => {
   ]);
 });
 
+test("charges 980 ₽ for the tree kit only to a buyer of its workshop", async () => {
+  const kit: Product = {
+    ...bag,
+    id: "elka-kit",
+    slug: "nabor-makrame-elka",
+    category: "interior",
+    subcategory: "kits",
+    price: 1980,
+  };
+  catalog = { products: [kit, bag], status: "available" };
+  const requested = [
+    { productSlug: kit.slug, quantity: 1 },
+    { productSlug: bag.slug, quantity: 1 },
+  ];
+
+  const regular = await resolveCatalogItems(requested);
+  const owner = await resolveCatalogItems(requested, { elkaKitOwner: true });
+
+  assert.deepEqual(
+    regular.map((item) => item.price),
+    [198_000, 350_000],
+  );
+  assert.deepEqual(
+    owner.map((item) => item.price),
+    [98_000, 350_000],
+  );
+});
+
 test("both gnomes together are charged the bundle price, one alone the catalog price", async () => {
   const gnome = (slug: string, sku: number): Product => ({
     ...bag,

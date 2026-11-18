@@ -5,6 +5,7 @@ import {
   DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
+  ProductsPriceChangedError,
 } from "@stariva/web-api/contract";
 import {
   ArrowRightIcon,
@@ -69,7 +70,7 @@ export default function CheckoutPage() {
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   // Подарок с кодом доступа имеет смысл только для набора с мастер-классом
   const hasKit = items.some((item) => item.kit);
-  const { notices, dismissNotices } = useCartValidation();
+  const { notices, dismissNotices, refresh } = useCartValidation();
 
   const [step, setStep] = useState<Step>("contact");
   const [contact, setContact] = useState<ContactFormValues | null>(null);
@@ -227,6 +228,7 @@ export default function CheckoutPage() {
         delivery,
         // Сервер не возьмёт за доставку больше, чем показано на странице
         expectedDeliveryKopecks: quoteState.quote.deliveryPriceKopecks,
+        expectedProductsKopecks: subtotal,
         personalDataConsent: contact.personalDataConsent,
         offerAccepted: true,
       });
@@ -242,6 +244,9 @@ export default function CheckoutPage() {
       } else if (error instanceof DeliveryPriceChangedError) {
         // Ozon ожил или цена сдвинулась: пересчитываем и показываем новую сумму
         setQuoteAttempt((n) => n + 1);
+        toast.error(error.message);
+      } else if (error instanceof ProductsPriceChangedError) {
+        refresh();
         toast.error(error.message);
       } else {
         toast.error(
