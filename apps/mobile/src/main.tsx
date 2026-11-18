@@ -6,7 +6,7 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { Compass, Heart, House, UserRound, Video } from "lucide-react";
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { Avatar, Button, EmptyState } from "@/components/ui/Primitives";
@@ -54,6 +54,7 @@ const sections = [
 ] as const;
 
 function App() {
+  const contentRef = useRef<HTMLDivElement>(null);
   const params = new URLSearchParams(window.location.search);
   const [slug, setSlug] = useState(params.get("slug") ?? "");
   const [lessonId, setLessonId] = useState(params.get("lesson") ?? "");
@@ -94,7 +95,10 @@ function App() {
     localStorage.setItem("stariva:favorites", JSON.stringify(favorites));
   }, [favorites]);
   useEffect(() => {
-    if (routeKey) window.scrollTo(0, 0);
+    if (routeKey) {
+      contentRef.current?.scrollTo(0, 0);
+      window.scrollTo(0, 0);
+    }
   }, [routeKey]);
 
   let screen: React.ReactNode;
@@ -279,26 +283,25 @@ function App() {
         </main>
       );
     screen = (
-      <>
-        {screen}
-        <nav
-          aria-label="Основная навигация"
-          className="glass fixed inset-x-3 bottom-[max(.5rem,env(safe-area-inset-bottom))] z-40 flex rounded-[var(--radius-xl)] border border-line p-1 shadow-[var(--shadow-2)]"
-        >
+      <div className="app-shell">
+        <div ref={contentRef} className="app-content">
+          {screen}
+        </div>
+        <nav aria-label="Основная навигация" className="tab-bar">
           {sections.map(({ id, label, Icon }) => (
             <button
               key={id}
               type="button"
               aria-current={section === id ? "page" : undefined}
               onClick={() => setSection(id)}
-              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-lg)] text-[.65rem] font-semibold ${section === id ? "bg-accent text-accent-fg" : "text-muted"}`}
+              className={`flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-lg)] text-[.65rem] font-semibold ${section === id ? "bg-accent text-accent-fg" : "text-muted"}`}
             >
               <Icon size={21} aria-hidden />
               {label}
             </button>
           ))}
         </nav>
-      </>
+      </div>
     );
   }
 

@@ -11,6 +11,8 @@ for (const scenario of [
   "quote reports an Ozon refusal instead of going manual",
   "create takes the order with manual delivery when Ozon is down",
   "create refuses to charge more delivery than the buyer saw",
+  "create refuses to charge more for products than the buyer saw",
+  "create passes verified workshop ownership to catalog pricing",
   "create goes ahead when the delivery price matches what the buyer saw",
   "create stays free when Ozon is down and the buyer expected a price",
   "create refuses a manual order that has no address for the point",

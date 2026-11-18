@@ -57,6 +57,7 @@ export {
   madeToOrderContactChannels,
   normalizeTelegramHandle,
   OptionsUnavailableError,
+  ProductsPriceChangedError,
   type PhoneCheck,
   type QuoteInput,
   TELEGRAM_HANDLE_ERROR,

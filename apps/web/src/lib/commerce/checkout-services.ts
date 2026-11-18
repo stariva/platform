@@ -9,6 +9,7 @@ import { getCachedPickupPointsInfo } from "@/lib/ozon-delivery/pickup-points-cac
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { collectVisitor } from "@/lib/visitor";
+import { hasPurchasedElkaWorkshop } from "./elka-kit-offer";
 import {
   CatalogItemsUnavailableError,
   MadeToOrderOptionsError,
@@ -120,13 +121,26 @@ export const checkoutServices: CheckoutServices = {
 
     let items: Awaited<ReturnType<typeof resolveCatalogItems>>;
     try {
-      items = await resolveCatalogItems(data.items);
+      items = await resolveCatalogItems(data.items, {
+        elkaKitOwner: userId ? await hasPurchasedElkaWorkshop(userId) : false,
+      });
     } catch (error) {
       if (error instanceof CatalogItemsUnavailableError) {
         return unavailableItems(error);
       }
       console.error("[checkout/create] Ошибка проверки заказа:", error);
       return { status: "check_failed" };
+    }
+
+    const productsKopecks = items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+    if (
+      data.expectedProductsKopecks !== undefined &&
+      productsKopecks > data.expectedProductsKopecks
+    ) {
+      return { status: "products_price_changed" };
     }
 
     // null — Ozon не ответил: заказ принимаем с ручной доставкой, бесплатной

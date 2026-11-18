@@ -6,6 +6,12 @@ import {
   listGiftedSlugs,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { getProductBySlug } from "@/lib/catalog/service";
+import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
+import {
+  ELKA_KIT_SLUG,
+  ELKA_WORKSHOP_SLUG,
+} from "@/lib/commerce/elka-kit-price";
 import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
@@ -14,6 +20,7 @@ import {
   levelLabels,
 } from "@/lib/workshops-data";
 import { CourseCover } from "./course-cover";
+import { ElkaKitOffer } from "./elka-kit-offer";
 
 export const dynamic = "force-dynamic";
 
@@ -76,9 +83,19 @@ export default async function AccountCoursesPage() {
   const summaries = await Promise.all(
     workshops.map((w) => getCourseProgressSummary(session.user.id, w)),
   );
+  const kit =
+    slugs.includes(ELKA_WORKSHOP_SLUG) &&
+    (await hasPurchasedElkaWorkshop(session.user.id))
+      ? await getProductBySlug(ELKA_KIT_SLUG)
+      : undefined;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {kit ? (
+        <div className="sm:col-span-2 lg:col-span-3">
+          <ElkaKitOffer product={kit} />
+        </div>
+      ) : null}
       {workshops.map((workshop, i) => {
         const summary = summaries[i];
         if (!summary) return null;

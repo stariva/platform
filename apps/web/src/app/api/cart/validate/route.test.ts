@@ -24,6 +24,15 @@ const product: Product = {
 };
 
 let catalog: ProductsResult = { products: [], status: "available" };
+let signedIn = false;
+let eligible = false;
+
+mock.module("@/lib/auth/session", () => ({
+  getSession: async () => (signedIn ? { user: { id: "course-owner" } } : null),
+}));
+mock.module("@/lib/commerce/elka-kit-offer", () => ({
+  hasPurchasedElkaWorkshop: async () => eligible,
+}));
 
 // Подменяем слой базы, а не весь service: mock.module в bun глобален для прогона,
 // и урезанный service ломал бы другие тесты, которым нужны getProducts и т. д.
@@ -88,6 +97,32 @@ test("marks a kit, so a cart from before the gift option still offers it", async
 
   const { lines } = (await res.json()) as { lines: { kit?: boolean }[] };
   assert.equal(lines[0]?.kit, true);
+});
+
+test("shows the owner price for the tree kit only with a purchased course", async () => {
+  catalog = {
+    products: [
+      {
+        ...product,
+        slug: "nabor-makrame-elka",
+        category: "interior",
+        subcategory: "kits",
+        price: 1980,
+      },
+    ],
+    status: "available",
+  };
+  signedIn = true;
+  eligible = true;
+  const owner = await POST(request({ lines: [stock("nabor-makrame-elka")] }));
+  const ownerLines = (await owner.json()) as { lines: { price: number }[] };
+  assert.equal(ownerLines.lines[0]?.price, 98_000);
+
+  signedIn = false;
+  const guest = await POST(request({ lines: [stock("nabor-makrame-elka")] }));
+  const guestLines = (await guest.json()) as { lines: { price: number }[] };
+  assert.equal(guestLines.lines[0]?.price, 198_000);
+  eligible = false;
 });
 
 test("ready-made clothes from an old cart are no longer for sale", async () => {

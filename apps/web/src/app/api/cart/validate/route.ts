@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { CartValidationLine } from "@/lib/cart/validation";
+import { getSession } from "@/lib/auth/session";
 import { getProductsResult } from "@/lib/catalog/service";
 import {
   isCatalogProductBuyable,
@@ -9,6 +10,8 @@ import {
   priceInKopecks,
 } from "@/lib/commerce/catalog";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
+import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
+import { elkaKitPrice } from "@/lib/commerce/elka-kit-price";
 import { isKit } from "@/lib/in-stock";
 
 export const runtime = "nodejs";
@@ -45,6 +48,11 @@ export async function POST(request: NextRequest) {
       { status: 503 },
     );
   }
+
+  const session = await getSession();
+  const elkaKitOwner = session
+    ? await hasPurchasedElkaWorkshop(session.user.id)
+    : false;
 
   const productsBySlug = new Map(products.map((p) => [p.slug, p]));
   const requested = new Map(
@@ -105,7 +113,7 @@ export async function POST(request: NextRequest) {
         name: product.name,
         image: product.images[0] ?? "",
         ozonSku: product.ozonSku as number,
-        price,
+        price: elkaKitPrice(productSlug, price, elkaKitOwner),
         maxQuantity: Math.min(MAX_ITEM_QUANTITY, product.stockAvailable),
         // Корзина, собранная до появления подарка, не помнит, что это набор
         ...(isKit(product) ? { kit: true } : {}),

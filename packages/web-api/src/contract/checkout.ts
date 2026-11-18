@@ -31,6 +31,11 @@ export const DeliveryPriceChangedError = error("DELIVERY_PRICE_CHANGED", {
   message: "Стоимость доставки изменилась. Проверьте сумму и оплатите ещё раз.",
 });
 
+/** Цена товаров изменилась после показа корзины, в том числе из-за входа или выхода. */
+export const ProductsPriceChangedError = error("PRODUCTS_PRICE_CHANGED", {
+  message: "Цена товаров изменилась. Проверьте новую сумму и оплатите ещё раз.",
+});
+
 /**
  * Товары из корзины сняты с продажи или раскуплены. Витрина убирает их из
  * корзины по списку.
@@ -141,6 +146,8 @@ export const createOrderInputSchema = z.object({
    * бесплатно (Ozon не ответил) — можно. Без поля проверки нет.
    */
   expectedDeliveryKopecks: z.number().int().nonnegative().optional(),
+  /** Не создаём платёж, если серверная цена товаров выше показанной покупателю. */
+  expectedProductsKopecks: z.number().int().positive().optional(),
   // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ) и акцепт оферты.
   personalDataConsent,
   offerAccepted: z.literal(true, { error: "Подтвердите согласие с офертой" }),
@@ -292,6 +299,7 @@ export const checkoutContract = {
       [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
       [DeliveryNotAvailableError.code]: DeliveryNotAvailableError,
       [DeliveryPriceChangedError.code]: DeliveryPriceChangedError,
+      [ProductsPriceChangedError.code]: ProductsPriceChangedError,
       [PaymentCreateFailedError.code]: PaymentCreateFailedError,
     })
     .input(createOrderInputSchema)
