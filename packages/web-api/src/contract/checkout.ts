@@ -175,7 +175,7 @@ export const madeToOrderContactChannels = [
   "telegram",
   "whatsapp",
   "max",
-  "phone",
+  "email",
 ] as const;
 
 export const madeToOrderContactChannelSchema = z.enum(
@@ -213,7 +213,10 @@ export const madeToOrderRequestSchema = z
      * Где удобнее ответить. Необязательно только для старых вкладок: раньше
      * выбора не было, и мастер звонил на телефон из заявки.
      */
-    preferredContactChannel: madeToOrderContactChannelSchema.optional(),
+    // phone сохраняем для запросов из вкладок с прежней формой «Звонок».
+    preferredContactChannel: madeToOrderContactChannelSchema
+      .or(z.literal("phone"))
+      .optional(),
     /** Ник в Telegram; для остальных каналов сервер его не сохраняет. */
     contactMessenger: z.string().trim().max(120).optional(),
     customerNotes: z.string().trim().max(1500).optional(),

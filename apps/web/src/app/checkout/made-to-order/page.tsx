@@ -23,8 +23,8 @@ import {
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
+  MailIcon,
   MaxIcon,
-  PhoneIcon,
   TelegramIcon,
   WhatsappIcon,
 } from "@/components/stariva/icons";
@@ -44,7 +44,6 @@ import { reachGoal } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
 import { rememberOrderPhone } from "@/lib/commerce/order-phone";
-import { CONTACTS } from "@/lib/contacts";
 import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
@@ -54,7 +53,7 @@ const CONTACT_CHANNELS = [
   { id: "telegram", label: "Telegram", Icon: TelegramIcon },
   { id: "whatsapp", label: "WhatsApp", Icon: WhatsappIcon },
   { id: "max", label: "MAX", Icon: MaxIcon },
-  { id: "phone", label: "Звонок", Icon: PhoneIcon },
+  { id: "email", label: "Email", Icon: MailIcon },
 ] as const satisfies readonly {
   id: MadeToOrderContactChannel;
   label: string;
@@ -430,8 +429,8 @@ export default function MadeToOrderCheckoutPage() {
                         "Напишем на номер из заявки — проверьте, что он привязан к WhatsApp."}
                       {contactChannel === "max" &&
                         "Напишем на номер из заявки в MAX."}
-                      {contactChannel === "phone" &&
-                        `Позвоним в рабочее время: ${CONTACTS.hours}.`}
+                      {contactChannel === "email" &&
+                        "Напишем на email из заявки — проверьте адрес."}
                     </p>
                     <FormMessage id="contact-channel-error" />
                   </FormItem>

@@ -30,6 +30,7 @@ const CONTACT_CHANNEL_LABELS: Record<
   telegram: "Telegram",
   whatsapp: "WhatsApp",
   max: "MAX",
+  email: "Email",
   phone: "Звонок",
 };
 
@@ -42,7 +43,11 @@ function preferredContactLine(order: OrderRow): string | null {
     const username = order.contactMessenger.replace(/^@/, "");
     return `Связь: ${label} — ${order.contactMessenger} (https://t.me/${username})`;
   }
-  if (channel === "phone") return "Связь: звонок";
+  if (channel === "email") {
+    return order.contactEmail
+      ? `Связь: ${label} — ${order.contactEmail}`
+      : null;
+  }
   return `Связь: ${label} — ${order.contactPhone}`;
 }
 

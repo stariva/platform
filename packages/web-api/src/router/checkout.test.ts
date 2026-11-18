@@ -405,6 +405,31 @@ test("an order needs a valid email for the receipt and status updates", async ()
   expect(invalid).toMatchObject({ code: "BAD_REQUEST" });
 });
 
+test("made-to-order accepts legacy phone and current email requests over RPC", async () => {
+  const seen: unknown[] = [];
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        requestMadeToOrder: async (input) => {
+          seen.push(input);
+          return {
+            status: "ok",
+            request: { orderId: "ord_2", estimate: 4500 },
+          };
+        },
+      }),
+    },
+  });
+  for (const preferredContactChannel of ["phone", "email"] as const) {
+    const input = { ...madeToOrderInput, preferredContactChannel };
+    expect(await client.checkout.requestMadeToOrder(input)).toEqual({
+      orderId: "ord_2",
+      estimate: 4500,
+    });
+    expect(seen.at(-1)).toMatchObject(input);
+  }
+});
+
 test("made-to-order asks for a Telegram handle when Telegram is chosen", async () => {
   const client = wireClient({ services: { checkout: checkout() } });
   const [missing] = await safe(

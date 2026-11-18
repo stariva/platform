@@ -115,11 +115,32 @@ test("request message says where the buyer prefers to be contacted", () => {
   ).message;
   assert.ok(whatsapp.includes("Связь: WhatsApp — +7 999 123-45-67"));
 
-  const call = formatMadeToOrderRequestMessage(
+  const legacyPhone = formatMadeToOrderRequestMessage(
     { ...order, preferredContactChannel: "phone" },
     [item],
   ).message;
-  assert.ok(call.includes("Связь: звонок"));
+  assert.ok(legacyPhone.includes("Связь: Звонок — +7 999 123-45-67"));
+
+  const emailChannel = formatMadeToOrderRequestMessage(
+    {
+      ...order,
+      preferredContactChannel: "email",
+      contactEmail: "anna@example.com",
+    },
+    [item],
+  ).message;
+  assert.ok(emailChannel.includes("Связь: Email — anna@example.com"));
+});
+
+test("email contact without an address omits the contact line", () => {
+  for (const contactEmail of [null, ""]) {
+    const { message } = formatMadeToOrderRequestMessage(
+      { ...order, preferredContactChannel: "email", contactEmail },
+      [item],
+    );
+    assert.ok(!message.includes("Связь:"));
+    assert.ok(message.includes(`Телефон: ${order.contactPhone}`));
+  }
 });
 
 test("request message includes wishes and delivery when given", () => {

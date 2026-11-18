@@ -9,10 +9,7 @@ import {
   user,
   type VisitorInfo,
 } from "@stariva/db/schema";
-import type {
-  MadeToOrderContactChannel,
-  MadeToOrderParcel,
-} from "@stariva/web-api/contract";
+import type { MadeToOrderParcel } from "@stariva/web-api/contract";
 import {
   and,
   desc,
@@ -82,7 +79,7 @@ export interface CreateMadeToOrderOrderInput {
   contactPhone: string;
   contactEmail?: string;
   /** Где покупателю удобнее ответить; null — старая вкладка без выбора. */
-  preferredContactChannel?: MadeToOrderContactChannel | null;
+  preferredContactChannel?: (typeof productOrders.$inferInsert)["preferredContactChannel"];
   /** Ник в Telegram; для остальных каналов не сохраняется. */
   contactMessenger?: string | null;
   customerNotes?: string;

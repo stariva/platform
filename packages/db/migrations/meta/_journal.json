@@ -477,6 +477,13 @@
       "when": 1794984656075,
       "tag": "0067_lyrical_rage",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1794988226957,
+      "tag": "0068_dry_shaman",
+      "breakpoints": true
     }
   ]
 }
