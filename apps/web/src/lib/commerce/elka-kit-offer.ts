@@ -4,7 +4,9 @@ import { and, eq, gt } from "drizzle-orm";
 import { ELKA_WORKSHOP_SLUG } from "./elka-kit-price";
 
 /** Покупка набора создаёт нулевой заказ курса, он не даёт скидку на ещё один набор. */
-export async function hasPurchasedElkaWorkshop(userId: string): Promise<boolean> {
+export async function hasPurchasedElkaWorkshop(
+  userId: string,
+): Promise<boolean> {
   const [order] = await db
     .select({ id: orders.id })
     .from(orders)
@@ -19,4 +21,3 @@ export async function hasPurchasedElkaWorkshop(userId: string): Promise<boolean>
     .limit(1);
   return Boolean(order);
 }
-

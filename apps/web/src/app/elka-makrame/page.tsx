@@ -84,11 +84,12 @@ const METADATA: Metadata = {
 };
 
 export default async function ElkaMakramePage() {
-  const [{ trees: treesResult, workshop }, bigTree, catalog] = await Promise.all([
-    loadElkaData("elka_workshop"),
-    loadBigTreeWorkshop(),
-    getProductsResult(),
-  ]);
+  const [{ trees: treesResult, workshop }, bigTree, catalog] =
+    await Promise.all([
+      loadElkaData("elka_workshop"),
+      loadBigTreeWorkshop(),
+      getProductsResult(),
+    ]);
   const kit = catalog.products.find(
     (product) => product.slug === "nabor-makrame-elka",
   );

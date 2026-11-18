@@ -49,7 +49,9 @@ export function ElkaKitBuyButton({ product }: { product: Product }) {
       }}
       className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-terracotta px-5 py-3 text-center font-medium text-parchment transition-colors hover:bg-terracotta-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta sm:w-auto"
     >
-      {inCart ? "Перейти к заказу" : `Купить набор за ${formatPrice(price / 100)}`}
+      {inCart
+        ? "Перейти к заказу"
+        : `Купить набор за ${formatPrice(price / 100)}`}
       <ArrowRight className="size-4 shrink-0" aria-hidden />
     </button>
   );

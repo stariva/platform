@@ -12,7 +12,10 @@ import {
 import { getSession } from "@/lib/auth/session";
 import { getProductBySlug } from "@/lib/catalog/service";
 import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
-import { ELKA_KIT_SLUG, ELKA_WORKSHOP_SLUG } from "@/lib/commerce/elka-kit-price";
+import {
+  ELKA_KIT_SLUG,
+  ELKA_WORKSHOP_SLUG,
+} from "@/lib/commerce/elka-kit-price";
 import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {

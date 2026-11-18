@@ -39,7 +39,8 @@ export function HomeScreen({
       </div>
       <h1 className="display max-w-xs">Время создавать прекрасное</h1>
       <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-        Учитесь в своём темпе. Продолжайте с нужного места, повторяйте сложные узлы и возвращайтесь к урокам когда угодно.
+        Учитесь в своём темпе. Продолжайте с нужного места, повторяйте сложные
+        узлы и возвращайтесь к урокам когда угодно.
       </p>
       <div className="mt-7">
         {featured ? (
@@ -47,9 +48,15 @@ export function HomeScreen({
         ) : catalog.isLoading ? (
           <Skeleton className="aspect-[4/5]" />
         ) : catalog.isError ? (
-          <ErrorState message="Не удалось загрузить видеокурсы." onRetry={() => void catalog.refetch()} />
+          <ErrorState
+            message="Не удалось загрузить видеокурсы."
+            onRetry={() => void catalog.refetch()}
+          />
         ) : (
-          <EmptyState title="Курсы скоро появятся" description="Опубликованные мастер-классы будут здесь." />
+          <EmptyState
+            title="Курсы скоро появятся"
+            description="Опубликованные мастер-классы будут здесь."
+          />
         )}
       </div>
       <section className="mt-9">
@@ -108,7 +115,8 @@ export function CatalogScreen({
       </span>
       <h1 className="display mt-3">Найдите своё</h1>
       <p className="mt-3 text-sm text-muted">
-        Видеокурсы по макраме. Выберите проект, оплатите на сайте и смотрите здесь.
+        Видеокурсы по макраме. Выберите проект, оплатите на сайте и смотрите
+        здесь.
       </p>
       <div className="mt-7 flex gap-2">
         <label className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] bg-surface px-4 ring-1 ring-line">
@@ -130,7 +138,10 @@ export function CatalogScreen({
           <SlidersHorizontal size={20} />
         </Button>
       </div>
-      <div className="mt-5 flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+      <div
+        className="mt-5 flex gap-2 overflow-x-auto pb-2"
+        style={{ scrollbarWidth: "none" }}
+      >
         {["Все", "Абажуры", "Декор интерьера", "Одежда"].map((value) => (
           <Chip
             key={value}
@@ -155,8 +166,20 @@ export function CatalogScreen({
           />
         ))}
       </div>
-      {catalog.isLoading && <div className="mt-4 grid grid-cols-2 gap-3"><Skeleton className="h-64" /><Skeleton className="h-64" /></div>}
-      {catalog.isError && <div className="mt-6"><ErrorState message="Не удалось загрузить каталог." onRetry={() => void catalog.refetch()} /></div>}
+      {catalog.isLoading && (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+        </div>
+      )}
+      {catalog.isError && (
+        <div className="mt-6">
+          <ErrorState
+            message="Не удалось загрузить каталог."
+            onRetry={() => void catalog.refetch()}
+          />
+        </div>
+      )}
       {!catalog.isLoading && !catalog.isError && items.length === 0 && (
         <div className="mt-6">
           <EmptyState
@@ -265,7 +288,8 @@ export function DetailScreen({
           </p>
         </section>
         <p className="mt-7 text-sm text-muted">
-          {workshop.length} · {workshop.isPreorder ? "Предзаказ" : "Доступ онлайн"}
+          {workshop.length} ·{" "}
+          {workshop.isPreorder ? "Предзаказ" : "Доступ онлайн"}
         </p>
       </div>
       <div className="glass fixed inset-x-0 bottom-0 z-30 border-t border-line px-5 py-3 pb-[max(.75rem,env(safe-area-inset-bottom))]">
@@ -275,12 +299,16 @@ export function DetailScreen({
             <br />
             <strong className="text-sm text-fg">{workshop.price}</strong>
           </span>
-          <a href={`${API_URL || "https://stariva.ru"}${workshop.href}`} target="_blank" rel="noreferrer"
+          <a
+            href={`${API_URL || "https://stariva.ru"}${workshop.href}`}
+            target="_blank"
+            rel="noreferrer"
             onClick={(event) => {
               event.preventDefault();
               void native.openExternal(event.currentTarget.href);
             }}
-            className="flex min-h-12 items-center gap-2 rounded-[var(--radius-md)] bg-accent px-5 text-sm font-semibold text-accent-fg">
+            className="flex min-h-12 items-center gap-2 rounded-[var(--radius-md)] bg-accent px-5 text-sm font-semibold text-accent-fg"
+          >
             Посмотреть и купить <ArrowRight size={18} />
           </a>
         </div>

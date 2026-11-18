@@ -122,9 +122,7 @@ export const checkoutServices: CheckoutServices = {
     let items: Awaited<ReturnType<typeof resolveCatalogItems>>;
     try {
       items = await resolveCatalogItems(data.items, {
-        elkaKitOwner: userId
-          ? await hasPurchasedElkaWorkshop(userId)
-          : false,
+        elkaKitOwner: userId ? await hasPurchasedElkaWorkshop(userId) : false,
       });
     } catch (error) {
       if (error instanceof CatalogItemsUnavailableError) {

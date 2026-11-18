@@ -134,9 +134,11 @@ export function CraftHlsPlayer({
   const currentTime = () => videoRef.current?.currentTime ?? 0;
 
   useEffect(() => {
-    const updateFullscreen = () => setFullscreen(document.fullscreenElement === playerRef.current);
+    const updateFullscreen = () =>
+      setFullscreen(document.fullscreenElement === playerRef.current);
     document.addEventListener("fullscreenchange", updateFullscreen);
-    return () => document.removeEventListener("fullscreenchange", updateFullscreen);
+    return () =>
+      document.removeEventListener("fullscreenchange", updateFullscreen);
   }, []);
 
   const toggleFullscreen = async () => {
@@ -145,7 +147,9 @@ export function CraftHlsPlayer({
     } else if (playerRef.current?.requestFullscreen) {
       await playerRef.current.requestFullscreen();
     } else {
-      const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+      const video = videoRef.current as
+        | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
+        | null;
       video?.webkitEnterFullscreen?.();
     }
   };
@@ -442,7 +446,14 @@ export function CraftHlsPlayer({
   const loopActive = loopA !== null && loopB !== null;
 
   return (
-    <div ref={playerRef} className={fullscreen ? "flex min-h-dvh flex-col justify-center overflow-y-auto bg-bg text-fg" : "bg-bg text-fg"}>
+    <div
+      ref={playerRef}
+      className={
+        fullscreen
+          ? "flex min-h-dvh flex-col justify-center overflow-y-auto bg-bg text-fg"
+          : "bg-bg text-fg"
+      }
+    >
       <div className="relative bg-black">
         <video
           ref={videoRef}
@@ -476,7 +487,9 @@ export function CraftHlsPlayer({
         </video>
         <button
           type="button"
-          aria-label={fullscreen ? "Выйти из полноэкранного режима" : "На весь экран"}
+          aria-label={
+            fullscreen ? "Выйти из полноэкранного режима" : "На весь экран"
+          }
           onClick={() => void toggleFullscreen().catch(() => {})}
           className="absolute top-2 right-2 flex size-11 items-center justify-center rounded-full bg-black/60 text-white"
         >

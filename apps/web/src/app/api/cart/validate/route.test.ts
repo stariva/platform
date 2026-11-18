@@ -28,8 +28,7 @@ let signedIn = false;
 let eligible = false;
 
 mock.module("@/lib/auth/session", () => ({
-  getSession: async () =>
-    signedIn ? { user: { id: "course-owner" } } : null,
+  getSession: async () => (signedIn ? { user: { id: "course-owner" } } : null),
 }));
 mock.module("@/lib/commerce/elka-kit-offer", () => ({
   hasPurchasedElkaWorkshop: async () => eligible,
