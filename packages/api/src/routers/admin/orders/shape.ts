@@ -85,6 +85,8 @@ export function toAdminOrder(
     contactName: order.contactName,
     contactPhone: order.contactPhone,
     contactEmail: order.contactEmail,
+    preferredContactChannel: order.preferredContactChannel,
+    contactMessenger: order.contactMessenger,
     amountTotal: rubles(order.amountTotal),
     amountProducts: rubles(order.amountProducts),
     amountDelivery: rubles(order.amountDelivery),

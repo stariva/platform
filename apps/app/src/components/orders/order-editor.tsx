@@ -34,6 +34,7 @@ import {
 } from "./order-details";
 import {
   type AdminOrderView,
+  CONTACT_CHANNEL_LABELS,
   dateTime,
   isSafeToDelete,
   KIND_LABELS,
@@ -289,6 +290,32 @@ export function OrderEditor({
                   >
                     {order.contactEmail}
                   </a>
+                </Field>
+              )}
+              {order.preferredContactChannel && (
+                <Field label="Удобная связь">
+                  {order.preferredContactChannel === "telegram" &&
+                  order.contactMessenger ? (
+                    <a
+                      href={`https://t.me/${order.contactMessenger.replace(/^@/, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Telegram · {order.contactMessenger}
+                    </a>
+                  ) : order.preferredContactChannel === "whatsapp" ? (
+                    <a
+                      href={`https://wa.me/${order.contactPhone.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:underline"
+                    >
+                      WhatsApp · {order.contactPhone}
+                    </a>
+                  ) : (
+                    CONTACT_CHANNEL_LABELS[order.preferredContactChannel]
+                  )}
                 </Field>
               )}
               <Field label="Аккаунт">

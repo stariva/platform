@@ -470,6 +470,13 @@
       "when": 1794757161710,
       "tag": "0066_app_release_checksum",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794984656075,
+      "tag": "0067_lyrical_rage",
+      "breakpoints": true
     }
   ]
 }

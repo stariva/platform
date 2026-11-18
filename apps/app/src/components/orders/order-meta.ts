@@ -10,6 +10,10 @@ export interface AdminOrderView {
   contactName: string;
   contactPhone: string;
   contactEmail: string | null;
+  /** Где покупателю удобнее ответить; null — старая заявка без выбора. */
+  preferredContactChannel: "telegram" | "whatsapp" | "max" | "phone" | null;
+  /** Ник в Telegram, если выбран Telegram. */
+  contactMessenger: string | null;
   amountTotal: number;
   amountProducts: number;
   amountDelivery: number;
@@ -81,6 +85,16 @@ export interface AdminOrderView {
   /** Привязанные чеки, которые не отправлены покупателю. */
   receiptsUnsent?: number;
 }
+
+export const CONTACT_CHANNEL_LABELS: Record<
+  NonNullable<AdminOrderView["preferredContactChannel"]>,
+  string
+> = {
+  telegram: "Telegram",
+  whatsapp: "WhatsApp",
+  max: "MAX",
+  phone: "Звонок",
+};
 
 /** Чеков меньше, чем оплат: нет чека на предоплату, доплату или на весь заказ. */
 export function needsReceipt(order: AdminOrderView): boolean {
