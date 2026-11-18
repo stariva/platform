@@ -1,23 +1,24 @@
 import { createHash, randomUUID } from "node:crypto";
 import { customOrderRequests, db } from "@stariva/db";
 import type { VisitorInfo } from "@stariva/db/schema";
+import { isEmailConfigured } from "@stariva/emails";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
-import { baseEnv, env } from "@/env";
+import { env } from "@/env";
 import { formatTouch } from "@/lib/campaign-attribution";
+import {
+  missingStaffEmailSettings,
+  staffEmailDelivery,
+} from "@/lib/email/staff-config";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { formatVisitor } from "@/lib/visitor";
-import {
-  deliverNotification,
-  missingEmailSettings,
-  type Notification,
-} from "./delivery";
+import { deliverNotification, type Notification } from "./delivery";
 import type { OrderRequest } from "./schema";
 
 export function notificationConfigured() {
   return Boolean(
     (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) ||
-      (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_TO && env.ORDER_EMAIL_FROM),
+      (isEmailConfigured() && env.ORDER_EMAIL_TO && env.ORDER_EMAIL_FROM),
   );
 }
 /** Номер заявки, как его видят покупатель и мастер. */
@@ -92,9 +93,7 @@ export async function saveRequest(
 async function notify(item: Notification) {
   return deliverNotification(item, {
     ...telegramStaffConfig(),
-    emailKey: baseEnv.RESEND_API_KEY,
-    emailFrom: env.ORDER_EMAIL_FROM,
-    emailTo: env.ORDER_EMAIL_TO,
+    ...staffEmailDelivery(),
   });
 }
 export async function dispatchRequest(
@@ -171,11 +170,7 @@ export function warnIfOrderEmailMissing() {
   console.info(
     `[notifications] Telegram: токен ${env.TELEGRAM_BOT_TOKEN ? "задан" : "НЕ задан"}, чат ${env.TELEGRAM_CHAT_ID ? "задан" : "НЕ задан"}, прокси (3proxy) ${telegramProxyHost(env.TELEGRAM_PROXY_URL)}`,
   );
-  const missing = missingEmailSettings({
-    emailKey: baseEnv.RESEND_API_KEY,
-    emailFrom: env.ORDER_EMAIL_FROM,
-    emailTo: env.ORDER_EMAIL_TO,
-  });
+  const missing = missingStaffEmailSettings();
   if (missing.length > 0) {
     console.warn(
       `[notifications] Уведомления о заказах не уходят на почту — не заданы ${missing.join(", ")}`,

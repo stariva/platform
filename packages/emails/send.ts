@@ -38,6 +38,7 @@ export interface Emails {
 }
 
 export type EmailHtml = {
+  attachments?: EmailAttachment[];
   html: string;
   subject: string;
   to: string[];
@@ -79,6 +80,7 @@ export const sendEmailHtml = async (email: EmailHtml) =>
     from: email.from ?? env.EMAIL_FROM,
     subject: email.subject,
     html: email.html,
+    attachments: email.attachments,
     idempotencyKey: email.idempotencyKey,
   });
 

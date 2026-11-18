@@ -20,8 +20,8 @@ export const env = createEnv({
     // Email
     // Основной и запасной провайдер почты: письмо уходит основным, а если тот
     // не настроен или отказал — запасным.
-    EMAIL_PROVIDER: z.enum(["resend", "postbox"]).default("resend"),
-    EMAIL_FALLBACK_PROVIDER: z.enum(["resend", "postbox"]).optional(),
+    EMAIL_PROVIDER: z.enum(["resend", "postbox"]).default("postbox"),
+    EMAIL_FALLBACK_PROVIDER: z.enum(["resend", "postbox"]).default("resend"),
     RESEND_API_KEY: z.string().optional(),
     // Yandex Cloud Postbox (AWS-совместимый API): статический ключ
     // сервисного аккаунта с ролью postbox.sender.
