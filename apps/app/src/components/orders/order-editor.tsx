@@ -318,6 +318,14 @@ export function OrderEditor({
                     </a>
                   ) : order.preferredContactChannel === "whatsapp" ? (
                     `WhatsApp · ${order.contactPhone}`
+                  ) : order.preferredContactChannel === "email" &&
+                    order.contactEmail ? (
+                    <a
+                      href={`mailto:${order.contactEmail}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Email · {order.contactEmail}
+                    </a>
                   ) : (
                     CONTACT_CHANNEL_LABELS[order.preferredContactChannel]
                   )}

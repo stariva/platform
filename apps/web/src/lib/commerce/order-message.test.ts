@@ -115,11 +115,15 @@ test("request message says where the buyer prefers to be contacted", () => {
   ).message;
   assert.ok(whatsapp.includes("Связь: WhatsApp — +7 999 123-45-67"));
 
-  const call = formatMadeToOrderRequestMessage(
-    { ...order, preferredContactChannel: "phone" },
+  const emailChannel = formatMadeToOrderRequestMessage(
+    {
+      ...order,
+      preferredContactChannel: "email",
+      contactEmail: "anna@example.com",
+    },
     [item],
   ).message;
-  assert.ok(call.includes("Связь: звонок"));
+  assert.ok(emailChannel.includes("Связь: Email — anna@example.com"));
 });
 
 test("request message includes wishes and delivery when given", () => {

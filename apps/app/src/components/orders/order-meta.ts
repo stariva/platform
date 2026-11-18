@@ -11,7 +11,7 @@ export interface AdminOrderView {
   contactPhone: string;
   contactEmail: string | null;
   /** Где покупателю удобнее ответить; null — старая заявка без выбора. */
-  preferredContactChannel: "telegram" | "whatsapp" | "max" | "phone" | null;
+  preferredContactChannel: "telegram" | "whatsapp" | "max" | "email" | null;
   /** Ник в Telegram, если выбран Telegram. */
   contactMessenger: string | null;
   amountTotal: number;
@@ -93,7 +93,7 @@ export const CONTACT_CHANNEL_LABELS: Record<
   telegram: "Telegram",
   whatsapp: "WhatsApp",
   max: "MAX",
-  phone: "Звонок",
+  email: "Email",
 };
 
 /** Чеков меньше, чем оплат: нет чека на предоплату, доплату или на весь заказ. */

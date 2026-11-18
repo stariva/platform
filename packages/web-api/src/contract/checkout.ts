@@ -175,7 +175,7 @@ export const madeToOrderContactChannels = [
   "telegram",
   "whatsapp",
   "max",
-  "phone",
+  "email",
 ] as const;
 
 export const madeToOrderContactChannelSchema = z.enum(

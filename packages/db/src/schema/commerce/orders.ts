@@ -43,7 +43,7 @@ export const productContactChannel = pgEnum("product_contact_channel", [
   "telegram",
   "whatsapp",
   "max",
-  "phone",
+  "email",
 ]);
 
 export const productDeliveryMethod = pgEnum("product_delivery_method", [
