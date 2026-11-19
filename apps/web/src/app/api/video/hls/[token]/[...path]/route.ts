@@ -1,3 +1,4 @@
+import { allowedCorsOrigin, corsPreflight, withCors } from "@stariva/auth/cors";
 import { env } from "@stariva/config";
 import {
   getDownloadUrl,
@@ -7,6 +8,7 @@ import {
 } from "@stariva/storage";
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
+import { signPlaylistSegments } from "@/lib/workshops/hls-playlist";
 import { sessionFingerprint, verifyHlsGrant } from "@/lib/workshops/hls-token";
 
 export const runtime = "nodejs";
@@ -27,7 +29,7 @@ const NO_STORE = { "Cache-Control": "private, no-store" };
  * seg-NNNNN.m4s), в несколько — master.m3u8 и те же файлы в v0/, v1/…:
  * `<пропуск>/master.m3u8` → `<пропуск>/v1/index.m3u8` → `<пропуск>/v1/seg-…`.
  */
-export async function GET(
+async function serveHls(
   request: NextRequest,
   { params }: { params: Promise<{ token: string; path: string[] }> },
 ) {
@@ -56,7 +58,21 @@ export async function GET(
   const key = `${grant.prefix}/${file}`;
   try {
     if (file.endsWith(".m3u8")) {
-      return new Response(await getObjectText(key), {
+      let playlist = await getObjectText(key);
+      // Приложение (чужой origin) не пройдёт перенаправление в бакет: после
+      // него браузер шлёт Origin: null. Даём ему прямые ссылки на куски,
+      // живущие столько же, сколько пропуск.
+      if (file !== "master.m3u8" && allowedCorsOrigin(request)) {
+        const dir = file.slice(0, file.lastIndexOf("/") + 1);
+        const expiresIn = Math.max(
+          SEGMENT_URL_TTL_SECONDS,
+          grant.expiresAt - Math.floor(Date.now() / 1000),
+        );
+        playlist = await signPlaylistSegments(playlist, dir, (segment) =>
+          getDownloadUrl(`${grant.prefix}/${segment}`, { expiresIn }),
+        );
+      }
+      return new Response(playlist, {
         headers: {
           "Content-Type": "application/vnd.apple.mpegurl",
           ...NO_STORE,
@@ -72,3 +88,10 @@ export async function GET(
     return NextResponse.json({ error: "unavailable" }, { status: 502 });
   }
 }
+
+export const GET = async (
+  request: NextRequest,
+  context: { params: Promise<{ token: string; path: string[] }> },
+) => withCors(request, await serveHls(request, context));
+
+export const OPTIONS = (request: Request) => corsPreflight(request);

@@ -66,12 +66,15 @@ mock.module("@/lib/workshops/workshops-db", () => ({
 }));
 
 const { workshopFileServices } = await import("./signed-media");
-const sign = (userId: string | null, cookie?: string) =>
+const sign = (userId: string | null, cookie?: string, bearer = false) =>
   workshopFileServices.signLessonVideo({
     slug: "test",
     lessonId: "lesson",
     userId,
-    headers: new Headers(cookie ? { cookie } : {}),
+    headers: new Headers({
+      ...(cookie ? { cookie } : {}),
+      ...(bearer ? { authorization: "Bearer mobile-session" } : {}),
+    }),
   });
 
 test("signed-in requests without a session cookie fall back to MP4", async () => {
@@ -93,6 +96,17 @@ test("signed-in HLS grants are bound to the incoming cookie", async () => {
   assert.equal(
     verifyHlsGrant(token ?? "", secret)?.session,
     sessionFingerprint("token.sig"),
+  );
+});
+
+test("mobile bearer sessions receive HLS qualities without a cookie", async () => {
+  free = false;
+  const result = await sign("user", undefined, true);
+  assert.ok(result.status === "ok" && result.type === "hls");
+  assert.equal(result.url.split("/").at(-1), "master.m3u8");
+  assert.equal(
+    verifyHlsGrant(result.url.split("/").at(-2) ?? "", secret)?.session,
+    null,
   );
 });
 
