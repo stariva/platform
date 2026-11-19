@@ -9,57 +9,125 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@stariva/config";
 
-const BUCKET_NAME = env.AWS_S3_BUCKET;
+/**
+ * S3-совместимые хранилища. «yandex» — основной бакет (переменные AWS_*),
+ * «vkcloud» — зеркало в VK Cloud Hotbox (переменные VK_S3_*). Ключи объектов
+ * одинаковые, поэтому файл можно читать из любого, где он уже есть.
+ */
+export type StorageProvider = "yandex" | "vkcloud";
 
-/** Whether S3 credentials and a bucket are configured for this environment. */
-export function isStorageConfigured(): boolean {
-  return Boolean(
-    env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET,
-  );
+/** Активное хранилище: сюда пишут загрузки, отсюда читают по умолчанию. */
+export function activeStorageProvider(): StorageProvider {
+  return env.STORAGE_PROVIDER;
 }
 
-let cachedClient: S3Client | undefined;
+/**
+ * Хранилище, из которого зрители смотрят видеоуроки. По умолчанию активное;
+ * STORAGE_VIDEO_READ_PROVIDER задаёт отдельное хранилище для видео, не
+ * трогая материалы и загрузки. Просмотр из зеркала возможен только после
+ * того, как синхронизация скопировала туда файлы.
+ */
+export function videoStorageProvider(): StorageProvider {
+  return env.STORAGE_VIDEO_READ_PROVIDER ?? activeStorageProvider();
+}
+
+/** Второе хранилище — зеркало активного (куда копирует jobs.storage.mirrorSync). */
+export function otherStorageProvider(
+  provider: StorageProvider,
+): StorageProvider {
+  return provider === "yandex" ? "vkcloud" : "yandex";
+}
+
+interface ProviderConfig {
+  endpoint?: string;
+  forcePathStyle: boolean;
+  region: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  bucket?: string;
+}
+
+/** Настройки провайдера из окружения; пустое значение — как не заданное. */
+function providerConfig(provider: StorageProvider): ProviderConfig {
+  if (provider === "vkcloud") {
+    return {
+      endpoint: env.VK_S3_ENDPOINT,
+      forcePathStyle: env.VK_S3_FORCE_PATH_STYLE !== "false",
+      region: env.VK_S3_REGION,
+      accessKeyId: env.VK_S3_ACCESS_KEY_ID || undefined,
+      secretAccessKey: env.VK_S3_SECRET_ACCESS_KEY || undefined,
+      bucket: env.VK_S3_BUCKET || undefined,
+    };
+  }
+  return {
+    endpoint: env.AWS_S3_ENDPOINT,
+    forcePathStyle: env.AWS_S3_FORCE_PATH_STYLE !== "false",
+    region: env.AWS_REGION,
+    accessKeyId: env.AWS_ACCESS_KEY_ID || undefined,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY || undefined,
+    bucket: env.AWS_S3_BUCKET || undefined,
+  };
+}
+
+/** Заданы ли ключи и закрытый бакет провайдера. */
+export function isProviderConfigured(provider: StorageProvider): boolean {
+  const config = providerConfig(provider);
+  return Boolean(config.accessKeyId && config.secretAccessKey && config.bucket);
+}
+
+/** Whether the active storage provider is configured for this environment. */
+export function isStorageConfigured(): boolean {
+  return isProviderConfigured(activeStorageProvider());
+}
+
+const cachedClients = new Map<StorageProvider, S3Client>();
 
 /**
- * Lazily creates the S3 client so importing this module never throws when
- * credentials aren't configured yet (e.g. local dev without storage set up).
- * The client is only constructed the first time a function here is called.
+ * Клиент провайдера, создаётся лениво: импорт модуля не падает, когда ключи
+ * ещё не настроены (локальная разработка без хранилища). forcePathStyle —
+ * по умолчанию: MinIO, Яндекс и Hotbox VK Cloud дружат с path-style.
  */
-function getClient(): S3Client {
-  if (cachedClient) return cachedClient;
+function getProviderClient(provider: StorageProvider): S3Client {
+  const cached = cachedClients.get(provider);
+  if (cached) return cached;
 
-  const accessKeyId = env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+  const { accessKeyId, secretAccessKey, endpoint, forcePathStyle, region } =
+    providerConfig(provider);
   if (!accessKeyId || !secretAccessKey) {
     throw new Error(
-      "AWS credentials (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY) are required",
+      `S3 credentials for ${provider} are required (access key id and secret)`,
     );
   }
 
-  const s3Endpoint = env.AWS_S3_ENDPOINT;
-  const s3ForcePathStyle = env.AWS_S3_FORCE_PATH_STYLE !== "false";
-
-  cachedClient = new S3Client({
-    region: env.AWS_REGION,
+  const client = new S3Client({
+    region,
     credentials: { accessKeyId, secretAccessKey },
-    ...(s3Endpoint
-      ? {
-          endpoint: s3Endpoint,
-          forcePathStyle: s3ForcePathStyle, // MinIO/Yandex-friendly by default when endpoint provided
-        }
-      : {}),
+    ...(endpoint ? { endpoint, forcePathStyle } : {}),
   });
-  return cachedClient;
+  cachedClients.set(provider, client);
+  return client;
 }
 
-export async function createPresignedUrl(key: string): Promise<string> {
+/** Закрытый бакет провайдера; без него читать и писать нечего. */
+function requireBucket(provider: StorageProvider): string {
+  const bucket = providerConfig(provider).bucket;
+  if (!bucket) throw new Error(`S3 bucket for ${provider} is not configured`);
+  return bucket;
+}
+
+export async function createPresignedUrl(
+  key: string,
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<string> {
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: requireBucket(provider),
     Key: key,
     ContentType: "application/octet-stream",
   });
 
-  return getSignedUrl(getClient(), command, { expiresIn: 3600 }); // 1 hour
+  return getSignedUrl(getProviderClient(provider), command, {
+    expiresIn: 3600,
+  }); // 1 hour
 }
 
 /**
@@ -70,15 +138,20 @@ export async function createPresignedUrl(key: string): Promise<string> {
 export async function createUploadUrl(
   key: string,
   contentType: string,
-  options?: { expiresIn?: number; contentLength?: number },
+  options?: {
+    expiresIn?: number;
+    contentLength?: number;
+    provider?: StorageProvider;
+  },
 ): Promise<string> {
+  const provider = options?.provider ?? activeStorageProvider();
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: requireBucket(provider),
     Key: key,
     ContentType: contentType,
     ContentLength: options?.contentLength,
   });
-  return getSignedUrl(getClient(), command, {
+  return getSignedUrl(getProviderClient(provider), command, {
     expiresIn: options?.expiresIn ?? 3 * 3600,
   });
 }
@@ -95,35 +168,40 @@ export async function uploadBufferToS3(
   key: string,
   body: Buffer | Uint8Array,
   contentType?: string,
+  provider: StorageProvider = activeStorageProvider(),
 ): Promise<{ key: string; bucket: string; etag?: string }> {
+  const bucket = requireBucket(provider);
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: bucket,
     Key: key,
     Body: body,
     ContentType: contentType ?? "application/octet-stream",
   });
   try {
-    const res = await getClient().send(command);
-    return { key, bucket: BUCKET_NAME, etag: res.ETag };
+    const res = await getProviderClient(provider).send(command);
+    return { key, bucket, etag: res.ETag };
   } catch (err) {
     const e = err as Error;
     console.error("S3 upload failed", {
-      bucket: BUCKET_NAME,
+      provider,
+      bucket,
       key,
       error: e?.message ?? String(err),
       stack: e?.stack,
     });
     throw new Error(
-      `Failed to upload to S3 bucket '${BUCKET_NAME}' key '${key}': ${e?.message ?? String(err)}`,
+      `Failed to upload to ${provider} bucket '${bucket}' key '${key}': ${e?.message ?? String(err)}`,
     );
   }
 }
 
 // ─── Публичный бакет (фото каталога) ─────────────────────────────────────────
+// Живёт только в Яндексе: адреса фото хранятся в базе, поэтому переключение
+// хранилища их не трогает — за ними сайт всегда ходит в AWS_S3_PUBLIC_BUCKET.
 
 /** Задан публичный бакет и ключи — можно выкладывать фото каталога. */
 export function isPublicStorageConfigured(): boolean {
-  return Boolean(isStorageConfigured() && env.AWS_S3_PUBLIC_BUCKET);
+  return Boolean(isProviderConfigured("yandex") && env.AWS_S3_PUBLIC_BUCKET);
 }
 
 /** Постоянный публичный адрес файла из публичного бакета. */
@@ -146,7 +224,7 @@ export async function uploadPublicObject(
   const bucket = env.AWS_S3_PUBLIC_BUCKET;
   if (!bucket) throw new Error("AWS_S3_PUBLIC_BUCKET is not configured");
 
-  await getClient().send(
+  await getProviderClient("yandex").send(
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -172,7 +250,7 @@ export async function deletePublicObjects(keys: string[]): Promise<void> {
   if (!bucket) throw new Error("AWS_S3_PUBLIC_BUCKET is not configured");
   if (keys.length === 0) return;
 
-  const res = await getClient().send(
+  const res = await getProviderClient("yandex").send(
     new DeleteObjectsCommand({
       Bucket: bucket,
       Delete: {
@@ -190,30 +268,39 @@ export async function deletePublicObjects(keys: string[]): Promise<void> {
 }
 
 /** Текст небольшого файла из закрытого бакета (например, плейлиста HLS). */
-export async function getObjectText(key: string): Promise<string> {
-  const res = await getClient().send(
-    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+export async function getObjectText(
+  key: string,
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<string> {
+  const res = await getProviderClient(provider).send(
+    new GetObjectCommand({ Bucket: requireBucket(provider), Key: key }),
   );
   if (!res.Body) throw new Error(`empty object: ${key}`);
   return res.Body.transformToString("utf-8");
 }
 
 /** Содержимое файла из закрытого бакета целиком (например, PDF во вложение письма). */
-export async function getObjectBytes(key: string): Promise<Buffer> {
-  const res = await getClient().send(
-    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+export async function getObjectBytes(
+  key: string,
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<Buffer> {
+  const res = await getProviderClient(provider).send(
+    new GetObjectCommand({ Bucket: requireBucket(provider), Key: key }),
   );
   if (!res.Body) throw new Error(`empty object: ${key}`);
   return Buffer.from(await res.Body.transformToByteArray());
 }
 
 /** Файл из закрытого бакета потоком — отдать через сайт, не держа в памяти. */
-export async function getObjectStream(key: string): Promise<{
+export async function getObjectStream(
+  key: string,
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<{
   body: ReadableStream;
   contentLength?: number;
 }> {
-  const res = await getClient().send(
-    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+  const res = await getProviderClient(provider).send(
+    new GetObjectCommand({ Bucket: requireBucket(provider), Key: key }),
   );
   if (!res.Body) throw new Error(`empty object: ${key}`);
   return {
@@ -222,11 +309,14 @@ export async function getObjectStream(key: string): Promise<{
   };
 }
 
-/** Есть ли файл в закрытом бакете. */
-export async function objectExists(key: string): Promise<boolean> {
+/** Есть ли файл в закрытом бакете провайдера. */
+export async function objectExists(
+  key: string,
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<boolean> {
   try {
-    await getClient().send(
-      new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+    await getProviderClient(provider).send(
+      new HeadObjectCommand({ Bucket: requireBucket(provider), Key: key }),
     );
     return true;
   } catch (error) {
@@ -238,10 +328,13 @@ export async function objectExists(key: string): Promise<boolean> {
 }
 
 /** Время загрузки файла в закрытый бакет; null — файла нет. */
-export async function objectLastModified(key: string): Promise<Date | null> {
+export async function objectLastModified(
+  key: string,
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<Date | null> {
   try {
-    const res = await getClient().send(
-      new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+    const res = await getProviderClient(provider).send(
+      new HeadObjectCommand({ Bucket: requireBucket(provider), Key: key }),
     );
     return res.LastModified ?? null;
   } catch (error) {
@@ -259,14 +352,17 @@ export interface StoredObject {
   lastModified: Date;
 }
 
-/** Все файлы закрытого бакета под префиксом (постранично, по 1000). */
-export async function listObjects(prefix: string): Promise<StoredObject[]> {
+/** Все файлы закрытого бакета провайдера под префиксом (постранично, по 1000). */
+export async function listObjects(
+  prefix: string,
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<StoredObject[]> {
   const objects: StoredObject[] = [];
   let token: string | undefined;
   do {
-    const res = await getClient().send(
+    const res = await getProviderClient(provider).send(
       new ListObjectsV2Command({
-        Bucket: BUCKET_NAME,
+        Bucket: requireBucket(provider),
         Prefix: prefix,
         ContinuationToken: token,
       }),
@@ -285,11 +381,16 @@ export async function listObjects(prefix: string): Promise<StoredObject[]> {
 }
 
 /** Удаляет файлы из закрытого бакета пачками по 1000 (предел S3). */
-export async function deleteObjects(keys: string[]): Promise<void> {
+export async function deleteObjects(
+  keys: string[],
+  provider: StorageProvider = activeStorageProvider(),
+): Promise<void> {
+  if (keys.length === 0) return;
+  const bucket = requireBucket(provider);
   for (let i = 0; i < keys.length; i += 1000) {
-    const res = await getClient().send(
+    const res = await getProviderClient(provider).send(
       new DeleteObjectsCommand({
-        Bucket: BUCKET_NAME,
+        Bucket: bucket,
         Delete: {
           Objects: keys.slice(i, i + 1000).map((Key) => ({ Key })),
           Quiet: true,
@@ -307,14 +408,15 @@ export async function deleteObjects(keys: string[]): Promise<void> {
 
 export async function getDownloadUrl(
   key: string,
-  options?: { expiresIn?: number },
+  options?: { expiresIn?: number; provider?: StorageProvider },
 ): Promise<string> {
+  const provider = options?.provider ?? activeStorageProvider();
   const command = new GetObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: requireBucket(provider),
     Key: key,
   });
 
-  return getSignedUrl(getClient(), command, {
+  return getSignedUrl(getProviderClient(provider), command, {
     expiresIn: options?.expiresIn ?? 3600, // 1 hour by default
   });
 }

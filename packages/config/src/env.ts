@@ -43,7 +43,8 @@ export const env = createEnv({
     // Auth
     AUTH_SECRET: z.string().optional(),
 
-    // AWS S3
+    // AWS S3 — провайдер «yandex»: закрытый бакет с видео и PDF курсов
+    // (адреса файлов хранятся в БД, публичные фото каталога — в AWS_S3_PUBLIC_*)
     AWS_S3_ENDPOINT: z.string().optional(),
     AWS_S3_FORCE_PATH_STYLE: z.string().optional(),
     AWS_ACCESS_KEY_ID: z.string().optional(),
@@ -54,6 +55,25 @@ export const env = createEnv({
     AWS_S3_PUBLIC_BUCKET: z.string().optional(),
     // Базовый адрес публичных файлов; по умолчанию <endpoint>/<public bucket>
     AWS_S3_PUBLIC_URL: z.url().optional(),
+
+    // VK Cloud (Hotbox, S3-совместимое) — провайдер «vkcloud»: второе
+    // хранилище-зеркало. Ключи совпадают с яндексовскими, поэтому зеркало
+    // позволяет быстро переключить сайт на VK Cloud целиком или только
+    // просмотр видеоуроков. Тот же префикс ключей: workshops/…
+    VK_S3_ENDPOINT: z.string().default("https://hb.ru-msk.vkcloud-storage.ru"),
+    VK_S3_FORCE_PATH_STYLE: z.string().optional(),
+    VK_S3_ACCESS_KEY_ID: z.string().optional(),
+    VK_S3_SECRET_ACCESS_KEY: z.string().optional(),
+    VK_S3_REGION: z.string().default("ru-msk"),
+    VK_S3_BUCKET: z.string().optional(),
+
+    // Маршрутизация хранилища: активное — куда пишут загрузки и откуда читают
+    // материалы; переключение на «vkcloud» возможно после того, как зеркало
+    // догнало активный бакет (задача jobs.storage.mirrorSync).
+    STORAGE_PROVIDER: z.enum(["yandex", "vkcloud"]).default("yandex"),
+    // Отдельно просмотр видеоуроков (HLS и исходники MP4): пока задан
+    // «vkcloud», плееры берут видео из VK Cloud, остальное — из активного.
+    STORAGE_VIDEO_READ_PROVIDER: z.enum(["yandex", "vkcloud"]).optional(),
 
     // Витрина (stariva.ru): админка сбрасывает её кэш после правок каталога.
     // Один и тот же REVALIDATE_SECRET задаётся и сайту, и админке.
@@ -98,6 +118,15 @@ export const env = createEnv({
     AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
     AWS_S3_PUBLIC_BUCKET: process.env.AWS_S3_PUBLIC_BUCKET,
     AWS_S3_PUBLIC_URL: process.env.AWS_S3_PUBLIC_URL,
+    VK_S3_ENDPOINT: process.env.VK_S3_ENDPOINT || undefined,
+    VK_S3_FORCE_PATH_STYLE: process.env.VK_S3_FORCE_PATH_STYLE,
+    VK_S3_ACCESS_KEY_ID: process.env.VK_S3_ACCESS_KEY_ID,
+    VK_S3_SECRET_ACCESS_KEY: process.env.VK_S3_SECRET_ACCESS_KEY,
+    VK_S3_REGION: process.env.VK_S3_REGION || undefined,
+    VK_S3_BUCKET: process.env.VK_S3_BUCKET,
+    STORAGE_PROVIDER: process.env.STORAGE_PROVIDER || undefined,
+    STORAGE_VIDEO_READ_PROVIDER:
+      process.env.STORAGE_VIDEO_READ_PROVIDER || undefined,
     STOREFRONT_URL: process.env.STOREFRONT_URL,
     REVALIDATE_SECRET: process.env.REVALIDATE_SECRET,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,

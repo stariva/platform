@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { env } from "@stariva/config";
-import { getDownloadUrl, isStorageConfigured } from "@stariva/storage";
+import {
+  activeStorageProvider,
+  getDownloadUrl,
+  isProviderConfigured,
+  objectExists,
+  type StorageProvider,
+  videoStorageProvider,
+} from "@stariva/storage";
 import {
   canWatchCourse,
   getReadyRendition,
@@ -36,6 +43,16 @@ import {
 const VIDEO_URL_TTL_SECONDS = 60 * 15;
 
 /**
+ * Хранилище, из которого зрители смотрят видеоуроки: STORAGE_VIDEO_READ_
+ * PROVIDER, а если оно не настроено — активное, чтобы выключение зеркала не
+ * ломало просмотр. Материалы и загрузки это не трогает.
+ */
+function lessonVideoProvider(): StorageProvider {
+  const provider = videoStorageProvider();
+  return isProviderConfigured(provider) ? provider : activeStorageProvider();
+}
+
+/**
  * Ссылка на видео урока: на HLS-плейлист, если видео уже нарезано, иначе на
  * исходный MP4. Доступ: бесплатный урок-превью — всем; платные уроки — только
  * владельцам.
@@ -53,7 +70,10 @@ async function signLessonVideo({
   const lesson = workshop && findWorkshopLesson(workshop, lessonId);
   if (!workshop || !lesson) return { status: "lesson_not_found" };
   if (!lesson.videoKey) return { status: "video_not_uploaded" };
-  if (!isStorageConfigured()) return { status: "files_unavailable" };
+  const videoProvider = lessonVideoProvider();
+  if (!isProviderConfigured(videoProvider)) {
+    return { status: "files_unavailable" };
+  }
 
   // Проверка доступа: превью открыто всем, пока курс опубликован
   if (!(lesson.free && workshop.status === "published")) {
@@ -100,11 +120,20 @@ async function signLessonVideo({
     env.AUTH_SECRET &&
     (!userId || fingerprint || mobileBearer)
   ) {
+    // Нарезку отдаём из хранилища для видео, но только после того, как
+    // синхронизация скопировала её папку целиком: недостающие куски плеер
+    // увидел бы как обрыв посреди урока. Пропуск закрепляет выбор, поэтому
+    // досмотр не скачет между хранилищами.
+    const storage =
+      videoProvider !== activeStorageProvider() && rendition.mirrored
+        ? videoProvider
+        : null;
     const token = signHlsGrant(
       {
         prefix: rendition.hlsPrefix,
         expiresAt: Math.floor(Date.now() / 1000) + HLS_GRANT_TTL_SECONDS,
         session: fingerprint,
+        storage,
       },
       env.AUTH_SECRET,
     );
@@ -116,9 +145,17 @@ async function signLessonVideo({
     };
   }
 
-  // Пока видео не нарезано — исходный файл по короткой ссылке
+  // Пока видео не нарезано — исходный файл по короткой ссылке. Синхронизация
+  // могла уже скопировать его в хранилище для видео — проверяем и отдаём
+  // оттуда, иначе из активного
+  const sourceProvider =
+    videoProvider === activeStorageProvider() ||
+    (await objectExists(lesson.videoKey, videoProvider))
+      ? videoProvider
+      : activeStorageProvider();
   const url = await getDownloadUrl(lesson.videoKey, {
     expiresIn: VIDEO_URL_TTL_SECONDS,
+    provider: sourceProvider,
   });
   return {
     status: "ok",
@@ -197,7 +234,11 @@ async function authorizeMaterial(
   if (!material) return { status: "not_found" };
   if (!userId) return { status: "unauthorized" };
   if (!(await canWatchCourse(userId, slug))) return { status: "forbidden" };
-  if (!isStorageConfigured()) return { status: "files_unavailable" };
+  // Материалы читаем из активного хранилища: отдельный переключатель есть
+  // только у просмотра видео
+  if (!isProviderConfigured(activeStorageProvider())) {
+    return { status: "files_unavailable" };
+  }
   return {
     status: "ok",
     key: material.key,

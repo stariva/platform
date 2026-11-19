@@ -2,6 +2,7 @@ import { emailEventsWorkflow } from "./email-events";
 import { npdIssuingWatchWorkflow } from "./npd-issuing-watch";
 import { ozonStockSyncWorkflow } from "./ozon-stock-sync";
 import { workshopRemindersWorkflow } from "./workshop-reminders";
+import { workshopStorageMirrorWorkflow } from "./workshop-storage-mirror";
 import { workshopStorageSweepWorkflow } from "./workshop-storage-sweep";
 import { yandexAnalyticsSyncWorkflow } from "./yandex-analytics-sync";
 
@@ -13,6 +14,7 @@ export const workflows = [
   workshopRemindersWorkflow,
   npdIssuingWatchWorkflow,
   workshopStorageSweepWorkflow,
+  workshopStorageMirrorWorkflow,
   yandexAnalyticsSyncWorkflow,
   emailEventsWorkflow,
   ozonStockSyncWorkflow,

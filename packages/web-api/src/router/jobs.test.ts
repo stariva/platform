@@ -39,6 +39,33 @@ mock.module("../services/workshop-storage", () => ({
   },
 }));
 
+const mirrorBatches: { maxFiles?: number; maxBytes?: number }[] = [];
+let mirrorConfigured = true;
+mock.module("../services/storage-mirror", () => ({
+  claimMirrorSyncBatch: async (options: {
+    maxFiles?: number;
+    maxBytes?: number;
+  }) => {
+    mirrorBatches.push(options);
+    return {
+      configured: mirrorConfigured,
+      files: mirrorConfigured
+        ? [
+            {
+              key: "workshops/a/x.mp4",
+              size: 30,
+              contentType: "video/mp4",
+              getUrl: "https://source.example.test/workshops/a/x.mp4",
+              putUrl: "https://mirror.example.test/workshops/a/x.mp4",
+            },
+          ]
+        : [],
+      remainingFiles: mirrorConfigured ? 2 : 0,
+      remainingBytes: mirrorConfigured ? 45 : 0,
+    };
+  },
+}));
+
 let yandexConfigured = false;
 let yandexPending = false;
 const metrikaCalls: unknown[][] = [];
@@ -235,6 +262,45 @@ test("storage sweep requires the jobs secret and hides deleted keys", async () =
   expect(await api.sweep()).toEqual({ deleted: 2, bytes: 30, renditions: 1 });
   await api.sweep({ dryRun: true });
   expect(storageSweeps).toEqual([{ dryRun: false }, { dryRun: true }]);
+});
+
+test("mirror sync requires the jobs secret and hands out signed links", async () => {
+  mirrorBatches.length = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.storage.mirrorSync());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(mirrorBatches).toHaveLength(0);
+
+  mirrorConfigured = true;
+  const api = client(`Bearer ${secret}`).jobs.storage;
+  expect(await api.mirrorSync()).toEqual({
+    configured: true,
+    files: [
+      {
+        key: "workshops/a/x.mp4",
+        size: 30,
+        contentType: "video/mp4",
+        getUrl: "https://source.example.test/workshops/a/x.mp4",
+        putUrl: "https://mirror.example.test/workshops/a/x.mp4",
+      },
+    ],
+    remainingFiles: 2,
+    remainingBytes: 45,
+  });
+  await api.mirrorSync({ maxFiles: 5, maxBytes: 1024 });
+  expect(mirrorBatches).toEqual([{}, { maxFiles: 5, maxBytes: 1024 }]);
+  expect(lastStatus()).toBe(200);
+});
+
+test("mirror sync is a quiet no-op when the mirror is not configured", async () => {
+  mirrorConfigured = false;
+  const result = await client(`Bearer ${secret}`).jobs.storage.mirrorSync();
+  mirrorConfigured = true;
+  expect(result).toEqual({
+    configured: false,
+    files: [],
+    remainingFiles: 0,
+    remainingBytes: 0,
+  });
 });
 
 test("analytics jobs report a missing Yandex token", async () => {

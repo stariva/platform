@@ -2,8 +2,11 @@ import { logger } from "@stariva/config";
 import { db, inArray } from "@stariva/db";
 import { videoRenditions, workshops } from "@stariva/db/schema";
 import {
+  activeStorageProvider,
   deleteObjects,
+  isProviderConfigured,
   listObjects,
+  otherStorageProvider,
   planWorkshopSweep,
 } from "@stariva/storage";
 
@@ -85,6 +88,42 @@ export async function sweepWorkshopStorage({
       await db
         .delete(videoRenditions)
         .where(inArray(videoRenditions.videoKey, plan.staleRenditions));
+    }
+    // Чистим и зеркало: после переключения хранилища мусор в старом не
+    // должен копиться. Ошибки зеркала не роняют чистку активного бакета
+    const mirror = otherStorageProvider(activeStorageProvider());
+    if (isProviderConfigured(mirror)) {
+      try {
+        const mirrorObjects = await listObjects("workshops/", mirror);
+        const mirrorPlan = planWorkshopSweep(
+          mirrorObjects,
+          {
+            workshops: rows.map((row) => ({
+              slug: row.slug,
+              updatedAt: row.updatedAt,
+              videoKeys: row.lessons
+                .map((lesson) => lesson.videoKey)
+                .filter(Boolean),
+              materialKeys: row.materialFiles.map((file) => file.key),
+            })),
+            renditions,
+          },
+          {
+            now,
+            fileGraceMs: STORAGE_SWEEP_FILE_GRACE_MS,
+            changeGraceMs: STORAGE_SWEEP_CHANGE_GRACE_MS,
+          },
+        );
+        await deleteObjects(mirrorPlan.deleteKeys, mirror);
+        logger.info("workshop.storage.sweep.mirror", {
+          deleted: mirrorPlan.deleteKeys.length,
+          bytes: mirrorPlan.bytes,
+        });
+      } catch (error) {
+        logger.warn("workshop.storage.sweep.mirror_failed", {
+          error: String(error),
+        });
+      }
     }
   }
 

@@ -1,10 +1,12 @@
 import { allowedCorsOrigin, corsPreflight, withCors } from "@stariva/auth/cors";
 import { env } from "@stariva/config";
 import {
+  activeStorageProvider,
   getDownloadUrl,
   getObjectText,
   HLS_FILE_PATTERN,
-  isStorageConfigured,
+  isProviderConfigured,
+  type StorageProvider,
 } from "@stariva/storage";
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
@@ -25,6 +27,10 @@ const NO_STORE = { "Cache-Control": "private, no-store" };
  * относительные адреса ведут обратно сюда), за куском — короткая ссылка в
  * бакет.
  *
+ * Пропуск закрепляет хранилище: нарезку, скопированную в зеркало, зритель
+ * смотрит оттуда до конца пропуска, даже если зеркало выключили — ссылка на
+ * кусок одноразовая, а свежий пропуск уже выдадут из активного.
+ *
  * Нарезка в одно качество лежит прямо в папке (index.m3u8, init.mp4,
  * seg-NNNNN.m4s), в несколько — master.m3u8 и те же файлы в v0/, v1/…:
  * `<пропуск>/master.m3u8` → `<пропуск>/v1/index.m3u8` → `<пропуск>/v1/seg-…`.
@@ -39,14 +45,18 @@ async function serveHls(
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   const secret = env.AUTH_SECRET;
-  if (!secret || !isStorageConfigured()) {
+  if (!secret) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
-
   const grant = verifyHlsGrant(token, secret);
   if (!grant) {
     return NextResponse.json({ error: "expired" }, { status: 403 });
   }
+  const provider: StorageProvider = grant.storage ?? activeStorageProvider();
+  if (!isProviderConfigured(provider)) {
+    return NextResponse.json({ error: "not_configured" }, { status: 503 });
+  }
+
   // Пропуск, скопированный в другой браузер, не сработает
   if (
     grant.session &&
@@ -58,7 +68,7 @@ async function serveHls(
   const key = `${grant.prefix}/${file}`;
   try {
     if (file.endsWith(".m3u8")) {
-      let playlist = await getObjectText(key);
+      let playlist = await getObjectText(key, provider);
       // Приложение (чужой origin) не пройдёт перенаправление в бакет: после
       // него браузер шлёт Origin: null. Даём ему прямые ссылки на куски,
       // живущие столько же, сколько пропуск.
@@ -69,7 +79,10 @@ async function serveHls(
           grant.expiresAt - Math.floor(Date.now() / 1000),
         );
         playlist = await signPlaylistSegments(playlist, dir, (segment) =>
-          getDownloadUrl(`${grant.prefix}/${segment}`, { expiresIn }),
+          getDownloadUrl(`${grant.prefix}/${segment}`, {
+            expiresIn,
+            provider,
+          }),
         );
       }
       return new Response(playlist, {
@@ -81,6 +94,7 @@ async function serveHls(
     }
     const url = await getDownloadUrl(key, {
       expiresIn: SEGMENT_URL_TTL_SECONDS,
+      provider,
     });
     return NextResponse.redirect(url, { status: 302, headers: NO_STORE });
   } catch (error) {

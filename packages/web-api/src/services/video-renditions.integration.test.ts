@@ -239,7 +239,11 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
           leaseUntil: null,
         })
         .where(eq(videoRenditions.videoKey, videoKey));
-      const oldCut = { hlsPrefix: oldPrefix, playlist: "index.m3u8" };
+      const oldCut = {
+        hlsPrefix: oldPrefix,
+        playlist: "index.m3u8",
+        mirrored: false,
+      };
       expect(await getReadyRendition(videoKey)).toEqual(oldCut);
       expect(await claimNextVideo()).toBeNull();
       const upgrade = await claimNextVideo(2);
@@ -262,6 +266,7 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
       expect(await getReadyRendition(videoKey)).toEqual({
         hlsPrefix: upgrade.hlsPrefix,
         playlist: "master.m3u8",
+        mirrored: false,
       });
       expect(await claimNextVideo(2)).toBeNull();
     } finally {
@@ -269,6 +274,146 @@ test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
         .delete(videoRenditions)
         .where(eq(videoRenditions.videoKey, videoKey));
       await db.delete(workshops).where(eq(workshops.id, id));
+    }
+  },
+);
+
+test.skipIf(!process.env.RENDITION_TEST_DATABASE_URL)(
+  "mirror flags follow the listings and never mark a fresh cut",
+  async () => {
+    const url = new URL(process.env.RENDITION_TEST_DATABASE_URL ?? "");
+    expect(url.hostname).toBe("127.0.0.1");
+    expect(url.pathname).toBe("/stariva_rendition_test");
+    process.env.POSTGRES_URL = url.href;
+    const { db, eq, inArray } = await import("@stariva/db");
+    const { videoRenditions } = await import("@stariva/db/schema");
+    const { syncRenditionMirrorFlags } = await import("./video-renditions");
+
+    // Три готовые нарезки: папка целиком в зеркале, недокопированная и
+    // старая без ready_* (дорезал воркер до версий)
+    const id = crypto.randomUUID();
+    const fullPrefix = `workshops/${id}/hls/full`;
+    const partialPrefix = `workshops/${id}/hls/partial`;
+    const legacyPrefix = `workshops/${id}/hls/legacy`;
+    const videoKeys = [
+      `workshops/${id}/full.mp4`,
+      `workshops/${id}/partial.mp4`,
+      `workshops/${id}/legacy.mp4`,
+    ];
+    const file = (prefix: string, name: string) => ({
+      key: `${prefix}/${name}`,
+    });
+    const files = (prefix: string, names: string[]) =>
+      names.map((name) => file(prefix, name));
+
+    await db.insert(videoRenditions).values([
+      {
+        videoKey: videoKeys[0],
+        status: "ready",
+        hlsPrefix: `${fullPrefix}/attempt`,
+        version: 2,
+        readyHlsPrefix: fullPrefix,
+        readyVersion: 2,
+      },
+      {
+        videoKey: videoKeys[1],
+        status: "ready",
+        hlsPrefix: `${partialPrefix}/attempt`,
+        version: 2,
+        readyHlsPrefix: partialPrefix,
+        readyVersion: 2,
+      },
+      {
+        videoKey: videoKeys[2],
+        status: "ready",
+        hlsPrefix: legacyPrefix,
+        version: 1,
+      },
+    ]);
+
+    const source = [
+      ...files(fullPrefix, ["index.m3u8", "v0/init.mp4", "v0/seg-00001.m4s"]),
+      ...files(partialPrefix, [
+        "index.m3u8",
+        "v0/init.mp4",
+        "v0/seg-00001.m4s",
+        "v0/seg-00002.m4s",
+      ]),
+      ...files(legacyPrefix, ["index.m3u8", "init.mp4"]),
+    ];
+    // В зеркале всё, кроме куска недокопированной
+    const mirror = [
+      ...files(fullPrefix, ["index.m3u8", "v0/init.mp4", "v0/seg-00001.m4s"]),
+      ...files(partialPrefix, [
+        "index.m3u8",
+        "v0/init.mp4",
+        "v0/seg-00001.m4s",
+      ]),
+      ...files(legacyPrefix, ["index.m3u8", "init.mp4"]),
+    ];
+
+    const flaggedAt = async (videoKey: string) =>
+      (
+        await db
+          .select({ mirrorSyncedAt: videoRenditions.mirrorSyncedAt })
+          .from(videoRenditions)
+          .where(eq(videoRenditions.videoKey, videoKey))
+      )[0]?.mirrorSyncedAt ?? null;
+
+    try {
+      // Полная папка и старая нарезка помечены, недокоп — нет: по отметке
+      // витрина решает, куда отправлять зрителей
+      const first = await syncRenditionMirrorFlags(source, mirror);
+      expect(first).toEqual({ marked: 2, cleared: 0 });
+      expect(await flaggedAt(videoKeys[0])).not.toBeNull();
+      expect(await flaggedAt(videoKeys[2])).not.toBeNull();
+      expect(await flaggedAt(videoKeys[1])).toBeNull();
+
+      // Из зеркала пропал кусок — отметку снимаем, зрители уходят в активный
+      const second = await syncRenditionMirrorFlags(
+        source,
+        mirror.filter(
+          (object) => object.key !== `${fullPrefix}/v0/seg-00001.m4s`,
+        ),
+      );
+      expect(second).toEqual({ marked: 0, cleared: 1 });
+      expect(await flaggedAt(videoKeys[0])).toBeNull();
+
+      // Перерезка сменила готовую папку: листинги, где полна прежняя,
+      // новую не пометят — пусть синхронизация сначала доложит её целиком
+      await db
+        .update(videoRenditions)
+        .set({
+          status: "ready",
+          hlsPrefix: `${fullPrefix}/re-cut`,
+          readyHlsPrefix: `${fullPrefix}/re-cut`,
+          mirrorSyncedAt: null,
+        })
+        .where(eq(videoRenditions.videoKey, videoKeys[0]));
+      const third = await syncRenditionMirrorFlags(source, [
+        ...mirror,
+        ...files(`${fullPrefix}/re-cut`, ["master.m3u8"]),
+      ]);
+      expect(third).toEqual({ marked: 0, cleared: 0 });
+      expect(await flaggedAt(videoKeys[0])).toBeNull();
+
+      // Синхронизация долила новую папку — отметка встала
+      const fourth = await syncRenditionMirrorFlags(
+        [
+          ...source,
+          ...files(`${fullPrefix}/re-cut`, ["master.m3u8", "v0/init.mp4"]),
+        ],
+        [
+          ...mirror,
+          ...files(`${fullPrefix}/re-cut`, ["master.m3u8", "v0/init.mp4"]),
+        ],
+      );
+      expect(fourth).toEqual({ marked: 1, cleared: 0 });
+      expect(await flaggedAt(videoKeys[0])).not.toBeNull();
+    } finally {
+      await db
+        .delete(videoRenditions)
+        .where(inArray(videoRenditions.videoKey, videoKeys));
     }
   },
 );
