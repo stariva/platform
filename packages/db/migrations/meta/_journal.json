@@ -498,6 +498,13 @@
       "when": 1795102673046,
       "tag": "0070_bezhevyy_kit",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795103503585,
+      "tag": "0071_sage_kit",
+      "breakpoints": true
     }
   ]
 }

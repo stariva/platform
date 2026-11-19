@@ -51,8 +51,28 @@ jobs:
 
       - name: Port-forward to Postgres
         run: |
+          # kubectl get с ретраями на временные сбои связи с API-сервером
+          # (обрывы соединения, таймауты чтения ответа). Постоянные ошибки не ретраим.
+          kctl() {
+            local err attempt
+            err="$(mktemp)"
+            for attempt in 1 2 3 4 5; do
+              if "$@" 2>"$err"; then
+                rm -f "$err"
+                return 0
+              fi
+              if [ "$attempt" -lt 5 ] && grep -qiE 'request canceled|connection lost|connection refused|no such host|i/o timeout|reset by peer|EOF|timeout=|Unable to connect' "$err"; then
+                echo "kctl: временный сбой API, повтор $attempt/5 через 15 с" >&2
+                sleep 15
+                continue
+              fi
+              cat "$err" >&2
+              rm -f "$err"
+              return 1
+            done
+          }
           # Пароль роли stariva — тот же, с которым сайт ходит в базу
-          password="$(kubectl get secret postgres-credentials -n stariva -o jsonpath='{.data.DB_PASSWORD}' | base64 -d)"
+          password="$(kctl get secret postgres-credentials -n stariva -o jsonpath='{.data.DB_PASSWORD}' | base64 -d)"
           if [ -z "$password" ]; then
             echo "::error::В секрете stariva/postgres-credentials нет DB_PASSWORD"
             exit 1
@@ -62,19 +82,35 @@ jobs:
           echo "::add-mask::$encoded"
           echo "POSTGRES_URL=postgresql://stariva:${encoded}@127.0.0.1:5432/stariva" >> "$GITHUB_ENV"
 
-          kubectl port-forward -n postgres svc/postgres 5432:5432 > port-forward.log 2>&1 &
-          echo "PORT_FORWARD_PID=$!" >> "$GITHUB_ENV"
+          port_forward() {
+            kubectl port-forward -n postgres svc/postgres 5432:5432 >> port-forward.log 2>&1 &
+            echo $!
+          }
+          pf_pid="$(port_forward)"
+          echo "PORT_FORWARD_PID=$pf_pid" >> "$GITHUB_ENV"
 
-          for _ in $(seq 1 30); do
+          ready=""
+          for i in $(seq 1 60); do
+            # port-forward привязан к API-серверу: при обрыве связи процесс умирает,
+            # поднимаем его заново, пока не поднимется локальный порт
+            # kill -0 не отличает зомби от живого процесса, поэтому смотрим /proc
+            if [ ! -d "/proc/$pf_pid" ] || grep -q "^State:.*Z" "/proc/$pf_pid/status" 2>/dev/null; then
+              echo "port-forward упал, перезапускаю ($i/60)"
+              pf_pid="$(port_forward)"
+              echo "PORT_FORWARD_PID=$pf_pid" >> "$GITHUB_ENV"
+            fi
             if (echo > /dev/tcp/127.0.0.1/5432) 2>/dev/null; then
-              echo "port-forward ready"
-              exit 0
+              ready=1
+              break
             fi
             sleep 1
           done
-          echo "::error::port-forward на postgres/svc/postgres не поднялся за 30 с"
-          cat port-forward.log
-          exit 1
+          if [ -z "$ready" ]; then
+            echo "::error::port-forward на postgres/svc/postgres не поднялся за 60 с"
+            cat port-forward.log
+            exit 1
+          fi
+          echo "port-forward ready"
 
       - name: Apply pending migrations
         working-directory: packages/db

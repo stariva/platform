@@ -79,25 +79,46 @@ jobs:
 
       - name: Roll out new image on k3s
         run: |
-          kubectl set image deployment/stariva stariva=ghcr.io/stariva/platform:${{ needs.build-and-push.outputs.sha }} -n stariva
+          # kubectl с ретраями на временные сбои связи с API-сервером (обрывы
+          # соединения, таймауты чтения ответа). Постоянные ошибки не ретраим:
+          # их сообщения не совпадают с сетевыми паттернами ниже.
+          kctl() {
+            local err attempt
+            err="$(mktemp)"
+            for attempt in 1 2 3 4 5; do
+              if "$@" 2>"$err"; then
+                rm -f "$err"
+                return 0
+              fi
+              if [ "$attempt" -lt 5 ] && grep -qiE 'request canceled|connection lost|connection refused|no such host|i/o timeout|reset by peer|EOF|timeout=|Unable to connect' "$err"; then
+                echo "kctl: временный сбой API, повтор $attempt/5 через 15 с" >&2
+                sleep 15
+                continue
+              fi
+              cat "$err" >&2
+              rm -f "$err"
+              return 1
+            done
+          }
+          kctl set image deployment/stariva stariva=ghcr.io/stariva/platform:${{ needs.build-and-push.outputs.sha }} -n stariva
           # Старый под обслуживает трафик, пока новый не прошёл readiness (maxUnavailable: 0),
           # так что при неудаче достаточно вернуть предыдущую ревизию
-          if ! kubectl rollout status deployment/stariva -n stariva --timeout=300s; then
+          if ! kctl rollout status deployment/stariva -n stariva --timeout=300s; then
             # Один сбой API или соединения не повод откатывать здоровую ревизию:
             # откат только если и повторная проверка не прошла
-            if kubectl rollout status deployment/stariva -n stariva --timeout=90s; then
+            if kctl rollout status deployment/stariva -n stariva --timeout=90s; then
               exit 0
             fi
-            kubectl get pods -n stariva -l app=stariva || true
-            kubectl describe pods -n stariva -l app=stariva | tail -n 60 || true
+            kctl get pods -n stariva -l app=stariva || true
+            kctl describe pods -n stariva -l app=stariva | tail -n 60 || true
             # Откатываем только при подтверждённом таймауте выкатки. Если состояние
             # не прочитать (API недоступен), лучше упасть без отката.
             # progressDeadlineSeconds (по умолчанию 600 с) может быть дольше ожидания
             # выше, поэтому ждём, пока Kubernetes сам признает выкатку зависшей
-            deadline="$(kubectl get deployment/stariva -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
+            deadline="$(kctl get deployment/stariva -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
             end=$((SECONDS + ${deadline:-600} + 30))
             while true; do
-              reason="$(kubectl get deployment/stariva -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
+              reason="$(kctl get deployment/stariva -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
                 echo "::error::Не удалось прочитать состояние stariva, откат не выполняю"
                 exit 1
               }
@@ -114,8 +135,8 @@ jobs:
               fi
               sleep 10
             done
-            kubectl rollout undo deployment/stariva -n stariva
-            kubectl rollout status deployment/stariva -n stariva --timeout=120s
+            kctl rollout undo deployment/stariva -n stariva
+            kctl rollout status deployment/stariva -n stariva --timeout=120s
             echo "::error::Выкатка stariva не прошла, возвращена предыдущая ревизия"
             exit 1
           fi
@@ -178,30 +199,51 @@ jobs:
 
       - name: Roll out new image on k3s
         run: |
+          # kubectl с ретраями на временные сбои связи с API-сервером (обрывы
+          # соединения, таймауты чтения ответа). Постоянные ошибки не ретраим:
+          # их сообщения не совпадают с сетевыми паттернами ниже.
+          kctl() {
+            local err attempt
+            err="$(mktemp)"
+            for attempt in 1 2 3 4 5; do
+              if "$@" 2>"$err"; then
+                rm -f "$err"
+                return 0
+              fi
+              if [ "$attempt" -lt 5 ] && grep -qiE 'request canceled|connection lost|connection refused|no such host|i/o timeout|reset by peer|EOF|timeout=|Unable to connect' "$err"; then
+                echo "kctl: временный сбой API, повтор $attempt/5 через 15 с" >&2
+                sleep 15
+                continue
+              fi
+              cat "$err" >&2
+              rm -f "$err"
+              return 1
+            done
+          }
           # Деплоймент создаётся один раз руками: stariva/infra, k3s/31-app.stariva.ru.yaml
           # Пропускаем только отсутствие Deployment; ошибки доступа к API валят шаг
-          deployment="$(kubectl get deployment/stariva-app -n stariva --ignore-not-found -o name)" || exit 1
+          deployment="$(kctl get deployment/stariva-app -n stariva --ignore-not-found -o name)" || exit 1
           if [ -z "$deployment" ]; then
             echo "::notice::deployment/stariva-app ещё не создан — пропускаю выкатку админки"
             exit 0
           fi
-          kubectl set image deployment/stariva-app stariva-app=ghcr.io/stariva/platform-app:${{ needs.build-and-push-app.outputs.sha }} -n stariva
-          if ! kubectl rollout status deployment/stariva-app -n stariva --timeout=300s; then
+          kctl set image deployment/stariva-app stariva-app=ghcr.io/stariva/platform-app:${{ needs.build-and-push-app.outputs.sha }} -n stariva
+          if ! kctl rollout status deployment/stariva-app -n stariva --timeout=300s; then
             # Один сбой API или соединения не повод откатывать здоровую ревизию:
             # откат только если и повторная проверка не прошла
-            if kubectl rollout status deployment/stariva-app -n stariva --timeout=90s; then
+            if kctl rollout status deployment/stariva-app -n stariva --timeout=90s; then
               exit 0
             fi
-            kubectl get pods -n stariva -l app=stariva-app || true
-            kubectl describe pods -n stariva -l app=stariva-app | tail -n 60 || true
+            kctl get pods -n stariva -l app=stariva-app || true
+            kctl describe pods -n stariva -l app=stariva-app | tail -n 60 || true
             # Откатываем только при подтверждённом таймауте выкатки. Если состояние
             # не прочитать (API недоступен), лучше упасть без отката.
             # progressDeadlineSeconds (по умолчанию 600 с) может быть дольше ожидания
             # выше, поэтому ждём, пока Kubernetes сам признает выкатку зависшей
-            deadline="$(kubectl get deployment/stariva-app -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
+            deadline="$(kctl get deployment/stariva-app -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
             end=$((SECONDS + ${deadline:-600} + 30))
             while true; do
-              reason="$(kubectl get deployment/stariva-app -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
+              reason="$(kctl get deployment/stariva-app -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
                 echo "::error::Не удалось прочитать состояние stariva-app, откат не выполняю"
                 exit 1
               }
@@ -218,8 +260,8 @@ jobs:
               fi
               sleep 10
             done
-            kubectl rollout undo deployment/stariva-app -n stariva
-            kubectl rollout status deployment/stariva-app -n stariva --timeout=120s
+            kctl rollout undo deployment/stariva-app -n stariva
+            kctl rollout status deployment/stariva-app -n stariva --timeout=120s
             echo "::error::Выкатка stariva-app не прошла, возвращена предыдущая ревизия"
             exit 1
           fi
@@ -280,31 +322,52 @@ jobs:
 
       - name: Roll out new image on k3s
         run: |
+          # kubectl с ретраями на временные сбои связи с API-сервером (обрывы
+          # соединения, таймауты чтения ответа). Постоянные ошибки не ретраим:
+          # их сообщения не совпадают с сетевыми паттернами ниже.
+          kctl() {
+            local err attempt
+            err="$(mktemp)"
+            for attempt in 1 2 3 4 5; do
+              if "$@" 2>"$err"; then
+                rm -f "$err"
+                return 0
+              fi
+              if [ "$attempt" -lt 5 ] && grep -qiE 'request canceled|connection lost|connection refused|no such host|i/o timeout|reset by peer|EOF|timeout=|Unable to connect' "$err"; then
+                echo "kctl: временный сбой API, повтор $attempt/5 через 15 с" >&2
+                sleep 15
+                continue
+              fi
+              cat "$err" >&2
+              rm -f "$err"
+              return 1
+            done
+          }
           # Деплоймент создаётся один раз руками в stariva/infra (stariva-jobs, контейнер stariva-jobs).
           # Пропускаем только отсутствие Deployment; ошибки доступа к API валят шаг
-          deployment="$(kubectl get deployment/stariva-jobs -n stariva --ignore-not-found -o name)" || exit 1
+          deployment="$(kctl get deployment/stariva-jobs -n stariva --ignore-not-found -o name)" || exit 1
           if [ -z "$deployment" ]; then
             echo "::notice::deployment/stariva-jobs ещё не создан — пропускаю выкатку воркера"
             exit 0
           fi
-          kubectl set image deployment/stariva-jobs stariva-jobs=ghcr.io/stariva/platform-jobs:${{ needs.build-and-push-jobs.outputs.sha }} -n stariva
+          kctl set image deployment/stariva-jobs stariva-jobs=ghcr.io/stariva/platform-jobs:${{ needs.build-and-push-jobs.outputs.sha }} -n stariva
           # Старый воркер до 120 с дожидается текущих заданий, а rollout status ждёт его выхода
-          if ! kubectl rollout status deployment/stariva-jobs -n stariva --timeout=240s; then
+          if ! kctl rollout status deployment/stariva-jobs -n stariva --timeout=240s; then
             # Один сбой API или соединения не повод откатывать здоровую ревизию:
             # откат только если и повторная проверка не прошла
-            if kubectl rollout status deployment/stariva-jobs -n stariva --timeout=90s; then
+            if kctl rollout status deployment/stariva-jobs -n stariva --timeout=90s; then
               exit 0
             fi
-            kubectl get pods -n stariva -l app=stariva-jobs || true
-            kubectl describe pods -n stariva -l app=stariva-jobs | tail -n 60 || true
+            kctl get pods -n stariva -l app=stariva-jobs || true
+            kctl describe pods -n stariva -l app=stariva-jobs | tail -n 60 || true
             # Откатываем только при подтверждённом таймауте выкатки. Если состояние
             # не прочитать (API недоступен), лучше упасть без отката.
             # progressDeadlineSeconds (по умолчанию 600 с) может быть дольше ожидания
             # выше, поэтому ждём, пока Kubernetes сам признает выкатку зависшей
-            deadline="$(kubectl get deployment/stariva-jobs -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
+            deadline="$(kctl get deployment/stariva-jobs -n stariva -o jsonpath='{.spec.progressDeadlineSeconds}')" || deadline=600
             end=$((SECONDS + ${deadline:-600} + 30))
             while true; do
-              reason="$(kubectl get deployment/stariva-jobs -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
+              reason="$(kctl get deployment/stariva-jobs -n stariva -o jsonpath='{.status.conditions[?(@.type=="Progressing")].reason}')" || {
                 echo "::error::Не удалось прочитать состояние stariva-jobs, откат не выполняю"
                 exit 1
               }
@@ -321,8 +384,8 @@ jobs:
               fi
               sleep 10
             done
-            kubectl rollout undo deployment/stariva-jobs -n stariva
-            kubectl rollout status deployment/stariva-jobs -n stariva --timeout=240s
+            kctl rollout undo deployment/stariva-jobs -n stariva
+            kctl rollout status deployment/stariva-jobs -n stariva --timeout=240s
             echo "::error::Выкатка stariva-jobs не прошла, возвращена предыдущая ревизия"
             exit 1
           fi

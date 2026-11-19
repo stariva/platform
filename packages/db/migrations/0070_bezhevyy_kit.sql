@@ -1,46 +1,23 @@
 -- Бежевый набор «Ёлка макраме» — второй цвет набора nabor-makrame-elka
 -- (тёплый оливковый). Тексты и цена те же, фото бежевого набора уже в CDN:
 -- products/14fc50f2-1eb2-4e55-8221-502fe8f25104/a5585dc9daa31985.png
--- Заводим миграцией, а не через админку: сразу вместе с артикулами Ozon и
--- остатком. Остаток в админке после этого лишь переподтверждают — он уйдёт
--- на FBS-склад Ozon.
--- Миграция никогда не падает и не перезаписывает чужие данные: если товар
--- уже существует или артикулы Ozon заняты другим товаром, она пропускает
--- вставку и пишет WARNING, который виден в логе деплоя.
+-- Карточку Ozon заведём позже и привяжем отдельной миграцией (по образцу
+-- 0058_link_macrame_kit_to_ozon), поэтому без артикулов и остатка: набор
+-- на сайте сразу виден, покупка онлайн включится вместе с артикулами,
+-- до этого карточка предлагает написать мастеру.
+-- Миграция никогда не падает: если товар уже существует, она пропускает
+-- вставку и пишет NOTICE, который виден в логе деплоя.
 DO $$
-DECLARE
-	kit_product bigint; -- id карточки Ozon
-	kit_offer text; -- артикул (offer id), например ELKA_KIT_002
-	kit_sku bigint; -- SKU для Ozon Доставки (FBS)
-	kit_stock integer; -- сколько бежевых наборов готово
 BEGIN
-	-- Артикулов может не быть: тогда продаём без онлайн-покупки, остаток — ноль.
-	-- Проверка products_stock_requires_sku не даст остаток без SKU.
-	kit_stock := COALESCE(kit_stock, 0);
-	IF kit_sku IS NULL THEN
-		kit_stock := 0;
-	END IF;
-
 	IF EXISTS (SELECT 1 FROM "products" WHERE "slug" = 'nabor-makrame-elka-bezhevyy') THEN
 		RAISE NOTICE 'Beige kit skipped: product nabor-makrame-elka-bezhevyy already exists';
-		RETURN;
-	END IF;
-
-	IF kit_offer IS NOT NULL AND EXISTS (
-		SELECT 1 FROM "products"
-		WHERE (kit_product IS NOT NULL AND "ozon_product_id" = kit_product)
-			OR "ozon_offer_id" = kit_offer
-			OR (kit_sku IS NOT NULL AND "ozon_sku" = kit_sku)
-	) THEN
-		RAISE WARNING 'Beige kit skipped: Ozon product id %, offer id % or sku % is already used by another product. Free them, then insert manually: products.id = 14fc50f2-1eb2-4e55-8221-502fe8f25104, slug nabor-makrame-elka-bezhevyy.', kit_product, kit_offer, kit_sku;
 		RETURN;
 	END IF;
 
 	INSERT INTO "products" (
 		"id", "slug", "name", "description", "category", "subcategory",
 		"status", "price", "old_price", "images", "material", "color",
-		"dimensions", "made_to_order", "ozon_product_id", "ozon_offer_id",
-		"ozon_sku", "stock_available", "sell_on_ozon", "highlights",
+		"dimensions", "made_to_order", "stock_available", "highlights",
 		"workshop_slug"
 	) VALUES (
 		'14fc50f2-1eb2-4e55-8221-502fe8f25104',
@@ -68,11 +45,7 @@ BEGIN
 		'Тёплый бежевый',
 		'Готовая ёлка 50×110 см; коробка 58×12×4 см',
 		false,
-		kit_product,
-		kit_offer,
-		kit_sku,
-		kit_stock,
-		kit_sku IS NOT NULL,
+		0,
 		ARRAY[
 			'В коробке всё для плетения: 100 м хлопкового шнура 5 мм, деревянная основа, бусины и звезда',
 			'Видеоурок 2 ч 20 мин: от первого узла до готовой ёлки, доступ навсегда',
