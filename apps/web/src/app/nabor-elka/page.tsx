@@ -11,7 +11,7 @@ import { KIT_COLORS } from "@/lib/commerce/elka-kit-bundle";
 import { CONTACTS } from "@/lib/contacts";
 import { SELLER } from "@/lib/legal";
 import { SITE_URL } from "@/lib/site-url";
-import { FAQ } from "./_data";
+import { ELKA_KIT_PATH, FAQ } from "./_data";
 import { KitLanding } from "./kit-landing";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: { absolute: "Набор для плетения ёлки макраме — Stariva" },
   description:
     "Сплетите настенную ёлку макраме 50×110 см за два уютных вечера. Материалы, видеоурок и поддержка мастера в одной коробке.",
-  alternates: { canonical: `${SITE_URL}/nabor-elka` },
+  alternates: { canonical: `${SITE_URL}${ELKA_KIT_PATH}` },
 };
 
 export default async function NaborElkaPage() {
