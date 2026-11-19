@@ -59,6 +59,8 @@ export interface CraftHlsPlayerProps {
   onTimeUpdate?: (seconds: number) => void;
   /** Ссылка протухла (401/403): экран должен запросить новую. */
   onSourceExpired?: () => void;
+  /** Плеер вошёл в полный экран или вышел из него. */
+  onFullscreenChange?: (fullscreen: boolean) => void;
   ref?: Ref<CraftHlsPlayerHandle>;
 }
 
@@ -88,6 +90,7 @@ export function CraftHlsPlayer({
   onSaveProgress,
   onTimeUpdate,
   onSourceExpired,
+  onFullscreenChange,
   ref,
 }: CraftHlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -115,8 +118,18 @@ export function CraftHlsPlayer({
   const [qualityOpen, setQualityOpen] = useState(false);
 
   // Колбэки и состояние для обработчиков, которые не должны пересоздаваться
-  const latest = useRef({ onSaveProgress, onTimeUpdate, onSourceExpired });
-  latest.current = { onSaveProgress, onTimeUpdate, onSourceExpired };
+  const latest = useRef({
+    onSaveProgress,
+    onTimeUpdate,
+    onSourceExpired,
+    onFullscreenChange,
+  });
+  latest.current = {
+    onSaveProgress,
+    onTimeUpdate,
+    onSourceExpired,
+    onFullscreenChange,
+  };
   // Секунда, на которую вернуться после смены источника (новая ссылка)
   const resumeAt = useRef<number | null>(null);
   const lastSavedAt = useRef(-1);
@@ -177,6 +190,10 @@ export function CraftHlsPlayer({
     landscape.addEventListener("change", onChange);
     return () => landscape.removeEventListener("change", onChange);
   }, []);
+
+  useEffect(() => {
+    latest.current.onFullscreenChange?.(fullscreen);
+  }, [fullscreen]);
 
   const seekTo = useCallback((seconds: number) => {
     const video = videoRef.current;

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ChevronLeft, Circle, CircleCheck } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   CraftHlsPlayer,
   type ProgressSnapshot,
@@ -26,6 +26,7 @@ function LessonContent({
   onSelectLesson,
   onBack,
 }: LessonScreenProps) {
+  const [playerFullscreen, setPlayerFullscreen] = useState(false);
   const details = useQuery({
     queryKey: ["lesson", slug, lessonId],
     queryFn: () => api.account.lessonDetails({ slug, lessonId }),
@@ -102,9 +103,11 @@ function LessonContent({
           Урок {currentIndex + 1} из {lesson.lessons.length}
         </p>
       </div>
-      {/* Плеер остаётся на месте, пока листаешь уроки. z-[60] — чтобы его
-          полноэкранный оверлей перекрыл таб-бар (z-40) и плашку обновления (z-50) */}
-      <div className="sticky top-0 z-[60] border-b border-line bg-bg">
+      {/* Плеер остаётся на месте, пока листаешь уроки. В полном экране
+          z-[60] — поверх таб-бара (z-40) и плашки обновления (z-50) */}
+      <div
+        className={`sticky top-0 border-b border-line bg-bg ${playerFullscreen ? "z-[60]" : "z-10"}`}
+      >
         <CraftHlsPlayer
           // Другой урок — новый плеер: прогресс не должен перепутаться
           key={lessonId}
@@ -116,6 +119,7 @@ function LessonContent({
           progressKey={`${slug}:${lessonId}`}
           onSaveProgress={saveProgress}
           onSourceExpired={refreshVideo}
+          onFullscreenChange={setPlayerFullscreen}
         />
       </div>
 
