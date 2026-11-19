@@ -33,7 +33,7 @@
     "@orpc/client": "2.0.0-beta.51",
     "@stariva/auth": "workspace:*",
     "@stariva/web-api": "workspace:*",
-    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-query": "^5.108.0",
     "hls.js": "^1.7.4",
     "lucide-react": "1.75.0",
     "react": "19.3.1",
