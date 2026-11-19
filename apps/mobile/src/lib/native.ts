@@ -1,8 +1,22 @@
+import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 
 /** Web APIs работают в браузере и WebView; нативные плагины можно подключить здесь без изменения экранов. */
 export const native = {
+  onBackButton: async (handler: () => void) => {
+    if (!Capacitor.isNativePlatform()) return () => {};
+    const listener = await App.addListener("backButton", handler);
+    return () => void listener.remove();
+  },
+  onResume: async (handler: () => void) => {
+    if (!Capacitor.isNativePlatform()) return () => {};
+    const listener = await App.addListener("resume", handler);
+    return () => void listener.remove();
+  },
+  exitApp: async () => {
+    if (Capacitor.isNativePlatform()) await App.exitApp();
+  },
   haptic: () => {
     if (Capacitor.isNativePlatform() && "vibrate" in navigator)
       navigator.vibrate(12);

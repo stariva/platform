@@ -13,6 +13,7 @@ import { Avatar, Button, EmptyState } from "@/components/ui/Primitives";
 import { WorkshopCard } from "@/components/ui/WorkshopCard";
 import { CourseDetailScreen } from "@/features/my-workshops/CourseDetailScreen";
 import { MyWorkshopsScreen } from "@/features/my-workshops/MyWorkshopsScreen";
+import { useMyCourses } from "@/features/my-workshops/queries";
 import type { CatalogWorkshop } from "@/lib/catalog";
 import { useCatalog } from "@/lib/catalog";
 import { native } from "@/lib/native";
@@ -60,6 +61,7 @@ function App() {
   const [lessonId, setLessonId] = useState(params.get("lesson") ?? "");
   const [section, setSection] = useState<Section>("home");
   const [selected, setSelected] = useState<CatalogWorkshop | null>(null);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<MobileCourse | null>(
     null,
   );
@@ -82,9 +84,67 @@ function App() {
   const update = useAppUpdate();
   const session = useSession();
   const catalog = useCatalog();
+  const myCourses = useMyCourses(
+    session.status === "signed-in" ? (session.user?.id ?? null) : null,
+    session.status === "signed-in",
+  );
+  const ownedCourse =
+    myCourses.data?.courses.find((course) => course.slug === selected?.id) ??
+    null;
+
+  const closeLesson = () => {
+    void queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+    void queryClient.invalidateQueries({ queryKey: ["lesson", slug] });
+    const url = new URL(window.location.href);
+    url.searchParams.delete("slug");
+    url.searchParams.delete("lesson");
+    window.history.replaceState(window.history.state, "", url);
+    setSlug("");
+    setLessonId("");
+  };
+  const goBack = () => {
+    if (slug && lessonId) closeLesson();
+    else if (selectedCourse) setSelectedCourse(null);
+    else if (purchaseOpen) setPurchaseOpen(false);
+    else if (selected) setSelected(null);
+    else if (section !== "home") setSection("home");
+    else void native.exitApp();
+  };
+  const goBackRef = useRef(goBack);
+  goBackRef.current = goBack;
 
   useEffect(() => {
     void startSession();
+  }, []);
+  useEffect(() => {
+    let remove = () => {};
+    let active = true;
+    void native
+      .onBackButton(() => goBackRef.current())
+      .then((unsubscribe) => {
+        if (active) remove = unsubscribe;
+        else unsubscribe();
+      });
+    return () => {
+      active = false;
+      remove();
+    };
+  }, []);
+  useEffect(() => {
+    let remove = () => {};
+    let active = true;
+    void native
+      .onResume(() => {
+        void queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+      })
+      .then((unsubscribe) => {
+        if (active) remove = unsubscribe;
+        else unsubscribe();
+      });
+    return () => {
+      active = false;
+      remove();
+    };
   }, []);
   useEffect(() => {
     document.documentElement.classList.toggle("theme-dark", theme === "dark");
@@ -117,18 +177,7 @@ function App() {
           window.history.replaceState(window.history.state, "", url);
           setLessonId(id);
         }}
-        onBack={() => {
-          // Урок мог добавить пройденный: список курсов и уроков обновляем
-          void queryClient.invalidateQueries({ queryKey: ["my-courses"] });
-          void queryClient.invalidateQueries({ queryKey: ["lesson", slug] });
-          if (selectedCourse) {
-            setLessonId("");
-            const url = new URL(window.location.href);
-            url.searchParams.delete("slug");
-            url.searchParams.delete("lesson");
-            window.history.replaceState(window.history.state, "", url);
-          } else window.history.back();
-        }}
+        onBack={closeLesson}
       />
     );
   } else if (selectedCourse) {
@@ -138,12 +187,12 @@ function App() {
         userId={
           session.status === "signed-in" ? (session.user?.id ?? null) : null
         }
-        onBack={() => setSelectedCourse(null)}
+        onBack={goBack}
         onLesson={(id) => {
           const url = new URL(window.location.href);
           url.searchParams.set("slug", selectedCourse.slug);
           url.searchParams.set("lesson", id);
-          window.history.pushState({}, "", url);
+          window.history.replaceState(window.history.state, "", url);
           setSlug(selectedCourse.slug);
           setLessonId(id);
         }}
@@ -153,8 +202,18 @@ function App() {
     screen = (
       <DetailScreen
         workshop={selected}
-        onBack={() => setSelected(null)}
+        onBack={goBack}
         favorite={favorites.includes(selected.id)}
+        ownedCourse={ownedCourse}
+        accessLoading={session.status === "signed-in" && myCourses.isLoading}
+        accessError={session.status === "signed-in" && myCourses.isError}
+        onRetryAccess={() => void myCourses.refetch()}
+        purchaseOpen={purchaseOpen}
+        onPurchaseOpenChange={setPurchaseOpen}
+        onOpenCourse={(course) => {
+          setSelected(null);
+          setSelectedCourse(course);
+        }}
         onToggleFavorite={() => {
           native.haptic();
           setFavorites((current) =>
@@ -191,7 +250,7 @@ function App() {
               const url = new URL(window.location.href);
               url.searchParams.set("slug", course.slug);
               url.searchParams.set("lesson", id);
-              window.history.pushState({}, "", url);
+              window.history.replaceState(window.history.state, "", url);
               setSlug(course.slug);
               setLessonId(id);
             }}
