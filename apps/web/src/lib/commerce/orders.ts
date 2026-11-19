@@ -50,6 +50,7 @@ export interface CreateProductOrderInput {
   comment?: string;
   /** Набор в подарок: доступ к мастер-классу выдаётся кодом, а не письмом. */
   gift?: boolean;
+  kitAccessMode?: "single_lesson" | "separate_gifts";
   items: OrderLineInput[];
   delivery: DeliverySelection;
   /** Выбранный пункт выдачи — чтобы мастер видел его адрес, а не только id. */
@@ -216,6 +217,7 @@ export async function createProductOrder(
       currency: "RUB",
       customerNotes: input.comment || null,
       gift: input.gift ?? false,
+      kitAccessMode: input.kitAccessMode ?? null,
       // Без расчёта Ozon отправление создаётся вручную — заказ «manual»,
       // но пункт, который выбрал покупатель, сохраняем
       deliveryMethod: input.checkout ? input.delivery.method : "manual",

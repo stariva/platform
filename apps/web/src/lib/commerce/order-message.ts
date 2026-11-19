@@ -216,7 +216,9 @@ export function formatPaidOrderMessage(
       "Изделия:",
       ...itemLines(items),
       order.gift &&
-        "\n🎁 ПОДАРОК: доступ к уроку не отправляем на почту. Напечатайте купон с кодом (заказ в админке → «Мастер-класс к набору») и положите в коробку.",
+        (order.kitAccessMode === "separate_gifts"
+          ? `\n🎁 ОТДЕЛЬНЫЕ ПОДАРКИ: соберите ${items.reduce((sum, item) => sum + item.quantity, 0)} коробки. Ссылки на почту не отправляем. Напечатайте отдельный купон с кодом для каждой коробки (заказ в админке → «Мастер-класс к набору»).`
+          : "\n🎁 ПОДАРОК: доступ к уроку не отправляем на почту. Напечатайте купон с кодом (заказ в админке → «Мастер-класс к набору») и положите в коробку."),
       order.customerNotes && `\nКомментарий: ${order.customerNotes}`,
       order.ozonOrderId && `\nЗаказ Ozon Доставка: ${order.ozonOrderId}`,
       ...manualDeliveryLines(order),

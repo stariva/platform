@@ -35,6 +35,7 @@ const order: OrderRow = {
   checkoutSnapshot: null,
   customerNotes: null,
   gift: false,
+  kitAccessMode: null,
   deliveryNote: null,
   depositAmount: null,
   leadTime: null,
@@ -226,6 +227,15 @@ test("a gift order tells the master to print the coupon", () => {
   assert.ok(gift.message.includes("ПОДАРОК"));
   assert.ok(gift.message.includes("купон"));
   assert.ok(!plain.message.includes("ПОДАРОК"));
+});
+
+test("separate tree gifts ask for one coupon per box", () => {
+  const message = formatPaidOrderMessage(
+    { ...order, kind: "stock", gift: true, kitAccessMode: "separate_gifts" },
+    [{ ...item, quantity: 2 }],
+  ).message;
+  assert.ok(message.includes("2 коробки"));
+  assert.ok(message.includes("отдельный купон"));
 });
 
 test("the balance message says where to ship and that Ozon takes over", () => {

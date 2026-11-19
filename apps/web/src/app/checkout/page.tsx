@@ -27,6 +27,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
+import {
+  type KitAccessMode,
+  priceKitBundleLines,
+} from "@/lib/commerce/elka-kit-bundle";
 import { rememberOrderPhone } from "@/lib/commerce/order-phone";
 import {
   formatDateRange,
@@ -62,11 +66,27 @@ type QuoteState =
 
 export default function CheckoutPage() {
   const { items: cartItems, hydrated, clear, remove } = useCart();
+  const [kitAccessMode, setKitAccessMode] = useState<KitAccessMode | null>(
+    null,
+  );
+  const [kitGift, setKitGift] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("kitAccessMode");
+    setKitAccessMode(
+      mode === "single_lesson" || mode === "separate_gifts" ? mode : null,
+    );
+    setKitGift(params.get("kitGift") === "1");
+  }, []);
   // Изделия под заказ оплачиваются отдельно — на /checkout/made-to-order
-  const items = useMemo(
+  const rawItems = useMemo(
     () => cartItems.filter((item) => item.fulfillmentType === "stock"),
     [cartItems],
   );
+  const bundleItems = kitAccessMode
+    ? priceKitBundleLines(rawItems, kitAccessMode)
+    : null;
+  const items = bundleItems ?? rawItems;
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   // Подарок с кодом доступа имеет смысл только для набора с мастер-классом
   const hasKit = items.some((item) => item.kit);
@@ -112,6 +132,7 @@ export default function CheckoutPage() {
           {
             contactPhone: phone,
             items: items.map((i) => ({
+              productId: i.productId,
               productSlug: i.productSlug,
               quantity: i.quantity,
             })),
@@ -220,8 +241,10 @@ export default function CheckoutPage() {
         contactEmail: contact.email,
         comment: contact.comment || undefined,
         // Черновик мог сохранить галочку из прошлой корзины с набором
-        gift: hasKit && contact.gift === true ? true : undefined,
+        gift: hasKit && (kitGift || contact.gift === true) ? true : undefined,
+        kitAccessMode: bundleItems ? (kitAccessMode ?? undefined) : undefined,
         items: items.map((item) => ({
+          productId: item.productId,
           productSlug: item.productSlug,
           quantity: item.quantity,
         })),
@@ -404,7 +427,7 @@ export default function CheckoutPage() {
                 initial={contact}
                 busy={checkingPhone}
                 submitLabel={contact ? "Сохранить" : "Продолжить"}
-                offerGift={hasKit}
+                offerGift={hasKit && !kitGift && !bundleItems}
                 onSubmit={handleContactSubmit}
               />
             </CheckoutSection>
