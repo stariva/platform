@@ -59,6 +59,8 @@ export interface CraftHlsPlayerProps {
   onTimeUpdate?: (seconds: number) => void;
   /** Ссылка протухла (401/403): экран должен запросить новую. */
   onSourceExpired?: () => void;
+  /** Плеер вошёл в полный экран или вышел из него. */
+  onFullscreenChange?: (fullscreen: boolean) => void;
   ref?: Ref<CraftHlsPlayerHandle>;
 }
 
@@ -77,7 +79,9 @@ type WakeState = "off" | "on" | "unsupported";
  * - hls.js, а где нет MSE (iOS WKWebView) — нативный HLS; MP4 как есть;
  * - Wake Lock: Capacitor KeepAwake (в браузере и TMA — Screen Wake Lock API);
  * - шаги ±10 с и скорости 0.5×…1.5× одним тапом;
- * - прогресс: каждые 10 с, на паузе, при сворачивании и выходе.
+ * - прогресс: каждые 10 с, на паузе, при сворачивании и выходе;
+ * - полный экран — свой CSS-оверлей: Element Fullscreen в WebView не работает,
+ *   а поворот телефона в горизонталь разворачивает видео сам.
  */
 export function CraftHlsPlayer({
   src,
@@ -86,6 +90,7 @@ export function CraftHlsPlayer({
   onSaveProgress,
   onTimeUpdate,
   onSourceExpired,
+  onFullscreenChange,
   ref,
 }: CraftHlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -95,8 +100,8 @@ export function CraftHlsPlayer({
     wasPlaying: boolean;
     onMeta: () => void;
   } | null>(null);
-  const playerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const autoFullscreen = useRef(false);
 
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -105,14 +110,26 @@ export function CraftHlsPlayer({
   const [wake, setWake] = useState<WakeState>("off");
   const [failed, setFailed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const fullscreenRef = useRef(fullscreen);
+  fullscreenRef.current = fullscreen;
   const [attempt, setAttempt] = useState(0);
   const [qualities, setQualities] = useState<QualityOption[]>([]);
   const [quality, setQuality] = useState<number | "auto">("auto");
   const [qualityOpen, setQualityOpen] = useState(false);
 
   // Колбэки и состояние для обработчиков, которые не должны пересоздаваться
-  const latest = useRef({ onSaveProgress, onTimeUpdate, onSourceExpired });
-  latest.current = { onSaveProgress, onTimeUpdate, onSourceExpired };
+  const latest = useRef({
+    onSaveProgress,
+    onTimeUpdate,
+    onSourceExpired,
+    onFullscreenChange,
+  });
+  latest.current = {
+    onSaveProgress,
+    onTimeUpdate,
+    onSourceExpired,
+    onFullscreenChange,
+  };
   // Секунда, на которую вернуться после смены источника (новая ссылка)
   const resumeAt = useRef<number | null>(null);
   const lastSavedAt = useRef(-1);
@@ -135,34 +152,48 @@ export function CraftHlsPlayer({
 
   const currentTime = () => videoRef.current?.currentTime ?? 0;
 
+  /**
+   * Полный экран рисуем CSS-оверлеем, а не Element Fullscreen API: в Android
+   * WebView Capacitor сразу закрывает нативный custom view, поэтому
+   * `requestFullscreen()` там не даёт результата, а в WKWebView элементного
+   * fullscreen нет вовсе. Оверлей растягивается на `100dvh` и сам следует
+   * за поворотом экрана.
+   */
+  const toggleFullscreen = () => {
+    autoFullscreen.current = false;
+    setFullscreen((value) => !value);
+  };
+
+  // Телефон повернули в горизонталь — открываем видео на весь экран.
+  // Обратно в портрет выходим, но только если развернули сами: ручной
+  // полный экран в портрете не закрываем.
   useEffect(() => {
-    const updateFullscreen = () =>
-      setFullscreen(document.fullscreenElement === playerRef.current);
-    document.addEventListener("fullscreenchange", updateFullscreen);
-    return () =>
-      document.removeEventListener("fullscreenchange", updateFullscreen);
+    const landscape = window.matchMedia("(orientation: landscape)");
+    const enterAuto = () => {
+      // Уже развернули вручную — поворот не делает это автоматическим
+      if (fullscreenRef.current) return;
+      autoFullscreen.current = true;
+      setFullscreen(true);
+    };
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        enterAuto();
+        return;
+      }
+      if (autoFullscreen.current) {
+        autoFullscreen.current = false;
+        setFullscreen(false);
+      }
+    };
+    // Урок открыли уже в горизонтали
+    if (landscape.matches) enterAuto();
+    landscape.addEventListener("change", onChange);
+    return () => landscape.removeEventListener("change", onChange);
   }, []);
 
-  const toggleFullscreen = async () => {
-    if (document.fullscreenElement === playerRef.current) {
-      await document.exitFullscreen();
-      return;
-    }
-
-    if (document.fullscreenEnabled && playerRef.current?.requestFullscreen) {
-      try {
-        await playerRef.current.requestFullscreen();
-        return;
-      } catch {
-        // WKWebView может объявлять API, но запрещать fullscreen для div.
-      }
-    }
-
-    const video = videoRef.current as
-      | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
-      | null;
-    video?.webkitEnterFullscreen?.();
-  };
+  useEffect(() => {
+    latest.current.onFullscreenChange?.(fullscreen);
+  }, [fullscreen]);
 
   const seekTo = useCallback((seconds: number) => {
     const video = videoRef.current;
@@ -481,10 +512,9 @@ export function CraftHlsPlayer({
 
   return (
     <div
-      ref={playerRef}
       className={
         fullscreen
-          ? "relative h-dvh w-full overflow-hidden bg-black text-white"
+          ? "fixed inset-0 z-50 h-dvh w-full touch-none overflow-hidden bg-black text-white"
           : "bg-bg text-fg"
       }
     >
@@ -526,7 +556,7 @@ export function CraftHlsPlayer({
           aria-label={
             fullscreen ? "Выйти из полноэкранного режима" : "На весь экран"
           }
-          onClick={() => void toggleFullscreen()}
+          onClick={toggleFullscreen}
           className="absolute top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] flex size-11 items-center justify-center rounded-full bg-black/60 text-white"
         >
           {fullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
