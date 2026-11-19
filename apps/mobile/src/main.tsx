@@ -8,6 +8,7 @@ import {
 import { Compass, Heart, House, UserRound, Video } from "lucide-react";
 import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { AboutApp } from "@/components/AboutApp";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { Avatar, Button, EmptyState } from "@/components/ui/Primitives";
 import { WorkshopCard } from "@/components/ui/WorkshopCard";
@@ -338,6 +339,9 @@ function App() {
             ) : (
               <Button onClick={() => setSection("my")}>Войти</Button>
             )}
+          </div>
+          <div className="mt-9">
+            <AboutApp update={update} />
           </div>
         </main>
       );
