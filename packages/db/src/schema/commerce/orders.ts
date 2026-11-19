@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   jsonb,
   pgEnum,
@@ -9,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
+import { customOrderRequests } from "../custom-order";
 import type { VisitorInfo } from "../visitor";
 
 /** Статус заказа на товары (каталог, не мастер-классы). */
@@ -36,19 +38,34 @@ export const productOrderPaymentType = pgEnum("product_order_payment_type", [
   "balance",
 ]);
 
+/** Где покупателю удобнее ответить мастеру. */
+export const productContactChannel = pgEnum("product_contact_channel", [
+  "telegram",
+  "whatsapp",
+  "max",
+  "phone", // Старые заказы и вкладки; новая форма предлагает email.
+  "email",
+]);
+
 export const productDeliveryMethod = pgEnum("product_delivery_method", [
   "pickup",
   "courier",
-  "manual", // изделие под заказ: способ и стоимость доставки согласует мастер
+  "manual", // под заказ: покупатель ещё не выбрал пункт, или мастер отправляет сама
 ]);
 
 /**
- * Готовое изделие со склада (отправляет Ozon Доставка) или изделие под заказ
- * (плетётся после оплаты, отправляется вручную). Один заказ — один вид.
+ * Готовое изделие со склада или изделие под заказ (плетётся после предоплаты).
+ * Оба отправляет Ozon Доставка, под заказ — запасной ручной путь без Ozon.
+ * Один заказ — один вид.
  */
 export const productOrderKind = pgEnum("product_order_kind", [
   "stock",
   "made_to_order",
+]);
+
+export const kitAccessMode = pgEnum("kit_access_mode", [
+  "single_lesson",
+  "separate_gifts",
 ]);
 
 /** Заказ на товары из каталога, оформленный на сайте и доставляемый Ozon Доставка. */
@@ -68,6 +85,11 @@ export const productOrders = pgTable(
     contactName: text("contact_name").notNull(),
     contactPhone: text("contact_phone").notNull(),
     contactEmail: text("contact_email"),
+    // Под заказ: где покупателю удобнее ответить. null — старые заявки, где
+    // выбора не было, и заказы со склада.
+    preferredContactChannel: productContactChannel("preferred_contact_channel"),
+    // Под заказ: ник в мессенджере, если канал его требует (Telegram).
+    contactMessenger: text("contact_messenger"),
     status: productOrderStatus("status").notNull().default("pending"),
     // Суммы в копейках
     amountProducts: integer("amount_products").notNull(),
@@ -80,14 +102,15 @@ export const productOrders = pgTable(
     deliveryPointId: text("delivery_point_id"),
     // { address: string; lat: number; lng: number } — для курьерской доставки
     deliveryAddress: jsonb("delivery_address"),
-    // Точный ответ v2/delivery/checkout — состав/сроки нельзя менять после
+    // Под заказ: посылка и расчёт Delivery API (MadeToOrderDeliverySnapshot).
+    // Со склада: точный ответ v2/delivery/checkout — состав/сроки нельзя менять после
     // создания заказа в Ozon, поэтому воспроизводим ровно то, что показали
     // покупателю при оформлении.
     checkoutSnapshot: jsonb("checkout_snapshot"),
     // Под заказ: пожелания покупателя (в заявке и до одобрения).
     customerNotes: text("customer_notes"),
-    // Под заказ: куда и как отправить — покупатель пишет в заявке,
-    // мастер согласует способ и стоимость.
+    // Под заказ, старые заявки: куда отправить, свободным текстом. Новые заявки
+    // хранят выбранный пункт Ozon в deliveryPointId и deliveryAddress.
     deliveryNote: text("delivery_note"),
     // Под заказ: предоплата в копейках, фиксируется при одобрении;
     // доплата — amountTotal минус предоплата.
@@ -104,11 +127,21 @@ export const productOrders = pgTable(
     attribution: jsonb("attribution").$type<CampaignAttribution>(),
     // IP, город, устройство и язык покупателя в момент заказа.
     visitor: jsonb("visitor").$type<VisitorInfo>(),
+    // Набор в подарок: доступ к мастер-классу не уходит на почту покупателя,
+    // а выдаётся кодом на купоне в коробке — его вводит получатель.
+    gift: boolean("gift").notNull().default(false),
+    kitAccessMode: kitAccessMode("kit_access_mode"),
     // Внутренняя заметка мастера, покупателю не показывается.
     masterNotes: text("master_notes"),
     // Под заказ: служба и номер отправления, которые мастер вводит при отправке;
     // покупатель видит их на странице заказа.
     trackingNumber: text("tracking_number"),
+    // Под заказ: заявка с сайта («Обсудим вашу идею»), по которой мастер
+    // выставил счёт из админки.
+    requestNumber: integer("request_number").references(
+      () => customOrderRequests.number,
+      { onDelete: "restrict" },
+    ),
     // Когда мастеру ушло уведомление об оплаченном заказе или новой заявке.
     staffNotifiedAt: timestamp("staff_notified_at"),
     // Заполняются после успешного v2/order/create
@@ -125,5 +158,8 @@ export const productOrders = pgTable(
       .notNull(),
     paidAt: timestamp("paid_at"),
   },
-  (table) => [uniqueIndex("product_orders_number_idx").on(table.number)],
+  (table) => [
+    uniqueIndex("product_orders_number_idx").on(table.number),
+    uniqueIndex("product_orders_request_idx").on(table.requestNumber),
+  ],
 );

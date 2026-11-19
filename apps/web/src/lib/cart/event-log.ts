@@ -1,11 +1,13 @@
 import { db, eq } from "@stariva/db";
 import {
   CART_EVENT_ACTIONS,
+  type CampaignAttribution,
   cartEvents,
   productOrders,
   type VisitorInfo,
 } from "@stariva/db/schema";
 import { z } from "zod";
+import { entrySchema } from "@/lib/contact-clicks/click-log";
 
 // Как MAX_CART_QUANTITY в cart-context: тот модуль клиентский, на сервер его не тянем
 const quantity = z.number().int().min(0).max(99);
@@ -36,6 +38,8 @@ export const cartEventSchema = z.object({
     )
     .max(100),
   orderId: z.string().min(1).max(100).optional(),
+  // Битый заход не повод терять событие: просто без него
+  entry: entrySchema.optional().catch(undefined),
 });
 
 export type CartEventInput = z.infer<typeof cartEventSchema>;
@@ -46,7 +50,15 @@ export type CartEventInput = z.infer<typeof cartEventSchema>;
  */
 export async function recordCartEvent(
   event: CartEventInput,
-  { userId, visitor }: { userId: string | null; visitor: VisitorInfo },
+  {
+    userId,
+    visitor,
+    attribution,
+  }: {
+    userId: string | null;
+    visitor: VisitorInfo;
+    attribution: CampaignAttribution | null;
+  },
 ): Promise<void> {
   try {
     let orderId: string | null = null;
@@ -68,6 +80,8 @@ export async function recordCartEvent(
       orderId,
       ip: visitor.ip,
       visitor,
+      entry: event.entry ?? null,
+      attribution,
     });
   } catch (error) {
     console.error("[cart-events] failed to record event", error);

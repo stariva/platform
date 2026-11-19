@@ -1,8 +1,13 @@
 import { SiteHeader } from "~/components/layout";
 import { EMPTY_PRODUCT, ProductForm } from "~/components/products/product-form";
 import { baseEnv } from "~/env";
+import { api } from "~/orpc/server";
 
-export default function NewProductPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewProductPage() {
+  const workshops = await api.admin.workshops.list();
+
   return (
     <>
       <SiteHeader title="Новый товар" />
@@ -11,6 +16,9 @@ export default function NewProductPage() {
         <ProductForm
           initialValues={EMPTY_PRODUCT}
           storefrontUrl={baseEnv.STOREFRONT_URL}
+          workshops={workshops
+            .filter((w) => w.status !== "archived")
+            .map(({ slug, title }) => ({ slug, title }))}
         />
       </div>
     </>

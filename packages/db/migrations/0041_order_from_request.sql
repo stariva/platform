@@ -1,0 +1,3 @@
+ALTER TABLE "product_orders" ADD COLUMN "request_number" integer;--> statement-breakpoint
+ALTER TABLE "product_orders" ADD CONSTRAINT "product_orders_request_number_custom_order_requests_number_fk" FOREIGN KEY ("request_number") REFERENCES "public"."custom_order_requests"("number") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "product_orders_request_idx" ON "product_orders" USING btree ("request_number");

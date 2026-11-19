@@ -51,11 +51,16 @@ export function analyticsUrl(value: string): string {
   }
 }
 
-/** По этим ссылкам открывают заказ или видео без входа — id в них работает как пароль. */
+/**
+ * По этим ссылкам открывают заказ, видео или отписку от рассылки без входа —
+ * id в них работает как пароль.
+ */
 const SECRET_PATHS: Array<[RegExp, string]> = [
   [/^\/order\/[^/]+/, "/order/status"],
   [/^\/api\/video\/hls\/[^/]+/, "/api/video/hls/:token"],
   [/^\/api\/workshops\/access\/[^/]+/, "/api/workshops/access/:token"],
+  [/^\/unsubscribe\/[^/]+/, "/unsubscribe/:token"],
+  [/^\/api\/m\/([ocu])\/[^/]+/, "/api/m/$1/:token"],
 ];
 
 export function analyticsPath(pathname: string): string {
@@ -206,10 +211,10 @@ function scrubEvent(event: CaptureResult | null): CaptureResult | null {
 }
 
 /** Блок с data-analytics-private в записи сессии виден только как звёздочки. */
-function maskReplayText(text: string, element?: HTMLElement | null) {
-  if (element?.closest?.("[data-analytics-private]"))
-    return text.replace(/\S/g, "*");
-  return maskContacts(text);
+const PRIVATE_BLOCK = "[data-analytics-private]";
+
+function maskPrivateInput(text: string, element?: HTMLElement | null) {
+  return element?.closest?.(PRIVATE_BLOCK) ? text.replace(/./g, "*") : text;
 }
 
 const IGNORE_PARAM = "ph_ignore";
@@ -273,10 +278,11 @@ function postHog(send?: (posthog: PostHog) => void) {
         capture_exceptions: true,
         before_send: scrubEvent,
         session_recording: {
-          maskAllInputs: true,
-          // Каждый текст проходит через maskReplayText: прячем контакты и приватные блоки.
-          maskTextSelector: "*",
-          maskTextFn: maskReplayText,
+          // Тексты и поля в записях видны как есть (пароли PostHog прячет сам).
+          // Исключение — блоки с data-analytics-private (кабинет, статус заказа).
+          maskAllInputs: false,
+          maskTextSelector: `${PRIVATE_BLOCK}, ${PRIVATE_BLOCK} *`,
+          maskInputFn: maskPrivateInput,
           // Применяется и к адресу страницы в записи, не только к запросам.
           maskCapturedNetworkRequestFn: (request) => ({
             ...request,
@@ -314,6 +320,28 @@ export function trackHydrationMismatch(properties: Record<string, unknown>) {
       server_only: mask(properties.server_only),
       client_only: mask(properties.client_only),
     }),
+  );
+}
+
+/**
+ * Только PostHog: как идёт видео урока — остановки на подгрузку, качество,
+ * подсказка про «Авто». beforeLeave — событие уходит при закрытии страницы,
+ * его отправляем сразу (beacon), а не пачкой.
+ */
+export function trackLessonVideo(
+  event:
+    | "lesson_video_stall"
+    | "lesson_video_summary"
+    | "lesson_video_auto_hint",
+  properties: Record<string, unknown>,
+  { beforeLeave = false }: { beforeLeave?: boolean } = {},
+) {
+  postHog((posthog) =>
+    posthog.capture(
+      event,
+      properties,
+      beforeLeave ? { send_instantly: true } : undefined,
+    ),
   );
 }
 

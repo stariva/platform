@@ -37,6 +37,7 @@ test("does not reuse a settled, paymentless or different order", () => {
     { paymentId: "robokassa:1001" },
     { userId: "someone-else" },
     { workshopSlug: "other" },
+    { bundleSlug: "elka-makrame-kombo" },
     { amount: 149000 },
   ] as Partial<WorkshopOrder>[]) {
     expect(canReuseOrder({ ...order, ...changed }, cookie, purchase)).toBe(

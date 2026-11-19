@@ -36,6 +36,7 @@ const valid: WorkshopFormValues = {
   materialFiles: [],
   brief: { howTo: "", shops: [], outro: "", image: "" },
   ozonUrl: "",
+  supportChatUrl: "",
   featured: false,
   sortOrder: 0,
   testimonialText: "",
@@ -51,6 +52,21 @@ const errorPaths = (value: WorkshopFormValues) => {
 describe("workshopFormSchema", () => {
   test("accepts a valid published workshop", () => {
     expect(errorPaths(valid)).toEqual([]);
+  });
+
+  test("support chat is optional and must be an https link", () => {
+    expect(
+      errorPaths({
+        ...valid,
+        supportChatUrl: "https://t.me/+nzXZQ0mgbok1ZjZi",
+      }),
+    ).toEqual([]);
+    expect(errorPaths({ ...valid, supportChatUrl: "t.me/+abc" })).toEqual([
+      "supportChatUrl",
+    ]);
+    expect(
+      errorPaths({ ...valid, supportChatUrl: "http://t.me/+abc" }),
+    ).toEqual(["supportChatUrl"]);
   });
 
   test("a free workshop is valid, a negative price is not", () => {

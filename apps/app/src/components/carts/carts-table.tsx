@@ -1,6 +1,5 @@
 import type { CartEventItem, VisitorInfo } from "@stariva/db/schema";
 import {
-  Badge,
   Table,
   TableBody,
   TableCell,
@@ -8,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import {
   dateTime,
@@ -16,6 +16,7 @@ import {
   statusVariant,
 } from "~/components/orders/order-meta";
 import { cartTotal, optionsLabel, visitorSummary } from "./cart-meta";
+import { RemoveCart } from "./remove-cart";
 
 export interface CartRow {
   cartId: string;
@@ -48,13 +49,14 @@ export function CartsTable({ rows }: { rows: CartRow[] }) {
             <TableHead>Кто</TableHead>
             <TableHead>Заказ</TableHead>
             <TableHead>Последнее действие</TableHead>
+            <TableHead className="w-px" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={4}
+                colSpan={5}
                 className="text-muted-foreground py-8 text-center"
               >
                 Корзин нет
@@ -150,6 +152,12 @@ export function CartsTable({ rows }: { rows: CartRow[] }) {
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                   {dateTime.format(row.lastAt)}
+                </TableCell>
+                <TableCell>
+                  <RemoveCart
+                    id={row.cartId}
+                    label={`Корзина от ${dateTime.format(row.lastAt)}, событий: ${row.eventsCount}`}
+                  />
                 </TableCell>
               </TableRow>
             );

@@ -5,7 +5,6 @@ import type {
   VisitorInfo,
 } from "@stariva/db/schema";
 import {
-  Badge,
   Table,
   TableBody,
   TableCell,
@@ -13,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { visitorSummary } from "~/components/carts/cart-meta";
 import {

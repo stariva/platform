@@ -1,0 +1,380 @@
+import { randomBytes } from "node:crypto";
+import { ORPCError } from "@orpc/server";
+import { env } from "@stariva/config";
+import {
+  and,
+  asc,
+  type Database,
+  desc,
+  emailCampaignRecipients,
+  emailCampaigns,
+  emailLog,
+  eq,
+  inArray,
+  sql,
+} from "@stariva/db";
+import {
+  CAMPAIGN_TEMPLATE_IDS,
+  campaignParamsError,
+  campaignTemplateList,
+  previewSource,
+  renderCampaignHtml,
+  sendCampaignBatch,
+  sendCampaignTest,
+} from "@stariva/emails";
+import { campaignEmailSchema } from "@stariva/validators";
+import { z } from "zod";
+
+import { adminProcedure } from "../../../orpc";
+import { loadAudience, purchasedWorkshops } from "./audience";
+
+/** Куда ведут ссылки письма, если адрес витрины не задан. */
+const DEFAULT_STOREFRONT_URL = "https://stariva.ru";
+const siteUrl = () => env.STOREFRONT_URL ?? DEFAULT_STOREFRONT_URL;
+
+// Столько админка ждёт отправку сама; остаток дошлёт крон сайта
+const START_BUDGET_MS = 40_000;
+
+const idInput = z.object({ id: z.string().uuid() });
+
+const segmentSchema = z.object({
+  buyers: z.boolean(),
+  workshops: z.array(z.string().trim().min(1).max(100)).max(50),
+  // Адреса вручную: в нижнем регистре и без повторов, как в email_suppressions
+  emails: z
+    .array(campaignEmailSchema)
+    .max(1000)
+    .transform((emails) => [
+      ...new Set(emails.map((email) => email.trim().toLowerCase())),
+    ]),
+});
+
+const paramsSchema = z.record(z.string().max(100), z.string().trim().max(2000));
+
+const contentSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  template: z.enum(CAMPAIGN_TEMPLATE_IDS),
+  // Поля шаблона; сами значения проверяет шаблон (campaignParamsError)
+  params: paramsSchema,
+  segment: segmentSchema,
+});
+
+const r = emailCampaignRecipients;
+
+/** Счётчики рассылки по её получателям. */
+const statsColumns = {
+  recipients: sql<number>`count(${r.id})::int`,
+  queued: sql<number>`(count(*) filter (where ${r.status} = 'queued'))::int`,
+  sent: sql<number>`(count(*) filter (where ${r.status} = 'sent'))::int`,
+  failed: sql<number>`(count(*) filter (where ${r.status} = 'failed'))::int`,
+  skipped: sql<number>`(count(*) filter (where ${r.status} = 'skipped'))::int`,
+  opened: sql<number>`(count(*) filter (where ${r.firstOpenedAt} is not null))::int`,
+  clicked: sql<number>`(count(*) filter (where ${r.firstClickedAt} is not null))::int`,
+  unsubscribed: sql<number>`(count(*) filter (where ${r.unsubscribedAt} is not null))::int`,
+};
+
+async function findCampaign(db: Database, id: string) {
+  const [campaign] = await db
+    .select()
+    .from(emailCampaigns)
+    .where(eq(emailCampaigns.id, id))
+    .limit(1);
+  if (!campaign) throw new ORPCError("NOT_FOUND");
+  return campaign;
+}
+
+/**
+ * Рассылки, свежие сверху, со счётчиками: скольким ушло, сколько открыли,
+ * перешли по кнопке и отписались.
+ */
+const list = adminProcedure.handler(async ({ context }) =>
+  context.db
+    .select({
+      id: emailCampaigns.id,
+      name: emailCampaigns.name,
+      subject: emailCampaigns.subject,
+      status: emailCampaigns.status,
+      createdAt: emailCampaigns.createdAt,
+      startedAt: emailCampaigns.startedAt,
+      finishedAt: emailCampaigns.finishedAt,
+      ...statsColumns,
+    })
+    .from(emailCampaigns)
+    .leftJoin(r, eq(r.campaignId, emailCampaigns.id))
+    .groupBy(emailCampaigns.id)
+    .orderBy(desc(emailCampaigns.createdAt)),
+);
+
+/**
+ * Ушедшие письма рассылки в журнале, по одному на получателя: токен пикселя
+ * у них общий с получателем. Из журнала берём то, что о письме сообщил
+ * Postbox, — доставку, отказ, жалобу. Только письма этой рассылки: журнал
+ * других не читаем.
+ */
+function sentCampaignEmails(db: Database, campaignId: string) {
+  return db
+    .selectDistinctOn([emailLog.openToken], {
+      token: emailLog.openToken,
+      deliveredAt: emailLog.deliveredAt,
+      delayedAt: emailLog.delayedAt,
+      bouncedAt: emailLog.bouncedAt,
+      bounceDetail: emailLog.bounceDetail,
+      complainedAt: emailLog.complainedAt,
+    })
+    .from(emailLog)
+    .where(
+      and(
+        inArray(
+          emailLog.openToken,
+          db
+            .select({ token: r.token })
+            .from(r)
+            .where(eq(r.campaignId, campaignId)),
+        ),
+        eq(emailLog.status, "sent"),
+      ),
+    )
+    .orderBy(emailLog.openToken, desc(emailLog.createdAt))
+    .as("sent_email");
+}
+
+/** Рассылка, её счётчики и все получатели с тем, что о них известно. */
+const get = adminProcedure
+  .input(idInput)
+  .handler(async ({ context, input }) => {
+    const campaign = await findCampaign(context.db, input.id);
+    const sent = sentCampaignEmails(context.db, input.id);
+    const [stats, recipients] = await Promise.all([
+      context.db
+        .select(statsColumns)
+        .from(r)
+        .where(eq(r.campaignId, input.id))
+        .then((rows) => rows[0]),
+      context.db
+        .select({
+          id: r.id,
+          email: r.email,
+          source: r.source,
+          status: r.status,
+          error: r.error,
+          attempts: r.attempts,
+          sentAt: r.sentAt,
+          firstOpenedAt: r.firstOpenedAt,
+          openCount: r.openCount,
+          firstClickedAt: r.firstClickedAt,
+          clickCount: r.clickCount,
+          unsubscribedAt: r.unsubscribedAt,
+          deliveredAt: sent.deliveredAt,
+          delayedAt: sent.delayedAt,
+          bouncedAt: sent.bouncedAt,
+          bounceDetail: sent.bounceDetail,
+          complainedAt: sent.complainedAt,
+        })
+        .from(r)
+        .leftJoin(sent, eq(sent.token, r.token))
+        .where(eq(r.campaignId, input.id))
+        .orderBy(asc(r.email)),
+    ]);
+    return { campaign, stats, recipients };
+  });
+
+/**
+ * Кому уйдёт рассылка с таким сегментом — до запуска, чтобы проверить
+ * список. Заодно курсы, из которых можно выбрать.
+ */
+const audience = adminProcedure
+  .input(z.object({ segment: segmentSchema }))
+  .handler(async ({ context, input }) => {
+    const [members, workshops] = await Promise.all([
+      loadAudience(context.db, input.segment),
+      purchasedWorkshops(context.db),
+    ]);
+    return { members, workshops };
+  });
+
+/** Тема письма из шаблона: её показывают список рассылок и история. */
+const templateSubject = (template: string) =>
+  campaignTemplateList().find((item) => item.id === template)?.subject ?? "";
+
+/** Готовые письма для выбора в форме: название, тема и поля под заполнение. */
+const templates = adminProcedure.handler(() => campaignTemplateList());
+
+/**
+ * Новая рассылка (без id) или правка черновика. Запущенную менять нельзя.
+ * Тема берётся из шаблона: письма готовые, их текст живёт в коде.
+ */
+const save = adminProcedure
+  .input(contentSchema.extend({ id: z.string().uuid().optional() }))
+  .handler(async ({ context, input }) => {
+    const { id, ...content } = input;
+    const paramsError = campaignParamsError(content.template, content.params);
+    if (paramsError) {
+      throw new ORPCError("BAD_REQUEST", { message: paramsError });
+    }
+    const values = { ...content, subject: templateSubject(content.template) };
+    if (!id) {
+      const [created] = await context.db
+        .insert(emailCampaigns)
+        .values(values)
+        .returning({ id: emailCampaigns.id });
+      return { id: (created as { id: string }).id };
+    }
+    const [updated] = await context.db
+      .update(emailCampaigns)
+      .set(values)
+      .where(and(eq(emailCampaigns.id, id), eq(emailCampaigns.status, "draft")))
+      .returning({ id: emailCampaigns.id });
+    if (!updated) {
+      throw new ORPCError("CONFLICT", {
+        message: "Рассылка уже запущена, её не изменить",
+      });
+    }
+    return { id };
+  });
+
+/**
+ * Удаляет рассылку любого статуса вместе с получателями (каскадом). У
+ * запущенной пропадает история отправки, а ссылки отписки и кнопки в уже
+ * ушедших письмах перестают работать: токены лежат у получателей. Если
+ * рассылка ещё отправлялась, остаток не уйдёт. Отписавшиеся остаются в
+ * email_suppressions, там только сбрасывается ссылка на рассылку.
+ */
+const remove = adminProcedure
+  .input(idInput)
+  .handler(async ({ context, input }) => {
+    const [removed] = await context.db
+      .delete(emailCampaigns)
+      .where(eq(emailCampaigns.id, input.id))
+      .returning({ id: emailCampaigns.id });
+    if (!removed) throw new ORPCError("NOT_FOUND");
+  });
+
+/** HTML письма, как его увидит получатель. */
+const preview = adminProcedure
+  .input(idInput)
+  .handler(async ({ context, input }) => {
+    const campaign = await findCampaign(context.db, input.id);
+    return {
+      html: await renderCampaignHtml(
+        campaign,
+        siteUrl(),
+        previewSource(campaign.segment),
+      ),
+    };
+  });
+
+/**
+ * HTML готового письма до сохранения: шаблон с полями из формы. Пока поля не
+ * заполнены, подставляется пример из шаблона. По флагу «покупатели» видно,
+ * какую строчку «почему пришло письмо» получат адресаты.
+ */
+const previewTemplate = adminProcedure
+  .input(
+    z.object({
+      template: z.enum(CAMPAIGN_TEMPLATE_IDS),
+      params: paramsSchema,
+      buyers: z.boolean().default(true),
+    }),
+  )
+  .handler(async ({ input }) => ({
+    html: await renderCampaignHtml(
+      input,
+      siteUrl(),
+      previewSource({ buyers: input.buyers }),
+    ),
+  }));
+
+/** Пробное письмо себе (на почту админа) или на указанный адрес. */
+const sendTest = adminProcedure
+  .input(idInput.extend({ to: z.email().optional() }))
+  .handler(async ({ context, input }) => {
+    const campaign = await findCampaign(context.db, input.id);
+    const to = input.to ?? context.session.user.email;
+    await sendCampaignTest(campaign, { to, siteUrl: siteUrl() });
+    return { to };
+  });
+
+/**
+ * Запускает рассылку: фиксирует получателей (без отписавшихся) и сразу
+ * отправляет, сколько успеет за START_BUDGET_MS. Остаток и повторы после
+ * сбоев дошлёт крон сайта.
+ */
+const start = adminProcedure
+  .input(idInput)
+  .handler(async ({ context, input }) => {
+    // Черновик заперт до конца транзакции: сохранение из другой вкладки
+    // дождётся запуска и получит отказ, а получатели возьмутся из того
+    // сегмента, что в базе
+    const recipients = await context.db.transaction(async (tx) => {
+      const [campaign] = await tx
+        .select()
+        .from(emailCampaigns)
+        .where(eq(emailCampaigns.id, input.id))
+        .for("update");
+      if (!campaign) throw new ORPCError("NOT_FOUND");
+      if (campaign.status !== "draft") {
+        throw new ORPCError("CONFLICT", { message: "Рассылка уже запущена" });
+      }
+      // Без нужных полей (например, ссылки на канал) письмо не соберётся, и
+      // все получатели ушли бы в «не ушло»
+      const paramsError = campaignParamsError(
+        campaign.template,
+        campaign.params,
+      );
+      if (paramsError) {
+        throw new ORPCError("BAD_REQUEST", { message: paramsError });
+      }
+      const members = (
+        await loadAudience(tx as unknown as Database, campaign.segment)
+      ).filter((member) => !member.suppressed);
+      if (members.length === 0) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Некому отправлять: в сегменте никого нет",
+        });
+      }
+      await tx
+        .update(emailCampaigns)
+        .set({
+          status: "sending",
+          startedAt: new Date(),
+          // Тема, с которой письма уходят: шаблон в коде мог поменяться
+          subject: templateSubject(campaign.template),
+        })
+        .where(eq(emailCampaigns.id, campaign.id));
+      await tx
+        .insert(r)
+        .values(
+          members.map((member) => ({
+            campaignId: campaign.id,
+            email: member.email,
+            userId: member.userId,
+            source: member.source,
+            token: randomBytes(18).toString("base64url"),
+          })),
+        )
+        .onConflictDoNothing();
+      return members.length;
+    });
+
+    const totals = await sendCampaignBatch({
+      db: context.db,
+      siteUrl: siteUrl(),
+      campaignId: input.id,
+      limit: recipients,
+      deadline: Date.now() + START_BUDGET_MS,
+    });
+    return { recipients, ...totals };
+  });
+
+export const adminCampaignsRouter = {
+  list,
+  get,
+  audience,
+  templates,
+  save,
+  remove,
+  preview,
+  previewTemplate,
+  sendTest,
+  start,
+};

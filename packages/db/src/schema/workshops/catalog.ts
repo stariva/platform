@@ -30,6 +30,27 @@ export const workshopStatus = pgEnum("workshop_status", [
   "archived", // не продаётся и не в каталоге, но купившие смотрят дальше
 ]);
 
+/** Глава урока: тап по ней перематывает плеер. */
+export interface WorkshopLessonChapterData {
+  /** Секунды от начала видео. */
+  time: number;
+  title: string;
+}
+
+/** Строка чек-листа нарезки: «Шнур 4 мм — 12 отрезков по 3,5 м». */
+export interface WorkshopLessonChecklistItemData {
+  /** Стабильный id: на него ссылается lesson_progress.checked_materials. */
+  id: string;
+  label: string;
+}
+
+/** Схема или фото узла к уроку; файл — в закрытом бакете, как у PDF курса. */
+export interface WorkshopLessonAttachmentData {
+  label: string;
+  key: string;
+  kind: "pdf" | "image";
+}
+
 /** Урок внутри мастер-класса. Хранится массивом в workshops.lessons. */
 export interface WorkshopLessonData {
   /** Стабильный id: на него ссылается lesson_progress. */
@@ -40,6 +61,12 @@ export interface WorkshopLessonData {
   videoKey: string;
   /** Бесплатное превью — смотреть можно без покупки. */
   free: boolean;
+  /** Этапы урока для приложения. Старые уроки без поля — без глав. */
+  chapters?: WorkshopLessonChapterData[];
+  /** Чек-лист нарезки для приложения. */
+  materialsChecklist?: WorkshopLessonChecklistItemData[];
+  /** Схемы и фото узлов для вкладки «Конспект». */
+  attachments?: WorkshopLessonAttachmentData[];
 }
 
 /** PDF к курсу в закрытом бакете. */
@@ -133,6 +160,10 @@ export const workshops = pgTable(
       .default(sql`'{"howTo":"","shops":[],"outro":"","image":""}'::jsonb`),
 
     ozonUrl: text("ozon_url"),
+    // Закрытый чат поддержки покупателей (приглашение в Telegram). Ссылку
+    // видят только купившие, поэтому на витрину она не попадает. null — у
+    // курса нет чата.
+    supportChatUrl: text("support_chat_url"),
     testimonialText: text("testimonial_text"),
     testimonialAuthor: text("testimonial_author"),
 

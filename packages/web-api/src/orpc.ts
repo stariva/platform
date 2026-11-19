@@ -6,6 +6,7 @@ import {
   type CreatedOrder,
   type CreateOrderInput,
   type CustomOrderRequest,
+  type EmailEventsSyncResult,
   type LessonVideoResult,
   type MadeToOrderRequest,
   type MadeToOrderRequested,
@@ -15,6 +16,7 @@ import {
   type PhoneCheck,
   type QuoteInput,
   type ReminderSweepResult,
+  type WorkshopReview,
   webContract,
 } from "./contract";
 
@@ -27,6 +29,8 @@ export interface WebServices {
   runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
   /** Проверка зависших заявок НПД без повторного запроса в ФНС. */
   runNpdIssuingSweep: () => Promise<{ checked: number }>;
+  /** События доставки Postbox из Data Streams: @stariva/emails (postbox-sync). */
+  syncEmailEvents: () => Promise<EmailEventsSyncResult>;
   /** Токен антиспама для форм входа: секрет better-auth живёт в витрине. */
   issueFormToken: () => Promise<string>;
   /** Уведомление мастеру о подписке: apps/web/src/lib/newsletter.ts */
@@ -37,6 +41,20 @@ export interface WebServices {
   checkout: CheckoutServices;
   /** Сброс кэша страниц Next: revalidatePath живёт в витрине. */
   revalidatePaths: (paths: string[]) => void;
+  /**
+   * Мастеру: покупатель оставил или изменил отзыв о мастер-классе, его пора
+   * проверить. Уходит после ответа, сбой — только в лог.
+   */
+  notifyWorkshopReview: (notice: WorkshopReviewNotice) => void;
+}
+
+export interface WorkshopReviewNotice {
+  workshopSlug: string;
+  workshopTitle: string;
+  email: string;
+  /** false — автор изменил уже оставленный отзыв */
+  created: boolean;
+  review: WorkshopReview;
 }
 
 /**
@@ -69,6 +87,8 @@ export type OrderPaymentResult =
   | { status: "unavailable" }
   | { status: "nothing_to_pay" }
   | { status: "overdue" }
+  // Доплата, а пункт выдачи не выбран и доставка не посчитана
+  | { status: "delivery_point_required" }
   | { status: "failed" };
 
 /**
@@ -86,6 +106,24 @@ export interface OrderServices {
   updateDetails: (
     input: OrderDetails & { orderId: string; phone: string },
   ) => Promise<"ok" | "not_found" | "locked">;
+  /**
+   * Покупатель выбрал пункт при доплате: сохраняет его и считает доставку
+   * Ozon. `locked` — выбирать пункт сейчас нельзя, `unavailable` — Ozon не
+   * принимает в этот пункт такую посылку, `quote_failed` — временный сбой,
+   * повтор может помочь, `quote_unavailable` — расчёт не выйдет, мастер знает.
+   */
+  updateDeliveryPoint: (input: {
+    orderId: string;
+    phone: string;
+    pointId: string;
+  }) => Promise<
+    | "ok"
+    | "not_found"
+    | "locked"
+    | "unavailable"
+    | "quote_failed"
+    | "quote_unavailable"
+  >;
   /** Заголовки нужны, чтобы собрать адрес возврата, если он не задан в окружении. */
   startPayment: (input: {
     orderId: string;
@@ -134,6 +172,8 @@ export interface CheckoutServices {
     | { status: "ok"; order: CreatedOrder }
     | { status: "unconfigured" }
     | { status: "delivery_unavailable" }
+    | { status: "delivery_price_changed" }
+    | { status: "products_price_changed" }
     | { status: "payment_failed" }
     | CheckoutRejection
   >;
@@ -142,6 +182,7 @@ export interface CheckoutServices {
   ) => Promise<
     | { status: "ok"; request: MadeToOrderRequested }
     | { status: "options_unavailable" }
+    | { status: "delivery_point_unavailable" }
     | CheckoutRejection
   >;
 }

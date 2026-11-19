@@ -1,0 +1,9 @@
+# Готовые релизные APK локальной сборки (`bun run apk:release`)
+/apk/
+
+# Ключи подписи: потеряете — APK перестанет обновляться поверх прежнего
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+google-services.json

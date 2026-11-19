@@ -57,6 +57,70 @@ export function madeToOrderPaymentStep(
 }
 
 /**
+ * Доплата ждёт доставку: мастер указала параметры посылки, а покупатель ещё не
+ * выбрал пункт, и Ozon не посчитал стоимость. Пока так, доплата — это только
+ * изделие, платить её рано. Заказ с ручной доставкой (расчёта нет вовсе) и
+ * предоплата сюда не относятся.
+ */
+export function needsDeliveryQuote(
+  order: Pick<OrderRow, "kind" | "status" | "checkoutSnapshot">,
+): boolean {
+  if (order.kind !== "made_to_order" || order.status !== "awaiting_balance") {
+    return false;
+  }
+  const snapshot = order.checkoutSnapshot as {
+    parcel?: unknown;
+    priceKopecks?: number | null;
+  } | null;
+  return Boolean(snapshot?.parcel) && snapshot?.priceKopecks == null;
+}
+
+/** Доплату берём, когда выбран пункт и посчитана доставка до него. */
+export function isDeliveryQuoteRequiredToPay(
+  order: PaymentStepOrder & Pick<OrderRow, "checkoutSnapshot">,
+  now = new Date(),
+): boolean {
+  return (
+    madeToOrderPaymentStep(order, now)?.type === "balance" &&
+    needsDeliveryQuote(order)
+  );
+}
+
+/**
+ * Строки чека на оплату этапа. В доплату входит доставка: в чеке она отдельной
+ * строкой, как и у заказа со склада. Сумма строк равна сумме платежа.
+ */
+export function madeToOrderReceiptLines(
+  itemName: string,
+  payment: Pick<PaymentRow, "type" | "amount">,
+  amountDelivery: number,
+): { name: string; amount: number; quantity: number }[] {
+  if (payment.type === "deposit") {
+    return [
+      {
+        name: `${itemName}, предоплата`,
+        amount: payment.amount,
+        quantity: 1,
+      },
+    ];
+  }
+  // Оплата могла прийти не на ту сумму (старая ссылка): тогда строку не делим
+  if (amountDelivery <= 0 || payment.amount <= amountDelivery) {
+    return [
+      { name: `${itemName}, доплата`, amount: payment.amount, quantity: 1 },
+    ];
+  }
+  return [
+    {
+      name: `${itemName}, доплата`,
+      amount: payment.amount - amountDelivery,
+      quantity: 1,
+    },
+    { name: "Доставка", amount: amountDelivery, quantity: 1 },
+  ];
+}
+
+/**
  * Чем обернулась успешная оплата этапа:
  * - `applied` — заказ продвинулся благодаря ей;
  * - `duplicate` — этот этап уже оплачен другим платежом, деньги нужно вернуть;

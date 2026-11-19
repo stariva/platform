@@ -72,15 +72,22 @@ export function OrderItemsCard({ order }: { order: AdminOrderView }) {
                 </span>
               </div>
               <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
-                <a
-                  href={productSiteUrl(item.productSlug)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline-offset-4 hover:underline"
-                >
-                  на сайте ↗
-                </a>
-                {!item.productId && <span>товара больше нет в каталоге</span>}
+                {/* Счёт по заявке с главной — изделие без карточки в каталоге */}
+                {item.productSlug ? (
+                  <a
+                    href={productSiteUrl(item.productSlug)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    на сайте ↗
+                  </a>
+                ) : (
+                  <span>изделие не из каталога</span>
+                )}
+                {item.productSlug && !item.productId && (
+                  <span>товара больше нет в каталоге</span>
+                )}
                 {item.ozonSku !== null && <span>SKU Ozon {item.ozonSku}</span>}
               </div>
               {item.options && (
@@ -153,6 +160,16 @@ function SumLine({
 export function OrderDeliveryCard({ order }: { order: AdminOrderView }) {
   const { address, title, locality, coordinates } = order.deliveryAddress;
   const ozon = order.ozonDelivery;
+  // Заявка под заказ без пункта: покупатель выбирает его при доплате, когда
+  // изделие готово
+  const awaitingPoint =
+    order.kind === "made_to_order" &&
+    !order.deliveryPointId &&
+    !order.deliveryNote &&
+    (order.status === "requested" ||
+      order.status === "awaiting_deposit" ||
+      order.status === "in_production" ||
+      order.deliveryQuotePending);
   const ozonDates =
     ozon?.dateFrom && ozon.dateTo
       ? ozon.dateFrom.slice(0, 10) === ozon.dateTo.slice(0, 10)
@@ -168,7 +185,9 @@ export function OrderDeliveryCard({ order }: { order: AdminOrderView }) {
       <CardContent>
         <dl className="grid gap-3 sm:grid-cols-2">
           <Field label="Способ">
-            {DELIVERY_METHOD_LABELS[order.deliveryMethod]}
+            {awaitingPoint
+              ? "Пункт выдачи Ozon — покупатель выберет при доплате"
+              : DELIVERY_METHOD_LABELS[order.deliveryMethod]}
             {ozon?.type &&
               ` · ${OZON_DELIVERY_TYPE_LABELS[ozon.type] ?? ozon.type}`}
           </Field>
@@ -226,7 +245,8 @@ export function OrderDeliveryCard({ order }: { order: AdminOrderView }) {
             </div>
           )}
           <Field label="Отправление">{order.trackingNumber}</Field>
-          {order.kind === "stock" && (
+          {(order.kind === "stock" ||
+            order.ozonShipmentStatus !== "pending") && (
             <>
               <Field label="Заказ в Ozon Доставка">
                 {order.ozonOrderId ??
@@ -306,7 +326,7 @@ export function OrderPaymentsCard({ order }: { order: AdminOrderView }) {
   );
 }
 
-/** UTM-метки первого и последнего захода до заказа. */
+/** UTM-метки и сайт, с которого пришли, для первого и последнего захода до заказа. */
 export function OrderAttributionCard({ order }: { order: AdminOrderView }) {
   const attribution = order.attribution;
   if (!attribution) return null;
@@ -317,7 +337,7 @@ export function OrderAttributionCard({ order }: { order: AdminOrderView }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Реклама</CardTitle>
+        <CardTitle className="text-base">Источник</CardTitle>
       </CardHeader>
       <CardContent>
         <dl className="grid gap-3 sm:grid-cols-2">

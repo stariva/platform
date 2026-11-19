@@ -2,40 +2,26 @@ import { safe } from "@orpc/client";
 import { AttemptLostError } from "@stariva/web-api/contract";
 import { schedules } from "@trigger.dev/sdk";
 import { HLS_VERSION, probe, segmentAndUpload, withTempDir } from "../lib/hls";
-import { webApi } from "../lib/web-api";
+import { webApi, withRetry } from "../lib/web-api";
 
 // Больше за один прогон не берём: следующий прогон через 10 минут доберёт
 const MAX_VIDEOS_PER_RUN = 5;
 // Как часто задача сообщает сайту, что жива (аренда на сайте — 20 минут)
 const HEARTBEAT_MS = 5 * 60_000;
-// Ссылки на заливку: запрос зависал на минуту уже после успешного первого.
-// Повторяем с коротким таймаутом — зависший сокет рвётся, повтор идёт по новому
-const UPLOAD_URLS_TIMEOUT_MS = 15_000;
-const UPLOAD_URLS_ATTEMPTS = 4;
 
-/** Ссылки на заливку кусков; запрос идемпотентен, поэтому его можно повторять. */
+/**
+ * Ссылки на заливку кусков. Запросы к сайту зависали на минуту уже после
+ * успешного первого, поэтому claim, uploadUrls, complete и fail идут через
+ * withRetry (короткий таймаут и повторы).
+ */
 async function getUploadUrls(
   attempt: { videoKey: string; attemptId: number },
   files: string[],
 ) {
-  for (let n = 1; ; n++) {
-    try {
-      const { uploads } = await webApi.jobs.videos.uploadUrls(
-        { ...attempt, files },
-        { context: { timeout: UPLOAD_URLS_TIMEOUT_MS } },
-      );
-      return uploads;
-    } catch (error) {
-      // Попытка не наша — повторять бессмысленно
-      if (error instanceof AttemptLostError || n >= UPLOAD_URLS_ATTEMPTS) {
-        throw error;
-      }
-      console.warn(
-        `[lesson-video-hls] ссылки на заливку, попытка ${n}/${UPLOAD_URLS_ATTEMPTS}:`,
-        error instanceof Error ? error.message : error,
-      );
-    }
-  }
+  const { uploads } = await withRetry("uploadUrls", (context) =>
+    webApi.jobs.videos.uploadUrls({ ...attempt, files }, { context }),
+  );
+  return uploads;
 }
 
 /**
@@ -73,7 +59,9 @@ export const lessonVideoHls = schedules.task({
 
     for (let i = 0; i < MAX_VIDEOS_PER_RUN; i++) {
       if (signal.aborted) break;
-      const { job } = await webApi.jobs.videos.claim({ version: HLS_VERSION });
+      const { job } = await withRetry("claim", (context) =>
+        webApi.jobs.videos.claim({ version: HLS_VERSION }, { context }),
+      );
       if (!job) break;
 
       const attempt = { videoKey: job.videoKey, attemptId: job.attemptId };
@@ -104,10 +92,12 @@ export const lessonVideoHls = schedules.task({
             (batch) => getUploadUrls(attempt, batch),
             { signal: abort.signal },
           );
-          await webApi.jobs.videos.complete({
-            ...attempt,
-            durationSeconds: source.durationSeconds,
-          });
+          await withRetry("complete", (context) =>
+            webApi.jobs.videos.complete(
+              { ...attempt, durationSeconds: source.durationSeconds },
+              { context },
+            ),
+          );
           return count;
         });
         console.log(`[lesson-video-hls] ${job.videoKey}: ${files} файлов`);
@@ -116,15 +106,15 @@ export const lessonVideoHls = schedules.task({
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[lesson-video-hls] ${job.videoKey}:`, message);
         failed.push(job.videoKey);
-        await webApi.jobs.videos
-          .fail({ ...attempt, error: message })
-          .catch((reportError: unknown) => {
-            // Не смогли сообщить — видео вернётся в очередь, когда истечёт аренда
-            console.error(
-              "[lesson-video-hls] не удалось сообщить об ошибке:",
-              reportError,
-            );
-          });
+        await withRetry("fail", (context) =>
+          webApi.jobs.videos.fail({ ...attempt, error: message }, { context }),
+        ).catch((reportError: unknown) => {
+          // Не смогли сообщить — видео вернётся в очередь, когда истечёт аренда
+          console.error(
+            "[lesson-video-hls] не удалось сообщить об ошибке:",
+            reportError,
+          );
+        });
       } finally {
         clearInterval(heartbeat);
         signal.removeEventListener("abort", onCancel);

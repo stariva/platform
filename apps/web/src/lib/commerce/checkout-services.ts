@@ -1,8 +1,10 @@
 import type { CheckoutQuote, CheckoutServices } from "@stariva/web-api";
+import { normalizeTelegramHandle } from "@stariva/web-api/contract";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
 import { checkDeliveryAvailable, checkout } from "@/lib/ozon-delivery/client";
+import { isOzonInfrastructureError } from "@/lib/ozon-delivery/errors";
 import { getCachedPickupPointsInfo } from "@/lib/ozon-delivery/pickup-points-cache";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import {
@@ -19,6 +21,8 @@ import {
   resolveCatalogItems,
   resolveMadeToOrderItems,
 } from "./catalog";
+import { priceKitBundleLines, resolveKitOrderGift } from "./elka-kit-bundle";
+import { hasPurchasedElkaWorkshop } from "./elka-kit-offer";
 import {
   notifyCustomer,
   notifyMadeToOrderRequested,
@@ -29,6 +33,19 @@ import {
   createMadeToOrderOrder,
   createProductOrder,
 } from "./orders";
+
+/**
+ * Расчёта нет, потому что Ozon не ответил: покупателю доставка бесплатна, а
+ * мастер отправит заказ вручную. Такой «расчёт» не блокирует оформление.
+ */
+function manualQuote(): CheckoutQuote {
+  return {
+    available: true,
+    deliveryPriceKopecks: 0,
+    shipments: [],
+    manual: true,
+  };
+}
 
 /** Расчёт Ozon без внутренних полей: покупателю нужны цена и даты. */
 function toQuote(result: DeliveryCheckoutResponse): CheckoutQuote {
@@ -61,6 +78,15 @@ export const checkoutServices: CheckoutServices = {
     try {
       return { status: "ok", check: await checkDeliveryAvailable(phone) };
     } catch (error) {
+      // Проверка телефона — подсказка, а не условие заказа: если Ozon лежит,
+      // пропускаем её, чтобы покупатель мог оформить заказ
+      if (isOzonInfrastructureError(error)) {
+        console.warn(
+          "[checkout/delivery-check] Ozon недоступен, проверку телефона пропускаем:",
+          error,
+        );
+        return { status: "ok", check: { available: true } };
+      }
       console.error("[checkout/delivery-check] Ошибка:", error);
       return { status: "check_failed" };
     }
@@ -83,6 +109,13 @@ export const checkoutServices: CheckoutServices = {
       if (error instanceof CatalogItemsUnavailableError) {
         return unavailableItems(error);
       }
+      if (isOzonInfrastructureError(error)) {
+        console.warn(
+          "[checkout/quote] Ozon недоступен, считаем доставку вручную:",
+          error,
+        );
+        return { status: "ok", quote: manualQuote() };
+      }
       console.error("[checkout/quote] Ошибка:", error);
       return { status: "check_failed" };
     }
@@ -98,16 +131,12 @@ export const checkoutServices: CheckoutServices = {
     }
 
     let items: Awaited<ReturnType<typeof resolveCatalogItems>>;
-    let deliveryQuote: DeliveryCheckoutResponse;
     try {
-      items = await resolveCatalogItems(data.items);
-      deliveryQuote = await checkout({
-        items: items.map((item) => ({
-          sku: item.ozonSku,
-          quantity: item.quantity,
-        })),
-        delivery: data.delivery,
-        buyerPhone: data.contactPhone,
+      items = await resolveCatalogItems(data.items, {
+        elkaKitOwner:
+          !data.kitAccessMode && userId
+            ? await hasPurchasedElkaWorkshop(userId)
+            : false,
       });
     } catch (error) {
       if (error instanceof CatalogItemsUnavailableError) {
@@ -117,7 +146,59 @@ export const checkoutServices: CheckoutServices = {
       return { status: "check_failed" };
     }
 
-    if (!deliveryQuote.available) return { status: "delivery_unavailable" };
+    if (data.kitAccessMode) {
+      const priced = priceKitBundleLines(items, data.kitAccessMode);
+      if (!priced) return { status: "check_failed" };
+      items = priced;
+    }
+    const productsKopecks = items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+    if (
+      data.expectedProductsKopecks !== undefined &&
+      productsKopecks > data.expectedProductsKopecks
+    ) {
+      return { status: "products_price_changed" };
+    }
+
+    // null — Ozon не ответил: заказ принимаем с ручной доставкой, бесплатной
+    // для покупателя. Решает сервер, а не клиент: просто так бесплатную
+    // доставку не получить
+    let deliveryQuote: DeliveryCheckoutResponse | null;
+    try {
+      deliveryQuote = await checkout({
+        items: items.map((item) => ({
+          sku: item.ozonSku,
+          quantity: item.quantity,
+        })),
+        delivery: data.delivery,
+        buyerPhone: data.contactPhone,
+      });
+    } catch (error) {
+      if (!isOzonInfrastructureError(error)) {
+        console.error("[checkout/create] Ошибка проверки заказа:", error);
+        return { status: "check_failed" };
+      }
+      console.warn(
+        "[checkout/create] Ozon недоступен, оформляем с ручной доставкой:",
+        error,
+      );
+      deliveryQuote = null;
+    }
+
+    if (deliveryQuote && !deliveryQuote.available) {
+      return { status: "delivery_unavailable" };
+    }
+
+    // Покупатель не должен заплатить за доставку больше, чем видел
+    const deliveryKopecks = deliveryQuote?.deliveryPriceKopecks ?? 0;
+    if (
+      data.expectedDeliveryKopecks !== undefined &&
+      deliveryKopecks > data.expectedDeliveryKopecks
+    ) {
+      return { status: "delivery_price_changed" };
+    }
 
     // Адрес пункта нужен только мастеру в админке — без него заказ всё равно оформляем
     const pickupPoint = await getCachedPickupPointsInfo([data.delivery.pointId])
@@ -130,19 +211,41 @@ export const checkoutServices: CheckoutServices = {
         return null;
       });
 
-    const order = await createProductOrder({
-      userId: userId ?? undefined,
-      attribution: attributionFromRequest({ headers }),
-      visitor: await collectVisitor({ headers }),
-      contactName: data.contactName,
-      contactPhone: data.contactPhone,
-      contactEmail: data.contactEmail,
-      comment: data.comment,
-      items,
-      delivery: data.delivery,
-      pickupPoint,
-      checkout: deliveryQuote,
-    });
+    // Ручной заказ без адреса пункта мастер не отправит: Ozon ничего не
+    // подскажет, значит, адрес должен прийти от покупателя (так делает
+    // страница; не пришёл — старая вкладка, пусть оформит заново)
+    if (!deliveryQuote && !pickupPoint && !data.delivery.pointLabel?.trim()) {
+      console.error(
+        `[checkout/create] Ozon недоступен, а адреса пункта ${data.delivery.pointId} нет: ручной заказ не принимаем`,
+      );
+      return { status: "check_failed" };
+    }
+
+    let order: Awaited<ReturnType<typeof createProductOrder>>;
+    try {
+      order = await createProductOrder({
+        userId: userId ?? undefined,
+        attribution: attributionFromRequest({ headers }),
+        visitor: await collectVisitor({ headers }),
+        contactName: data.contactName,
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+        comment: data.comment,
+        gift: resolveKitOrderGift(data.kitAccessMode, data.gift),
+        kitAccessMode: data.kitAccessMode,
+        items,
+        delivery: data.delivery,
+        pickupPoint,
+        pointLabel: data.delivery.pointLabel,
+        checkout: deliveryQuote,
+      });
+    } catch (error) {
+      if (error instanceof CatalogItemsUnavailableError) {
+        return unavailableItems(error);
+      }
+      console.error("[checkout/create] Ошибка сохранения заказа:", error);
+      return { status: "check_failed" };
+    }
 
     const description = `Заказ Stariva №${order.number}`;
     // Фиксация согласия и акцепта: редакция документов на момент заказа.
@@ -215,6 +318,23 @@ export const checkoutServices: CheckoutServices = {
       return { status: "check_failed" };
     }
 
+    // Пункт покупатель выбирает перед предоплатой; в заявке он приходит только
+    // из старых вкладок. Если Ozon не ответил, заявку не теряем: адрес пункта
+    // нужен для показа, а сам пункт ещё раз проверит расчёт доставки
+    const pointId = data.deliveryPointId;
+    const pointInfo = pointId
+      ? await getCachedPickupPointsInfo([pointId]).catch((error: unknown) => {
+          console.warn(
+            "[checkout/made-to-order] Не удалось получить адрес пункта:",
+            error,
+          );
+          return null;
+        })
+      : null;
+    if (pointId && pointInfo?.unavailable.includes(pointId)) {
+      return { status: "delivery_point_unavailable" };
+    }
+
     const order = await createMadeToOrderOrder({
       userId: userId ?? undefined,
       attribution: attributionFromRequest({ headers }),
@@ -222,8 +342,14 @@ export const checkoutServices: CheckoutServices = {
       contactName: data.contactName,
       contactPhone: data.contactPhone,
       contactEmail: data.contactEmail,
+      preferredContactChannel: data.preferredContactChannel ?? null,
+      contactMessenger:
+        data.preferredContactChannel === "telegram"
+          ? normalizeTelegramHandle(data.contactMessenger ?? "")
+          : null,
       customerNotes: data.customerNotes,
-      deliveryNote: data.deliveryNote,
+      deliveryPointId: pointId ?? null,
+      pickupPoint: pointInfo?.points[0] ?? null,
       items,
     });
 

@@ -1,0 +1,37 @@
+name: Deploy Trigger.dev
+
+# Заливает задачи apps/jobs/src/trigger в Trigger.dev (prod). Сборка образа идёт
+# у них в облаке, Docker здесь не нужен. Запускается только когда меняются
+# задачи или то, что они импортируют, либо вручную.
+#
+# Секрет TRIGGER_ACCESS_TOKEN: Personal Access Token (tr_pat_…) из дашборда
+# Trigger.dev → Account → Tokens, либо prod-ключ проекта (tr_prod_…).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/jobs/**"
+      - "packages/web-api/src/contract/**"
+      - "bun.lock"
+      - ".github/workflows/deploy-trigger.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-trigger
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      # Версия CLI закреплена в скрипте trigger:deploy и совпадает с @trigger.dev/sdk
+      - name: Deploy to Trigger.dev
+        working-directory: apps/jobs
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: bun run trigger:deploy --env prod

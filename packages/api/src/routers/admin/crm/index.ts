@@ -16,6 +16,17 @@ import {
   saveClient,
 } from "./clients";
 import {
+  addBusinessExpense,
+  addOrderCost,
+  businessExpenses,
+  financeSettings,
+  orderCosts,
+  profit,
+  removeBusinessExpense,
+  removeOrderCost,
+  saveFinanceSettings,
+} from "./finance";
+import {
   addPayment,
   analytics,
   order,
@@ -29,6 +40,15 @@ import { report } from "./report";
 export const adminCrmRouter = {
   report,
   analytics,
+  profit,
+  orderCosts,
+  addOrderCost,
+  removeOrderCost,
+  businessExpenses,
+  addBusinessExpense,
+  removeBusinessExpense,
+  financeSettings,
+  saveFinanceSettings,
   orders,
   order,
   updateOrder,

@@ -77,9 +77,9 @@ export function BigTreeWorkshop({
             Большая ёлка макраме своими руками
           </h1>
           <p className="text-dark-grey leading-relaxed lg:mb-8">
-            Ольга покажет в видеоуроках, как сплести ёлку {BONUS_TREE_SIZE} — в
-            полтора метра, для гостиной или праздничной фотозоны. Опыт в макраме
-            не нужен.{" "}
+            Я — Ольга, и в видеоуроках покажу, как сплести ёлку{" "}
+            {BONUS_TREE_SIZE} — в полтора метра, для гостиной или праздничной
+            фотозоны. Опыт в макраме не нужен.{" "}
             {preorder && releaseLabel
               ? `Уроки откроются ${releaseLabel}, а цену со скидкой можно зафиксировать уже сейчас.`
               : "Уроки появятся в личном кабинете сразу после оплаты."}
@@ -87,7 +87,7 @@ export function BigTreeWorkshop({
 
           <div
             id={QUICK_BUY_ID}
-            className="mt-6 flex items-center gap-4 lg:hidden"
+            className="mt-6 flex items-center gap-4 lg:mt-0 lg:mb-10 lg:max-w-md"
           >
             <div className="shrink-0">
               <span className="block font-serif text-3xl leading-none text-espresso">

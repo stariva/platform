@@ -1,5 +1,10 @@
 import { expect, mock, test } from "bun:test";
-import { crmClients, crmSales } from "@stariva/db";
+import {
+  crmClients,
+  crmSales,
+  customOrderRequests,
+  productOrders,
+} from "@stariva/db";
 import { addSale } from "./clients";
 import type { ClientRecord } from "./model";
 
@@ -21,8 +26,22 @@ function card(id: string, contacts: Partial<ClientRecord> = {}): ClientRecord {
 }
 
 /** Only the transaction exposes queries, so both writes must use it. */
-function database(records: ClientRecord[] = [], saleError?: unknown) {
-  const state = { records: [...records], sales: [] as unknown[] };
+function database(
+  records: ClientRecord[] = [],
+  saleError?: unknown,
+  requestLock: Promise<void> = Promise.resolve(),
+) {
+  const state = {
+    records: [...records],
+    sales: [] as unknown[],
+    orders: [] as { number: number }[],
+  };
+  const lockRequest = mock(async (mode: string) => {
+    expect(mode).toBe("update");
+    await requestLock;
+    return [{ number: 1042 }];
+  });
+  const orderLookup = mock(async () => [...state.orders]);
   const insert = mock((table: unknown) => ({
     values: (fields: Record<string, unknown>) => ({
       returning: async () => {
@@ -42,10 +61,13 @@ function database(records: ClientRecord[] = [], saleError?: unknown) {
   const tx = {
     select: () => ({
       from: (table: unknown) => {
+        if (table === customOrderRequests) {
+          return { where: () => ({ for: lockRequest }) };
+        }
         const rows = Promise.resolve(table === crmClients ? state.records : []);
         return Object.assign(rows, {
           orderBy: () => rows,
-          where: () => rows,
+          where: table === productOrders ? orderLookup : () => rows,
           innerJoin: () => ({ leftJoin: () => rows }),
         });
       },
@@ -61,7 +83,7 @@ function database(records: ClientRecord[] = [], saleError?: unknown) {
       throw error;
     }
   });
-  return { state, insert, transaction };
+  return { state, insert, transaction, lockRequest, orderLookup };
 }
 
 function sell(
@@ -125,6 +147,29 @@ test("sale commits a new card and its sale together", async () => {
   expect(db.transaction).toHaveBeenCalledTimes(1);
   expect(db.state.records).toMatchObject([{ phone, email }]);
   expect(db.state.sales).toMatchObject([{ amount: 12345 }]);
+});
+
+test("sale sees an invoice committed while waiting for the request lock", async () => {
+  const lock = Promise.withResolvers<void>();
+  const db = database([], undefined, lock.promise);
+  const result = sell(db, { phone, email });
+  await Promise.resolve();
+  const waiting = {
+    lockCalls: db.lockRequest.mock.calls.length,
+    orderLookups: db.orderLookup.mock.calls.length,
+    writes: db.insert.mock.calls.length,
+  };
+  db.state.orders.push({ number: 2001 });
+  lock.resolve();
+
+  await expect(result).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "По заявке №1042 уже выставлен счёт — заказ №2001",
+  });
+  expect(waiting).toEqual({ lockCalls: 1, orderLookups: 0, writes: 0 });
+  expect(db.insert).not.toHaveBeenCalled();
+  expect(db.state.records).toHaveLength(0);
+  expect(db.state.sales).toHaveLength(0);
 });
 
 test("duplicate request rolls back the newly created card", async () => {

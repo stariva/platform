@@ -4,6 +4,12 @@ import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
 
+/** Заказы, которые ссылаются на заявку: записанный в CRM и выставленный счёт. */
+const REQUEST_FKS = new Set([
+  "crm_sales_request_number_custom_order_requests_number_fk",
+  "product_orders_request_number_custom_order_requests_number_fk",
+]);
+
 /**
  * Удаляет заявку насовсем вместе с фото: спам, тесты, дубли. Заявку, по которой
  * записан заказ, удалить нельзя — заказ потеряет источник; такую сначала
@@ -29,8 +35,8 @@ export const remove = adminProcedure
       } | null;
       if (
         (pg?.code === "23503" || pg?.code === "23001") &&
-        pg.constraint ===
-          "crm_sales_request_number_custom_order_requests_number_fk"
+        pg.constraint !== undefined &&
+        REQUEST_FKS.has(pg.constraint)
       ) {
         throw new ORPCError("CONFLICT", {
           message: "По заявке записан заказ — сначала удалите заказ",

@@ -8,7 +8,11 @@ import {
   products,
   user,
   type VisitorInfo,
+  workshopAccessCodes,
+  workshops,
 } from "@stariva/db/schema";
+import { kitCodeNote } from "@stariva/web-api";
+import type { MadeToOrderParcel } from "@stariva/web-api/contract";
 import {
   and,
   desc,
@@ -27,6 +31,8 @@ import type {
   DeliverySelection,
   PickupPoint,
 } from "@/lib/ozon-delivery/types";
+import { CatalogItemsUnavailableError } from "./catalog";
+import { isElkaKitSlug } from "./elka-kit-bundle";
 import type { MadeToOrderPaymentType } from "./made-to-order-flow";
 import type { MadeToOrderOptions } from "./made-to-order-options";
 
@@ -47,11 +53,20 @@ export interface CreateProductOrderInput {
   contactEmail?: string;
   /** Комментарий покупателя к заказу — попадает в customerNotes. */
   comment?: string;
+  /** Набор в подарок: доступ к мастер-классу выдаётся кодом, а не письмом. */
+  gift?: boolean;
+  kitAccessMode?: "single_lesson" | "separate_gifts";
   items: OrderLineInput[];
   delivery: DeliverySelection;
   /** Выбранный пункт выдачи — чтобы мастер видел его адрес, а не только id. */
   pickupPoint?: PickupPoint | null;
-  checkout: DeliveryCheckoutResponse;
+  /** Подпись пункта от покупателя — если Ozon не отдал адрес, мастеру нужен хоть какой-то. */
+  pointLabel?: string;
+  /**
+   * Расчёт Ozon. null — Ozon не ответил: заказ принимается с ручной доставкой,
+   * бесплатной для покупателя, отправление мастер создаст сама.
+   */
+  checkout: DeliveryCheckoutResponse | null;
 }
 
 export interface MadeToOrderLineInput {
@@ -69,9 +84,30 @@ export interface CreateMadeToOrderOrderInput {
   contactName: string;
   contactPhone: string;
   contactEmail?: string;
+  /** Где покупателю удобнее ответить; null — старая вкладка без выбора. */
+  preferredContactChannel?: (typeof productOrders.$inferInsert)["preferredContactChannel"];
+  /** Ник в Telegram; для остальных каналов не сохраняется. */
+  contactMessenger?: string | null;
   customerNotes?: string;
-  deliveryNote?: string;
+  /** null — пункт покупатель выберет на странице заказа перед предоплатой. */
+  deliveryPointId: string | null;
+  /** Адрес пункта; null — Ozon сейчас не ответил, заявку всё равно принимаем. */
+  pickupPoint: PickupPoint | null;
   items: MadeToOrderLineInput[];
+}
+
+/** Адрес пункта выдачи для заказа: его показываем покупателю и мастеру. */
+function pickupPointAddress(point: PickupPoint | null | undefined) {
+  return point
+    ? {
+        address: point.address,
+        title: point.title,
+        locality: point.locality,
+        kind: point.kind,
+        lat: point.latitude,
+        lng: point.longitude,
+      }
+    : null;
 }
 
 function assertValidOrderTotal(amountTotal: number) {
@@ -86,8 +122,8 @@ function assertValidOrderTotal(amountTotal: number) {
 
 /**
  * Заявка на изделия под заказ: без оплаты. Цены из каталога — стартовые,
- * мастер согласует с покупателем итог и доставку, а затем выставляет
- * предоплату. Ни пункта выдачи, ни расчёта Ozon здесь нет.
+ * мастер согласует с покупателем итог и выставляет предоплату. Покупатель
+ * выбирает пункт выдачи перед предоплатой, а расчёт Ozon — когда изделие готово.
  */
 export async function createMadeToOrderOrder(
   input: CreateMadeToOrderOrderInput,
@@ -110,23 +146,41 @@ export async function createMadeToOrderOrder(
       contactName: input.contactName,
       contactPhone: input.contactPhone,
       contactEmail: input.contactEmail ?? null,
+      preferredContactChannel: input.preferredContactChannel ?? null,
+      contactMessenger: input.contactMessenger ?? null,
       status: "requested",
       amountProducts,
       amountDelivery: 0,
       amountTotal: amountProducts,
       currency: "RUB",
-      deliveryMethod: "manual",
+      // Без пункта — «manual», пока покупатель не выберет его на странице заказа
+      deliveryMethod: input.deliveryPointId ? "pickup" : "manual",
+      deliveryPointId: input.deliveryPointId,
+      deliveryAddress: pickupPointAddress(input.pickupPoint),
       customerNotes: input.customerNotes || null,
-      deliveryNote: input.deliveryNote || null,
     })
     .returning({ number: productOrders.number });
   if (!created) throw new Error("product_order_not_created");
 
+  const workshopLinks = await db
+    .select({ slug: products.slug, workshopSlug: products.workshopSlug })
+    .from(products)
+    .where(
+      inArray(
+        products.slug,
+        input.items.map((item) => item.productSlug),
+      ),
+    );
+  const workshopByProduct = new Map(
+    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
+  );
   await db.insert(productOrderItems).values(
     input.items.map((item) => ({
       id: randomUUID(),
       orderId,
       productSlug: item.productSlug,
+      workshopSlug: workshopByProduct.get(item.productSlug) ?? null,
+      workshopLinkCaptured: true,
       ozonSku: null,
       name: item.name,
       price: item.price,
@@ -147,9 +201,33 @@ export async function createProductOrder(
     (sum, i) => sum + i.price * i.quantity,
     0,
   );
-  const amountDelivery = input.checkout.deliveryPriceKopecks;
+  const amountDelivery = input.checkout?.deliveryPriceKopecks ?? 0;
   const amountTotal = amountProducts + amountDelivery;
   assertValidOrderTotal(amountTotal);
+
+  const workshopLinks = await db
+    .select({ slug: products.slug, workshopSlug: workshops.slug })
+    .from(products)
+    .leftJoin(workshops, eq(workshops.slug, products.workshopSlug))
+    .where(
+      inArray(
+        products.slug,
+        input.items.map((item) => item.productSlug),
+      ),
+    );
+  const workshopByProduct = new Map(
+    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
+  );
+  const unlinkedKits = input.items
+    .map(({ productSlug }) => productSlug)
+    .filter(
+      (slug) =>
+        (input.kitAccessMode || isElkaKitSlug(slug)) &&
+        !workshopByProduct.get(slug),
+    );
+  if (unlinkedKits.length > 0) {
+    throw new CatalogItemsUnavailableError(unlinkedKits);
+  }
 
   const [created] = await db
     .insert(productOrders)
@@ -167,7 +245,11 @@ export async function createProductOrder(
       amountTotal,
       currency: "RUB",
       customerNotes: input.comment || null,
-      deliveryMethod: input.delivery.method,
+      gift: input.gift ?? false,
+      kitAccessMode: input.kitAccessMode ?? null,
+      // Без расчёта Ozon отправление создаётся вручную — заказ «manual»,
+      // но пункт, который выбрал покупатель, сохраняем
+      deliveryMethod: input.checkout ? input.delivery.method : "manual",
       deliveryPointId:
         input.delivery.method === "pickup" ? input.delivery.pointId : null,
       deliveryAddress:
@@ -177,16 +259,8 @@ export async function createProductOrder(
               lat: input.delivery.latitude,
               lng: input.delivery.longitude,
             }
-          : input.pickupPoint
-            ? {
-                address: input.pickupPoint.address,
-                title: input.pickupPoint.title,
-                locality: input.pickupPoint.locality,
-                kind: input.pickupPoint.kind,
-                lat: input.pickupPoint.latitude,
-                lng: input.pickupPoint.longitude,
-              }
-            : null,
+          : (pickupPointAddress(input.pickupPoint) ??
+            (input.pointLabel ? { address: input.pointLabel } : null)),
       checkoutSnapshot: input.checkout,
     })
     .returning({ number: productOrders.number });
@@ -197,6 +271,8 @@ export async function createProductOrder(
       id: randomUUID(),
       orderId,
       productSlug: item.productSlug,
+      workshopSlug: workshopByProduct.get(item.productSlug) ?? null,
+      workshopLinkCaptured: true,
       ozonSku: item.ozonSku,
       name: item.name,
       price: item.price,
@@ -215,6 +291,16 @@ export async function attachPaymentId(
     .update(productOrders)
     .set({ paymentId })
     .where(eq(productOrders.id, orderId));
+}
+
+export async function countKitGiftCodes(orderNumber: number): Promise<number> {
+  return db.$count(
+    workshopAccessCodes,
+    and(
+      eq(workshopAccessCodes.channel, "kit"),
+      eq(workshopAccessCodes.note, kitCodeNote(orderNumber)),
+    ),
+  );
 }
 
 export async function getProductOrderById(orderId: string) {
@@ -344,6 +430,75 @@ export async function claimProductOrderShipment(
   return result.length > 0 ? attemptId : null;
 }
 
+/**
+ * То же для изделия под заказ: оплачено полностью и доставка посчитана через
+ * Ozon. Заказ с ручной доставкой (без расчёта) сюда не попадает.
+ */
+export async function claimMadeToOrderShipment(
+  orderId: string,
+): Promise<string | null> {
+  const attemptId = randomUUID();
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - 15 * 60_000);
+  const result = await db
+    .update(productOrders)
+    .set({
+      status: "ready_to_ship",
+      ozonShipmentStatus: "creating",
+      ozonShipmentAttemptId: attemptId,
+      ozonShipmentAttemptedAt: now,
+    })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.kind, "made_to_order"),
+        inArray(productOrders.status, ["ready_to_ship", "ozon_order_failed"]),
+        isNull(productOrders.ozonOrderId),
+        isNotNull(productOrders.checkoutSnapshot),
+        or(
+          inArray(productOrders.ozonShipmentStatus, ["pending", "failed"]),
+          and(
+            eq(productOrders.ozonShipmentStatus, "creating"),
+            lt(productOrders.ozonShipmentAttemptedAt, staleBefore),
+          ),
+        ),
+      ),
+    )
+    .returning({ id: productOrders.id });
+  return result.length > 0 ? attemptId : null;
+}
+
+/**
+ * Отправление заказа под заказ создано. Номер покупатель видит как номер
+ * отправления: статусы такой посылки Seller API не отдаёт.
+ */
+export async function attachMadeToOrderShipment(
+  orderId: string,
+  attemptId: string,
+  ozonOrderId: string,
+  postingNumbers: string[],
+): Promise<void> {
+  await db
+    .update(productOrders)
+    .set({
+      ozonOrderId,
+      ozonPostingNumbers: postingNumbers,
+      trackingNumber: postingNumbers.join(", ") || ozonOrderId,
+      ozonShipmentStatus: "created",
+      status: "fulfilling",
+    })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        // Отменённый заказ в сборку не возвращаем, даже если отправление
+        // успело создаться
+        eq(productOrders.status, "ready_to_ship"),
+        eq(productOrders.ozonShipmentStatus, "creating"),
+        eq(productOrders.ozonShipmentAttemptId, attemptId),
+      ),
+    );
+}
+
 /** Записывает результат успешного v2/order/create и переводит заказ в сборку. */
 export async function attachOzonOrder(
   orderId: string,
@@ -366,6 +521,49 @@ export async function attachOzonOrder(
         eq(productOrders.ozonShipmentAttemptId, attemptId),
       ),
     );
+}
+
+/**
+ * Заказ под заказ создан в Ozon, но не подтверждён к отгрузке (например, не
+ * хватило баланса кабинета). Запоминаем номера: из-за них повтор не найдёт
+ * свободного заказа и не создаст второй в Ozon. Подтверждает мастер в кабинете
+ * Ozon Доставки. Номер отправления покупателю не показываем — оно ещё не едет.
+ *
+ * Уведомление об оплате доплаты, которое могло уйти раньше, когда о заказе
+ * ничего не знали, снова становится неотправленным — в той же транзакции, что
+ * и номера: иначе сбой между ними оставил бы заказ с номерами, о котором
+ * мастер уже не узнает (повтор webhook не найдёт, что отправлять).
+ */
+export async function markMadeToOrderShipmentUnapproved(
+  orderId: string,
+  attemptId: string,
+  ozonOrderId: string,
+  postingNumbers: string[],
+  balancePaymentId: string,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const marked = await tx
+      .update(productOrders)
+      .set({
+        ozonOrderId,
+        ozonPostingNumbers: postingNumbers,
+        status: "ozon_order_failed",
+        ozonShipmentStatus: "failed",
+      })
+      .where(
+        and(
+          eq(productOrders.id, orderId),
+          eq(productOrders.ozonShipmentStatus, "creating"),
+          eq(productOrders.ozonShipmentAttemptId, attemptId),
+        ),
+      )
+      .returning({ id: productOrders.id });
+    if (marked.length === 0) return;
+    await tx
+      .update(productOrderPayments)
+      .set({ staffNotifiedAt: null })
+      .where(eq(productOrderPayments.id, balancePaymentId));
+  });
 }
 
 /** Помечает заказ как требующий ручной обработки — оплата прошла, но заказ в Ozon не создался. */
@@ -398,6 +596,72 @@ export async function listUserProductOrders(userId: string) {
  */
 const DETAILS_EDITABLE_STATUSES = ["requested"] as const;
 
+/** Посылка заказа под заказ и расчёт доставки Ozon: посылку отправим после доплаты. */
+export interface MadeToOrderDeliverySnapshot {
+  parcel: MadeToOrderParcel;
+  /** Доставка со страховкой, копейки; null — покупатель ещё не выбрал пункт. */
+  priceKopecks: number | null;
+}
+
+/**
+ * Пункт выбирают при доплате, пока мастер указала посылку для Ozon, а
+ * покупатель ещё не заплатил: сайт считает доставку до выбранного пункта.
+ * Заказ с ручной доставкой (посылки нет) пункта не просит.
+ */
+export function isDeliveryPointEditable(
+  order: Pick<
+    typeof productOrders.$inferSelect,
+    "kind" | "status" | "checkoutSnapshot"
+  >,
+): boolean {
+  return (
+    order.kind === "made_to_order" &&
+    order.status === "awaiting_balance" &&
+    Boolean(
+      (order.checkoutSnapshot as MadeToOrderDeliverySnapshot | null)?.parcel,
+    )
+  );
+}
+
+/**
+ * Покупатель выбрал пункт, и Ozon посчитал доставку до него: пункт и цена
+ * ложатся в заказ вместе, и доставка входит в доплату. Пишет, только пока заказ
+ * ждёт доплату по той же посылке: если он уже оплачен или изменился, возвращает
+ * false и ничего не меняет.
+ */
+export async function saveMadeToOrderDeliveryPrice(
+  orderId: string,
+  pointId: string,
+  point: PickupPoint | null,
+  priceKopecks: number,
+): Promise<boolean> {
+  // Одна запись без предварительного чтения: между чтением и записью мастер
+  // успела бы перейти на ручную доставку (она стирает снимок), а чужое
+  // прочитанное значение затёрло бы её стоимость и вернуло отправление в Ozon.
+  // Итог и снимок считает сама база от тех значений, что лежат в строке сейчас.
+  const saved = await db
+    .update(productOrders)
+    .set({
+      deliveryMethod: "pickup",
+      deliveryPointId: pointId,
+      deliveryAddress: pickupPointAddress(point),
+      amountDelivery: priceKopecks,
+      amountTotal: sql`${productOrders.amountProducts} + ${priceKopecks}::int`,
+      checkoutSnapshot: sql`jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${priceKopecks}::int))`,
+    })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.kind, "made_to_order"),
+        eq(productOrders.status, "awaiting_balance"),
+        // Есть посылка для Ozon: у ручной доплаты снимка нет
+        sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+      ),
+    )
+    .returning({ id: productOrders.id });
+  return saved.length > 0;
+}
+
 export interface MadeToOrderDetailsInput {
   /** Мерки и комментарий по позициям заказа; позиции не из заказа пропускаются. */
   items: {
@@ -406,11 +670,10 @@ export interface MadeToOrderDetailsInput {
     comment?: string;
   }[];
   customerNotes?: string;
-  deliveryNote?: string;
 }
 
 /**
- * Покупатель дополняет заявку под заказ: мерки, пожелания, куда отправить.
+ * Покупатель дополняет заявку под заказ: мерки и пожелания.
  * Размер и цвет выбраны в заявке и здесь не меняются — их правит мастер по
  * согласованию. Возвращает false, если заказ уже нельзя дополнять.
  */
@@ -424,9 +687,6 @@ export async function updateMadeToOrderDetails(
       .set({
         ...(input.customerNotes !== undefined && {
           customerNotes: input.customerNotes || null,
-        }),
-        ...(input.deliveryNote !== undefined && {
-          deliveryNote: input.deliveryNote || null,
         }),
       })
       .where(
@@ -622,13 +882,36 @@ export async function applyMadeToOrderPayment(
           .returning({ id: productOrders.id })
       : await db
           .update(productOrders)
-          .set({ status: "ready_to_ship", paidAt: now, paymentDueAt: null })
+          .set({
+            status: "ready_to_ship",
+            paidAt: now,
+            paymentDueAt: null,
+            // Доставкой считаем то, что оплачено: ссылка могла быть создана до
+            // смены пункта, и сумма в ней — прежняя. При отправлении Ozon
+            // посчитает цену заново и скажет мастеру о разнице. Без смены
+            // пункта это те же значения, что и были в заказе
+            amountDelivery: sql`${amount}::int - (${productOrders.amountProducts} - ${productOrders.depositAmount})`,
+            amountTotal: sql`${productOrders.depositAmount} + ${amount}::int`,
+            // У ручной доплаты снимка нет: jsonb_set от NULL остаётся NULL
+            checkoutSnapshot: sql`jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${amount}::int - (${productOrders.amountProducts} - ${productOrders.depositAmount})))`,
+          })
           .where(
             and(
               eq(productOrders.id, orderId),
               eq(productOrders.kind, "made_to_order"),
               eq(productOrders.status, "awaiting_balance"),
-              sql`${productOrders.amountTotal} - ${productOrders.depositAmount} = ${amount}`,
+              or(
+                // Ровно то, что сейчас просит заказ
+                sql`${productOrders.amountTotal} - ${productOrders.depositAmount} = ${amount}`,
+                // Доставка Ozon посчитана, а покупатель позже сменил пункт и
+                // оплатил прежнюю ссылку: принимаем, если оплата покрывает изделие.
+                // Ручную доплату это не касается — у неё сумма должна совпасть
+                and(
+                  sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+                  sql`${productOrders.checkoutSnapshot} ->> 'priceKopecks' is not null`,
+                  sql`${amount}::int >= ${productOrders.amountProducts} - ${productOrders.depositAmount}`,
+                ),
+              ),
             ),
           )
           .returning({ id: productOrders.id });

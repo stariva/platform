@@ -113,6 +113,15 @@ function AvitoBadge() {
   );
 }
 
+/** Отзыв оставила участница в кабинете — только купившие могут его написать. */
+function WorkshopBadge() {
+  return (
+    <span className="inline-flex items-center label-caps text-[11px] bg-terracotta/8 text-terracotta px-2 py-0.5 rounded-full">
+      Участница мастер-класса
+    </span>
+  );
+}
+
 const LONG_TEXT = 220;
 
 /**
@@ -213,6 +222,7 @@ export function ReviewCard({ review, index, productHref }: ReviewCardProps) {
         <Stars rating={review.rating} />
         {review.source === "ozon" && <OzonBadge />}
         {review.source === "avito" && <AvitoBadge />}
+        {review.workshopSlug && <WorkshopBadge />}
       </div>
 
       {/* Text */}

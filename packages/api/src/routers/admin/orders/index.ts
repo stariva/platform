@@ -1,4 +1,5 @@
 import { byId } from "./by-id";
+import { fromRequest } from "./from-request";
 import { list } from "./list";
 import { remove } from "./remove";
 import {
@@ -7,6 +8,7 @@ import {
   extendPayment,
   reopen,
   requestBalance,
+  requestBalanceWithOzon,
   terms,
 } from "./stages";
 import { update } from "./update";
@@ -14,11 +16,13 @@ import { update } from "./update";
 export const adminOrdersRouter = {
   list,
   byId,
+  fromRequest,
   update,
   terms,
   decline,
   reopen,
   requestBalance,
+  requestBalanceWithOzon,
   extendPayment,
   cancel,
   remove,

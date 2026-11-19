@@ -1,0 +1,29 @@
+# Проектный конфиг Codex. Работает, когда проект помечен как trusted.
+# Для глобального конфига: %USERPROFILE%\.codex\config.toml (секции можно перенести туда).
+
+# model = "..."                      # раскомментируйте и укажите модель, которую рекомендует ваша версия Codex
+approval_policy = "on-request"       # спрашивает перед рискованными действиями
+sandbox_mode = "workspace-write"     # пишет только в папку проекта
+
+[sandbox_workspace_write]
+network_access = true                # нужно для npm install и чтения документации
+
+# ---------- MCP-серверы ----------
+# Нативный Windows: npx запускаем через cmd /c.
+# Если работаете в WSL — замените на command = "npx", args = ["-y", "..."]
+
+# Актуальная документация библиотек (React, Capacitor, Tailwind, TanStack…)
+[mcp_servers.context7]
+command = "cmd"
+args = ["/c", "npx", "-y", "@upstash/context7-mcp", "--api-key", "ctx7sk-5ba1003a-bb41-4f8b-86ad-8a69a67a84be"]
+
+# Браузер: открывает приложение в мобильном вьюпорте, делает скриншоты, кликает
+[mcp_servers.playwright]
+command = "cmd"
+args = ["/c", "npx", "-y", "@playwright/mcp@latest"]
+
+# Figma — по желанию, если есть макеты (нужен токен в переменной окружения)
+# [mcp_servers.figma]
+# command = "cmd"
+# args = ["/c", "npx", "-y", "figma-developer-mcp", "--stdio"]
+# env = { FIGMA_API_KEY = "ваш_токен" }

@@ -1,10 +1,13 @@
 import {
+  accessCode,
   accessCodesList,
   issueAccessCode,
+  orderAccess,
   removeAccessCode,
 } from "./access-codes";
 import { sendBrief, sendMissingBriefs } from "./brief";
 import { byId, videos } from "./by-id";
+import { sendKitAccess } from "./kit-access";
 import { list } from "./list";
 import { livemasterPdf } from "./livemaster-pdf";
 import { materialUrl } from "./material-url";
@@ -35,7 +38,10 @@ export const adminWorkshopsRouter = {
   uploadImage,
   sendBrief,
   sendMissingBriefs,
+  sendKitAccess,
   accessCodes: accessCodesList,
+  accessCode,
+  orderAccess,
   issueAccessCode,
   removeAccessCode,
 };

@@ -56,6 +56,19 @@ function ozonDelivery(order: OrderRow) {
   };
 }
 
+/**
+ * Изделие готово, мастер указала посылку, а покупатель ещё не выбрал пункт:
+ * доставки в доплате пока нет. Так же считает витрина (made-to-order-flow.ts).
+ */
+function deliveryQuotePending(order: OrderRow): boolean {
+  if (order.status !== "awaiting_balance") return false;
+  const snapshot = order.checkoutSnapshot as {
+    parcel?: unknown;
+    priceKopecks?: number | null;
+  } | null;
+  return Boolean(snapshot?.parcel) && snapshot?.priceKopecks == null;
+}
+
 /** Заказ для админки: суммы в рублях, всё, что известно о заказе и доставке. */
 export function toAdminOrder(
   order: OrderRow,
@@ -72,6 +85,8 @@ export function toAdminOrder(
     contactName: order.contactName,
     contactPhone: order.contactPhone,
     contactEmail: order.contactEmail,
+    preferredContactChannel: order.preferredContactChannel,
+    contactMessenger: order.contactMessenger,
     amountTotal: rubles(order.amountTotal),
     amountProducts: rubles(order.amountProducts),
     amountDelivery: rubles(order.amountDelivery),
@@ -83,10 +98,12 @@ export function toAdminOrder(
     depositPaidAt: order.depositPaidAt,
     declineReason: order.declineReason,
     customerNotes: order.customerNotes,
+    requestNumber: order.requestNumber,
     deliveryMethod: order.deliveryMethod,
     deliveryPointId: order.deliveryPointId,
     deliveryAddress: deliveryAddress(order),
     ozonDelivery: ozonDelivery(order),
+    deliveryQuotePending: deliveryQuotePending(order),
     deliveryNote: order.deliveryNote,
     masterNotes: order.masterNotes,
     trackingNumber: order.trackingNumber,
@@ -148,8 +165,10 @@ export const STATUSES_BY_KIND = {
     "in_production",
     "awaiting_balance",
     "ready_to_ship",
+    "fulfilling",
     "shipped",
     "delivered",
+    "ozon_order_failed",
     "declined",
     "canceled",
     "refunded",

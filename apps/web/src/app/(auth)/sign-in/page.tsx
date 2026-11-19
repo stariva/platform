@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { AuthCard } from "../auth-card";
 import { SignInForm } from "./sign-in-form";
@@ -13,15 +12,7 @@ export default function SignInPage() {
   return (
     <AuthCard
       title="Вход"
-      description="Войдите, чтобы смотреть купленные мастер-классы в личном кабинете."
-      footer={
-        <span>
-          Нет аккаунта?{" "}
-          <Link href="/sign-up" className="text-terracotta hover:underline">
-            Зарегистрироваться
-          </Link>
-        </span>
-      }
+      description="Пришлём на почту код из 6 цифр — пароль не нужен."
     >
       <Suspense fallback={null}>
         <SignInForm />

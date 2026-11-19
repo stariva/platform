@@ -29,11 +29,18 @@ export const setProducts = adminProcedure
     const productIds = [...new Set(input.productIds)];
 
     const [review] = await context.db
-      .select({ id: reviews.id })
+      .select({ id: reviews.id, workshopSlug: reviews.workshopSlug })
       .from(reviews)
       .where(eq(reviews.id, input.id));
     if (!review) {
       throw new ORPCError("NOT_FOUND", { message: "Отзыв не найден" });
+    }
+    // Отзыв о мастер-классе не про изделие: на карточке товара он исказил бы
+    // рейтинг. Снять старые связи можно, добавить новые — нет
+    if (review.workshopSlug && productIds.length > 0) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Отзыв о мастер-классе не привязывается к товарам",
+      });
     }
     if (productIds.length > 0) {
       const found = await context.db

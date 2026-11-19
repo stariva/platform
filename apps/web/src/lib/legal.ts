@@ -6,7 +6,7 @@ import { SELLER_INN } from "@stariva/config/seller";
  */
 export const SELLER = {
   status: "Плательщик налога на профессиональный доход (самозанятый)",
-  shortName: "СЗ Карпычева О. А.",
+  shortName: "СЗ Карпычева Ольга Александровна",
   name: "Карпычева О. А.",
   genitive: "Карпычевой О. А.",
   inn: SELLER_INN,

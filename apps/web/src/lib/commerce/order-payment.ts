@@ -24,6 +24,7 @@ import { createOzonDeliveryOrder } from "@/lib/ozon-delivery/client";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { kopecksToValue, type Payment } from "@/lib/payments/payment";
 import { fetchPayment } from "@/lib/payments/status";
+import { grantKitWorkshops } from "@/lib/workshops/kit-access";
 
 type ProductOrder = NonNullable<
   Awaited<ReturnType<typeof getProductOrderById>>

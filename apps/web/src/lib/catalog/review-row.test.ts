@@ -15,6 +15,9 @@ const row: ReviewRow = {
   reviewedAt: new Date("2026-09-03T17:30:58Z"),
   published: true,
   showPhotos: true,
+  workshopSlug: null,
+  userId: null,
+  publishConsentAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),
 };
@@ -32,6 +35,16 @@ test("maps a row to a storefront review", () => {
     photos: row.photos,
     source: "ozon",
   });
+});
+
+test("a workshop review keeps its workshop", () => {
+  const review = reviewRowToReview({
+    ...row,
+    source: "site",
+    workshopSlug: "elka-makrame",
+    userId: "u-1",
+  });
+  assert.equal(review.workshopSlug, "elka-makrame");
 });
 
 test("a review without links belongs to no product", () => {

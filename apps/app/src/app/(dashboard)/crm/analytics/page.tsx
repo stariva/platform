@@ -88,7 +88,7 @@ function TotalsHead({ first }: { first: string }) {
       <TableHead className="text-right">Доля</TableHead>
       <TableHead className="text-right">Средний чек</TableHead>
       <TableHead className="text-right">Комиссии</TableHead>
-      <TableHead className="text-right">Чистыми</TableHead>
+      <TableHead className="text-right">После комиссий</TableHead>
     </TableRow>
   );
 }
@@ -121,6 +121,11 @@ export default async function CrmAnalyticsPage({
             вручную. Выручка — деньги, поступившие за период (предоплата и
             доплата — в свои дни), без возвратов и отменённых заказов.
             «Оформлено» — заказы, созданные за период, без брошенных корзин.
+            Сколько из этого осталось — на странице{" "}
+            <Link href="/crm/profit" className="underline">
+              «Прибыль»
+            </Link>
+            .
           </p>
         </div>
 
@@ -137,7 +142,7 @@ export default async function CrmAnalyticsPage({
             value={rubles.format(totals.revenue)}
             hint={
               totals.fees > 0
-                ? `Чистыми ${rubles.format(totals.net)} после комиссий площадок`
+                ? `${rubles.format(totals.net)} после комиссий площадок`
                 : "Поступило денег за период"
             }
           />

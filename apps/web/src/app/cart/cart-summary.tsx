@@ -2,6 +2,7 @@
 
 import {
   ArrowRightIcon,
+  CalendarClockIcon,
   LockKeyholeIcon,
   PackageCheckIcon,
   RulerIcon,
@@ -27,7 +28,7 @@ const COPY: Record<
     checkoutLabel: string;
     checkoutHref: string;
     unavailable: (count: number) => string;
-    perks: { Icon: typeof TruckIcon; text: string }[];
+    perks: (leadTime: string) => { Icon: typeof TruckIcon; text: string }[];
   }
 > = {
   stock: {
@@ -40,7 +41,7 @@ const COPY: Record<
       count === 1
         ? "Одного изделия уже нет в наличии."
         : `${count} ${pluralItems(count)} уже нет в наличии.`,
-    perks: [
+    perks: () => [
       { Icon: PackageCheckIcon, text: `Отправим за ${IN_STOCK_SHIP_DAYS}` },
       { Icon: TruckIcon, text: "Доставка в пункт выдачи Ozon по всей России" },
       { Icon: LockKeyholeIcon, text: "Безопасная онлайн-оплата через ЮKassa" },
@@ -56,7 +57,7 @@ const COPY: Record<
       count === 1
         ? "Одно изделие снято с продажи."
         : `${count} ${pluralItems(count)} сняты с продажи.`,
-    perks: [
+    perks: (leadTime) => [
       {
         Icon: RulerIcon,
         text: "Сейчас без оплаты: мастер свяжется и согласует мерки, цену и доставку",
@@ -67,7 +68,7 @@ const COPY: Record<
       },
       {
         Icon: PackageCheckIcon,
-        text: `Сплетём вручную, обычно за ${MADE_TO_ORDER_DAYS}`,
+        text: `Сплетём вручную, обычно за ${leadTime}`,
       },
     ],
   },
@@ -82,8 +83,12 @@ interface CartSummaryProps {
   unavailableCount: number;
   checking: boolean;
   onRemoveUnavailable: () => void;
+  /** Срок изготовления изделий под заказ: из изделий в корзине, иначе общий */
+  leadTime?: string;
   /** Кнопка оформления — по ней мобильная панель понимает, что итог на экране */
   ctaRef?: Ref<HTMLDivElement>;
+  /** «18 ноября»: в заказе есть товар, который отправим не сразу */
+  shipsFrom?: string | null;
 }
 
 export function CartSummary({
@@ -93,10 +98,17 @@ export function CartSummary({
   unavailableCount,
   checking,
   onRemoveUnavailable,
+  leadTime = MADE_TO_ORDER_DAYS,
   ctaRef,
+  shipsFrom,
 }: CartSummaryProps) {
   const blocked = unavailableCount > 0 || count === 0;
   const copy = COPY[kind];
+  // Дату отправки показываем отдельной плашкой над кнопкой, в списке она лишняя
+  const allPerks = copy.perks(leadTime);
+  const perks = shipsFrom
+    ? allPerks.filter((perk) => perk.Icon !== PackageCheckIcon)
+    : allPerks;
 
   return (
     <aside className="lg:sticky lg:top-28 space-y-4">
@@ -124,6 +136,22 @@ export function CartSummary({
             {formatPrice(subtotal / 100)}
           </span>
         </div>
+
+        {shipsFrom && (
+          <div
+            role="note"
+            className="mt-5 flex items-center gap-3 rounded-xl border border-terracotta/40 bg-terracotta/10 px-4 py-3"
+          >
+            <CalendarClockIcon
+              className="size-6 shrink-0 text-terracotta"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+            <p className="text-sm font-semibold leading-snug text-espresso">
+              Заказ отправим с {shipsFrom}
+            </p>
+          </div>
+        )}
 
         {unavailableCount > 0 && (
           <div className="mt-5 rounded-xl bg-parchment px-4 py-3 text-sm text-espresso">
@@ -160,7 +188,7 @@ export function CartSummary({
       </div>
 
       <ul className="px-1 space-y-3 text-[13px] text-taupe">
-        {copy.perks.map(({ Icon, text }) => (
+        {perks.map(({ Icon, text }) => (
           <li key={text} className="flex gap-3">
             <Icon
               className="size-4 shrink-0 mt-px text-espresso"

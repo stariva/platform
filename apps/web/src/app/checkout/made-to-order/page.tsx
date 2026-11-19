@@ -1,7 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ItemsUnavailableError } from "@stariva/web-api/contract";
+import {
+  ItemsUnavailableError,
+  type MadeToOrderContactChannel,
+  madeToOrderContactChannelSchema,
+  normalizeTelegramHandle,
+  TELEGRAM_HANDLE_ERROR,
+} from "@stariva/web-api/contract";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +22,12 @@ import {
 } from "@/components/stariva/consent-checkbox";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
+import {
+  MailIcon,
+  MaxIcon,
+  TelegramIcon,
+  WhatsappIcon,
+} from "@/components/stariva/icons";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -30,24 +42,51 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { reachGoal } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
+import { useCartValidation } from "@/lib/cart/use-cart-validation";
 import { rememberOrderPhone } from "@/lib/commerce/order-phone";
-import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
+import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
+import { cn } from "@/lib/utils";
 import { formErrorMessage, webApi } from "@/lib/web-api";
 
-const formSchema = z.object({
-  name: z.string().trim().min(1, "Введите имя").max(120),
-  phone: z.string().trim().min(5, "Введите телефон").max(32),
-  email: z
-    .string()
-    .trim()
-    .email("Некорректный email")
-    .optional()
-    .or(z.literal("")),
-  delivery: z.string().trim().max(1000).optional(),
-  notes: z.string().trim().max(1500).optional(),
-  personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
-});
+const CONTACT_CHANNELS = [
+  { id: "telegram", label: "Telegram", Icon: TelegramIcon },
+  { id: "whatsapp", label: "WhatsApp", Icon: WhatsappIcon },
+  { id: "max", label: "MAX", Icon: MaxIcon },
+  { id: "email", label: "Email", Icon: MailIcon },
+] as const satisfies readonly {
+  id: MadeToOrderContactChannel;
+  label: string;
+  Icon: typeof TelegramIcon;
+}[];
+
+const formSchema = z
+  .object({
+    name: z.string().trim().min(1, "Введите имя").max(120),
+    phone: z.string().trim().min(5, "Введите телефон").max(32),
+    email: z
+      .string()
+      .trim()
+      .min(1, "Введите email")
+      .email("Некорректный email"),
+    preferredContactChannel: madeToOrderContactChannelSchema,
+    contactMessenger: z.string().trim().optional(),
+    notes: z.string().trim().max(1500).optional(),
+    personalDataConsent: z.boolean().refine((v) => v, PD_CONSENT_ERROR),
+  })
+  .superRefine((data, ctx) => {
+    if (data.preferredContactChannel !== "telegram") return;
+    if (
+      (data.contactMessenger?.length ?? 0) <= 120 &&
+      normalizeTelegramHandle(data.contactMessenger ?? "")
+    )
+      return;
+    ctx.addIssue({
+      code: "custom",
+      path: ["contactMessenger"],
+      message: TELEGRAM_HANDLE_ERROR,
+    });
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -59,6 +98,11 @@ export default function MadeToOrderCheckoutPage() {
   );
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const [submitting, setSubmitting] = useState(false);
+  // Срок — из изделий в заказе: у кого в каталоге свой срок, берём его, иначе общий
+  const { leadTimes } = useCartValidation();
+  const leadTime = madeToOrderLeadTimeOf(
+    items.map((item) => ({ leadTimeDays: leadTimes.get(cartLineKey(item)) })),
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -66,11 +110,12 @@ export default function MadeToOrderCheckoutPage() {
       name: "",
       phone: "",
       email: "",
-      delivery: "",
+      contactMessenger: "",
       notes: "",
       personalDataConsent: false,
     },
   });
+  const contactChannel = form.watch("preferredContactChannel");
 
   const checkoutTracked = useRef(false);
   useEffect(() => {
@@ -138,8 +183,13 @@ export default function MadeToOrderCheckoutPage() {
       const requested = await webApi.checkout.requestMadeToOrder({
         contactName: data.name,
         contactPhone: data.phone,
-        contactEmail: data.email || undefined,
-        deliveryNote: data.delivery || undefined,
+        contactEmail: data.email,
+        preferredContactChannel: data.preferredContactChannel,
+        contactMessenger:
+          data.preferredContactChannel === "telegram"
+            ? (normalizeTelegramHandle(data.contactMessenger ?? "") ??
+              undefined)
+            : undefined,
         customerNotes: data.notes || undefined,
         items: items.flatMap((item) =>
           item.options
@@ -161,6 +211,7 @@ export default function MadeToOrderCheckoutPage() {
       reachGoal("made_to_order_request", {
         order_id: requested.orderId,
         order_price: requested.estimate,
+        contact_channel: data.preferredContactChannel,
       });
       rememberOrderPhone(requested.orderId, data.phone);
       clear("made_to_order", requested.orderId);
@@ -195,13 +246,14 @@ export default function MadeToOrderCheckoutPage() {
               вами.
             </li>
             <li>
-              Вместе уточните мерки, цвет, итоговую цену и доставку. После
-              согласования на странице заказа откроется предоплата 50%.
+              Вместе уточните мерки, цвет и итоговую цену. После согласования на
+              странице заказа откроется предоплата 50%.
             </li>
             <li>
-              Изделие плетётся вручную, обычно за {MADE_TO_ORDER_DAYS}. Когда
-              оно готово — доплата остатка и доставки, и мастер отправляет
-              заказ.
+              Изделие плетётся вручную, обычно за {leadTime}. Когда оно готово,
+              вы выбираете на странице заказа пункт выдачи Ozon, и сайт сразу
+              считает доставку. Вы вносите доплату — остаток и доставку, и
+              мастер отправляет заказ.
             </li>
           </ol>
 
@@ -239,7 +291,7 @@ export default function MadeToOrderCheckoutPage() {
               </span>
             </div>
             <p className="text-xs text-taupe">
-              Итоговую цену и доставку согласует мастер.
+              Итоговую цену согласует мастер, доставку посчитает Ozon.
             </p>
           </div>
 
@@ -283,6 +335,10 @@ export default function MadeToOrderCheckoutPage() {
                         {...field}
                       />
                     </FormControl>
+                    <p className="text-xs text-taupe">
+                      Лучше тот, что в приложении Ozon: там будет штрихкод для
+                      получения заказа.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -292,7 +348,7 @@ export default function MadeToOrderCheckoutPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (необязательно)</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
@@ -301,27 +357,117 @@ export default function MadeToOrderCheckoutPage() {
                         {...field}
                       />
                     </FormControl>
+                    <p className="text-xs text-taupe">
+                      Пришлём статус заказа и чек.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="delivery"
-                render={({ field }) => (
+                name="preferredContactChannel"
+                render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>Город и доставка (необязательно)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Например, Казань, пункт выдачи Ozon"
-                        disabled={submitting}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
+                    <fieldset
+                      disabled={submitting}
+                      aria-invalid={!!fieldState.error}
+                      aria-describedby={
+                        fieldState.error ? "contact-channel-error" : undefined
+                      }
+                      className="space-y-2"
+                    >
+                      <legend className="text-sm font-medium leading-none">
+                        Где удобнее ответить? (обязательно)
+                      </legend>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {CONTACT_CHANNELS.map(({ id, label, Icon }) => {
+                          const selected = field.value === id;
+                          return (
+                            <label
+                              key={id}
+                              className={cn(
+                                "flex cursor-pointer flex-col items-center gap-2 rounded-xl border px-3 py-3 text-center transition-colors focus-within:ring-2 focus-within:ring-terracotta/40",
+                                selected
+                                  ? "border-terracotta bg-terracotta/5 text-espresso"
+                                  : "border-espresso/15 bg-white text-espresso hover:border-espresso/30",
+                                submitting && "cursor-not-allowed opacity-60",
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name={field.name}
+                                required
+                                value={id}
+                                checked={selected}
+                                onChange={() => field.onChange(id)}
+                                onBlur={field.onBlur}
+                                className="sr-only"
+                              />
+                              <span
+                                className={cn(
+                                  "flex size-9 items-center justify-center rounded-full transition-colors",
+                                  selected
+                                    ? "bg-terracotta text-parchment"
+                                    : "bg-sand text-espresso",
+                                )}
+                              >
+                                <Icon className="size-5" />
+                              </span>
+                              <span className="text-sm font-medium">
+                                {label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                    <p className="text-xs text-taupe">
+                      {contactChannel === "telegram" &&
+                        "Напишем в Telegram — укажите ник ниже."}
+                      {contactChannel === "whatsapp" &&
+                        "Напишем на номер из заявки — проверьте, что он привязан к WhatsApp."}
+                      {contactChannel === "max" &&
+                        "Напишем на номер из заявки в MAX."}
+                      {contactChannel === "email" &&
+                        "Напишем на email из заявки — проверьте адрес."}
+                    </p>
+                    <FormMessage id="contact-channel-error" />
                   </FormItem>
                 )}
               />
+              {contactChannel === "telegram" && (
+                <FormField
+                  control={form.control}
+                  name="contactMessenger"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ник в Telegram</FormLabel>
+                      <FormControl>
+                        <Input
+                          autoComplete="off"
+                          placeholder="@anna_star"
+                          disabled={submitting}
+                          {...field}
+                          onBlur={() => {
+                            const normalized = normalizeTelegramHandle(
+                              field.value ?? "",
+                            );
+                            if (normalized) field.onChange(normalized);
+                            field.onBlur();
+                          }}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-taupe">
+                        Например, @anna_star. Посмотреть ник: Telegram →
+                        Настройки → Имя пользователя. Если ника нет, выберите
+                        WhatsApp — напишем на телефон.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="notes"

@@ -28,6 +28,14 @@ const idleServices: WebServices = {
     failed: 0,
   }),
   runNpdIssuingSweep: async () => ({ checked: 0 }),
+  syncEmailEvents: async () => ({
+    configured: false,
+    read: 0,
+    stored: 0,
+    rejected: 0,
+    suppressed: 0,
+    updated: 0,
+  }),
   issueFormToken: async () => "form-token",
   subscribeToNewsletter: async () => {},
   customOrders: {
@@ -50,6 +58,7 @@ const idleServices: WebServices = {
   orders: {
     view: async () => null,
     updateDetails: async () => "not_found",
+    updateDeliveryPoint: async () => "not_found",
     startPayment: async () => ({ status: "not_found" }),
   },
   checkout: {
@@ -59,6 +68,7 @@ const idleServices: WebServices = {
     requestMadeToOrder: async () => ({ status: "check_failed" }),
   },
   revalidatePaths: () => {},
+  notifyWorkshopReview: () => {},
 };
 
 let lastResponseStatus = 0;

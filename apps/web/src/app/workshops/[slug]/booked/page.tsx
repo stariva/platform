@@ -3,11 +3,14 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CommunityInvite } from "@/components/stariva/community-invite";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
+import { SupportChatCard } from "@/components/stariva/support-chat";
 import { getSession } from "@/lib/auth/session";
 import { getOrderById } from "@/lib/payments/orders";
 import { clientBotStartUrl } from "@/lib/telegram/client-bot";
+import { bundleExtraFor, getBundle } from "@/lib/workshops/bundles";
 import { workshopCalendarLinks } from "@/lib/workshops/notifications";
 import {
   cookieMatchesOrder,
@@ -15,6 +18,7 @@ import {
 } from "@/lib/workshops/order-cookie";
 import { syncPendingWorkshopOrder } from "@/lib/workshops/order-payment";
 import { earnsPreorderBonus } from "@/lib/workshops/preorder-bonus";
+import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   formatReleaseDateTime,
@@ -128,7 +132,7 @@ const secondaryButton =
  * Показывает подтверждение оплаты, способы входа в кабинет и подготовки к
  * старту; подарок отображается, если заказ оформлен до выхода основного курса.
  */
-function Paid({
+async function Paid({
   workshop,
   order,
   isOwner,
@@ -155,13 +159,17 @@ function Paid({
     orderedAt: order.createdAt,
     releaseAt: workshop.releaseAt ? new Date(workshop.releaseAt) : null,
   });
+  const bundle = getBundle(order.bundleSlug);
+  const bundleExtra = bundleExtraFor(order.bundleSlug);
+  const supportChat = await getSupportChatUrl(workshop.slug);
 
   return (
     <div className="flex flex-col gap-5">
       <PaidGoal
         orderId={order.id}
-        slug={workshop.slug}
+        slug={bundle?.slug ?? workshop.slug}
         price={order.amount / 100}
+        bundleGoal={bundle?.paidGoal}
       />
       <div>
         <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-sage/20 px-4 py-2 text-sm text-espresso">
@@ -211,10 +219,10 @@ function Paid({
             </Link>
           ) : (
             <Link
-              href={`/magic-link?callbackURL=${encodeURIComponent(`/account/workshops/${workshop.slug}`)}`}
+              href={`/sign-in?callbackURL=${encodeURIComponent(`/account/workshops/${workshop.slug}`)}`}
               className={secondaryButton}
             >
-              Письмо не пришло? Получить новую ссылку
+              Письмо не пришло? Войти по коду
             </Link>
           )}
         </div>
@@ -300,6 +308,27 @@ function Paid({
         </Card>
       ) : null}
 
+      {bundleExtra ? (
+        <Card>
+          <div className="flex gap-4">
+            <Gift
+              className="mt-0.5 size-5 shrink-0 text-terracotta"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <h2 className="mb-1 font-serif text-xl text-espresso">
+                Второй мастер-класс комбо
+              </h2>
+              <p className="text-sm leading-relaxed text-dark-grey">
+                {bundleExtra.releaseLabel
+                  ? `Вы также оплатили ${bundleExtra.title}. Он откроется в вашем кабинете ${bundleExtra.releaseLabel}, войти можно по той же ссылке из письма.`
+                  : `Вы также оплатили ${bundleExtra.title}. Он уже открыт в вашем кабинете.`}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       {preorder && workshop.materials.length > 0 ? (
         <Card>
           <h2 className="mb-3 font-serif text-xl text-espresso">
@@ -315,6 +344,15 @@ function Paid({
           </ul>
         </Card>
       ) : null}
+
+      {supportChat ? <SupportChatCard href={supportChat} /> : null}
+
+      <CommunityInvite
+        source="workshop_booked"
+        title="Плетите вместе с другими участницами"
+        text="В Stariva Community делятся работами по мастер-классам, задают вопросы мастеру и первыми узнают о новых уроках."
+        className="rounded-[24px] border-0 bg-white lg:p-8 lg:pr-14"
+      />
     </div>
   );
 }
@@ -354,14 +392,14 @@ function Unknown({ slug }: { slug: string }) {
       <Heading>Спасибо!</Heading>
       <p className="mb-6 text-dark-grey leading-relaxed">
         Если оплата прошла, в течение пары минут на ваш email придёт письмо со
-        ссылкой на уроки. Ссылку для входа можно запросить и сейчас.
+        ссылкой на уроки. Войти можно и сейчас — по коду из письма.
       </p>
       <div className="flex flex-col gap-3">
         <Link
-          href={`/magic-link?callbackURL=${encodeURIComponent(`/account/workshops/${slug}`)}`}
+          href={`/sign-in?callbackURL=${encodeURIComponent(`/account/workshops/${slug}`)}`}
           className={primaryButton}
         >
-          Запросить ссылку для входа
+          Войти по коду
         </Link>
         <Link href={`/workshops/${slug}`} className={secondaryButton}>
           К мастер-классу

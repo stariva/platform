@@ -15,6 +15,10 @@ import { PhotoshootsTeaser } from "@/components/stariva/photoshoots-teaser";
 import { Process } from "@/components/stariva/process";
 import { ProductCardImages } from "@/components/stariva/product-card-images";
 import { Reviews } from "@/components/stariva/reviews";
+import {
+  WorkshopsStrip,
+  WorkshopsTeaser,
+} from "@/components/stariva/workshops-teaser";
 import { getFeaturedProducts } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
 import { getHomeCopy } from "@/lib/home-portfolio";
@@ -25,12 +29,12 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Одежда макраме по вашим меркам — ручная работа | Stariva",
   description:
-    "Платья, топы и туники макраме ручной работы по вашим меркам. Выберите образ — обсудим цвет, плетение, стоимость и срок с мастером Stariva.",
+    "Платья, топы и туники макраме ручной работы по вашим меркам. Выберите образ — цвет, плетение, стоимость и срок обсудим с Ольгой.",
   alternates: { canonical: SITE_URL },
   openGraph: {
     title: "Stariva — сплетено для вас",
     description:
-      "Одежда макраме по вашим меркам. Вы выбираете образ — мы плетём вручную.",
+      "Одежда макраме по вашим меркам. Вы выбираете образ — Ольга плетёт его вручную.",
     url: SITE_URL,
     images: [
       {
@@ -71,7 +75,7 @@ const homeFaq = [
   {
     question: "Из чего сделаны изделия?",
     answer:
-      "Материал зависит от модели: используем хлопковый и другие виды шнура. Состав указан в карточке изделия. Для индивидуального заказа материал, фактуру и оттенок согласуем с вами заранее.",
+      "Материал зависит от модели: Ольга плетёт из хлопкового и других видов шнура. Состав указан в карточке изделия. Для индивидуального заказа материал, фактуру и оттенок согласуем с вами заранее.",
   },
 ];
 
@@ -145,7 +149,10 @@ export default function Page() {
       <BreadcrumbJsonLd items={[{ name: "Главная", href: "/" }]} />
       <Header variant="solid" />
       <HomeOrderProvider>
-        <Hero />
+        <Hero announcement={<WorkshopsStrip />} />
+        <Suspense fallback={null}>
+          <WorkshopsTeaser />
+        </Suspense>
         <section id="examples" className="scroll-mt-24 py-14 lg:py-24">
           <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
             <p className="label-caps text-terracotta mb-4">Примеры работ</p>

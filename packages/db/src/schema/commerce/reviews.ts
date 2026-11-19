@@ -9,7 +9,9 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { user } from "../auth/user";
 import { products } from "./products";
 
 export const reviewSource = pgEnum("review_source", [
@@ -54,6 +56,15 @@ export const reviews = pgTable(
     published: boolean("published").notNull().default(false),
     showPhotos: boolean("show_photos").notNull().default(true),
 
+    // Отзыв о мастер-классе, оставленный купившим в кабинете. Автор — всегда
+    // покупатель этого мастер-класса: один отзыв на курс, его можно править.
+    workshopSlug: text("workshop_slug"),
+    userId: text("user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    // Когда автор согласился показать на сайте имя, текст и фото (152-ФЗ)
+    publishConsentAt: timestamp("publish_consent_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -65,6 +76,11 @@ export const reviews = pgTable(
   (table) => [
     index("reviews_listing_idx").on(table.published, table.reviewedAt),
     index("reviews_product_offer_id_idx").on(table.productOfferId),
+    // NULL не совпадают: отзывы без автора (с маркетплейсов) не мешают друг другу
+    uniqueIndex("reviews_user_workshop_uq").on(
+      table.userId,
+      table.workshopSlug,
+    ),
     check("reviews_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
   ],
 );

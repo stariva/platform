@@ -8,11 +8,16 @@ import {
 } from "@stariva/storage";
 
 /**
- * Столько живут файлы, на которые никто не ссылается. Покрывает форму,
- * в которую видео загрузили, но ещё не сохранили, и зрителей, досматривающих
- * заменённое видео (ссылки на HLS живут 6 часов).
+ * Столько живёт файл, на который никто не ссылается: его могли загрузить
+ * в форму, которую ещё не сохранили.
  */
-export const STORAGE_SWEEP_GRACE_MS = 3 * 24 * 60 * 60_000;
+export const STORAGE_SWEEP_FILE_GRACE_MS = 3 * 24 * 60 * 60_000;
+
+/**
+ * Столько после сохранения курса или перерезки не трогаем его прежние видео
+ * и нарезки: их досматривают по выданным ссылкам (HLS живут 6 часов).
+ */
+export const STORAGE_SWEEP_CHANGE_GRACE_MS = 12 * 60 * 60_000;
 
 export interface WorkshopStorageSweepResult {
   deleted: number;
@@ -67,7 +72,11 @@ export async function sweepWorkshopStorage({
       })),
       renditions,
     },
-    { now, graceMs: STORAGE_SWEEP_GRACE_MS },
+    {
+      now,
+      fileGraceMs: STORAGE_SWEEP_FILE_GRACE_MS,
+      changeGraceMs: STORAGE_SWEEP_CHANGE_GRACE_MS,
+    },
   );
 
   if (!dryRun) {

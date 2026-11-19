@@ -5,6 +5,10 @@
   background: var(--hero-paper);
   color: var(--hero-ink);
 }
+/* Строка над фото забирает отступ под шапку, пока она видна (до lg). */
+.announcement { padding-top: 60px; background: var(--hero-paper, #eee8dc); }
+@media (max-width: 1023px) { .hero[data-announced="true"] { padding-top: 0; } }
+@media (min-width: 1024px) { .announcement { display: none; } }
 .stage { position: relative; isolation: isolate; overflow: hidden; }
 .photos { position: relative; height: 290px; touch-action: pan-y pinch-zoom; }
 .photo { position: absolute; inset: 0; opacity: 0; transition: opacity 500ms ease; }

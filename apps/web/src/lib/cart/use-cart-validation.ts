@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { KitAccessMode } from "@/lib/commerce/elka-kit-bundle";
 import { formatPrice } from "@/lib/products";
-import { type CartItem, cartLineKey, useCart } from "./cart-context";
+import { cartLineKey, type PricedCartItem, useCart } from "./cart-context";
 import {
   type CartValidationLine,
   cartValidationResponseSchema,
@@ -23,17 +24,30 @@ export type CartLineState =
  * удалось, корзина работает как раньше — окончательное слово за сервером
  * при оформлении. Состояния отдаются по ключу строки корзины (`cartLineKey`).
  */
-export function useCartValidation() {
-  const { items, hydrated, syncWithCatalog } = useCart();
+export function useCartValidation(kitAccessMode?: KitAccessMode) {
+  const { items, hydrated, syncWithCatalog, setUnavailableKeys } = useCart();
   const [lines, setLines] = useState<Map<string, CartValidationLine>>(
     () => new Map(),
   );
+
+  // Проданное изделие не входит в комплект: оставшееся стоит без скидки сразу,
+  // а не после того, как покупатель уберёт проданное из корзины
+  useEffect(() => {
+    const unavailable = new Set<string>();
+    for (const [key, line] of lines) if (!line.available) unavailable.add(key);
+    setUnavailableKeys(unavailable);
+  }, [lines, setUnavailableKeys]);
+  useEffect(() => () => setUnavailableKeys(new Set()), [setUnavailableKeys]);
   const [loading, setLoading] = useState(false);
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [notices, setNotices] = useState<string[]>([]);
 
-  const itemsRef = useRef<CartItem[]>(items);
+  const itemsRef = useRef<PricedCartItem[]>(items);
   itemsRef.current = items;
-  const checked = useRef(new Set<string>());
+  const checked = useRef({
+    kitAccessMode,
+    keys: new Set<string>(),
+  });
 
   // Проверяем товар, а не строку: размеры и цвета одного изделия на цену не влияют
   const productKey = useMemo(
@@ -53,15 +67,19 @@ export function useCartValidation() {
     [items],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshAttempt запускает повторную проверку после изменения цены на сервере
   useEffect(() => {
     if (!hydrated) return;
+    if (checked.current.kitAccessMode !== kitAccessMode) {
+      checked.current = { kitAccessMode, keys: new Set() };
+    }
+    const checkedKeys = checked.current.keys;
     const keys = productKey ? productKey.split("\n") : [];
     const currentKeys = new Set(keys);
-    for (const key of checked.current) {
-      if (!currentKeys.has(key)) checked.current.delete(key);
+    for (const key of checkedKeys) {
+      if (!currentKeys.has(key)) checkedKeys.delete(key);
     }
-    if (keys.length === 0 || keys.every((key) => checked.current.has(key)))
-      return;
+    if (keys.length === 0 || keys.every((key) => checkedKeys.has(key))) return;
 
     const requestLines = keys.map((key) => {
       const separator = key.indexOf(":");
@@ -78,7 +96,7 @@ export function useCartValidation() {
         const res = await fetch("/api/cart/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lines: requestLines }),
+          body: JSON.stringify({ lines: requestLines, kitAccessMode }),
           signal: AbortSignal.any([
             controller.signal,
             AbortSignal.timeout(VALIDATION_TIMEOUT_MS),
@@ -86,9 +104,9 @@ export function useCartValidation() {
         });
         if (!res.ok) return;
         const parsed = cartValidationResponseSchema.safeParse(await res.json());
-        if (!parsed.success) return;
+        if (!parsed.success || controller.signal.aborted) return;
 
-        for (const key of keys) checked.current.add(key);
+        for (const key of keys) checkedKeys.add(key);
         setLines((prev) => {
           const next = new Map(prev);
           for (const line of parsed.data.lines) {
@@ -113,7 +131,7 @@ export function useCartValidation() {
       controller.abort();
       setLoading(false);
     };
-  }, [hydrated, productKey, syncWithCatalog]);
+  }, [hydrated, kitAccessMode, productKey, refreshAttempt, syncWithCatalog]);
 
   const states = useMemo(() => {
     const map = new Map<string, CartLineState>();
@@ -131,9 +149,26 @@ export function useCartValidation() {
     return map;
   }, [items, lines]);
 
+  // Срок изготовления из каталога по ключу строки; у изделий без своего срока записи нет
+  const leadTimes = useMemo(() => {
+    const map = new Map<string, { min: number; max: number }>();
+    for (const item of items) {
+      const line = lines.get(validationLineKey(item));
+      if (line?.available && line.leadTimeDays) {
+        map.set(cartLineKey(item), line.leadTimeDays);
+      }
+    }
+    return map;
+  }, [items, lines]);
+
   return {
     states,
+    leadTimes,
     loading,
+    refresh: () => {
+      checked.current.keys.clear();
+      setRefreshAttempt((attempt) => attempt + 1);
+    },
     notices,
     dismissNotices: () => setNotices([]),
   };
@@ -141,7 +176,7 @@ export function useCartValidation() {
 
 /** Что изменилось в корзине из-за новых цен и остатков — по-русски, для покупателя. */
 function describeChanges(
-  items: CartItem[],
+  items: PricedCartItem[],
   fresh: Extract<CartValidationLine, { available: true }>[],
 ): string[] {
   const messages: string[] = [];
@@ -150,9 +185,11 @@ function describeChanges(
     const matching = items.filter((item) => validationLineKey(item) === key);
     const [item] = matching;
     if (!item) continue;
-    if (item.price !== line.price) {
+    // Цена в корзине может быть ниже каталожной из-за комплекта — это не изменение
+    const cartPrice = item.listPrice ?? item.price;
+    if (cartPrice !== line.price) {
       messages.push(
-        `«${line.name}»: цена изменилась с ${formatPrice(item.price / 100)} на ${formatPrice(line.price / 100)}`,
+        `«${line.name}»: цена изменилась с ${formatPrice(cartPrice / 100)} на ${formatPrice(line.price / 100)}`,
       );
     }
     if (matching.some((i) => i.quantity > line.maxQuantity)) {

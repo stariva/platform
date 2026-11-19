@@ -15,7 +15,7 @@ const contacts = {
   email: "info@stariva.ru",
 };
 
-const requisites = `Самозанятая Карпычева О. А. · ИНН ${SELLER_INN}`;
+const requisites = `Самозанятая Карпычева Ольга Александровна · ИНН ${SELLER_INN}`;
 
 /** Где на базе отдыха обычно висит каждое изделие. */
 const usage: Record<string, string> = {

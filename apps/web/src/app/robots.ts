@@ -16,6 +16,7 @@ export default function robots(): MetadataRoute.Robots {
           "/magic-link",
           "/forgot-password",
           "/reset-password",
+          "/unsubscribe/",
         ],
       },
     ],

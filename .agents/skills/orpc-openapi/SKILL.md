@@ -1,5 +1,4 @@
 ---
-
 name: orpc-openapi
 description: "Expose an oRPC router as a spec-compliant OpenAPI HTTP API. Use when a project depends on @orpc/openapi, or for defining REST-style routes on oRPC procedures (openapi() metadata or .route with method, path, successStatus), serving them with OpenAPIHandler alongside RPCHandler, coercing query and path strings with Smart Coercion, calling an OpenAPI-shaped API with OpenAPILink, generating an OpenAPI 3.2 (or 3.1, 3.0) document with OpenAPIGenerator, or serving Scalar or Swagger docs with the OpenAPI Reference plugin. Biases toward retrieval from the oRPC docs over pre-trained knowledge. For contract-first work (defining contracts with oc, implementing them with implement, or generating a contract from an existing OpenAPI spec), use the orpc-contract skill; for plain RPC serving, core builder, middleware, or client work with no REST exposure, use the orpc skill instead."
 license: MIT
@@ -48,6 +47,7 @@ Compact mode (default): path params merge with query params or the request body 
 Set `inputStructure: 'detailed'` in the metadata to receive `{ params, query, headers, body }` instead (define only the fields you need in the input schema). Set `outputStructure: 'detailed'` to return `{ status?, headers?, body? }` and vary the status per response.
 
 Query strings and form data are decoded with bracket notation (fetch `openapi/bracket-notation` before designing schemas for nested query input; its limits are not guessable):
+
 - Repeated keys become arrays: `?color=red&color=blue` gives `['red', 'blue']`; `color[]=red` pushes too.
 - `[number]` targets an array index; `[key]` targets an object property: `?filter[status]=active` gives `{ filter: { status: 'active' } }`.
 - It cannot represent empty objects or arrays, root-level arrays, or objects whose keys are all numbers, and query/form values always arrive as strings (or files, in form data).
@@ -151,10 +151,12 @@ Contract-first workflows belong to the `orpc-contract` skill: defining the shape
 ## Full documentation
 
 If this skill and a fetched docs page disagree, trust the page: this skill is a summary and v2 is still moving. The docs are served at https://orpc.dev (the v1 docs stay at https://v1.orpc.dev):
+
 - https://orpc.dev/llms.txt : index of every page with descriptions
 - https://orpc.dev/llms-full.txt : the entire docs in one file (large; prefer single pages)
 - Append `.md` to any docs URL for that page's exact source markdown (for example https://orpc.dev/docs/openapi/routing.md)
 
 Pages to fetch when you need details beyond this skill:
+
 - OpenAPI: `openapi/routing`, `openapi/input-and-output-mapping`, `openapi/bracket-notation`, `openapi/serializer`, `openapi/handler`, `openapi/link`, `openapi/specification`, `openapi/scalar`
 - Plugins: `plugins/smart-coercion`, `plugins/openapi-reference`

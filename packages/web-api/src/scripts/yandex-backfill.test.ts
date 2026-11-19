@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 
 function run(...dates: string[]) {
   const env = {
@@ -11,7 +12,7 @@ function run(...dates: string[]) {
     [
       process.execPath,
       "--no-env-file",
-      new URL("./yandex-backfill.ts", import.meta.url).pathname,
+      fileURLToPath(new URL("./yandex-backfill.ts", import.meta.url)),
       ...dates,
     ],
     { env },

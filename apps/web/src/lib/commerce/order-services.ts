@@ -1,10 +1,18 @@
 import type { OrderServices } from "@stariva/web-api";
 import { baseEnv, env } from "@/env";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { getCachedPickupPointsInfo } from "@/lib/ozon-delivery/pickup-points-cache";
 import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
+import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { phonesMatch } from "@/lib/phone";
-import { isPaymentOverdue, madeToOrderPaymentStep } from "./made-to-order-flow";
+import {
+  isDeliveryQuoteRequiredToPay,
+  isPaymentOverdue,
+  madeToOrderPaymentStep,
+  needsDeliveryQuote,
+} from "./made-to-order-flow";
+import { priceMadeToOrderDelivery } from "./made-to-order-shipment";
 import {
   type MeasurementField,
   measurementFieldsBySlug,
@@ -17,9 +25,15 @@ import {
   findReusableOrderPayment,
   getProductCoverImages,
   getProductOrderById,
+  getProductOrderCustomerEmail,
   getProductOrderItems,
+  isDeliveryPointEditable,
   updateMadeToOrderDetails,
 } from "./orders";
+
+type ProductOrderRow = NonNullable<
+  Awaited<ReturnType<typeof getProductOrderById>>
+>;
 
 const STAGE_DESCRIPTIONS = {
   deposit: "Предоплата",
@@ -37,6 +51,44 @@ export function siteUrl(headers: Headers): string {
   return `${proto}://${host ?? "localhost:3000"}`;
 }
 
+/** Пункт, который выбрал покупатель; адреса нет, если Ozon тогда не ответил. */
+function deliveryPointView(
+  order: Pick<ProductOrderRow, "deliveryPointId" | "deliveryAddress">,
+) {
+  if (!order.deliveryPointId) return null;
+  const raw = (order.deliveryAddress ?? {}) as {
+    address?: unknown;
+    title?: unknown;
+  };
+  return {
+    id: order.deliveryPointId,
+    title: typeof raw.title === "string" ? raw.title : null,
+    address: typeof raw.address === "string" ? raw.address : null,
+  };
+}
+
+/**
+ * Ожидаемые даты доставки из расчёта Ozon при оформлении. Если заказ разбит
+ * на несколько отправлений, ориентируемся на самое позднее — как форма
+ * оформления, чтобы не обещать после оплаты срок раньше показанного до неё.
+ */
+export function deliveryDatesView(
+  order: Pick<ProductOrderRow, "checkoutSnapshot">,
+) {
+  const snapshot = order.checkoutSnapshot as DeliveryCheckoutResponse | null;
+  const methods = (snapshot?.splits ?? []).map((split) => split.deliveryMethod);
+  const latest = (dates: (string | undefined)[]) =>
+    dates
+      .filter((iso): iso is string => typeof iso === "string")
+      .filter((iso) => !Number.isNaN(new Date(iso).getTime()))
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+      .at(-1);
+  const from = latest(methods.map((method) => method?.logisticDateFrom));
+  const to = latest(methods.map((method) => method?.logisticDateTo));
+  if (!from || !to) return null;
+  return { from, to };
+}
+
 /**
  * Гостевые заказы для процедур orders.*: подтверждение телефоном вместо
  * аккаунта, чтобы нельзя было подобрать чужой заказ, зная только id.
@@ -48,9 +100,16 @@ export const orderServices: OrderServices = {
     // Вебхук мог потеряться: оплаченный заказ не должен висеть в «ожидает оплаты»
     const order = await syncPendingProductOrder(found);
 
-    const items = await getProductOrderItems(orderId);
+    const [items, email] = await Promise.all([
+      getProductOrderItems(orderId),
+      getProductOrderCustomerEmail(order),
+    ]);
     const covers = await getProductCoverImages(items.map((i) => i.productSlug));
-    const postings = await getPostingStatuses(order.ozonPostingNumbers);
+    // Посылка под заказ идёт через Delivery API, Seller API её статусы не знает
+    const postings =
+      order.kind === "stock"
+        ? await getPostingStatuses(order.ozonPostingNumbers)
+        : [];
     const fields =
       order.kind === "made_to_order"
         ? await measurementFieldsBySlug(items.map((item) => item.productSlug))
@@ -75,6 +134,11 @@ export const orderServices: OrderServices = {
       deliveryMethod: order.deliveryMethod,
       customerNotes: order.customerNotes,
       deliveryNote: order.deliveryNote,
+      deliveryPoint: deliveryPointView(order),
+      deliveryPointEditable: isDeliveryPointEditable(order),
+      deliveryQuoteNeeded: needsDeliveryQuote(order),
+      deliveryDates: deliveryDatesView(order),
+      hasEmail: Boolean(email),
       trackingNumber: order.trackingNumber,
       items: items.map((i) => ({
         id: i.id,
@@ -102,6 +166,37 @@ export const orderServices: OrderServices = {
     return "ok";
   },
 
+  async updateDeliveryPoint({ orderId, phone, pointId }) {
+    const order = await getProductOrderById(orderId);
+    if (
+      order?.kind !== "made_to_order" ||
+      !phonesMatch(order.contactPhone, phone)
+    ) {
+      return "not_found";
+    }
+    if (!isDeliveryPointEditable(order)) return "locked";
+
+    // Если Ozon не ответил, адрес пункта просто не покажем: выбор важнее
+    // адреса, а расчёт доставки ниже проверит пункт ещё раз
+    const info = await getCachedPickupPointsInfo([pointId]).catch(
+      (error: unknown) => {
+        console.warn("[orders] Не удалось получить адрес пункта:", error);
+        return null;
+      },
+    );
+    if (info?.unavailable.includes(pointId)) return "unavailable";
+
+    // Доставка до пункта входит в доплату: считаем её сразу, пока покупатель на странице
+    const priced = await priceMadeToOrderDelivery(
+      orderId,
+      pointId,
+      info?.points[0] ?? null,
+    );
+    if (priced !== "ok") return priced;
+    await notifyMadeToOrderDetailsUpdated(orderId);
+    return "ok";
+  },
+
   async startPayment({ orderId, phone, returnTo, headers }) {
     if (!isYooKassaConfigured()) return { status: "unavailable" };
 
@@ -118,6 +213,9 @@ export const orderServices: OrderServices = {
       return {
         status: isPaymentOverdue(order) ? "overdue" : "nothing_to_pay",
       };
+    }
+    if (isDeliveryQuoteRequiredToPay(order)) {
+      return { status: "delivery_point_required" };
     }
 
     const reusable = await findReusableOrderPayment(

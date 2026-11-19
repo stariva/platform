@@ -17,6 +17,7 @@ const complete = {
   syncedSlugs: ["vase"],
   failed: [],
   hidden: [123],
+  shown: [],
 };
 let body: unknown = complete;
 let calls = 0;

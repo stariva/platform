@@ -8,6 +8,7 @@ import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { DELIVERY_POINT_ANCHOR } from "@/lib/commerce/order-status";
 import { formatPrice } from "@/lib/products";
 import { formErrorMessage, webApi } from "@/lib/web-api";
 
@@ -71,11 +72,14 @@ export function MadeToOrderPayment({
   orderId,
   phone,
   terms,
+  deliveryQuoteNeeded = false,
   returnTo = "order",
 }: {
   orderId: string;
   phone: string;
   terms: MadeToOrderTerms;
+  /** Доставка ещё не посчитана: пока пункт не выбран, доплату не оплатить. */
+  deliveryQuoteNeeded?: boolean;
   /** Куда вернуть покупателя после оплаты: на гостевую страницу или в кабинет. */
   returnTo?: "order" | "account";
 }) {
@@ -86,16 +90,18 @@ export function MadeToOrderPayment({
       <div className="border-t border-espresso/8 pt-3 space-y-1">
         <Row label="По каталогу" value={money(terms.amountProducts)} strong />
         <p className="text-right text-xs text-taupe">
-          Итоговую цену и доставку согласует мастер
+          Итоговую цену согласует мастер, доставку посчитает Ozon
         </p>
       </div>
     );
   }
 
   const balance = terms.amountTotal - terms.depositAmount;
-  // Доплату выставляют, когда изделие готово; тогда же мастер уточняет доставку
+  // Доплату выставляют, когда изделие готово; доставку считает сайт, когда
+  // покупатель выберет пункт (или мастер назвала её сама)
   const balanceBilled = terms.status === "awaiting_balance" || terms.paid;
-  const deliveryKnown = balanceBilled || terms.amountDelivery > 0;
+  const deliveryKnown =
+    (balanceBilled && !deliveryQuoteNeeded) || terms.amountDelivery > 0;
 
   async function pay() {
     setPaying(true);
@@ -119,6 +125,7 @@ export function MadeToOrderPayment({
   }
 
   const step = terms.paymentStep;
+  const pointFirst = step?.type === "balance" && deliveryQuoteNeeded;
 
   return (
     <div className="border-t border-espresso/8 pt-3 space-y-3">
@@ -127,12 +134,20 @@ export function MadeToOrderPayment({
         <Row
           label="Доставка"
           value={
-            deliveryKnown
-              ? money(terms.amountDelivery)
-              : "уточним перед доплатой"
+            !deliveryKnown
+              ? balanceBilled
+                ? "выберите пункт — посчитаем"
+                : "посчитаем, когда изделие будет готово"
+              : terms.amountDelivery > 0
+                ? money(terms.amountDelivery)
+                : "бесплатно"
           }
         />
-        <Row label="Итого" value={money(terms.amountTotal)} strong />
+        <Row
+          label={deliveryKnown ? "Итого" : "Итого без доставки"}
+          value={money(terms.amountTotal)}
+          strong
+        />
       </div>
       <div className="rounded-xl bg-sand px-4 py-3 space-y-1.5">
         <Row
@@ -141,7 +156,15 @@ export function MadeToOrderPayment({
           done={terms.depositPaid}
         />
         <Row
-          label={balanceBilled ? "Доплата" : "Доплата, когда изделие готово"}
+          label={
+            balanceBilled
+              ? deliveryKnown
+                ? "Доплата"
+                : "Доплата без доставки"
+              : deliveryKnown
+                ? "Доплата, когда изделие готово"
+                : "Доплата без доставки, когда изделие готово"
+          }
           value={money(balance)}
           done={terms.paid}
         />
@@ -154,10 +177,22 @@ export function MadeToOrderPayment({
 
       {step && (
         <div className="space-y-2">
+          {pointFirst && (
+            <p className="rounded-xl border border-espresso/15 px-4 py-3 text-sm text-espresso">
+              Чтобы внести доплату,{" "}
+              <a
+                href={`#${DELIVERY_POINT_ANCHOR}`}
+                className="underline underline-offset-4"
+              >
+                выберите пункт выдачи Ozon
+              </a>
+              : сайт посчитает доставку, и она войдёт в доплату.
+            </p>
+          )}
           <Button
             type="button"
             onClick={pay}
-            disabled={paying}
+            disabled={paying || pointFirst}
             className="w-full bg-terracotta text-parchment hover:bg-terracotta-dark py-6"
           >
             {paying ? (

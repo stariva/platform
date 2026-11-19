@@ -1,5 +1,4 @@
 ---
-
 name: orpc-contract
 description: "Design oRPC v2 APIs contract-first, defining the API shape with oc from `@orpc/contract`, implementing it with implement from `@orpc/server`, and consuming the contract from typesafe clients. Use when a project depends on `@orpc/contract`, when defining a contract with oc, implementing a contract with implement, sharing an API contract between server and client packages, generating a contract from an existing OpenAPI spec, or publishing a typed API client to npm. Biases toward retrieval from the oRPC docs over pre-trained knowledge. For core builder, serving, and client work without a contract, use the orpc skill; for REST/OpenAPI exposure, spec generation, and OpenAPILink details, use the orpc-openapi skill."
 license: MIT
@@ -156,11 +155,13 @@ Then run `npx @hey-api/openapi-ts`. It writes `orpc.gen.ts` (one procedure contr
 ## Full documentation
 
 If this skill and a fetched docs page disagree, trust the page: this skill is a summary and v2 is still moving. The docs are served at https://orpc.dev (the v1 docs stay at https://v1.orpc.dev):
+
 - https://orpc.dev/llms.txt : index of every page with descriptions
 - https://orpc.dev/llms-full.txt : the entire docs in one file (large; prefer single pages)
 - Append `.md` to any docs URL for that page's exact source markdown (for example https://orpc.dev/docs/contract/procedure.md)
 
 Pages to fetch when you need details beyond this skill:
+
 - Contract: `contract/procedure`, `contract/router`, `contract/implementation`, `contract/generate-from-openapi`
 - Clients: `client/client-side`, `client/server-side`, `client/error-handling`, `openapi/link`
 - Workflows: `recipes/publish-client-to-npm`, `contract/client-factory`, `recipes/monorepo-setup`

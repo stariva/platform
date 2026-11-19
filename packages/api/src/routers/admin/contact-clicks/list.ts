@@ -20,8 +20,7 @@ import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
 import { moscowDay } from "../crm/model";
-import { daySchema } from "../crm/report";
-import { byId, rubles, sourceView } from "../crm/shape";
+import { byId, daySchema, rubles, sourceView } from "../crm/shape";
 import { clickSource, siteOf, summarize } from "./model";
 
 const DAY = 24 * 60 * 60 * 1000;

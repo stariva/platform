@@ -3,14 +3,17 @@
 import { ImageOffIcon, MinusIcon, PlusIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { type CartItem, MAX_CART_QUANTITY } from "@/lib/cart/cart-context";
+import {
+  MAX_CART_QUANTITY,
+  type PricedCartItem,
+} from "@/lib/cart/cart-context";
 import type { CartLineState } from "@/lib/cart/use-cart-validation";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
 interface CartItemRowProps {
-  item: CartItem;
+  item: PricedCartItem;
   state: CartLineState;
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
@@ -39,6 +42,9 @@ export function CartItemRow({
       item.options &&
       `Размер: ${item.options.size} · Цвет: ${item.options.color}`,
     item.quantity > 1 && `${formatPrice(item.price / 100)} за шт.`,
+    item.listPrice !== undefined &&
+      item.listPrice > item.price &&
+      `Цена в комплекте: вместо ${formatPrice(item.listPrice / 100)}`,
     madeToOrder
       ? atLimit && `Больше ${maxQuantity} шт. — напишите мастеру`
       : stockHint(item.quantity, maxQuantity),

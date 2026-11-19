@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Badge,
   Button,
   Table,
   TableBody,
@@ -10,10 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { useState } from "react";
 import {
   type AdminOrderView,
+  CONTACT_CHANNEL_LABELS,
   dateTime,
   KIND_LABELS,
   NEEDS_ATTENTION,
@@ -132,6 +133,8 @@ export function OrdersTable({ orders }: { orders: AdminOrderView[] }) {
                     {order.contactName}
                     <div className="text-muted-foreground text-xs">
                       {order.contactPhone}
+                      {order.preferredContactChannel &&
+                        ` · ${CONTACT_CHANNEL_LABELS[order.preferredContactChannel]}`}
                     </div>
                   </TableCell>
                   <TableCell className="max-w-[360px] text-sm whitespace-normal">

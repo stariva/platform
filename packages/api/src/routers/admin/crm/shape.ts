@@ -1,4 +1,5 @@
 import type { adCampaigns } from "@stariva/db/schema";
+import { z } from "zod";
 
 import type { Client, ClientSource, Deal } from "./model";
 import { sourceKey } from "./model";
@@ -6,6 +7,9 @@ import { sourceKey } from "./model";
 type CampaignRow = typeof adCampaigns.$inferSelect;
 
 export const rubles = (kopecks: number) => kopecks / 100;
+
+/** День по Москве в формате «2026-10-13». */
+export const daySchema = z.iso.date();
 
 /** Источник для админки: название кампании, канал или голая метка. */
 export function sourceView(

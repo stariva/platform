@@ -1,11 +1,11 @@
 import type { productOrders } from "@stariva/db/schema";
 import { sendOrderStatusEmail } from "@stariva/emails";
-import { baseEnv, env } from "@/env";
 import {
   deliverNotification,
   type Notification,
 } from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
+import { staffEmailDelivery } from "@/lib/email/staff-config";
 import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { siteUrl } from "@/lib/workshops/notifications";
 import { paymentOutcome } from "./made-to-order-flow";
@@ -16,10 +16,12 @@ import {
   formatOzonFailedMessage,
   formatPaidOrderMessage,
   type OrderMessage,
+  paymentNoticeId,
 } from "./order-message";
 import {
   claimPaymentNotification,
   claimStaffNotification,
+  countKitGiftCodes,
   getOrderPayment,
   getProductCoverImages,
   getProductOrderById,
@@ -48,9 +50,7 @@ function send(
   };
   return deliverNotification(notification, {
     ...telegramStaffConfig(),
-    emailKey: baseEnv.RESEND_API_KEY,
-    emailFrom: env.ORDER_EMAIL_FROM,
-    emailTo: env.ORDER_EMAIL_TO,
+    ...staffEmailDelivery(),
   });
 }
 
@@ -72,10 +72,11 @@ export async function notifyOrderPaid(orderId: string): Promise<void> {
   try {
     const order = await getProductOrderById(orderId);
     if (!order) return;
-    const message = formatPaidOrderMessage(
-      order,
-      await getProductOrderItems(orderId),
-    );
+    const [items, giftCodeCount] = await Promise.all([
+      getProductOrderItems(orderId),
+      order.gift ? countKitGiftCodes(order.number) : 0,
+    ]);
+    const message = formatPaidOrderMessage(order, items, giftCodeCount);
     if (!(await send(orderId, message, "order-paid"))) {
       throw new Error("staff_notification_failed");
     }
@@ -146,7 +147,8 @@ export async function notifyMadeToOrderPayment(
       payment,
     );
     const message = formatMadeToOrderPaymentMessage(order, payment, outcome);
-    if (!(await send(paymentId, message, "order-payment"))) {
+    const id = paymentNoticeId(order, payment, outcome);
+    if (!(await send(id, message, "order-payment"))) {
       throw new Error("staff_notification_failed");
     }
   } catch (error) {

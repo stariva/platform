@@ -83,6 +83,7 @@ test("payment link signs login, sum, invoice and password #1", () => {
     sha256("stariva:1490.00:1042:pass1"),
   );
   expect(params.getAll("PaymentMethods")).toEqual([
+    "BankCard",
     "YandexPay",
     "YandexPaySplit",
   ]);

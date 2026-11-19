@@ -1,4 +1,5 @@
 export * from "./access-codes";
+export * from "./app-releases";
 export * from "./catalog";
 export * from "./certificates";
 export * from "./course-access";

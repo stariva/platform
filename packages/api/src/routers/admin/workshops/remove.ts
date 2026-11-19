@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { courseAccess, eq, orders, workshops } from "@stariva/db";
+import { courseAccess, eq, orders, reviews, workshops } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -8,7 +8,8 @@ import { storefrontPaths } from "./mapping";
 
 /**
  * Удаляет мастер-класс, который никто не покупал и не получал. С покупателями
- * его только архивируют — иначе они потеряют курс. Файлы в бакете остаются.
+ * его только архивируют — иначе они потеряют курс. С отзывами — тоже: на
+ * /reviews они ссылаются на страницу курса. Файлы в бакете остаются.
  */
 export const remove = adminProcedure
   .input(z.object({ id: z.string().min(1) }))
@@ -35,6 +36,17 @@ export const remove = adminProcedure
       throw new ORPCError("CONFLICT", {
         message:
           "У мастер-класса есть покупки или доступы — удалить нельзя, переведите в архив",
+      });
+    }
+    const [review] = await context.db
+      .select({ id: reviews.id })
+      .from(reviews)
+      .where(eq(reviews.workshopSlug, row.slug))
+      .limit(1);
+    if (review) {
+      throw new ORPCError("CONFLICT", {
+        message:
+          "У мастер-класса есть отзывы участниц — удалить нельзя, переведите в архив",
       });
     }
 

@@ -25,16 +25,22 @@ export function productImageKey(
   return `products/${productId}/${hash}.${extension}`;
 }
 
-/** Ключ фото из отзыва в публичном бакете; устроен так же, как productImageKey. */
+/**
+ * Ключ фото из отзыва в публичном бакете; устроен так же, как productImageKey.
+ * `nonce` делает ключ уникальным для каждой загрузки: тогда один и тот же
+ * снимок из двух сохранений — два файла, и удаление одного не ломает другое.
+ */
 export function reviewImageKey(
   reviewId: string,
   bytes: Uint8Array,
   contentType: string,
+  nonce?: string,
 ): string {
   const extension = PRODUCT_IMAGE_TYPES[contentType];
   if (!extension) throw new Error(`unsupported image type: ${contentType}`);
   const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-  return `reviews/${reviewId}/${hash}.${extension}`;
+  const name = nonce ? `${hash}-${nonce}` : hash;
+  return `reviews/${reviewId}/${name}.${extension}`;
 }
 
 const ascii = (bytes: Uint8Array, start: number, end: number) =>

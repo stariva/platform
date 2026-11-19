@@ -1,5 +1,6 @@
 import { error, oc, type } from "@orpc/contract";
 import { z } from "zod";
+import { OzonRequestFailedError, ozonStockPullResultSchema } from "./admin";
 
 /**
  * Процедуры, которые вызывает воркер Hatchet (apps/jobs). Доступ — по
@@ -193,7 +194,10 @@ export const analyticsContract = {
       }),
     ),
 
-  /** Статистика Директа по срезам или поисковые запросы за дни. */
+  /**
+   * Статистика Директа по срезам или поисковые запросы за дни. Со
+   * статистикой пересчитываются и расходы кампаний CRM за те же дни.
+   */
   directReport: analyticsProcedure
     .input(
       z.object({
@@ -205,15 +209,47 @@ export const analyticsContract = {
       z.object({
         rows: z.number().int().nonnegative(),
         goals: z.number().int().nonnegative(),
+        expenseDays: z.number().int().nonnegative().optional(),
       }),
     ),
 };
 
+const emailEventsSyncResult = z.object({
+  configured: z.boolean(),
+  read: z.number().int().nonnegative(),
+  stored: z.number().int().nonnegative(),
+  rejected: z.number().int().nonnegative(),
+  suppressed: z.number().int().nonnegative(),
+  updated: z.number().int().nonnegative(),
+});
+
+export type EmailEventsSyncResult = z.infer<typeof emailEventsSyncResult>;
+
+export const emailsContract = {
+  /**
+   * Дочитывает поток событий Postbox (доставлено, не доставлено, жалоба) и
+   * обновляет журнал писем. Без потока в окружении сайта ничего не делает и
+   * отвечает configured: false — крон раз в минуту не должен сыпать ошибками.
+   */
+  syncEvents: jobProcedure.output(emailEventsSyncResult),
+};
+
 export const jobsContract = {
   videos: videosContract,
+  emails: emailsContract,
   reminders: remindersContract,
   storage: storageContract,
   analytics: analyticsContract,
+  ozon: {
+    /**
+     * Сверяет остаток товаров, которые продаются и на маркетплейсе Ozon:
+     * покупки на Ozon уменьшают остаток на сайте. Без ключей Seller API
+     * ничего не делает и отвечает configured: false.
+     */
+    syncStock: jobProcedure
+      .errors({ [OzonRequestFailedError.code]: OzonRequestFailedError })
+      .output(ozonStockPullResultSchema),
+  },
   npd: {
     /** Только алерт о зависших чеках; повторная регистрация дохода запрещена. */
     sweep: jobProcedure.output(

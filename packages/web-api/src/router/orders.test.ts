@@ -3,7 +3,12 @@ import type { OrderPaymentResult, OrderServices } from "../orpc";
 
 const { safe } = await import("@orpc/client");
 const {
+  DeliveryPointRequiredError,
+  DeliveryPointUnavailableError,
+  DeliveryQuoteFailedError,
+  DeliveryQuoteUnavailableError,
   NothingToPayError,
+  OrderDeliveryLockedError,
   OrderDetailsLockedError,
   OrderNotFoundError,
   PaymentCreateFailedError,
@@ -34,6 +39,11 @@ const view = {
   deliveryMethod: "ozon",
   customerNotes: null,
   deliveryNote: null,
+  deliveryPoint: null,
+  deliveryPointEditable: true,
+  deliveryQuoteNeeded: false,
+  deliveryDates: null,
+  hasEmail: true,
   trackingNumber: null,
   items: [],
   postings: [],
@@ -43,6 +53,7 @@ function orders(overrides: Partial<OrderServices> = {}): OrderServices {
   return {
     view: async () => view,
     updateDetails: async () => "ok",
+    updateDeliveryPoint: async () => "ok",
     startPayment: async () => ({
       status: "ok",
       confirmationUrl: "https://yookassa.example.test/pay/1",
@@ -115,6 +126,72 @@ test("saves details and passes them to the storefront", async () => {
   });
   expect(saved).toHaveLength(1);
   expect(saved[0]).toMatchObject({ orderId, phone, customerNotes: "Подарок" });
+});
+
+test("buyer picks a pickup point until the balance is billed", async () => {
+  const saved: unknown[] = [];
+  const client = wireClient({
+    services: {
+      orders: orders({
+        updateDeliveryPoint: async (input) => {
+          saved.push(input);
+          return "ok";
+        },
+      }),
+    },
+  });
+  await client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" });
+  expect(saved).toEqual([{ orderId, phone, pointId: "77" }]);
+});
+
+test("a billed order keeps its pickup point", async () => {
+  const client = wireClient({
+    services: { orders: orders({ updateDeliveryPoint: async () => "locked" }) },
+  });
+  const [error] = await safe(
+    client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" }),
+  );
+  expect(error).toBeInstanceOf(OrderDeliveryLockedError);
+  expect(lastStatus()).toBe(409);
+});
+
+test("a closed pickup point asks for another one", async () => {
+  const client = wireClient({
+    services: {
+      orders: orders({ updateDeliveryPoint: async () => "unavailable" }),
+    },
+  });
+  const [error] = await safe(
+    client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" }),
+  );
+  expect(error).toBeInstanceOf(DeliveryPointUnavailableError);
+  expect(lastStatus()).toBe(400);
+});
+
+test("a delivery quote that failed asks to try again", async () => {
+  const client = wireClient({
+    services: {
+      orders: orders({ updateDeliveryPoint: async () => "quote_failed" }),
+    },
+  });
+  const [error] = await safe(
+    client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" }),
+  );
+  expect(error).toBeInstanceOf(DeliveryQuoteFailedError);
+  expect(lastStatus()).toBe(502);
+});
+
+test("a delivery quote that cannot succeed tells not to retry", async () => {
+  const client = wireClient({
+    services: {
+      orders: orders({ updateDeliveryPoint: async () => "quote_unavailable" }),
+    },
+  });
+  const [error] = await safe(
+    client.orders.updateDeliveryPoint({ orderId, phone, pointId: "77" }),
+  );
+  expect(error).toBeInstanceOf(DeliveryQuoteUnavailableError);
+  expect(lastStatus()).toBe(409);
 });
 
 test("rejects a measurement that is not a positive number", async () => {
@@ -197,6 +274,7 @@ const failures: Array<
   ["unavailable", PaymentsUnavailableError, 503],
   ["nothing_to_pay", NothingToPayError, 409],
   ["overdue", PaymentOverdueError, 409],
+  ["delivery_point_required", DeliveryPointRequiredError, 409],
   ["failed", PaymentCreateFailedError, 502],
 ];
 

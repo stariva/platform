@@ -32,6 +32,8 @@ function order(overrides: Partial<WorkOrder> & Pick<WorkOrder, "id">) {
     amount: 1_000_000,
     payments: [],
     fee: 0,
+    delivery: 0,
+    costLines: [],
     createdAt: new Date("2026-10-05T09:00:00Z"),
     dueOn: null,
     paymentDueAt: null,

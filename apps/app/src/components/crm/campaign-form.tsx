@@ -25,6 +25,7 @@ export interface CampaignFormValues {
   channel: AdChannel;
   utmSource: string;
   utmCampaign: string;
+  directCampaignId: string;
   notes: string;
   archived: boolean;
 }
@@ -63,7 +64,13 @@ export function CampaignForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        save.mutate({ id, ...values });
+        save.mutate({
+          id,
+          ...values,
+          // Привязка к Директу — только у кампаний Директа
+          directCampaignId:
+            values.channel === "yandex_direct" ? values.directCampaignId : "",
+        });
       }}
     >
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_200px]">
@@ -130,6 +137,26 @@ export function CampaignForm({
         отдельно. Без меток (Авито, сарафан) клиентов отмечают вручную в их
         карточке.
       </p>
+
+      {values.channel === "yandex_direct" && (
+        <div className="space-y-1.5">
+          <Label htmlFor="campaign-direct-id">ID кампании в Директе</Label>
+          <Input
+            id="campaign-direct-id"
+            inputMode="numeric"
+            maxLength={15}
+            placeholder="715338803"
+            value={values.directCampaignId}
+            onChange={(event) =>
+              set("directCampaignId", event.target.value.replace(/\D/g, ""))
+            }
+          />
+          <p className="text-muted-foreground text-xs">
+            Расход за каждый день с НДС подтянется из Директа сам, каждое утро
+            за вчера. Дни, за которые расход уже внесён вручную, не трогаются.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="campaign-notes">Заметки</Label>

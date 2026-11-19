@@ -38,13 +38,20 @@ export const briefSentAt =
     workshopOrderNotifications.sentAt,
   );
 
+/** Когда покупателю ушло письмо о покупке со ссылкой на уроки; null — не уходило. */
+export const accessSentAt =
+  sql<Date | null>`(select ${workshopOrderNotifications.sentAt} from ${workshopOrderNotifications} where ${workshopOrderNotifications.orderId} = ${orders.id} and ${workshopOrderNotifications.kind} = 'booked' and ${workshopOrderNotifications.channel} = 'email')`.mapWith(
+    workshopOrderNotifications.sentAt,
+  );
+
 /** У курса есть PDF-бриф — его можно отправить. */
 export const workshopHasBrief = sql<boolean>`coalesce(jsonb_array_length(${workshops.materialFiles}) > 0, false)`;
 
 /** Оплаченная запись, которой бриф положен, но письмом ещё не уходил. */
-export const briefMissing: SQL = sql`${orders.status} = 'paid' and ${workshopHasBrief} and ${briefSentAt} is null`;
+// Заказы из наборов не берём: материалы у них в коробке, список покупок не нужен
+export const briefMissing: SQL = sql`${orders.status} = 'paid' and ${orders.id} not like 'kit-%' and ${workshopHasBrief} and ${briefSentAt} is null`;
 
-function accessUrl(order: { accessToken: string | null; slug: string }) {
+export function accessUrl(order: { accessToken: string | null; slug: string }) {
   const site = (env.STOREFRONT_URL ?? DEFAULT_STOREFRONT_URL).replace(
     /\/$/,
     "",
@@ -62,7 +69,7 @@ interface Recipient {
   to: string | null;
 }
 
-const recipientColumns = {
+export const recipientColumns = {
   orderId: orders.id,
   slug: orders.workshopSlug,
   accessToken: orders.accessToken,
@@ -129,7 +136,7 @@ async function recordBriefSent(db: Database, orderId: string) {
 }
 
 /** Причина сбоя доставки для админа: ответ почтового провайдера как есть. */
-function errorReason(error: unknown) {
+export function errorReason(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -151,43 +158,50 @@ async function sendTo(
 }
 
 /**
+ * Бриф по одному заказу мастер-класса: проверяет оплату и почту, шлёт письмо
+ * и ставит отметку. Общая часть для кнопки в списке заказов курса и для
+ * кнопки в заказе набора.
+ */
+export async function sendBriefForOrder(db: Database, orderId: string) {
+  const [recipient] = await db
+    .select({ ...recipientColumns, status: orders.status })
+    .from(orders)
+    .innerJoin(user, eq(user.id, orders.userId))
+    .where(eq(orders.id, orderId));
+  if (!recipient) {
+    throw new ORPCError("NOT_FOUND", { message: "Заказ не найден" });
+  }
+  if (recipient.status !== "paid") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Бриф отправляем только оплатившим",
+    });
+  }
+  const { to } = recipient;
+  if (!to) {
+    throw new ORPCError("BAD_REQUEST", { message: "У покупателя нет email" });
+  }
+  const brief = await loadBrief(db, recipient.slug);
+  try {
+    // Без ключа идемпотентности: повторная отправка — осознанное действие
+    return { to, ...(await sendTo(db, { ...recipient, to }, brief)) };
+  } catch (error) {
+    logger.error("workshops.brief.send_failed", error, { orderId });
+    throw new ORPCError("BAD_GATEWAY", {
+      message: `Письмо не ушло: ${errorReason(error)}`,
+    });
+  }
+}
+
+/**
  * Отправляет PDF-бриф одному покупателю — в первый раз или повторно.
  *
  * @example client.admin.workshops.sendBrief({ orderId })
  */
 export const sendBrief = adminProcedure
   .input(z.object({ orderId: z.string().min(1) }))
-  .handler(async ({ context, input }) => {
-    const [recipient] = await context.db
-      .select({ ...recipientColumns, status: orders.status })
-      .from(orders)
-      .innerJoin(user, eq(user.id, orders.userId))
-      .where(eq(orders.id, input.orderId));
-    if (!recipient) {
-      throw new ORPCError("NOT_FOUND", { message: "Заказ не найден" });
-    }
-    if (recipient.status !== "paid") {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Бриф отправляем только оплатившим",
-      });
-    }
-    const { to } = recipient;
-    if (!to) {
-      throw new ORPCError("BAD_REQUEST", { message: "У покупателя нет email" });
-    }
-    const brief = await loadBrief(context.db, recipient.slug);
-    try {
-      // Без ключа идемпотентности: повторная отправка — осознанное действие
-      return { to, ...(await sendTo(context.db, { ...recipient, to }, brief)) };
-    } catch (error) {
-      logger.error("workshops.brief.send_failed", error, {
-        orderId: input.orderId,
-      });
-      throw new ORPCError("BAD_GATEWAY", {
-        message: `Письмо не ушло: ${errorReason(error)}`,
-      });
-    }
-  });
+  .handler(({ context, input }) =>
+    sendBriefForOrder(context.db, input.orderId),
+  );
 
 /**
  * Отправляет PDF-бриф всем оплатившим курс, кому он ещё не уходил. Каждое

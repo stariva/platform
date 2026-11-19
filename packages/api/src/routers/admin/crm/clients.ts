@@ -4,8 +4,10 @@ import {
   crmClients,
   crmSalePayments,
   crmSales,
+  customOrderRequests,
   type Database,
   eq,
+  productOrders,
 } from "@stariva/db";
 import { z } from "zod";
 
@@ -365,6 +367,22 @@ export const addSale = adminProcedure
     const closed = input.status === "done" || input.status === "canceled";
     try {
       return await context.db.transaction(async (tx) => {
+        if (input.requestNumber) {
+          await tx
+            .select({ number: customOrderRequests.number })
+            .from(customOrderRequests)
+            .where(eq(customOrderRequests.number, input.requestNumber))
+            .for("update");
+          const [order] = await tx
+            .select({ number: productOrders.number })
+            .from(productOrders)
+            .where(eq(productOrders.requestNumber, input.requestNumber));
+          if (order) {
+            throw new ORPCError("CONFLICT", {
+              message: `По заявке №${input.requestNumber} уже выставлен счёт — заказ №${order.number}`,
+            });
+          }
+        }
         const clientId = await cardFor(tx, input);
         const [sale] = await tx
           .insert(crmSales)

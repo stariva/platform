@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 import type { orders } from "@stariva/db/schema";
+import { formatPrice } from "@/lib/products";
 import { formatWorkshopPurchaseMessage } from "./staff-message";
 
 const order = {
   id: "order",
   userId: "user",
   workshopSlug: "elka",
+  bundleSlug: null,
   amount: 249000,
   currency: "RUB",
   status: "paid",
@@ -62,3 +64,57 @@ test("a Livemaster code is announced as an activation, not a site purchase", () 
     "Активирован код с Ярмарки Мастеров: «Ёлка макраме» · 2 490 ₽",
   );
 });
+
+test("a workshop from a kit is announced without a price: the kit paid for it", () => {
+  const touch = {
+    utm_source: "kit",
+    utm_medium: "site",
+    landing: "/code",
+    at: "2026-10-01T10:00:00Z",
+  };
+  const { title } = formatWorkshopPurchaseMessage(
+    { ...order, amount: 0, attribution: { first: touch, last: touch } },
+    { title: "Ёлка макраме", releaseAt: null },
+    "account@example.test",
+    now,
+  );
+  expect(title).toBe("Открыт мастер-класс к набору: «Ёлка макраме»");
+
+  const ozon = { ...touch, utm_source: "ozon", utm_medium: "marketplace" };
+  expect(
+    formatWorkshopPurchaseMessage(
+      { ...order, amount: 0, attribution: { first: ozon, last: ozon } },
+      { title: "Ёлка макраме", releaseAt: null },
+      "account@example.test",
+      now,
+    ).title,
+  ).toBe("Активирован код из набора с Ozon: «Ёлка макраме»");
+});
+
+test("a combo purchase is announced as the combo", () => {
+  const { title } = formatWorkshopPurchaseMessage(
+    { ...order, bundleSlug: "elka-makrame-kombo", amount: 159000 },
+    { title: "Ёлка макраме", releaseAt: null },
+    "account@example.test",
+    now,
+  );
+  expect(title).toBe(`Куплено комбо «Две ёлки макраме» · ${formatPrice(1590)}`);
+});
+
+for (const source of ["kit", "ozon"]) {
+  test(`paid purchase with ${source} URL attribution keeps its price`, () => {
+    const touch = { utm_source: source, landing: "/", at: now.toISOString() };
+    expect(
+      formatWorkshopPurchaseMessage(
+        {
+          ...order,
+          paymentId: "payment",
+          attribution: { first: touch, last: touch },
+        },
+        { title: "Ёлка макраме", releaseAt: null },
+        "account@example.test",
+        now,
+      ).title,
+    ).toBe("Куплен мастер-класс «Ёлка макраме» · 2 490 ₽");
+  });
+}

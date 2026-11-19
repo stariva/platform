@@ -7,6 +7,7 @@ import {
   formatMadeToOrderRequestMessage,
   formatOzonFailedMessage,
   formatPaidOrderMessage,
+  paymentNoticeId,
 } from "./order-message";
 
 type OrderRow = typeof productOrders.$inferSelect;
@@ -20,6 +21,8 @@ const order: OrderRow = {
   contactName: "Анна",
   contactPhone: "+7 999 123-45-67",
   contactEmail: null,
+  preferredContactChannel: null,
+  contactMessenger: null,
   status: "requested",
   amountProducts: 700000,
   amountDelivery: 0,
@@ -31,6 +34,8 @@ const order: OrderRow = {
   deliveryAddress: null,
   checkoutSnapshot: null,
   customerNotes: null,
+  gift: false,
+  kitAccessMode: null,
   deliveryNote: null,
   depositAmount: null,
   leadTime: null,
@@ -42,6 +47,7 @@ const order: OrderRow = {
   visitor: null,
   masterNotes: null,
   trackingNumber: null,
+  requestNumber: null,
   staffNotifiedAt: null,
   ozonOrderId: null,
   ozonPostingNumbers: null,
@@ -56,6 +62,8 @@ const item: ItemRow = {
   id: "item-1",
   orderId: order.id,
   productSlug: "tunika-5565",
+  workshopSlug: null,
+  workshopLinkCaptured: false,
   ozonSku: null,
   name: "Туника",
   price: 350000,
@@ -82,8 +90,58 @@ test("request message lists the buyer, options and the approval step", () => {
     ),
   );
   assert.ok(message.includes("одобрить заявку в админке"));
+  assert.ok(
+    message.includes("Пункт выдачи Ozon: покупатель выберет при доплате"),
+  );
   assert.ok(!message.includes("Email:"));
   assert.ok(!message.includes("Пожелания:"));
+});
+
+test("request message says where the buyer prefers to be contacted", () => {
+  const telegram = formatMadeToOrderRequestMessage(
+    {
+      ...order,
+      preferredContactChannel: "telegram",
+      contactMessenger: "@anna_star",
+    },
+    [item],
+  ).message;
+  assert.ok(
+    telegram.includes("Связь: Telegram — @anna_star (https://t.me/anna_star)"),
+  );
+
+  const whatsapp = formatMadeToOrderRequestMessage(
+    { ...order, preferredContactChannel: "whatsapp" },
+    [item],
+  ).message;
+  assert.ok(whatsapp.includes("Связь: WhatsApp — +7 999 123-45-67"));
+
+  const legacyPhone = formatMadeToOrderRequestMessage(
+    { ...order, preferredContactChannel: "phone" },
+    [item],
+  ).message;
+  assert.ok(legacyPhone.includes("Связь: Звонок — +7 999 123-45-67"));
+
+  const emailChannel = formatMadeToOrderRequestMessage(
+    {
+      ...order,
+      preferredContactChannel: "email",
+      contactEmail: "anna@example.com",
+    },
+    [item],
+  ).message;
+  assert.ok(emailChannel.includes("Связь: Email — anna@example.com"));
+});
+
+test("email contact without an address omits the contact line", () => {
+  for (const contactEmail of [null, ""]) {
+    const { message } = formatMadeToOrderRequestMessage(
+      { ...order, preferredContactChannel: "email", contactEmail },
+      [item],
+    );
+    assert.ok(!message.includes("Связь:"));
+    assert.ok(message.includes(`Телефон: ${order.contactPhone}`));
+  }
 });
 
 test("request message includes wishes and delivery when given", () => {
@@ -104,7 +162,9 @@ test("deposit message tells the master to start and then bill the balance", () =
   );
 
   assert.match(title, /^Получена предоплата 3\s?500/);
-  assert.ok(message.includes("выставить доплату"));
+  assert.ok(message.includes("Доплата выставится за изделие"));
+  // Доставку считает сайт, когда покупатель выберет пункт, а не админка
+  assert.ok(message.includes("выберет пункт выдачи"));
 });
 
 test("balance message tells the master to ship", () => {
@@ -140,6 +200,7 @@ test("stock order message mentions the Ozon order", () => {
   const { title, message } = formatPaidOrderMessage(
     { ...order, kind: "stock", ozonOrderId: "OZ-1" },
     [{ ...item, ozonSku: 123, options: null }],
+    0,
   );
 
   assert.ok(!title.includes("под заказ"));
@@ -151,9 +212,80 @@ test("stock order message carries the buyer comment", () => {
   const { message } = formatPaidOrderMessage(
     { ...order, kind: "stock", customerNotes: "Позвоните перед доставкой" },
     [{ ...item, ozonSku: 123, options: null }],
+    0,
   );
 
   assert.ok(message.includes("Комментарий: Позвоните перед доставкой"));
+});
+
+test("a gift order tells the master to print the coupon", () => {
+  const items = [{ ...item, ozonSku: 123, options: null }];
+  const gift = formatPaidOrderMessage(
+    { ...order, kind: "stock", gift: true },
+    items,
+    1,
+  );
+  const plain = formatPaidOrderMessage({ ...order, kind: "stock" }, items, 0);
+
+  assert.ok(gift.message.includes("ПОДАРОК"));
+  assert.ok(gift.message.includes("купон"));
+  assert.ok(!plain.message.includes("ПОДАРОК"));
+});
+
+test("separate tree gifts ask for one coupon per box", () => {
+  const message = formatPaidOrderMessage(
+    { ...order, kind: "stock", gift: true, kitAccessMode: "separate_gifts" },
+    [{ ...item, quantity: 2 }],
+    2,
+  ).message;
+  assert.ok(message.includes("2 коробки"));
+  assert.ok(message.includes("отдельный купон"));
+});
+
+test("a missing gift code is flagged instead of asking the master to print it", () => {
+  const message = formatPaidOrderMessage(
+    { ...order, kind: "stock", gift: true, kitAccessMode: "separate_gifts" },
+    [{ ...item, quantity: 2 }],
+    1,
+  ).message;
+  assert.match(message, /не хватает кодов доступа \(1 из 2\)/);
+  assert.doesNotMatch(message, /Напечатайте/);
+});
+
+test("the balance message says where to ship and that Ozon takes over", () => {
+  const { message } = formatMadeToOrderPaymentMessage(
+    {
+      ...order,
+      deliveryMethod: "pickup",
+      deliveryPointId: "77",
+      deliveryAddress: { title: "ул. Баумана, 1", address: "Казань" },
+      checkoutSnapshot: { priceKopecks: 45000 },
+    },
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+
+  assert.ok(message.includes("Пункт выдачи Ozon: ул. Баумана, 1, Казань"));
+  assert.ok(message.includes("кабинете доставки Ozon"));
+});
+
+test("a balance billed by hand still asks for a tracking number", () => {
+  const { message } = formatMadeToOrderPaymentMessage(
+    order,
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+
+  assert.ok(message.includes("указать номер отправления"));
+});
+
+test("a pickup point without a saved address falls back to its number", () => {
+  const { message } = formatDetailsUpdatedMessage(
+    { ...order, deliveryMethod: "pickup", deliveryPointId: "77" },
+    [item],
+  );
+
+  assert.ok(message.includes("Пункт выдачи Ozon: №77"));
 });
 
 test("details-updated message carries the delivery note", () => {
@@ -174,4 +306,79 @@ test("Ozon failure alert is flagged as critical", () => {
 
   assert.ok(title.startsWith("КРИТИЧНО"));
   assert.ok(message.includes("Телефон: +7 999 123-45-67"));
+});
+
+test("a parcel created in Ozon but not approved asks the master to approve it", () => {
+  const { title, message } = formatOzonFailedMessage({
+    ...order,
+    ozonOrderId: "YY-123-90YY",
+    ozonPostingNumbers: ["123-90YY-1"],
+  });
+
+  assert.ok(title.includes("создан в Ozon Доставка, но не подтверждён"));
+  assert.ok(!title.startsWith("КРИТИЧНО"));
+  assert.ok(message.includes("Заказ Ozon: YY-123-90YY"));
+  assert.ok(message.includes("Отправление: 123-90YY-1"));
+  assert.ok(message.includes("Подтвердите отправление в кабинете"));
+  // Второй раз создавать не нужно — повтора YooKassa здесь нет
+  assert.ok(!message.includes("YooKassa повторит"));
+});
+
+test("the balance notice says the parcel is not approved instead of promising it is on its way", () => {
+  const unapproved = {
+    ...order,
+    status: "ozon_order_failed" as const,
+    checkoutSnapshot: { priceKopecks: 45000 },
+    ozonOrderId: "YY-123-90YY",
+    ozonPostingNumbers: ["123-90YY-1"],
+  };
+  const { title, message } = formatMadeToOrderPaymentMessage(
+    unapproved,
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+
+  assert.ok(title.includes("создан в Ozon Доставка, но не подтверждён"));
+  assert.ok(message.includes("Получена доплата"));
+  assert.ok(message.includes("Отправление: 123-90YY-1"));
+  assert.ok(!message.includes("Отправление создаётся в Ozon"));
+
+  // Предоплата и обычная доплата не меняются
+  const regular = formatMadeToOrderPaymentMessage(
+    { ...unapproved, status: "ready_to_ship", ozonOrderId: null },
+    { type: "balance", amount: 240000 },
+    "applied",
+  );
+  assert.ok(regular.message.includes("Отправление создаётся в Ozon"));
+});
+
+test("a failure with no created order tells to check the cabinet first", () => {
+  const { message } = formatOzonFailedMessage({ ...order, kind: "stock" });
+
+  assert.ok(message.includes("Сначала проверьте кабинет Ozon Доставки"));
+});
+
+test("a warning about an unapproved parcel is a different message from the earlier notice", () => {
+  const unapproved = {
+    ...order,
+    status: "ozon_order_failed" as const,
+    ozonOrderId: "YY-123-90YY",
+  };
+  const balance = { id: "payment-1", type: "balance" as const };
+
+  // Тот же ключ при другом теле: Resend в течение суток ответил бы 409
+  assert.equal(
+    paymentNoticeId(unapproved, balance, "applied"),
+    "payment-1/unapproved",
+  );
+  assert.equal(paymentNoticeId(order, balance, "applied"), "payment-1");
+  assert.equal(
+    paymentNoticeId(
+      unapproved,
+      { id: "payment-0", type: "deposit" },
+      "applied",
+    ),
+    "payment-0",
+  );
+  assert.equal(paymentNoticeId(unapproved, balance, "duplicate"), "payment-1");
 });

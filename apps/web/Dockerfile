@@ -22,6 +22,10 @@ ENV APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=814c36f0-1a32-47af-b51d-8f197d5f2981
 ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_kCRjCvwxBW8Wrfav8gBsxeT6fswrCVFASUsMY5d34Swb
+# Идентификатор выкладки для защиты от рассинхрона версий при rolling update:
+# клиент со старой страницей после выкатки перезагрузится целиком.
+ARG DEPLOYMENT_ID=dev
+ENV NEXT_DEPLOYMENT_ID=$DEPLOYMENT_ID
 RUN bun run build --filter=@stariva/web
 
 # 3. Minimal runtime image, just the Next.js standalone output
@@ -32,6 +36,8 @@ COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/public ./apps/web/public
 USER nextjs
+ARG DEPLOYMENT_ID=dev
+ENV NEXT_DEPLOYMENT_ID=$DEPLOYMENT_ID
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_SITE_URL=https://stariva.ru
 ENV APP_URL=https://stariva.ru

@@ -12,10 +12,13 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = await api.admin.products.byId({ id }).catch((error) => {
-    if ((error as { code?: string }).code === "NOT_FOUND") notFound();
-    throw error;
-  });
+  const [product, workshops] = await Promise.all([
+    api.admin.products.byId({ id }).catch((error) => {
+      if ((error as { code?: string }).code === "NOT_FOUND") notFound();
+      throw error;
+    }),
+    api.admin.workshops.list(),
+  ]);
 
   return (
     <>
@@ -31,6 +34,14 @@ export default async function EditProductPage({
           initialValues={product.values}
           ozon={product.ozon}
           storefrontUrl={baseEnv.STOREFRONT_URL}
+          // Архивный остаётся в списке, если он уже привязан к товару
+          workshops={workshops
+            .filter(
+              (w) =>
+                w.status !== "archived" ||
+                w.slug === product.values.workshopSlug,
+            )
+            .map(({ slug, title }) => ({ slug, title }))}
         />
       </div>
     </>

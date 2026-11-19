@@ -4,9 +4,9 @@ import { z } from "zod";
 import { adminProcedure } from "../../../orpc";
 
 /**
- * Все товары, включая черновики и архив. По умолчанию — в порядке витрины;
- * `sort: "price"` сортирует по цене (`dir` — направление), при равной цене
- * остаётся порядок витрины.
+ * Все товары, включая черновики и архив. По умолчанию — по дате создания,
+ * новые сверху; `sort: "price"` сортирует по цене (`dir` — направление),
+ * при равной цене остаётся порядок витрины.
  *
  * @example client.admin.products.list({ sort: "price", dir: "desc" })
  */
@@ -27,7 +27,7 @@ export const list = adminProcedure
             input.dir === "desc" ? desc(products.price) : asc(products.price),
             ...showcase,
           ]
-        : showcase;
+        : [desc(products.createdAt)];
 
     const rows = await context.db
       .select({

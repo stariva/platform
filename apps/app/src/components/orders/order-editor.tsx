@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -18,10 +17,11 @@ import {
   Textarea,
   toast,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import { MadeToOrderStage } from "./made-to-order-stage";
@@ -34,6 +34,7 @@ import {
 } from "./order-details";
 import {
   type AdminOrderView,
+  CONTACT_CHANNEL_LABELS,
   dateTime,
   isSafeToDelete,
   KIND_LABELS,
@@ -44,6 +45,7 @@ import {
   statusVariant,
 } from "./order-meta";
 import { ReceiptsPanel } from "./receipts-panel";
+import { whatsappPhone } from "./whatsapp-phone";
 
 type UpdateInput = Parameters<typeof orpc.admin.orders.update.call>[0];
 type OrderStatus = NonNullable<UpdateInput["status"]>;
@@ -75,7 +77,16 @@ function deleteRisks(order: AdminOrderView): string[] {
 }
 
 /** Карточка заказа: что и кем заказано, доставка, оплаты и ведение заказа мастером. */
-export function OrderEditor({ order }: { order: AdminOrderView }) {
+export function OrderEditor({
+  order,
+  costs,
+  workshopAccess,
+}: {
+  order: AdminOrderView;
+  costs?: ReactNode;
+  /** Код и купон на мастер-класс к набору из заказа. */
+  workshopAccess?: ReactNode;
+}) {
   const router = useRouter();
   const confirm = useConfirm();
   const [status, setStatus] = useState(order.status);
@@ -166,6 +177,7 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
     : [order.status, ...kindStatuses];
 
   const phoneDigits = order.contactPhone.replace(/[^\d+]/g, "");
+  const whatsappNumber = whatsappPhone(order.contactPhone);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
@@ -185,6 +197,16 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
               <Field label="Создан">
                 {dateTime.format(new Date(order.createdAt))}
               </Field>
+              {order.requestNumber !== null && (
+                <Field label="Счёт выставлен по заявке">
+                  <Link
+                    href={`/requests/${order.requestNumber}`}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    №{order.requestNumber}
+                  </Link>
+                </Field>
+              )}
               <Field
                 label={
                   order.kind === "made_to_order"
@@ -242,6 +264,7 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
         )}
 
         <OrderPaymentsCard order={order} />
+        {costs}
         <OrderAttributionCard order={order} />
       </div>
 
@@ -271,6 +294,43 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
                   </a>
                 </Field>
               )}
+              {order.preferredContactChannel && (
+                <Field label="Удобная связь">
+                  {order.preferredContactChannel === "telegram" &&
+                  order.contactMessenger ? (
+                    <a
+                      href={`https://t.me/${order.contactMessenger.replace(/^@/, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Telegram · {order.contactMessenger}
+                    </a>
+                  ) : order.preferredContactChannel === "whatsapp" &&
+                    whatsappNumber ? (
+                    <a
+                      href={`https://wa.me/${whatsappNumber}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:underline"
+                    >
+                      WhatsApp · {order.contactPhone}
+                    </a>
+                  ) : order.preferredContactChannel === "whatsapp" ? (
+                    `WhatsApp · ${order.contactPhone}`
+                  ) : order.preferredContactChannel === "email" &&
+                    order.contactEmail ? (
+                    <a
+                      href={`mailto:${order.contactEmail}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Email · {order.contactEmail}
+                    </a>
+                  ) : (
+                    CONTACT_CHANNEL_LABELS[order.preferredContactChannel]
+                  )}
+                </Field>
+              )}
               <Field label="Аккаунт">
                 {order.userId ? (
                   <Link
@@ -288,6 +348,8 @@ export function OrderEditor({ order }: { order: AdminOrderView }) {
         </Card>
 
         {order.kind === "made_to_order" && <MadeToOrderStage order={order} />}
+
+        {workshopAccess}
 
         <Card>
           <CardHeader>

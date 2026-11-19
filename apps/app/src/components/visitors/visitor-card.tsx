@@ -21,6 +21,22 @@ export function visitorPlace(visitor: VisitorInfo): string | null {
   return parts.length ? parts.join(", ") : null;
 }
 
+/** Loopback и частные сети: запрос шёл не из интернета (чаще всего dev-сервер). */
+export function isLocalIp(ip: string): boolean {
+  const lower = ip.toLowerCase();
+  if (lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd")) {
+    return true;
+  }
+  if (lower.startsWith("fe80")) return true;
+  const [a = 0, b = 0] = lower.split(".").map(Number);
+  return (
+    a === 127 ||
+    a === 10 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
 /**
  * Часовой пояс браузера не совпал с поясом по IP — вероятно, VPN или прокси.
  * Сравниваем строки как есть: у пары Europe/Kiev и Europe/Kyiv возможны
@@ -58,7 +74,23 @@ export function VisitorCard({ visitor }: { visitor: VisitorInfo | null }) {
     .filter(Boolean)
     .join(", ");
   const rows: Array<[string, React.ReactNode]> = [
-    ["IP-адрес", visitor.ip ?? "не определён"],
+    [
+      "IP-адрес",
+      visitor.ip ? (
+        <>
+          {visitor.ip}
+          {isLocalIp(visitor.ip) && (
+            <span className="text-muted-foreground">
+              {" "}
+              — локальный адрес: запрос шёл не из интернета, город и провайдера
+              по нему не узнать
+            </span>
+          )}
+        </>
+      ) : (
+        "не определён"
+      ),
+    ],
     [
       "Город",
       place ? (

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getSession } from "@/lib/auth/session";
 import type { CartValidationLine } from "@/lib/cart/validation";
 import { getProductsResult } from "@/lib/catalog/service";
 import {
@@ -8,13 +9,17 @@ import {
   MAX_ITEM_QUANTITY,
   priceInKopecks,
 } from "@/lib/commerce/catalog";
+import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
+import { elkaKitPrice } from "@/lib/commerce/elka-kit-price";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
+import { isKit } from "@/lib/in-stock";
 
 export const runtime = "nodejs";
 
 const fulfillmentTypeSchema = z.enum(["stock", "made_to_order"]);
 
 const bodySchema = z.object({
+  kitAccessMode: z.enum(["single_lesson", "separate_gifts"]).optional(),
   lines: z
     .array(
       z.object({
@@ -44,6 +49,11 @@ export async function POST(request: NextRequest) {
       { status: 503 },
     );
   }
+
+  const session = parsed.data.kitAccessMode ? null : await getSession();
+  const elkaKitOwner = session
+    ? await hasPurchasedElkaWorkshop(session.user.id)
+    : false;
 
   const productsBySlug = new Map(products.map((p) => [p.slug, p]));
   const requested = new Map(
@@ -83,6 +93,9 @@ export async function POST(request: NextRequest) {
           image: product.images[0] ?? "",
           price,
           maxQuantity: MAX_MADE_TO_ORDER_QUANTITY,
+          ...(product.leadTimeDays
+            ? { leadTimeDays: product.leadTimeDays }
+            : {}),
         };
       }
 
@@ -101,8 +114,10 @@ export async function POST(request: NextRequest) {
         name: product.name,
         image: product.images[0] ?? "",
         ozonSku: product.ozonSku as number,
-        price,
+        price: elkaKitPrice(productSlug, price, elkaKitOwner),
         maxQuantity: Math.min(MAX_ITEM_QUANTITY, product.stockAvailable),
+        // Корзина, собранная до появления подарка, не помнит, что это набор
+        ...(isKit(product) ? { kit: true } : {}),
       };
     },
   );

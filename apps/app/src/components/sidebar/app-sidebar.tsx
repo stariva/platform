@@ -18,16 +18,20 @@ import {
   IconAddressBook,
   IconChartBar,
   IconChartPie,
+  IconCoin,
   IconExternalLink,
   IconInbox,
   IconKey,
   IconLayoutKanban,
-  IconMessageChatbot,
+  IconMail,
+  IconMailForward,
+  IconMap2,
   IconMessageForward,
   IconMessageStar,
   IconPackage,
   IconPlayerPlay,
   IconPlus,
+  IconReceipt,
   IconSchool,
   IconSettings,
   IconShoppingBag,
@@ -80,6 +84,8 @@ const sales: NavItem[] = [
   { title: "Заказы в работе", url: "/crm/orders", icon: IconLayoutKanban },
   { title: "Новый заказ", url: "/crm/orders/new", icon: IconPlus },
   { title: "Аналитика", url: "/crm/analytics", icon: IconChartPie },
+  { title: "Прибыль", url: "/crm/profit", icon: IconCoin },
+  { title: "Постоянные расходы", url: "/crm/expenses", icon: IconReceipt },
   {
     title: "Заказы с сайта",
     url: "/orders",
@@ -87,6 +93,7 @@ const sales: NavItem[] = [
     today: "orders",
   },
   { title: "Корзины", url: "/carts", icon: IconShoppingCart, today: "carts" },
+  { title: "Карта покупок", url: "/purchase-map", icon: IconMap2 },
   { title: "Заявки", url: "/requests", icon: IconInbox, today: "requests" },
   { title: "Клиенты", url: "/crm/clients", icon: IconAddressBook },
 ];
@@ -121,6 +128,7 @@ const marketing: NavItem[] = [
     url: "/crm/campaigns",
     icon: IconSpeakerphone,
   },
+  { title: "Рассылки", url: "/campaigns", icon: IconMailForward },
   {
     title: "Переходы в мессенджеры",
     url: "/contact-clicks",
@@ -131,12 +139,7 @@ const marketing: NavItem[] = [
 
 const customers: NavItem[] = [
   { title: "Пользователи", url: "/users", icon: IconUsers, today: "users" },
-  {
-    title: "Чат с Никой",
-    url: "/chats",
-    icon: IconMessageChatbot,
-    today: "chats",
-  },
+  { title: "Журнал писем", url: "/email-log", icon: IconMail },
 ];
 
 const allItems = [

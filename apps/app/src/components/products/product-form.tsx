@@ -25,7 +25,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { orpc } from "~/orpc/react";
 import { ProductImages } from "./product-images";
@@ -35,6 +35,7 @@ export interface OzonInfo {
   offerId: string | null;
   sku: number | null;
   stockAvailable: number;
+  sellOnOzon: boolean;
 }
 
 const selectClass =
@@ -64,6 +65,8 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   color: "",
   dimensions: "",
   careInstructions: "",
+  ideaAuthor: "",
+  workshopSlug: "",
   sizes: [],
   bestFor: "",
   highlights: [],
@@ -107,16 +110,20 @@ export function ProductForm({
   initialValues,
   ozon,
   storefrontUrl,
+  workshops,
 }: {
   id?: string;
   initialValues: ProductFormValues;
   ozon?: OzonInfo;
   storefrontUrl?: string;
+  /** Мастер-классы, которые можно приложить к товару (набору). */
+  workshops: { slug: string; title: string }[];
 }) {
   const router = useRouter();
   // Для нового товара адрес собираем из названия, пока его не правили руками
   const [slugTouched, setSlugTouched] = useState(Boolean(id));
   const [isRemovingImages, setIsRemovingImages] = useState(false);
+  const madeToOrderTouched = useRef(false);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -130,6 +137,12 @@ export function ProductForm({
   const slug = watch("slug");
   const subcategories: Record<string, string> =
     PRODUCT_CATEGORIES[category].subcategories;
+
+  const setDefaultMadeToOrder = (subcategory: string) => {
+    if (!id && !madeToOrderTouched.current) {
+      setValue("madeToOrder", subcategory !== "kits");
+    }
+  };
 
   const save = useMutation({
     ...orpc.admin.products.save.mutationOptions(),
@@ -206,12 +219,11 @@ export function ProductForm({
                         PRODUCT_CATEGORIES[
                           event.target.value as ProductCategoryId
                         ].subcategories;
-                      setValue(
-                        "subcategory",
-                        Object.keys(
-                          next,
-                        )[0] as ProductFormValues["subcategory"],
-                      );
+                      const subcategory = Object.keys(
+                        next,
+                      )[0] as ProductFormValues["subcategory"];
+                      setValue("subcategory", subcategory);
+                      setDefaultMadeToOrder(subcategory);
                     },
                   })}
                 >
@@ -230,7 +242,10 @@ export function ProductForm({
                 <select
                   id="subcategory"
                   className={selectClass}
-                  {...register("subcategory")}
+                  {...register("subcategory", {
+                    onChange: (event) =>
+                      setDefaultMadeToOrder(event.target.value),
+                  })}
                 >
                   {Object.entries(subcategories).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -314,7 +329,10 @@ export function ProductForm({
                   <Switch
                     id="madeToOrder"
                     checked={field.value}
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => {
+                      madeToOrderTouched.current = true;
+                      field.onChange(checked);
+                    }}
                   />
                 </div>
               )}
@@ -355,6 +373,7 @@ export function ProductForm({
                 stockAvailable={ozon.stockAvailable}
                 sku={ozon.sku}
                 offerId={ozon.offerId}
+                sellOnOzon={ozon.sellOnOzon}
               />
             )}
           </CardContent>
@@ -414,6 +433,37 @@ export function ProductForm({
                   rows={2}
                   {...register("careInstructions")}
                 />
+              </FieldRow>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldRow
+                label="Мастер-класс в комплекте"
+                htmlFor="workshopSlug"
+                hint="Для наборов. Оплатили на сайте — уроки и PDF сами уйдут на почту покупателя. Покупателям с Ozon кладите в коробку купон с кодом."
+                error={errors.workshopSlug?.message}
+              >
+                <select
+                  id="workshopSlug"
+                  className={selectClass}
+                  {...register("workshopSlug")}
+                >
+                  <option value="">Без мастер-класса</option>
+                  {workshops.map((workshop) => (
+                    <option key={workshop.slug} value={workshop.slug}>
+                      {workshop.title}
+                    </option>
+                  ))}
+                </select>
+              </FieldRow>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldRow
+                label="Автор идеи"
+                htmlFor="ideaAuthor"
+                hint="Если указан, в карточке товара появится сноска «Автор идеи — …»"
+                error={errors.ideaAuthor?.message}
+              >
+                <Input id="ideaAuthor" {...register("ideaAuthor")} />
               </FieldRow>
             </div>
             <div className="sm:col-span-2">

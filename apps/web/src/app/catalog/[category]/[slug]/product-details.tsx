@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarClockIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,10 +18,18 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { descriptionWithoutLead } from "@/lib/catalog/description-lead";
+import { kitFaq } from "@/lib/catalog/product-faq";
 import type { RatingSummary } from "@/lib/catalog/service";
 import type { Category, Product } from "@/lib/catalog/types";
 import { CONTACTS } from "@/lib/contacts";
-import { IN_STOCK_SHIP_DAYS, isPurchasable, pluralItems } from "@/lib/in-stock";
+import {
+  IN_STOCK_SHIP_DAYS,
+  isKit,
+  isPurchasable,
+  pluralItems,
+  pluralKits,
+  shipsFromLabel,
+} from "@/lib/in-stock";
 import {
   getProductMadeToOrder,
   madeToOrderLeadTime,
@@ -113,7 +122,11 @@ function productSpecs(product: Product, categorySlug: string): Spec[] {
   }
   if (product.color) specs.push({ label: "Цвет", value: product.color });
   if (product.dimensions) {
-    specs.push({ label: "Размеры изделия", value: product.dimensions });
+    // У набора в этом поле и размер будущего изделия, и размер коробки
+    specs.push({
+      label: isKit(product) ? "Размеры" : "Размеры изделия",
+      value: product.dimensions,
+    });
   }
   // У интерьера и сумок «размеры» в базе — это габариты, а не размерная сетка
   if (categorySlug === "clothes" && product.sizes?.length) {
@@ -134,14 +147,21 @@ export function ProductDetails({
   rating,
 }: ProductDetailsProps) {
   const faq = categoryFaq(madeToOrderLeadTime(product));
-  const faqItems = faq[categorySlug] ?? faq.interior;
-  // Два независимых способа купить: готовое со склада и сплести под заказ
+  // Набор покупатель плетёт сам: тексты про готовое изделие ему не подходят
+  const kit = isKit(product);
+  // Покупать можно сразу, но отправляем с даты: вместо «1–2 дня» пишем её
+  const shipsFrom = shipsFromLabel(product.slug);
+  const faqItems = kit
+    ? kitFaq(isPurchasable(product) ? shipsFrom : null).map(
+        ({ question, answer }) => ({
+          q: question,
+          a: answer,
+        }),
+      )
+    : (faq[categorySlug] ?? faq.interior);
+  // Два независимых способа купить: готовое со склада и сплести под заказ.
+  // Одежду готовой не продаём — только на заказ
   const readyToShip = isPurchasable(product);
-  // Один размер в карточке одежды — значит, и готовое изделие этого размера
-  const readySize =
-    categorySlug === "clothes" && product.sizes?.length === 1
-      ? product.sizes[0]
-      : undefined;
   const madeToOrder = getProductMadeToOrder(product);
   const productUrl = `https://stariva.ru/catalog/${categorySlug}/${product.slug}`;
   // Бейдж не должен обещать хлопок там, где шнур полиэфирный или пряжа шерстяная
@@ -281,7 +301,7 @@ export function ProductDetails({
                       strokeLinejoin="round"
                     />
                   </svg>
-                  Ручная работа
+                  {kit ? "Всё для плетения в коробке" : "Ручная работа"}
                 </span>
                 <span className="w-px h-3 bg-espresso/15" />
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
@@ -327,28 +347,72 @@ export function ProductDetails({
                 {product.shortDescription}
               </p>
 
+              {kit && product.highlights && (
+                <ul className="-mt-3 mb-8 space-y-2 text-sm text-espresso">
+                  {product.highlights.map((highlight) => (
+                    <li key={highlight} className="flex gap-2.5 leading-snug">
+                      <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-sage" />
+                      {highlight}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               {readyToShip && (
                 <div className="mb-4 rounded-xl border border-sage/30 bg-sage/5 p-5">
                   <div className="flex items-center gap-2 label-caps text-[11px] text-sage mb-2">
                     <span className="size-1.5 rounded-full bg-sage" />В наличии
-                    · отправим за {IN_STOCK_SHIP_DAYS}
+                    {!shipsFrom && <> · отправим за {IN_STOCK_SHIP_DAYS}</>}
                   </div>
                   <h2 className="font-serif text-xl text-espresso mb-1.5">
-                    Готовое изделие
+                    {kit ? "Набор для плетения" : "Готовое изделие"}
                   </h2>
-                  {readySize && (
-                    <p className="text-espresso text-sm mb-1.5">
-                      Размер {readySize}
+                  {shipsFrom && (
+                    <div
+                      role="note"
+                      className="mb-3 flex items-center gap-3 rounded-lg border border-terracotta/40 bg-terracotta/10 px-4 py-3"
+                    >
+                      <CalendarClockIcon
+                        className="size-6 shrink-0 text-terracotta"
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                      />
+                      <p className="leading-tight">
+                        <span className="block text-base font-semibold text-espresso">
+                          Отправка с {shipsFrom}
+                        </span>
+                        <span className="block text-[13px] text-taupe">
+                          Заказать и оплатить можно уже сейчас
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  {kit ? (
+                    <p className="text-taupe text-[13px] leading-relaxed mb-5">
+                      {product.stockAvailable === 1
+                        ? "Остался один набор"
+                        : `В наличии ${product.stockAvailable} ${pluralKits(product.stockAvailable)}`}
+                      . Изделие плетёте сами по видеоуроку. Доступ к уроку
+                      придёт на почту сразу после оплаты, а коробку с
+                      материалами привезёт Ozon.
+                    </p>
+                  ) : (
+                    <p className="text-taupe text-[13px] leading-relaxed mb-5">
+                      {product.stockAvailable === 1
+                        ? "Осталось одно изделие"
+                        : `Готово ${product.stockAvailable} ${pluralItems(product.stockAvailable)}`}{" "}
+                      — уже сплетено, точно как на фото. Оплата на сайте,
+                      доставка Ozon.
                     </p>
                   )}
-                  <p className="text-taupe text-[13px] leading-relaxed mb-5">
-                    {product.stockAvailable === 1
-                      ? "Осталось одно изделие"
-                      : `Готово ${product.stockAvailable} ${pluralItems(product.stockAvailable)}`}{" "}
-                    — уже сплетено, точно как на фото. Оплата на сайте, доставка
-                    Ozon.
-                  </p>
-                  <AddToCartButton product={product} label="Купить готовое" />
+                  <AddToCartButton
+                    product={product}
+                    label={
+                      kit
+                        ? `Купить набор · ${formatPrice(product.price)}`
+                        : "Купить готовое"
+                    }
+                  />
                 </div>
               )}
 
@@ -366,8 +430,9 @@ export function ProductDetails({
                     Нет в наличии
                   </p>
                   <p className="text-taupe text-[13px] leading-relaxed">
-                    Это изделие сейчас закончилось. Напишите мастеру —
-                    подскажем, когда появится, или подберём похожее.
+                    {kit
+                      ? "Наборы сейчас закончились. Напишите мастеру — подскажем, когда появятся."
+                      : "Это изделие сейчас закончилось. Напишите мастеру — подскажем, когда появится, или подберём похожее."}
                   </p>
                 </div>
               )}
@@ -408,29 +473,46 @@ export function ProductDetails({
                   </Button>
                 )}
 
-                <Button
-                  asChild
-                  variant="outline"
-                  className="flex items-center justify-center gap-2 w-full border-espresso/20 text-espresso hover:bg-espresso hover:text-parchment py-3 h-auto rounded-2xl transition-colors label-caps"
-                >
-                  <a href={CONTACTS.phoneHref}>
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden="true"
+                {/* Набор покупают без разговора: вместо звонка — вопрос в мессенджере */}
+                {kit && readyToShip && (
+                  <p className="text-center text-[13px] text-taupe">
+                    Остались вопросы?{" "}
+                    <ContactMasterButton
+                      source="product"
+                      message={`Здравствуйте, Ольга! Вопрос про «${product.name}».`}
+                      withPageLink
+                      className="text-espresso underline underline-offset-4 decoration-espresso/25 hover:text-terracotta hover:decoration-terracotta transition-colors"
                     >
-                      <path
-                        d="M4.5 5.5c0-1 .8-2 1.8-2h2c.5 0 .9.3 1 .8l.7 2.5c.2.6-.1 1.2-.6 1.5l-1.2.7c1 2.3 2.8 4.1 5.1 5.1l.7-1.2c.3-.5.9-.8 1.5-.6l2.5.7c.5.1.8.5.8 1v2c0 1-1 1.8-2 1.8C9.7 17.8 6.2 14.3 4.5 5.5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Позвонить
-                  </a>
-                </Button>
+                      Напишите мне
+                    </ContactMasterButton>
+                  </p>
+                )}
+
+                {!(kit && readyToShip) && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 w-full border-espresso/20 text-espresso hover:bg-espresso hover:text-parchment py-3 h-auto rounded-2xl transition-colors label-caps"
+                  >
+                    <a href={CONTACTS.phoneHref}>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M4.5 5.5c0-1 .8-2 1.8-2h2c.5 0 .9.3 1 .8l.7 2.5c.2.6-.1 1.2-.6 1.5l-1.2.7c1 2.3 2.8 4.1 5.1 5.1l.7-1.2c.3-.5.9-.8 1.5-.6l2.5.7c.5.1.8.5.8 1v2c0 1-1 1.8-2 1.8C9.7 17.8 6.2 14.3 4.5 5.5Z"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Позвонить
+                    </a>
+                  </Button>
+                )}
 
                 {/* Delivery info */}
                 <div className="flex items-center justify-center gap-4 pt-1">
@@ -526,6 +608,11 @@ export function ProductDetails({
                 __html: descriptionWithoutLead(product.description),
               }}
             />
+            {product.ideaAuthor && (
+              <p className="mt-6 border-t border-espresso/10 pt-4 text-xs text-taupe">
+                Автор идеи — {product.ideaAuthor}.
+              </p>
+            )}
           </div>
         </div>
       </section>

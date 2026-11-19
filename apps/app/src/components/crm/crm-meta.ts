@@ -1,4 +1,8 @@
-import type { AdChannel } from "@stariva/db/schema";
+import type {
+  AdChannel,
+  BusinessExpenseCategory,
+  OrderCostCategory,
+} from "@stariva/db/schema";
 
 export const CHANNEL_LABELS: Record<AdChannel, string> = {
   yandex_direct: "Яндекс Директ",
@@ -78,6 +82,49 @@ export function paybackTone(revenue: number, spend: number) {
     ? "text-emerald-600 dark:text-emerald-400"
     : "text-destructive";
 }
+
+/** Статьи затрат заказа; «Комиссия площадки» берётся из поля заказа вне сайта. */
+export const COST_LABELS: Record<OrderCostCategory | "fee", string> = {
+  materials: "Материалы",
+  packaging: "Упаковка",
+  shipping: "Доставка",
+  fee: "Комиссия площадки",
+  acquiring: "Эквайринг",
+  tax: "Налог",
+  other: "Другое",
+};
+
+/** Что можно внести в заказ строкой. */
+export const ORDER_COST_CATEGORIES: OrderCostCategory[] = [
+  "materials",
+  "packaging",
+  "shipping",
+  "acquiring",
+  "tax",
+  "other",
+];
+
+export const EXPENSE_LABELS: Record<BusinessExpenseCategory, string> = {
+  services: "Подписки и сервисы",
+  equipment: "Инструменты и оборудование",
+  content: "Фото и контент",
+  education: "Обучение",
+  other: "Другое",
+};
+
+export const EXPENSE_CATEGORIES = Object.keys(
+  EXPENSE_LABELS,
+) as BusinessExpenseCategory[];
+
+/** Убыток — красным, прибыль без выделения. */
+export const profitTone = (value: number) =>
+  value < 0 ? "text-destructive" : "";
+
+/** Доля части в целом, в процентах; от нуля — не посчитать. */
+export const sharePercent = (part: number, whole: number) =>
+  whole > 0
+    ? `${((part / whole) * 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 })}%`
+    : "—";
 
 /** Где посмотреть сделку: заказ с сайта, запись на мастер-класс или заказ вне сайта. */
 export function dealHref(deal: { kind: string; id: string }) {

@@ -11,7 +11,7 @@ import { orders } from "../workshops/orders";
 import { productOrders } from "./orders";
 
 /**
- * Счета Robokassa (Яндекс Пэй и Сплит). Robokassa знает платёж только по
+ * Счета Robokassa (карты, Яндекс Пэй и Сплит). Robokassa знает платёж только по
  * числовому номеру счёта, а id заказов у нас текстовые: номер выдаёт эта
  * таблица, и в заказ он попадает как paymentId «robokassa:<номер>». Сумму
  * храним свою — уведомление и запрос статуса сверяются с ней. Счёт
@@ -33,7 +33,7 @@ export const robokassaInvoices = pgTable(
     }),
     // Сумма в копейках — ровно столько запросили у Robokassa
     amount: integer("amount").notNull(),
-    // Способ из уведомления об оплате: YandexPay, YandexPaySplit…
+    // Способ из уведомления об оплате: BankCard, YandexPay, YandexPaySplit…
     paymentMethod: text("payment_method"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

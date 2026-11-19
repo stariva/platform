@@ -5,6 +5,7 @@ import {
   type ClientRecord,
   type Deal,
   findClient,
+  hasReportData,
   matchCampaign,
   moscowDay,
   normalizePhone,
@@ -228,6 +229,47 @@ test("report splits spend, new clients and revenue by period", () => {
     buyers: 1,
     revenue: 400000,
   });
+});
+
+test("report keeps a source whose only activity in the period is costs", () => {
+  const clients = buildClients(
+    [
+      // Оплачен в октябре, а материалы куплены в ноябре
+      deal({
+        id: "organic",
+        phone: "79880000000",
+        createdAt: new Date("2026-10-05T10:00:00Z"),
+        payments: [{ at: new Date("2026-10-05T10:00:00Z"), amount: 400000 }],
+      }),
+      deal({
+        id: "telegram",
+        phone: "79990000000",
+        createdAt: new Date("2026-10-06T10:00:00Z"),
+        attribution: touch("telegram", "posev"),
+        payments: [{ at: new Date("2026-10-06T10:00:00Z"), amount: 300000 }],
+      }),
+    ],
+    [],
+    campaigns,
+  );
+  const costsOf = () => [
+    { at: new Date("2026-11-10T10:00:00Z"), amount: 50000 },
+  ];
+  const november = {
+    from: moscowDay("2026-11-01"),
+    to: moscowDay("2026-12-01"),
+  };
+
+  const rows = buildReport(clients, [], [], november, costsOf).filter(
+    hasReportData,
+  );
+  const byKey = Object.fromEntries(rows.map((row) => [row.key, row]));
+  expect(byKey.none).toMatchObject({ revenue: 0, costs: 50000 });
+  expect(byKey["u:telegram|posev"]).toMatchObject({ revenue: 0, costs: 50000 });
+
+  // Без затрат за период такие источники в сводку не попадают
+  const quiet = buildReport(clients, [], [], november).filter(hasReportData);
+  expect(quiet).toEqual([]);
 });
 
 test("a custom order brings its revenue to the ad chosen for it", () => {

@@ -11,6 +11,8 @@ import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
 export interface CreateOrderInput {
   userId: string;
   workshopSlug: string;
+  /** Комбо, в составе которого куплен курс. */
+  bundleSlug?: string | null;
   amountKopecks: number;
   contactEmail: string;
   attribution?: CampaignAttribution | null;
@@ -30,6 +32,7 @@ export async function createOrder(input: CreateOrderInput) {
       id: randomUUID(),
       userId: input.userId,
       workshopSlug: input.workshopSlug,
+      bundleSlug: input.bundleSlug ?? null,
       amount: input.amountKopecks,
       currency: "RUB",
       status: "pending",

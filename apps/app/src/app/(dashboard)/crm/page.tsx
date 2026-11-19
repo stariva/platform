@@ -15,6 +15,7 @@ import {
   costPer,
   payback,
   paybackTone,
+  profitTone,
   rubles,
   type SourceView,
   sourceLabel,
@@ -98,7 +99,7 @@ export default async function CrmReportPage({
           today={today}
         />
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Stat label="Расход на рекламу" value={rubles.format(ads.spend)} />
           <Stat
             label="Выручка с рекламы"
@@ -110,6 +111,12 @@ export default async function CrmReportPage({
             value={payback(ads.revenue, ads.spend)}
             tone={paybackTone(ads.revenue, ads.spend)}
             hint="Рублей выручки на рубль рекламы"
+          />
+          <Stat
+            label="Прибыль с рекламы"
+            value={rubles.format(ads.profit)}
+            tone={profitTone(ads.profit)}
+            hint={`Выручка − затраты на заказы ${rubles.format(ads.costs)} − реклама`}
           />
           <Stat
             label="Новые покупатели с рекламы"
@@ -138,7 +145,7 @@ export default async function CrmReportPage({
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">По кампаниям</h2>
-          <div className="rounded-lg border">
+          <div className="rounded-lg border contain-inline-size">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -152,13 +159,17 @@ export default async function CrmReportPage({
                   </TableHead>
                   <TableHead className="text-right">Выручка</TableHead>
                   <TableHead className="text-right">Окупаемость</TableHead>
+                  <TableHead className="text-right">
+                    Затраты на заказы
+                  </TableHead>
+                  <TableHead className="text-right">Прибыль</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sorted.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={10}
                       className="text-muted-foreground py-8 text-center"
                     >
                       За этот период ничего нет.{" "}
@@ -243,6 +254,14 @@ export default async function CrmReportPage({
                     >
                       {payback(row.revenue, row.spend)}
                     </TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      {rubles.format(row.costs)}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right align-top font-medium tabular-nums ${profitTone(row.profit)}`}
+                    >
+                      {rubles.format(row.profit)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -271,6 +290,14 @@ export default async function CrmReportPage({
                     <TableCell className="text-right tabular-nums">
                       {payback(ads.revenue, ads.spend)}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {rubles.format(total.costs)}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right tabular-nums ${profitTone(total.profit)}`}
+                    >
+                      {rubles.format(total.profit)}
+                    </TableCell>
                   </TableRow>
                 </TableFooter>
               )}
@@ -280,7 +307,9 @@ export default async function CrmReportPage({
             «Обратились» — впервые оформили заказ, заявку или запись за период;
             «Купили впервые» — первая оплата за период. Выручка — деньги,
             поступившие за период, без возвратов. Цена покупателя и окупаемость
-            в итогах — только по рекламе.
+            в итогах — только по рекламе. Прибыль — выручка минус затраты на
+            заказы и расход на кампанию; заказы без внесённых материалов её
+            завышают.
           </p>
         </section>
 

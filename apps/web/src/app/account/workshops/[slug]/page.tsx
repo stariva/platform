@@ -1,12 +1,22 @@
 import { isAdminUser } from "@stariva/auth";
-import { hasAccess } from "@stariva/web-api";
+import { logger } from "@stariva/config";
+import { getWorkshopReview, hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CommunityNote } from "@/components/stariva/community-invite";
+import { SupportChatCard } from "@/components/stariva/support-chat";
 import {
   getCourseProgressMap,
   getCourseProgressSummary,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { getProductBySlug } from "@/lib/catalog/service";
+import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
+import {
+  ELKA_KIT_SLUG,
+  ELKA_WORKSHOP_SLUG,
+} from "@/lib/commerce/elka-kit-price";
+import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
   getWorkshopLessons,
@@ -14,7 +24,37 @@ import {
   isPreorder,
 } from "@/lib/workshops-data";
 import { PreorderNotice } from "./preorder-notice";
+import { ElkaKitOffer } from "../../elka-kit-offer";
 import { WorkshopBrief } from "./workshop-brief";
+import { WorkshopReview } from "./workshop-review";
+
+/** Отзыв не загрузился: форма с пустыми полями сбила бы с толку. */
+function ReviewUnavailable({ slug }: { slug: string }) {
+  return (
+    <section
+      id="review"
+      className="bg-white border border-espresso/10 rounded-2xl p-6"
+    >
+      <p className="label-caps text-[11px] text-taupe mb-2">Ваш отзыв</p>
+      <p className="text-sm text-taupe">
+        Сейчас не получилось загрузить отзыв.{" "}
+        {/* Обычная ссылка, не Link: страница кабинета соберётся на сервере заново */}
+        <a
+          href={`/account/workshops/${slug}`}
+          className="text-terracotta hover:underline"
+        >
+          Обновите страницу
+        </a>{" "}
+        через пару минут.
+      </p>
+    </section>
+  );
+}
+
+/** Имя без фамилии — подпись отзыва по умолчанию. */
+function firstName(name: string | null | undefined): string {
+  return name?.trim().split(/\s+/)[0] ?? "";
+}
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +93,14 @@ export default async function AccountCoursePage({
     redirect(`/workshops/${slug}`);
   }
 
+  const kit =
+    slug === ELKA_WORKSHOP_SLUG &&
+    (await hasPurchasedElkaWorkshop(session.user.id))
+      ? await getProductBySlug(ELKA_KIT_SLUG)
+      : undefined;
+
+  const supportChat = await getSupportChatUrl(slug);
+
   if (!admin && isPreorder(workshop) && workshop.releaseAt) {
     return (
       <div>
@@ -69,17 +117,59 @@ export default async function AccountCoursePage({
           <p className="text-taupe text-sm">{workshop.subtitle}</p>
         </div>
         <PreorderNotice workshop={workshop} releaseAt={workshop.releaseAt} />
+        {kit ? (
+          <div className="mt-6">
+            <ElkaKitOffer product={kit} />
+          </div>
+        ) : null}
         {/* Материалы лучше купить заранее — до старта уроков */}
         {brief}
+        {supportChat ? (
+          <SupportChatCard
+            href={supportChat}
+            text="Вопросы про материалы и подготовку — в чат: Ольга и другие участницы подскажут. После старта там же можно показать, что получилось."
+            className="mt-6 border border-espresso/10"
+          />
+        ) : null}
+        <CommunityNote
+          source="account_preorder"
+          title="Пока ждёте старта"
+          text="Загляните в группу Stariva: там участницы показывают работы по мастер-классам, а Ольга отвечает на вопросы — например, какие шнуры взять."
+          className="mt-6 bg-white border border-espresso/10"
+        />
       </div>
     );
   }
 
   const lessons = getWorkshopLessons(workshop);
-  const [progress, summary] = await Promise.all([
+  const [progress, summary, owned] = await Promise.all([
     getCourseProgressMap(session.user.id, slug),
     getCourseProgressSummary(session.user.id, workshop),
+    // Админ без покупки смотрит уроки, но отзыв не оставляет
+    admin ? hasAccess(session.user.id, slug) : true,
   ]);
+  // undefined — отзыв не загрузился: пустую форму поверх уже оставленного
+  // отзыва не показываем, только объясняем, что случилось
+  const review = owned
+    ? await getWorkshopReview(session.user.id, slug).catch((error) => {
+        logger.error("workshop_review.load_failed", error, {
+          workshopSlug: slug,
+        });
+        return undefined;
+      })
+    : undefined;
+  const reviewBlock = !owned ? null : review === undefined ? (
+    <ReviewUnavailable slug={slug} />
+  ) : (
+    <WorkshopReview
+      slug={slug}
+      initialReview={review}
+      defaultName={firstName(session.user.name)}
+      courseComplete={summary.isComplete}
+    />
+  );
+  // Досмотрела и ещё не написала — просим показать работу сразу под прогрессом
+  const reviewOnTop = summary.isComplete && review === null;
 
   return (
     <div>
@@ -116,6 +206,14 @@ export default async function AccountCoursePage({
           </Link>
         )}
       </div>
+
+      {kit ? (
+        <div className="mb-6">
+          <ElkaKitOffer product={kit} />
+        </div>
+      ) : null}
+
+      {reviewOnTop && <div className="mb-6">{reviewBlock}</div>}
 
       {/* PDF курса — внутри брифа, рядом со списком материалов */}
       {brief}
@@ -241,6 +339,22 @@ export default async function AccountCoursePage({
           })}
         </ol>
       </section>
+
+      {!reviewOnTop && reviewBlock && <div className="mt-8">{reviewBlock}</div>}
+
+      {supportChat ? (
+        <SupportChatCard
+          href={supportChat}
+          className="mt-8 border border-espresso/10"
+        />
+      ) : null}
+
+      <CommunityNote
+        source="account_course"
+        title="Плетите вместе с другими участницами"
+        text="Если узел не выходит, спросите в группе Stariva — Ольга подскажет. Там же можно показать, что получилось, и посмотреть работы других участниц."
+        className="mt-8 bg-white border border-espresso/10"
+      />
     </div>
   );
 }

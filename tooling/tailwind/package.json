@@ -15,13 +15,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "4.3.3",
-    "postcss": "^8.5.26",
-    "tailwindcss": "4.3.3"
+    "@tailwindcss/postcss": "4.3.5",
+    "postcss": "^8.5.32",
+    "tailwindcss": "4.3.5"
   },
   "devDependencies": {
     "@stariva/tsconfig": "workspace:*",
-    "@types/node": "26.6.5",
-    "typescript": "7.0.2"
+    "@types/node": "26.6.6",
+    "typescript": "7.1.0-dev.20261114.1"
   }
 }

@@ -1,24 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { cartEventSchema, recordCartEvent } from "@/lib/cart/event-log";
 import { readJsonBody } from "@/lib/read-json";
+import { sameOrigin } from "@/lib/same-origin";
 import { collectVisitor } from "@/lib/visitor";
 
 export const runtime = "nodejs";
 
 // Сто строк корзины с названиями и ссылками на фото
 const MAX_BODY_BYTES = 64 * 1024;
-
-/** Запрос со страниц сайта, а не с чужого: Origin браузер подставляет сам. */
-function sameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Журнал корзин для админки: браузер присылает каждое изменение корзины
@@ -40,7 +31,11 @@ export async function POST(request: NextRequest) {
   if (visitor.device !== "bot") {
     // Сбой авторизации не должен терять событие: тогда оно просто гостевое
     const userId = (await getSession().catch(() => null))?.user.id ?? null;
-    await recordCartEvent(parsed.data, { userId, visitor });
+    await recordCartEvent(parsed.data, {
+      userId,
+      visitor,
+      attribution: attributionFromRequest(request),
+    });
   }
   return new NextResponse(null, { status: 204 });
 }

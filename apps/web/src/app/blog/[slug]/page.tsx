@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CommunityInvite } from "@/components/stariva/community-invite";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate, getPostBySlug } from "@/lib/blog-data";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { cn } from "@/lib/utils";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 
 interface BlogPostPageProps {
@@ -73,6 +75,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound();
   }
 
+  const portrait = post.coverOrientation === "portrait";
   const relatedPosts = blogPosts
     .filter((p) => p.slug !== post.slug)
     .slice(0, 2);
@@ -109,36 +112,65 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
         {/* Article Header */}
         <article className="max-w-[1400px] mx-auto px-6 lg:px-10">
-          <header className="max-w-3xl mx-auto text-center mb-12">
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <span className="label-caps text-terracotta">
-                {post.category}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-taupe/50" />
-              <span className="label-caps text-taupe">{post.readTime}</span>
-            </div>
-            <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-espresso mb-6 text-balance">
-              {post.title}
-            </h1>
-            <p className="text-taupe text-lg leading-relaxed mb-6">
-              {post.excerpt}
-            </p>
-            <time dateTime={post.date} className="text-sm text-taupe">
-              {formatDate(post.date)}
-            </time>
-          </header>
+          <div
+            className={cn(
+              portrait &&
+                "grid lg:grid-cols-[minmax(0,1fr)_480px] items-center gap-10 lg:gap-16 mb-16",
+            )}
+          >
+            <header
+              className={cn(
+                "text-center",
+                portrait ? "lg:text-left" : "max-w-3xl mx-auto mb-12",
+              )}
+            >
+              <div
+                className={cn(
+                  "flex items-center justify-center gap-4 mb-6",
+                  portrait && "lg:justify-start",
+                )}
+              >
+                <span className="label-caps text-terracotta">
+                  {post.category}
+                </span>
+                <span className="w-1 h-1 rounded-full bg-taupe/50" />
+                <span className="label-caps text-taupe">{post.readTime}</span>
+              </div>
+              <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-espresso mb-6 text-balance">
+                {post.title}
+              </h1>
+              <p className="text-taupe text-lg leading-relaxed mb-6">
+                {post.excerpt}
+              </p>
+              <time dateTime={post.date} className="text-sm text-taupe">
+                {formatDate(post.date)}
+              </time>
+            </header>
 
-          {/* Cover Image */}
-          <div className="relative aspect-[21/9] lg:aspect-[2.5/1] overflow-hidden rounded-xl mb-16">
-            <Image
-              src={post.coverImage}
-              alt={post.title}
-              fill
-              className="object-cover"
-              style={{ objectPosition: post.coverPosition }}
-              sizes="(max-width: 1400px) 100vw, 1400px"
-              priority
-            />
+            {/* Cover Image */}
+            <div
+              className={cn(
+                "relative overflow-hidden rounded-xl",
+                portrait
+                  ? "aspect-[4/5] w-full max-w-md mx-auto lg:max-w-none"
+                  : "aspect-[21/9] lg:aspect-[2.5/1] mb-16",
+              )}
+            >
+              <Image
+                src={post.coverImage}
+                alt={post.title}
+                fill
+                className="object-cover"
+                style={{ objectPosition: post.coverPosition }}
+                sizes={
+                  portrait
+                    ? "(max-width: 1024px) 448px, 480px"
+                    : "(max-width: 1400px) 100vw, 1400px"
+                }
+                quality={90}
+                priority
+              />
+            </div>
           </div>
 
           {/* Article Content */}
@@ -169,13 +201,24 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                   return (
                     // biome-ignore lint/suspicious/noArrayIndexKey: blog content blocks are static and never reordered
                     <figure key={index} className="my-12">
-                      <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+                      <div
+                        className={cn(
+                          "relative overflow-hidden rounded-lg",
+                          block.orientation === "portrait"
+                            ? "aspect-[4/5] max-w-md mx-auto"
+                            : "aspect-[4/3]",
+                        )}
+                      >
                         <Image
                           src={block.src ?? ""}
                           alt={block.alt ?? ""}
                           fill
                           className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 672px"
+                          sizes={
+                            block.orientation === "portrait"
+                              ? "(max-width: 768px) 100vw, 448px"
+                              : "(max-width: 768px) 100vw, 672px"
+                          }
                         />
                       </div>
                       {block.caption && (
@@ -237,6 +280,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           {/* CTA Section */}
           <div className="max-w-2xl mx-auto mt-16 pt-12 border-t border-espresso/10">
+            <CommunityInvite source="blog" className="mb-6" />
             {/* CTA to catalog */}
             <div className="p-6 bg-espresso rounded-xl text-parchment text-center">
               <p className="font-serif text-xl mb-2">Понравилась статья?</p>

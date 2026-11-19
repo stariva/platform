@@ -68,7 +68,7 @@ type NavItem =
 
 const nav: NavItem[] = [
   { kind: "catalog", label: "Каталог", href: "/catalog" },
-  { kind: "link", label: "В наличии", href: IN_STOCK_HREF },
+  { kind: "link", label: "Быстрая отправка", href: IN_STOCK_HREF },
   ...serviceLinks.map((link) => ({ kind: "link" as const, ...link })),
   { kind: "dropdown", label: "Для бизнеса", href: "/b2b", links: b2bLinks },
   { kind: "dropdown", label: "О студии", links: aboutLinks },
@@ -147,10 +147,10 @@ export function Header({
     return () => window.removeEventListener("scroll", onScroll);
   }, [variant]);
 
-  /** Определяет активный раздел, исключая якоря и выделяя «В наличии» отдельно. */
+  /** Определяет активный раздел, исключая якоря и выделяя «Быструю отправку» отдельно. */
   const isActive = (href: string) => {
     if (href.startsWith("/#")) return false;
-    // «В наличии» живёт внутри /catalog, но в меню это отдельный пункт
+    // «Быстрая отправка» живёт внутри /catalog, но в меню это отдельный пункт
     if (href === "/catalog" && isInStockPage) return false;
     if (selectedSectionHref && catalogNav.some((cat) => cat.href === href)) {
       return href === selectedSectionHref;
@@ -386,7 +386,7 @@ export function Header({
                                     href={IN_STOCK_HREF}
                                     className="text-near-black underline underline-offset-4 hover:text-terracotta transition-colors"
                                   >
-                                    Готовые в наличии
+                                    Декор и сумки в наличии
                                   </Link>
                                 </NavigationMenuPrimitive.Link>{" "}
                                 — отправим за {IN_STOCK_SHIP_DAYS}
@@ -505,19 +505,6 @@ export function Header({
 
             <CartTrigger isSolid={isSolid} />
 
-            <Button
-              asChild
-              className={`inline-flex items-center gap-2 text-xs whitespace-nowrap xl:label-caps-nav px-3 sm:px-4 2xl:px-5 py-2 min-h-10 h-auto rounded-full transition-colors ${
-                isSolid
-                  ? "bg-terracotta text-parchment hover:bg-terracotta-dark"
-                  : "bg-white/15 border border-white/40 text-white hover:bg-white hover:text-espresso"
-              }`}
-            >
-              <Link href="/#order">
-                Рассчитать<span className="hidden sm:inline">&nbsp;заказ</span>
-              </Link>
-            </Button>
-
             {/* Burger */}
             <button
               type="button"
@@ -614,9 +601,9 @@ export function Header({
               active: pathname === "/catalog",
             })}
             {mobileLink({
-              label: "В наличии",
+              label: "Быстрая отправка",
               href: IN_STOCK_HREF,
-              desc: `Готовые изделия, отправим за ${IN_STOCK_SHIP_DAYS}`,
+              desc: `Готовый декор и сумки, отправим за ${IN_STOCK_SHIP_DAYS}`,
             })}
 
             {mobileHeading("Услуги")}

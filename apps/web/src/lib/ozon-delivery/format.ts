@@ -135,3 +135,21 @@ export function holidayNotice(
 export function pointKindLabel(point: PickupPoint): string {
   return point.kind === "postamat" ? "Постамат" : "Пункт выдачи";
 }
+
+/**
+ * Адрес пункта одной строкой. Название пункта вырезано из полного адреса,
+ * поэтому обычно в нём уже есть — тогда показываем только адрес, иначе
+ * получится «Центральная улица, 36, Россия, …, Центральная улица, 36».
+ */
+export function pickupPointAddressLine(
+  title: string | null | undefined,
+  address: string | null | undefined,
+): string {
+  const name = title?.trim() ?? "";
+  const full = address?.trim() ?? "";
+  if (!name) return full;
+  if (!full) return name;
+  return full.toLowerCase().includes(name.toLowerCase())
+    ? full
+    : `${name}, ${full}`;
+}

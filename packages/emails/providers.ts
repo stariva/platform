@@ -20,27 +20,32 @@ export type EmailAttachment =
 export type OutgoingEmail = {
   attachments?: EmailAttachment[];
   from: string;
+  /** Дополнительные заголовки письма, например List-Unsubscribe у рассылок. */
+  headers?: Record<string, string>;
   idempotencyKey?: string;
   subject: string;
   to: string[];
 } & ({ react: ReactNode } | { html: string });
 
 export interface EmailProvider {
+  name: EmailProviderName;
   label: string;
   isConfigured: () => boolean;
-  send: (email: OutgoingEmail) => Promise<void>;
+  /** Отправляет письмо; возвращает его идентификатор у провайдера, если тот его дал. */
+  send: (email: OutgoingEmail) => Promise<string | null>;
 }
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 const resendProvider: EmailProvider = {
+  name: "resend",
   label: "Resend",
   isConfigured: () => resend !== null,
   async send(email) {
     if (!resend) throw new Error("Resend is not configured");
     const body =
       "html" in email ? { html: email.html } : { react: email.react };
-    const { error } = await resend.emails.send(
+    const { data, error } = await resend.emails.send(
       {
         to: email.to,
         from: email.from,
@@ -49,12 +54,14 @@ const resendProvider: EmailProvider = {
         ...(email.attachments?.length
           ? { attachments: email.attachments }
           : {}),
+        ...(email.headers ? { headers: email.headers } : {}),
       },
       email.idempotencyKey
         ? { idempotencyKey: email.idempotencyKey }
         : undefined,
     );
     if (error) throw new Error(`Resend error: ${error.message}`);
+    return data?.id ?? null;
   },
 };
 
@@ -66,7 +73,7 @@ const POSTBOX_TIMEOUT_MS = 30_000;
 const POSTBOX_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 /** Ключ доступа сервисного аккаунта Postbox или null, если он не задан. */
-const postboxCredentials = () =>
+export const postboxCredentials = () =>
   env.POSTBOX_ACCESS_KEY_ID && env.POSTBOX_SECRET_ACCESS_KEY
     ? {
         accessKeyId: env.POSTBOX_ACCESS_KEY_ID,
@@ -132,6 +139,7 @@ async function postboxAttachment(attachment: EmailAttachment) {
  * postbox.sender; адрес отправителя должен быть подтверждён в Postbox.
  */
 const postboxProvider: EmailProvider = {
+  name: "postbox",
   label: "Yandex Postbox",
   isConfigured: () => postboxCredentials() !== null,
   async send(email) {
@@ -142,11 +150,24 @@ const postboxProvider: EmailProvider = {
       ? await Promise.all(email.attachments.map(postboxAttachment))
       : undefined;
     const body = JSON.stringify({
+      // Конфигурация с подпиской на события доставки (Data Streams). Без неё
+      // Postbox возьмёт конфигурацию, привязанную к адресу, если она есть
+      ...(env.POSTBOX_CONFIGURATION_SET
+        ? { ConfigurationSetName: env.POSTBOX_CONFIGURATION_SET }
+        : {}),
       FromEmailAddress: email.from,
       Destination: { ToAddresses: email.to },
       Content: {
         Simple: {
           Subject: { Data: email.subject, Charset: "UTF-8" },
+          ...(email.headers
+            ? {
+                Headers: Object.entries(email.headers).map(([Name, Value]) => ({
+                  Name,
+                  Value,
+                })),
+              }
+            : {}),
           Body: { Html: { Data: html, Charset: "UTF-8" } },
           ...(attachments ? { Attachments: attachments } : {}),
         },
@@ -174,6 +195,12 @@ const postboxProvider: EmailProvider = {
       const details = (await res.text().catch(() => "")).slice(0, 500);
       throw new Error(`Postbox error: HTTP ${res.status} ${details}`.trim());
     }
+    // Письмо уже принято: непонятный ответ не должен превратиться в ошибку
+    // и повторную отправку, поэтому без MessageId просто не узнаем доставку
+    const reply = (await res.json().catch(() => null)) as {
+      MessageId?: unknown;
+    } | null;
+    return typeof reply?.MessageId === "string" ? reply.MessageId : null;
   },
 };
 
@@ -181,6 +208,11 @@ const providers: Record<EmailProviderName, EmailProvider> = {
   resend: resendProvider,
   postbox: postboxProvider,
 };
+
+/** Есть ли хоть один выбранный провайдер с ключами: без него письма не уходят вовсе. */
+export function isEmailConfigured(): boolean {
+  return selectedEmailProviders().some((provider) => provider.isConfigured());
+}
 
 /** Провайдеры по порядку попыток: основной (EMAIL_PROVIDER), затем запасной. */
 export function selectedEmailProviders(): EmailProvider[] {

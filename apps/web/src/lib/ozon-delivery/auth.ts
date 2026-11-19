@@ -2,6 +2,8 @@ import { db, ozonDeliveryToken } from "@stariva/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "@/env";
+import { OzonDeliveryError } from "./errors";
+import { jwtExpiryMs } from "./jwt-expiry";
 
 /**
  * Ozon Доставка — приватное приложение с OAuth-авторизацией.
@@ -71,12 +73,12 @@ export async function persistOzonDeliveryRefreshToken(
 
 async function refreshAccessToken(): Promise<string> {
   if (!isOzonDeliveryConfigured()) {
-    throw new Error("ozon_delivery_not_configured");
+    throw new OzonDeliveryError("ozon_delivery_not_configured", true);
   }
 
   const refreshToken = await getCurrentRefreshToken();
   if (!refreshToken) {
-    throw new Error("ozon_delivery_not_configured");
+    throw new OzonDeliveryError("ozon_delivery_not_configured", true);
   }
 
   let res: Response;
@@ -94,21 +96,41 @@ async function refreshAccessToken(): Promise<string> {
       }),
     });
   } catch (error) {
-    throw new Error(
+    throw new OzonDeliveryError(
       `ozon_delivery_oauth_refresh_failed_network: ${String(error)}`,
+      true,
     );
   }
 
+  // Любой отказ OAuth — наша сторона: покупатель тут ни при чём
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(
+    throw new OzonDeliveryError(
       `ozon_delivery_oauth_refresh_failed_${res.status}: ${detail}`,
+      true,
     );
   }
 
-  const data = tokenResponseSchema.parse(await res.json());
+  const parsed = tokenResponseSchema.safeParse(
+    await res.json().catch(() => null),
+  );
+  if (!parsed.success) {
+    throw new OzonDeliveryError(
+      `ozon_delivery_oauth_bad_response: ${parsed.error.message}`,
+      true,
+    );
+  }
+  const data = parsed.data;
   // Обновляем чуть раньше истечения срока, чтобы не ловить 401 в середине запроса.
-  const expiresAt = Date.now() + (data.expires_in - 60) * 1000;
+  // expires_in Ozon не всегда совпадает с реальным сроком токена (в проде токен
+  // отвергали через часы после «истечения» по кэшу), поэтому берём меньшее из
+  // expires_in и exp самого JWT.
+  const byExpiresIn = Date.now() + (data.expires_in - 60) * 1000;
+  const jwtExpiresAt = jwtExpiryMs(data.access_token);
+  const expiresAt =
+    jwtExpiresAt === null
+      ? byExpiresIn
+      : Math.min(byExpiresIn, jwtExpiresAt - 60_000);
   cachedToken = { accessToken: data.access_token, expiresAt };
 
   if (data.refresh_token && data.refresh_token !== refreshToken) {
@@ -123,6 +145,15 @@ async function refreshAccessToken(): Promise<string> {
   }
 
   return data.access_token;
+}
+
+/**
+ * Ozon отверг токен (401) — забываем его, чтобы следующий запрос обновил.
+ * Сбрасываем только тот токен, что отвергли: параллельный запрос мог уже
+ * получить свежий.
+ */
+export function invalidateOzonDeliveryToken(token: string): void {
+  if (cachedToken?.accessToken === token) cachedToken = null;
 }
 
 export async function getOzonDeliveryToken(): Promise<string> {

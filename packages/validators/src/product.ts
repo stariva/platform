@@ -25,8 +25,9 @@ export const PRODUCT_CATEGORIES = {
       tipis: "Вигвамы и кресла",
       pannos: "Панно",
       placemats: "Плейсматы",
-      planters: "Игрушки и прочее",
+      planters: "Декор и прочее",
       trees: "Ёлки",
+      kits: "Наборы для творчества",
     },
   },
 } as const;
@@ -53,6 +54,7 @@ const subcategoryIds = [
   "placemats",
   "planters",
   "trees",
+  "kits",
 ] as const;
 
 /** Максимум для integer в PostgreSQL, цена хранится в копейках. */
@@ -87,6 +89,9 @@ export const productFormSchema = z
     color: optionalText(300),
     dimensions: optionalText(300),
     careInstructions: optionalText(1000),
+    ideaAuthor: optionalText(200),
+    // slug мастер-класса, который идёт с товаром; пусто — без мастер-класса
+    workshopSlug: optionalText(200),
     sizes: z.array(z.string().trim().min(1).max(20)).max(20),
     bestFor: optionalText(300),
     highlights: z

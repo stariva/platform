@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFeaturedProducts } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
+import { isPurchasable } from "@/lib/in-stock";
 import { catalogSections, formatPrice, productHref } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
@@ -88,14 +89,14 @@ function ProductCard({ product }: { product: Product; index?: number }) {
       </div>
       <p
         className={`mt-1.5 label-caps text-[11px] ${
-          product.inStock
+          isPurchasable(product)
             ? "text-sage"
             : product.madeToOrder
               ? "text-terracotta/90"
               : "text-taupe"
         }`}
       >
-        {product.inStock
+        {isPurchasable(product)
           ? "В наличии"
           : product.madeToOrder
             ? "Под заказ"

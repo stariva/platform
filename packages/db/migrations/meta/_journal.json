@@ -285,8 +285,246 @@
     {
       "idx": 40,
       "version": "7",
-      "when": 1792857709995,
-      "tag": "0040_robokassa_invoices",
+      "when": 1792953537790,
+      "tag": "0040_direct_expenses",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793023947930,
+      "tag": "0041_order_from_request",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793033264221,
+      "tag": "0042_order_bundle",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793218929774,
+      "tag": "0043_product_idea_author",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793221118944,
+      "tag": "0044_gnome_idea_author",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793381147911,
+      "tag": "0045_email_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793383742971,
+      "tag": "0046_email_log_html",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793383964954,
+      "tag": "0047_cart_events_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793731719819,
+      "tag": "0048_email_campaigns",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793775380455,
+      "tag": "0049_email_campaign_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793775387452,
+      "tag": "0050_email_campaigns_drop_free_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793778416837,
+      "tag": "0051_email_recipient_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793822190071,
+      "tag": "0052_email_delivery_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793822779429,
+      "tag": "0053_email_log_opens",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794034090359,
+      "tag": "0054_order_economics",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794138543776,
+      "tag": "0055_workshop_reviews",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794167881604,
+      "tag": "0056_workshop_support_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1794207288998,
+      "tag": "0057_product_kits_subcategory",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794241961365,
+      "tag": "0058_link_macrame_kit_to_ozon",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794379589512,
+      "tag": "0059_product_sell_on_ozon",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794382329701,
+      "tag": "0060_macrame_kit_copy",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1794383828449,
+      "tag": "0061_macrame_kit_copy_first_person",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794497121244,
+      "tag": "0062_product_workshop_slug",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794503670365,
+      "tag": "0063_jazzy_nighthawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1794555958190,
+      "tag": "0064_product_order_gift",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1794602224546,
+      "tag": "0065_mobile_app",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794757161710,
+      "tag": "0066_app_release_checksum",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794984656075,
+      "tag": "0067_lyrical_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1794988226957,
+      "tag": "0068_dry_shaman",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1795031468198,
+      "tag": "0069_email_log_idempotency_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1795102673046,
+      "tag": "0070_bezhevyy_kit",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795103503585,
+      "tag": "0071_sage_kit",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1795105681560,
+      "tag": "0072_link_color_kits_to_ozon",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1795112452134,
+      "tag": "0073_elka_kit_access_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1795114307188,
+      "tag": "0074_remarkable_zaladane",
       "breakpoints": true
     }
   ]

@@ -39,7 +39,12 @@ export const attributionSchema = z.object({
   last: touchSchema,
 }) satisfies z.ZodType<CampaignAttribution>;
 
-/** Заход по ссылке с UTM; без меток — не заход, кампания не перетирается. */
+const isTagged = (touch: CampaignTouch) => UTM_KEYS.some((key) => touch[key]);
+
+/**
+ * Заход по ссылке с UTM или с другого сайта (поиск, соцсети, чужие ссылки).
+ * Без меток и без внешнего Referer — переход по сайту, а не заход.
+ */
 export function touchFromUrl(
   url: URL,
   referer: string | null,
@@ -64,22 +69,31 @@ export function touchFromUrl(
       tagged = true;
     }
   }
-  if (!tagged) return null;
   try {
     const host = referer ? new URL(referer).hostname : "";
     if (host && host !== url.hostname) touch.referrer = host.slice(0, 100);
   } catch {
     /* Битый Referer — просто без него. */
   }
-  return touch;
+  return tagged || touch.referrer ? touch : null;
 }
 
-/** Сохраняет первый заход и заменяет последний; без истории оба равны новому. */
+/**
+ * Первый заход — первый по метке: заход без меток (из поиска) держит это
+ * место, пока не придёт заход по метке, и никогда не затирает последний
+ * заход по метке. Без истории оба равны новому.
+ */
 export function addTouch(
   current: CampaignAttribution | null,
   touch: CampaignTouch,
 ): CampaignAttribution {
-  return { first: current?.first ?? touch, last: touch };
+  if (!current) return { first: touch, last: touch };
+  if (!isTagged(touch))
+    return isTagged(current.last) ? current : { ...current, last: touch };
+  return {
+    first: isTagged(current.first) ? current.first : touch,
+    last: touch,
+  };
 }
 
 /** Next percent-encodes values as ASCII, so encoded length equals byte size. */
@@ -152,10 +166,14 @@ export function attributionFromRequest(
   return null;
 }
 
-/** Для уведомления мастеру: «utm_source=…, utm_campaign=… → /landing (с ya.ru)». */
+/**
+ * Для уведомления мастеру: «utm_source=…, utm_campaign=… → /landing (с ya.ru)»;
+ * без меток — «переход с google.com → /landing».
+ */
 export function formatTouch(touch: CampaignTouch): string {
   const tags = UTM_KEYS.flatMap((key) =>
     touch[key] ? [`${key}=${touch[key]}`] : [],
   ).join(", ");
+  if (!tags) return `переход с ${touch.referrer ?? "?"} → ${touch.landing}`;
   return `${tags} → ${touch.landing}${touch.referrer ? ` (с ${touch.referrer})` : ""}`;
 }

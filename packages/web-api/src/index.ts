@@ -10,12 +10,15 @@ export {
   type WebORPCContext,
   type WebServices,
   type WorkshopFileServices,
+  type WorkshopReviewNotice,
 } from "./orpc";
 export { type WebRouter, webRouter } from "./router";
 export {
   ACCESS_CODE_LENGTH,
   formatAccessCode,
   generateAccessCode,
+  kitCodeNote,
+  kitWorkshopOrderId,
   normalizeAccessCode,
 } from "./services/access-codes";
 export {
@@ -29,3 +32,8 @@ export {
   getReadyRendition,
   MAX_RENDITION_ATTEMPTS,
 } from "./services/video-renditions";
+export { getWorkshopReview } from "./services/workshop-reviews";
+export {
+  type DirectExpensesScope,
+  syncDirectExpenses,
+} from "./services/yandex/direct-expenses";

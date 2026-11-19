@@ -1,6 +1,10 @@
 import { error, oc } from "@orpc/contract";
 import { z } from "zod";
-import { PaymentCreateFailedError, PaymentsUnavailableError } from "./orders";
+import {
+  DeliveryPointUnavailableError,
+  PaymentCreateFailedError,
+  PaymentsUnavailableError,
+} from "./orders";
 
 /**
  * Оформление заказа: расчёт и проверка доставки Ozon, заказ готовых изделий
@@ -17,6 +21,19 @@ export const DeliveryUnavailableError = error("DELIVERY_UNAVAILABLE", {
 /** Ozon принял запрос, но доставки по выбранному адресу нет. */
 export const DeliveryNotAvailableError = error("DELIVERY_NOT_AVAILABLE", {
   message: "Доставка по выбранному адресу недоступна",
+});
+
+/**
+ * Стоимость доставки при создании заказа оказалась выше, чем покупатель видел
+ * на странице. Витрина пересчитывает доставку и просит подтвердить сумму.
+ */
+export const DeliveryPriceChangedError = error("DELIVERY_PRICE_CHANGED", {
+  message: "Стоимость доставки изменилась. Проверьте сумму и оплатите ещё раз.",
+});
+
+/** Цена товаров изменилась после показа корзины, в том числе из-за входа или выхода. */
+export const ProductsPriceChangedError = error("PRODUCTS_PRICE_CHANGED", {
+  message: "Цена товаров изменилась. Проверьте новую сумму и оплатите ещё раз.",
 });
 
 /**
@@ -46,9 +63,20 @@ export const MAX_MADE_TO_ORDER_QUANTITY = 10;
 /** Позиций под заказ в одном заказе. */
 export const MAX_MADE_TO_ORDER_LINES = 20;
 
-const phone = z.string().min(5, "Укажите телефон").max(32);
+/**
+ * Телефон для Ozon Доставки: Ozon принимает 10–15 цифр, остальное
+ * (+, пробелы, скобки, дефисы) отбрасывается при отправке.
+ */
+export const DELIVERY_PHONE_ERROR = "Укажите телефон полностью";
+
+export function isDeliveryPhone(value: string): boolean {
+  return /^\d{10,15}$/.test(value.replace(/\D/g, ""));
+}
+
+const phone = z.string().max(32).refine(isDeliveryPhone, DELIVERY_PHONE_ERROR);
 
 const stockItemSchema = z.object({
+  productId: z.string().min(1).optional(),
   productSlug: z.string().min(1),
   quantity: z.number().int().positive().max(99),
 });
@@ -56,6 +84,12 @@ const stockItemSchema = z.object({
 const pickupDeliverySchema = z.object({
   method: z.literal("pickup"),
   pointId: z.string().min(1),
+  /**
+   * Название и адрес пункта так, как их видел покупатель. Нужен только когда
+   * Ozon не отвечает и заказ уходит с ручной доставкой: мастеру нужен адрес,
+   * а взять его из Ozon нельзя. В обычном заказе адрес берётся из Ozon.
+   */
+  pointLabel: z.string().trim().max(400).optional(),
 });
 
 const personalDataConsent = z.literal(true, {
@@ -86,6 +120,11 @@ export const checkoutQuoteSchema = z.object({
   deliveryPriceKopecks: z.number().int().nonnegative(),
   /** Даты прибытия по отправлениям (ISO): покупателю показываем самую позднюю. */
   shipments: z.array(z.object({ dateFrom: z.string(), dateTo: z.string() })),
+  /**
+   * Ozon не ответил, расчёта нет: доставка бесплатна для покупателя, а заказ
+   * мастер отправит вручную.
+   */
+  manual: z.boolean().optional(),
 });
 
 export type CheckoutQuote = z.infer<typeof checkoutQuoteSchema>;
@@ -93,10 +132,25 @@ export type CheckoutQuote = z.infer<typeof checkoutQuoteSchema>;
 export const createOrderInputSchema = z.object({
   contactName: z.string().min(1).max(120),
   contactPhone: phone,
-  contactEmail: z.email().optional(),
+  contactEmail: z.email("Укажите email").trim(),
   comment: z.string().trim().max(1500).optional(),
+  /**
+   * Набор в подарок: доступ к мастер-классу не уходит на почту, а выдаётся
+   * кодом на купоне в коробке. Без наборов в заказе флаг ничего не меняет.
+   */
+  gift: z.boolean().optional(),
+  /** Special pricing for an order containing only two or three tree kits. */
+  kitAccessMode: z.enum(["single_lesson", "separate_gifts"]).optional(),
   items: z.array(stockItemSchema).min(1).max(100),
   delivery: pickupDeliverySchema,
+  /**
+   * Стоимость доставки, которую покупатель видел на странице. Если сервер
+   * насчитал больше, заказ не создаётся: `DELIVERY_PRICE_CHANGED`. Меньше или
+   * бесплатно (Ozon не ответил) — можно. Без поля проверки нет.
+   */
+  expectedDeliveryKopecks: z.number().int().nonnegative().optional(),
+  /** Не создаём платёж, если серверная цена товаров выше показанной покупателю. */
+  expectedProductsKopecks: z.number().int().positive().optional(),
   // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ) и акцепт оферты.
   personalDataConsent,
   offerAccepted: z.literal(true, { error: "Подтвердите согласие с офертой" }),
@@ -128,30 +182,86 @@ export const createdOrderSchema = z.object({
 
 export type CreatedOrder = z.infer<typeof createdOrderSchema>;
 
-export const madeToOrderRequestSchema = z.object({
-  contactName: z.string().trim().min(1).max(120),
-  contactPhone: z.string().trim().min(5, "Укажите телефон").max(32),
-  contactEmail: z.email().trim().optional(),
-  customerNotes: z.string().trim().max(1500).optional(),
-  deliveryNote: z.string().trim().max(1000).optional(),
-  items: z
-    .array(
-      z.object({
-        productSlug: z.string().min(1),
-        quantity: z.number().int().positive().max(MAX_MADE_TO_ORDER_QUANTITY),
-        // Мерки и комментарий покупатель добавляет на странице заказа.
-        options: z.object({
-          size: z.string().trim().min(1).max(60),
-          color: z.string().trim().min(1).max(60),
+/** Где покупателю удобнее ответить мастеру по заявке. */
+export const madeToOrderContactChannels = [
+  "telegram",
+  "whatsapp",
+  "max",
+  "email",
+] as const;
+
+export const madeToOrderContactChannelSchema = z.enum(
+  madeToOrderContactChannels,
+  { error: "Выберите, где удобнее ответить" },
+);
+
+export type MadeToOrderContactChannel = z.infer<
+  typeof madeToOrderContactChannelSchema
+>;
+
+export const TELEGRAM_HANDLE_ERROR =
+  "Укажите ник в Telegram, например @anna_star";
+
+/**
+ * Ник из `@anna_star`, `anna_star`, `t.me/anna_star` или
+ * `https://t.me/anna_star`. null — это не ник Telegram: ссылки с параметрами
+ * (например, приглашение в бота) и номера телефонов не подходят.
+ */
+export function normalizeTelegramHandle(value: string): string | null {
+  const trimmed = value.trim();
+  const link = trimmed.match(
+    /^(?:https?:\/\/)?(?:www\.)?(?:t|telegram)\.me\/([^/?#\s]+)\/?$/i,
+  );
+  const handle = (link?.[1] ?? trimmed.replace(/^@/, "")).trim();
+  return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(handle) ? `@${handle}` : null;
+}
+
+export const madeToOrderRequestSchema = z
+  .object({
+    contactName: z.string().trim().min(1).max(120),
+    contactPhone: z.string().trim().min(5, "Укажите телефон").max(32),
+    contactEmail: z.email("Укажите email").trim(),
+    /**
+     * Где удобнее ответить. Необязательно только для старых вкладок: раньше
+     * выбора не было, и мастер звонил на телефон из заявки.
+     */
+    // phone сохраняем для запросов из вкладок с прежней формой «Звонок».
+    preferredContactChannel: madeToOrderContactChannelSchema
+      .or(z.literal("phone"))
+      .optional(),
+    /** Ник в Telegram; для остальных каналов сервер его не сохраняет. */
+    contactMessenger: z.string().trim().max(120).optional(),
+    customerNotes: z.string().trim().max(1500).optional(),
+    // Пункт выдачи Ozon, куда отправить готовое изделие. Покупатель выбирает
+    // его на странице заказа перед предоплатой; поле осталось для старых вкладок.
+    deliveryPointId: z.string().trim().min(1).max(32).optional(),
+    items: z
+      .array(
+        z.object({
+          productSlug: z.string().min(1),
+          quantity: z.number().int().positive().max(MAX_MADE_TO_ORDER_QUANTITY),
+          // Мерки и комментарий покупатель добавляет на странице заказа.
+          options: z.object({
+            size: z.string().trim().min(1).max(60),
+            color: z.string().trim().min(1).max(60),
+          }),
         }),
-      }),
-    )
-    .min(1)
-    .max(MAX_MADE_TO_ORDER_LINES),
-  // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ). Оферту покупатель
-  // принимает позже — при предоплате, когда цена согласована.
-  personalDataConsent,
-});
+      )
+      .min(1)
+      .max(MAX_MADE_TO_ORDER_LINES),
+    // Отдельное согласие на обработку ПДн (ст. 9 152-ФЗ). Оферту покупатель
+    // принимает позже — при предоплате, когда цена согласована.
+    personalDataConsent,
+  })
+  .superRefine((data, ctx) => {
+    if (data.preferredContactChannel !== "telegram") return;
+    if (normalizeTelegramHandle(data.contactMessenger ?? "")) return;
+    ctx.addIssue({
+      code: "custom",
+      path: ["contactMessenger"],
+      message: TELEGRAM_HANDLE_ERROR,
+    });
+  });
 
 export type MadeToOrderRequest = z.infer<typeof madeToOrderRequestSchema>;
 
@@ -193,6 +303,8 @@ export const checkoutContract = {
       [ItemsUnavailableError.code]: ItemsUnavailableError,
       [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
       [DeliveryNotAvailableError.code]: DeliveryNotAvailableError,
+      [DeliveryPriceChangedError.code]: DeliveryPriceChangedError,
+      [ProductsPriceChangedError.code]: ProductsPriceChangedError,
       [PaymentCreateFailedError.code]: PaymentCreateFailedError,
     })
     .input(createOrderInputSchema)
@@ -200,13 +312,15 @@ export const checkoutContract = {
 
   /**
    * Заявка на изделия под заказ, без оплаты: мастер связывается с
-   * покупателем, согласует цену, мерки и доставку и выставляет предоплату.
-   * Цены из каталога стартовые; Ozon Доставка не участвует.
+   * покупателем, согласует цену и мерки и выставляет предоплату. Цены из
+   * каталога стартовые. Пункт выдачи Ozon покупатель выбирает перед
+   * предоплатой, а стоимость доставки Ozon посчитает, когда изделие готово.
    */
   requestMadeToOrder: oc
     .errors({
       [ItemsUnavailableError.code]: ItemsUnavailableError,
       [OptionsUnavailableError.code]: OptionsUnavailableError,
+      [DeliveryPointUnavailableError.code]: DeliveryPointUnavailableError,
       [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
     })
     .input(madeToOrderRequestSchema)

@@ -50,17 +50,31 @@ export function StarivaLayout({
   previewText,
   heading,
   intro,
+  beforeButton,
   buttonLabel,
   buttonUrl,
   footnote,
+  linkFallback = true,
+  footer,
   children,
 }: {
   previewText: string;
   heading: string;
-  intro: string;
-  buttonLabel: string;
-  buttonUrl: string;
+  /** Строка или строки с переносами (<br />) — у рассылок из админки. */
+  intro: ReactNode;
+  /** Блок между вступлением и кнопкой — например, код входа. */
+  beforeButton?: ReactNode;
+  /** Без кнопки письмо обходится и без ссылки «скопируйте в браузер». */
+  buttonLabel?: string;
+  buttonUrl?: string;
   footnote: string;
+  /**
+   * «Если кнопка не работает, скопируйте ссылку» под письмом. Выключают,
+   * когда ссылка кнопки служебная (переход через сайт у рассылок).
+   */
+  linkFallback?: boolean;
+  /** Под ссылкой на кнопку — например, отписка от рассылки. */
+  footer?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -148,24 +162,27 @@ export function StarivaLayout({
             >
               {intro}
             </Text>
-            <Link
-              href={buttonUrl}
-              style={{
-                display: "inline-block",
-                background: colors.nearBlack,
-                color: colors.white,
-                textDecoration: "none",
-                padding: "16px 34px",
-                borderRadius: 999,
-                fontSize: 12,
-                lineHeight: "16px",
-                fontWeight: 500,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-              }}
-            >
-              {buttonLabel}
-            </Link>
+            {beforeButton}
+            {buttonUrl && buttonLabel ? (
+              <Link
+                href={buttonUrl}
+                style={{
+                  display: "inline-block",
+                  background: colors.nearBlack,
+                  color: colors.white,
+                  textDecoration: "none",
+                  padding: "16px 34px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  lineHeight: "16px",
+                  fontWeight: 500,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {buttonLabel}
+              </Link>
+            ) : null}
             {children}
             <Hr
               style={{
@@ -184,21 +201,24 @@ export function StarivaLayout({
             >
               {footnote}
             </Text>
-            <Text
-              style={{
-                margin: "12px 0 0",
-                fontSize: 12,
-                lineHeight: "19px",
-                color: colors.textGrey,
-                wordBreak: "break-all",
-              }}
-            >
-              Если кнопка не работает, скопируйте ссылку в браузер:
-              <br />
-              <Link href={buttonUrl} style={{ color: colors.darkGrey }}>
-                {buttonUrl}
-              </Link>
-            </Text>
+            {buttonUrl && linkFallback ? (
+              <Text
+                style={{
+                  margin: "12px 0 0",
+                  fontSize: 12,
+                  lineHeight: "19px",
+                  color: colors.textGrey,
+                  wordBreak: "break-all",
+                }}
+              >
+                Если кнопка не работает, скопируйте ссылку в браузер:
+                <br />
+                <Link href={buttonUrl} style={{ color: colors.darkGrey }}>
+                  {buttonUrl}
+                </Link>
+              </Text>
+            ) : null}
+            {footer}
           </Section>
 
           <Section style={{ padding: "28px 24px 0", textAlign: "center" }}>

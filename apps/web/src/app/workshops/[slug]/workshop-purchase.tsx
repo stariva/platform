@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import {
   ConsentCheckbox,
   OfferAcceptanceNote,
@@ -20,6 +20,8 @@ import { formatPrice } from "@/lib/workshops-data";
 
 interface WorkshopPurchaseProps {
   slug: string;
+  /** Комбо: slug — его основной курс, цена и подпись — комбо. */
+  bundle?: string;
   price: number;
   title: string;
   /** Куда вернуть после входа по ссылке «Уже покупали?». */
@@ -30,6 +32,9 @@ interface WorkshopPurchaseProps {
   buyGoal?: string;
   /** Предзаказ: уроки откроются позже, поэтому обещаем напоминание о старте. */
   preorder?: boolean;
+  /** Общее состояние оплаты с выбором курса на лендинге. */
+  buying?: boolean;
+  onBuyingChange?: (buying: boolean) => void;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -52,8 +57,6 @@ function saveEmailDraft(email: string) {
 }
 
 type Notice = { tone: "error" | "info"; text: string } | null;
-
-/** yookassa — карта или СБП, robokassa — Яндекс Пэй или Сплит. */
 type PaymentProvider = "yookassa" | "robokassa";
 
 /**
@@ -62,17 +65,25 @@ type PaymentProvider = "yookassa" | "robokassa";
  */
 export function WorkshopPurchase({
   slug,
+  bundle,
   price,
   title,
   returnPath = `/workshops/${slug}`,
   buyLabel,
   buyGoal,
   preorder = false,
+  buying: controlledBuying,
+  onBuyingChange,
 }: WorkshopPurchaseProps) {
   const { data: session, isPending: sessionPending } = useSession();
   const [owned, setOwned] = useState<boolean | null>(null);
-  const [buying, setBuying] = useState(false);
+  const [localBuying, setLocalBuying] = useState(false);
   const [provider, setProvider] = useState<PaymentProvider>("yookassa");
+  const buying = controlledBuying ?? localBuying;
+  function setBuying(value: boolean) {
+    setLocalBuying(value);
+    onBuyingChange?.(value);
+  }
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [emailError, setEmailError] = useState<string>();
@@ -80,6 +91,25 @@ export function WorkshopPurchase({
   const [notice, setNotice] = useState<Notice>(null);
   const ids = useId();
   const emailId = `${ids}-email`;
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+
+  // Сообщение под кнопкой легко не заметить (особенно на телефоне, где оно
+  // уходит за нижний край экрана) — подводим к нему экран.
+  // Пока идёт проверка доступа, вместо формы крутится спиннер и абзаца нет:
+  // эффект должен сработать и когда форма вернулась, а сообщение уже есть.
+  const checkingAccess = sessionPending || (Boolean(session) && owned === null);
+  useEffect(() => {
+    if (!notice || checkingAccess) return;
+    // Тем, кто просит меньше движения, экран переводим без анимации. "auto"
+    // тут не подходит: он берёт глобальный `scroll-behavior: smooth` с html.
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    noticeRef.current?.scrollIntoView({
+      behavior: reduceMotion ? "instant" : "smooth",
+      block: "center",
+    });
+  }, [notice, checkingAccess]);
 
   useEffect(() => {
     setEmail((current) => current || readEmailDraft());
@@ -92,6 +122,8 @@ export function WorkshopPurchase({
       setOwned(false);
       return;
     }
+    // Курс сменился (выбор на лендинге комбо) — прошлый ответ не про него.
+    setOwned(null);
     webApi.account
       .workshopAccess({ slug })
       .then(({ owned }) => {
@@ -120,7 +152,6 @@ export function WorkshopPurchase({
     event.preventDefault();
     setNotice(null);
     if (!validate()) return;
-    // Enter в поле email отправляет первой кнопкой — картой или СБП
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const chosen: PaymentProvider =
       submitter?.dataset.provider === "robokassa" ? "robokassa" : "yookassa";
@@ -128,7 +159,7 @@ export function WorkshopPurchase({
 
     const goalSent = buyGoal
       ? reachGoalBeforeLeave(buyGoal, {
-          slug,
+          slug: bundle ?? slug,
           order_price: price,
           currency: "RUB",
         })
@@ -142,9 +173,10 @@ export function WorkshopPurchase({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           session
-            ? { slug, provider: chosen }
+            ? { slug, bundle, provider: chosen }
             : {
                 slug,
+                bundle,
                 email: guestEmail,
                 personalDataConsent: consent,
                 provider: chosen,
@@ -189,7 +221,7 @@ export function WorkshopPurchase({
         setBuying(false);
         return;
       }
-      // Редирект на страницу оплаты: иначе переход оборвёт цель
+      // Редирект на страницу оплаты YooKassa: иначе переход оборвёт цель
       await goalSent;
       window.location.href = data.confirmationUrl;
     } catch {
@@ -201,7 +233,7 @@ export function WorkshopPurchase({
     }
   }
 
-  if (sessionPending || (session && owned === null)) {
+  if (checkingAccess) {
     return (
       <div className="flex items-center justify-center w-full py-4 mb-3">
         <Spinner className="text-taupe" />
@@ -221,7 +253,7 @@ export function WorkshopPurchase({
     );
   }
 
-  const splitAvailable = env.NEXT_PUBLIC_ROBOKASSA_ENABLED && price > 0;
+  const robokassaAvailable = env.NEXT_PUBLIC_ROBOKASSA_ENABLED && price > 0;
   const submitLabel =
     price === 0
       ? "Смотреть бесплатно"
@@ -231,7 +263,8 @@ export function WorkshopPurchase({
     <form onSubmit={handleSubmit} noValidate className="mb-3">
       {session ? (
         <p className="text-sm text-text-grey mb-4">
-          Мастер-класс появится в вашем кабинете{" "}
+          {bundle ? "Оба мастер-класса появятся" : "Мастер-класс появится"} в
+          вашем кабинете{" "}
           <span className="text-espresso">({session.user.email})</span>
         </p>
       ) : (
@@ -323,15 +356,15 @@ export function WorkshopPurchase({
         )}
       </Button>
 
-      {splitAvailable ? (
-        <>
+      {robokassaAvailable && (
+        <div className="mt-2">
           <Button
             type="submit"
             data-provider="robokassa"
             disabled={buying}
             aria-busy={(buying && provider === "robokassa") || undefined}
-            aria-label={`Оплатить через Яндекс Пэй или частями в Сплит: мастер-класс «${title}»`}
-            className="mt-2 w-full h-auto min-h-12 whitespace-normal text-center border border-espresso/20 bg-transparent text-espresso hover:bg-sand py-3 rounded-2xl text-base"
+            aria-label={`Оплатить иностранной картой, через Яндекс Пэй или Сплит: мастер-класс «${title}»`}
+            className="w-full h-auto min-h-12 whitespace-normal text-center border border-espresso/20 bg-transparent text-espresso hover:bg-sand py-3 rounded-2xl text-base"
           >
             {buying && provider === "robokassa" ? (
               <>
@@ -339,23 +372,24 @@ export function WorkshopPurchase({
                 Переходим к оплате…
               </>
             ) : (
-              "Яндекс Пэй или Сплит"
+              "Иностранная карта, Яндекс Пэй или Сплит"
             )}
           </Button>
           <p className="mt-1.5 text-center text-[12px] text-taupe">
-            В Сплите можно оплатить частями
+            Выберите способ на странице Robokassa
           </p>
-        </>
-      ) : null}
+        </div>
+      )}
 
       <div aria-live="polite">
         {notice ? (
           <p
+            ref={noticeRef}
             role={notice.tone === "error" ? "alert" : "status"}
             className={
               notice.tone === "error"
-                ? "mt-3 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
-                : "mt-3 rounded-xl bg-sage/15 px-4 py-3 text-sm text-espresso"
+                ? "mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm leading-relaxed text-destructive"
+                : "mt-3 rounded-xl border border-sage/40 bg-sage/15 px-4 py-3 text-sm leading-relaxed text-espresso"
             }
           >
             {notice.text}

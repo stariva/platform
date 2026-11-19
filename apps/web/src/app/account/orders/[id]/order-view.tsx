@@ -11,15 +11,22 @@ import { MadeToOrderPayment } from "@/app/order/[orderId]/made-to-order-payment"
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import type { AccountOrder, AccountReceipt } from "@/lib/account/orders";
-import { isPaymentOverdue } from "@/lib/commerce/made-to-order-flow";
+import {
+  isPaymentOverdue,
+  needsDeliveryQuote,
+} from "@/lib/commerce/made-to-order-flow";
 import { describeMadeToOrderOptions } from "@/lib/commerce/made-to-order-options";
 import { measurementFieldsBySlug } from "@/lib/commerce/measurement-fields";
+import { deliveryDatesView } from "@/lib/commerce/order-services";
 import {
-  madeToOrderHints,
+  DELIVERY_POINT_ANCHOR,
+  madeToOrderHint,
   orderProgress,
   postingStatusLabels,
   stockOrderHints,
 } from "@/lib/commerce/order-status";
+import { isDeliveryPointEditable } from "@/lib/commerce/orders";
+import { pickupPointAddressLine } from "@/lib/ozon-delivery/format";
 import { getPostingStatuses } from "@/lib/ozon-delivery/postings";
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { cn } from "@/lib/utils";
@@ -31,7 +38,11 @@ import {
   ProgressSteps,
   StatusBadge,
 } from "../order-ui";
-import { AccountMadeToOrderDetails, PaidOrderTracker } from "./order-client";
+import {
+  AccountMadeToOrderDelivery,
+  AccountMadeToOrderDetails,
+  PaidOrderTracker,
+} from "./order-client";
 
 type ProductOrderRow = typeof productOrders.$inferSelect;
 
@@ -200,23 +211,22 @@ function deliveryDetails(order: ProductOrderRow) {
   const snapshot = order.checkoutSnapshot as DeliveryCheckoutResponse | null;
   const method = snapshot?.splits?.[0]?.deliveryMethod;
 
-  const label =
-    order.deliveryMethod === "manual"
-      ? "Способ и стоимость согласует мастер"
+  const label = needsDeliveryQuote(order)
+    ? "Пункт выдачи Ozon — выберете, и посчитаем доставку"
+    : order.deliveryMethod === "manual"
+      ? order.kind === "stock"
+        ? "Мастер отправит заказ сама — доставка бесплатно"
+        : "Способ и стоимость согласует мастер"
       : order.deliveryMethod === "courier"
         ? "Курьером Ozon"
         : method?.type === "POSTAMAT"
           ? "Постамат Ozon"
           : "Пункт выдачи Ozon";
 
-  let dates: string | null = null;
-  if (method?.logisticDateFrom && method.logisticDateTo) {
-    const from = new Date(method.logisticDateFrom);
-    const to = new Date(method.logisticDateTo);
-    if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime())) {
-      dates = deliveryDays.formatRange(from, to);
-    }
-  }
+  const range = deliveryDatesView(order);
+  const dates = range
+    ? deliveryDays.formatRange(new Date(range.from), new Date(range.to))
+    : null;
 
   const title = text(raw.title);
   return {
@@ -242,8 +252,10 @@ export async function ProductOrderView({
   const madeToOrder = order.kind === "made_to_order";
   const progress = orderProgress(view.kind, order.status);
   const canEditDetails = madeToOrder && order.status === "requested";
+  const quoteNeeded = needsDeliveryQuote(order);
   const [postings, measurementFields] = await Promise.all([
-    getPostingStatuses(order.ozonPostingNumbers),
+    // Посылка под заказ идёт через Delivery API, Seller API её статусы не знает
+    madeToOrder ? [] : getPostingStatuses(order.ozonPostingNumbers),
     canEditDetails
       ? measurementFieldsBySlug(view.items.map((item) => item.productSlug))
       : null,
@@ -255,9 +267,13 @@ export async function ProductOrderView({
   const hint =
     order.status === "declined"
       ? `Мастер не сможет выполнить этот заказ${order.declineReason ? `: ${order.declineReason}` : "."}`
-      : (madeToOrder ? madeToOrderHints : stockOrderHints)[order.status];
+      : madeToOrder
+        ? madeToOrderHint(order.status, quoteNeeded)
+        : stockOrderHints[order.status];
   const awaitingPayment =
     view.paymentStep !== null || order.status === "pending";
+  // Пункт выбирают при доплате, пока доставка не посчитана
+  const pointFirst = view.paymentStep?.type === "balance" && quoteNeeded;
 
   return (
     <div className="space-y-6">
@@ -287,13 +303,19 @@ export async function ProductOrderView({
                   asChild
                   className="mt-4 w-full bg-espresso text-parchment hover:bg-espresso/90 lg:hidden"
                 >
-                  <a href="#payment">
-                    Оплатить{" "}
-                    {view.paymentStep.type === "deposit"
-                      ? "предоплату"
-                      : "доплату"}{" "}
-                    {money(view.paymentStep.amount)}
-                  </a>
+                  {pointFirst ? (
+                    <a href={`#${DELIVERY_POINT_ANCHOR}`}>
+                      Выбрать пункт выдачи
+                    </a>
+                  ) : (
+                    <a href="#payment">
+                      Оплатить{" "}
+                      {view.paymentStep.type === "deposit"
+                        ? "предоплату"
+                        : "доплату"}{" "}
+                      {money(view.paymentStep.amount)}
+                    </a>
+                  )}
                 </Button>
               )}
             </Card>
@@ -318,8 +340,30 @@ export async function ProductOrderView({
                     measurementFields.get(item.productSlug) ?? [],
                 }))}
                 customerNotes={order.customerNotes}
-                deliveryNote={order.deliveryNote}
               />
+            </Card>
+          )}
+
+          {isDeliveryPointEditable(order) && (
+            <Card title="Куда доставить">
+              {/* Блок рассчитан на гостевую страницу, где над ним список изделий */}
+              <div className="[&>div:first-child]:border-t-0 [&>div:first-child]:pt-0">
+                <AccountMadeToOrderDelivery
+                  orderId={order.id}
+                  phone={order.contactPhone}
+                  point={
+                    order.deliveryPointId
+                      ? {
+                          id: order.deliveryPointId,
+                          title: delivery.title,
+                          address: delivery.address,
+                        }
+                      : null
+                  }
+                  editable
+                  quoteNeeded={quoteNeeded}
+                />
+              </div>
             </Card>
           )}
         </div>
@@ -332,6 +376,7 @@ export async function ProductOrderView({
                 <MadeToOrderPayment
                   orderId={order.id}
                   phone={order.contactPhone}
+                  deliveryQuoteNeeded={quoteNeeded}
                   returnTo="account"
                   terms={{
                     number: order.number,
@@ -386,9 +431,7 @@ export async function ProductOrderView({
               <p className="text-espresso">{delivery.label}</p>
               {(delivery.title || delivery.address) && (
                 <p className="text-taupe leading-relaxed">
-                  {[delivery.title, delivery.address]
-                    .filter(Boolean)
-                    .join(", ")}
+                  {pickupPointAddressLine(delivery.title, delivery.address)}
                 </p>
               )}
               {delivery.dates && !settled && (
@@ -397,7 +440,7 @@ export async function ProductOrderView({
                   <span className="text-espresso">{delivery.dates}</span>
                 </p>
               )}
-              {order.deliveryNote && !canEditDetails && (
+              {order.deliveryNote && !order.deliveryPointId && (
                 <p className="text-taupe leading-relaxed">
                   Куда отправить:{" "}
                   <span className="text-espresso">{order.deliveryNote}</span>

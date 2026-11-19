@@ -158,6 +158,37 @@ export async function uploadPublicObject(
   return publicObjectUrl(key);
 }
 
+/** Ключ файла публичного бакета по его адресу; null — адрес не из нашего бакета. */
+export function publicObjectKey(url: string): string | null {
+  const base = publicObjectUrl("");
+  return url.startsWith(base) && url.length > base.length
+    ? url.slice(base.length)
+    : null;
+}
+
+/** Удаляет файлы из публичного бакета (до 1000 за раз — предел S3). */
+export async function deletePublicObjects(keys: string[]): Promise<void> {
+  const bucket = env.AWS_S3_PUBLIC_BUCKET;
+  if (!bucket) throw new Error("AWS_S3_PUBLIC_BUCKET is not configured");
+  if (keys.length === 0) return;
+
+  const res = await getClient().send(
+    new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: {
+        Objects: keys.slice(0, 1000).map((Key) => ({ Key })),
+        Quiet: true,
+      },
+    }),
+  );
+  if (res.Errors?.length) {
+    const [first] = res.Errors;
+    throw new Error(
+      `S3 delete failed for ${res.Errors.length} keys, e.g. ${first?.Key}: ${first?.Code}`,
+    );
+  }
+}
+
 /** Текст небольшого файла из закрытого бакета (например, плейлиста HLS). */
 export async function getObjectText(key: string): Promise<string> {
   const res = await getClient().send(

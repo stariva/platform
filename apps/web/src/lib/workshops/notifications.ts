@@ -8,18 +8,30 @@ import {
   workshops,
 } from "@stariva/db/schema";
 import {
+  isEmailConfigured,
   StarivaWorkshopEmail,
   sendEmail,
+  sendEmailHtml,
   sendWorkshopBriefEmail,
   type WorkshopBriefFile,
   type WorkshopEmailKind,
 } from "@stariva/emails";
 import { loadWorkshopMaterials } from "@stariva/storage";
-import { and, between, eq, gte, inArray, isNotNull, or } from "drizzle-orm";
+import {
+  and,
+  between,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  or,
+  sql,
+} from "drizzle-orm";
 import { baseEnv, env } from "@/env";
 import {
   type DeliveryConfig,
   deliverNotification,
+  escapeHtml,
 } from "@/lib/custom-order/delivery";
 import { notificationConfigured } from "@/lib/custom-order/inbox";
 import {
@@ -38,7 +50,9 @@ import {
 } from "@/lib/telegram/client-bot";
 import { telegramStaffConfig } from "@/lib/telegram/staff-config";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
+import { bundleExtraFor, getBundle } from "./bundles";
 import { googleCalendarUrl } from "./calendar";
+import { isKitWorkshopOrder } from "./kit-order";
 import { earnsPreorderBonus } from "./preorder-bonus";
 import {
   dueReminders,
@@ -97,10 +111,14 @@ function upcomingRelease(workshop: WorkshopRow, now = new Date()) {
 function emailSubject(kind: WorkshopEmailKind, target: Target): string {
   const title = `«${target.workshop.title}»`;
   switch (kind) {
-    case "booked":
+    case "booked": {
+      const bundle = getBundle(target.order.bundleSlug);
+      if (bundle)
+        return `Комбо «${bundle.title}»: доступ к урокам открыт — Stariva`;
       return upcomingRelease(target.workshop)
         ? `Вы записаны на мастер-класс ${title} — Stariva`
         : `Доступ к мастер-классу ${title} открыт — Stariva`;
+    }
     case "week":
       return `Через неделю старт: ${title} — Stariva`;
     case "day":
@@ -115,9 +133,12 @@ function telegramText(kind: ReminderKind, target: Target): string {
   const when = target.workshop.releaseAt
     ? formatReleaseDateTime(target.workshop.releaseAt.toISOString())
     : "";
-  const materials = target.workshop.materials
-    .map((item) => `• ${escapeTelegramHtml(item)}`)
-    .join("\n");
+  // Покупателю набора материалы не нужны: всё лежит в коробке
+  const materials = isKitWorkshopOrder(target.order.id)
+    ? ""
+    : target.workshop.materials
+        .map((item) => `• ${escapeTelegramHtml(item)}`)
+        .join("\n");
   switch (kind) {
     case "week":
       return [
@@ -184,9 +205,12 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
   if (!order.accessToken) return Promise.resolve(false);
   const accessToken = order.accessToken;
   const release = upcomingRelease(workshop);
+  // Покупатель набора получает материалы в коробке: список покупок ему не нужен
+  const kit = isKitWorkshopOrder(order.id);
 
   return claimed(target, kind, "email", async () => {
-    const brief = kind === "booked" ? await briefForBookedEmail(target) : [];
+    const brief =
+      kind === "booked" && !kit ? await briefForBookedEmail(target) : [];
     await sendEmail({
       idempotencyKey: `workshop:${order.id}:${kind}:email`,
       to: [target.email],
@@ -218,8 +242,10 @@ function deliverEmail(target: Target, kind: WorkshopEmailKind) {
           orderedAt: order.createdAt,
           releaseAt: workshop.releaseAt,
         }),
+        bundle: bundleExtraFor(order.bundleSlug),
         attachedFiles:
           brief.length > 0 ? brief.map((file) => file.label) : undefined,
+        kit,
       }),
     });
     if (brief.length === 0) return;
@@ -270,17 +296,38 @@ function configuredStaffChannels(): StaffChannel[] {
       config: telegramStaffConfig(),
     });
   }
-  if (baseEnv.RESEND_API_KEY && env.ORDER_EMAIL_FROM && env.ORDER_EMAIL_TO) {
+  // Письмо уходит через sendEmailHtml, так что канал включён, только если
+  // настроен выбранный провайдер: без него отправка молча ничего не делает,
+  // а уведомление считалось бы доставленным.
+  if (env.ORDER_EMAIL_FROM && env.ORDER_EMAIL_TO && isEmailConfigured()) {
     channels.push({
       channel: "staff-email",
       config: {
-        emailKey: baseEnv.RESEND_API_KEY,
         emailFrom: env.ORDER_EMAIL_FROM,
         emailTo: env.ORDER_EMAIL_TO,
       },
     });
   }
   return channels;
+}
+
+/**
+ * Письмо мастеру идёт через sendEmail, как и письма покупателям: если Resend
+ * отказал, его подхватит запасной провайдер, а попытка попадёт в журнал писем.
+ * Напрямую в Resend письмо падало без запасного пути и роняло каждый прогон.
+ */
+async function sendStaffEmail(
+  { emailFrom, emailTo }: DeliveryConfig,
+  notification: { id: string; title: string; message: string },
+) {
+  if (!emailFrom || !emailTo) throw new Error("staff_email_not_configured");
+  await sendEmailHtml({
+    idempotencyKey: `workshop-purchase/${notification.id}`,
+    from: emailFrom,
+    to: [emailTo],
+    subject: `${notification.title} · Stariva`,
+    html: `<pre>${escapeHtml(`${notification.title}\n${notification.message}`)}</pre>`,
+  });
 }
 
 /** Отдельный резерв на каждый канал: повторяем только недоставленное. */
@@ -291,6 +338,10 @@ function deliverStaff(target: Target, { channel, config }: StaffChannel) {
     target.email,
   );
   return claimed(target, "booked", channel, async () => {
+    if (channel === "staff-email") {
+      await sendStaffEmail(config, { id: target.order.id, title, message });
+      return;
+    }
     const delivered = await deliverNotification(
       {
         id: target.order.id,
@@ -322,7 +373,11 @@ function deliverTelegram(target: Target, kind: ReminderKind) {
 
 async function loadTargets(where: Parameters<typeof and>[number]) {
   const rows = await db
-    .select({ order: orders, workshop: workshops, email: user.email })
+    .select({
+      order: orders,
+      workshop: workshops,
+      email: sql<string>`coalesce(${orders.contactEmail}, ${user.email})`,
+    })
     .from(orders)
     .innerJoin(workshops, eq(workshops.slug, orders.workshopSlug))
     .innerJoin(user, eq(user.id, orders.userId))
@@ -420,6 +475,7 @@ export async function runWorkshopReminderSweep(now = new Date()) {
     // само письмо о покупке: вдруг бриф уйдёт вместе с ним.
     if (
       recentlyPaid &&
+      !isKitWorkshopOrder(order.id) &&
       workshop.materialFiles.length > 0 &&
       isSent(target, "booked", "email") &&
       !isSent(target, BRIEF, "email")

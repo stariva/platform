@@ -17,17 +17,18 @@ import { z } from "zod";
 import { adminProcedure } from "../../../orpc";
 import { toKopecks } from "../orders/stage-math";
 import { field } from "../requests/fields";
+import { type FinanceRates, needsMaterials, orderEconomics } from "./economics";
 import { loadCrm } from "./load";
 import {
   findClient,
   moscowDay,
+  moscowNoon,
   normalizeEmail,
   normalizePhone,
   type Period,
   toMoscowDay,
 } from "./model";
-import { daySchema } from "./report";
-import { rubles } from "./shape";
+import { daySchema, rubles } from "./shape";
 import {
   ACTIVE_STAGES,
   clientKeys,
@@ -94,10 +95,6 @@ const REQUEST_FRESH_DAYS = 30;
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** Полдень дня по Москве — время ручного заказа и его оплат. */
-const noon = (day: string) =>
-  new Date(moscowDay(day).getTime() + 12 * 3600_000);
-
 /**
  * Все заказы в одной ленте: с сайта, записи на мастер-классы, заказы вне
  * сайта и свежие заявки без заказа. Заказов сотни — собираем в памяти.
@@ -143,8 +140,11 @@ export async function loadWork(db: Database, now = new Date()) {
   );
   const keyFor = clientKeys(crm.clients);
   const records = new Map(crm.records.map((record) => [record.id, record]));
+  // Заявка с заказом — записанным в CRM или со счётом на сайте — уже не новая
   const takenRequests = new Set(
-    crm.sales.map((sale) => sale.requestNumber).filter(Boolean),
+    [...crm.sales, ...crm.productRows]
+      .map((order) => order.requestNumber)
+      .filter(Boolean),
   );
 
   const orders: WorkOrder[] = [
@@ -172,6 +172,8 @@ export async function loadWork(db: Database, now = new Date()) {
         amount: order.amountTotal,
         payments: dealPayments.get(`product:${order.id}`) ?? [],
         fee: 0,
+        delivery: order.amountDelivery,
+        costLines: crm.costLines.get(`product:${order.id}`) ?? [],
         createdAt: order.createdAt,
         dueOn: null,
         paymentDueAt: order.paymentDueAt,
@@ -205,6 +207,8 @@ export async function loadWork(db: Database, now = new Date()) {
         amount: order.amount,
         payments: dealPayments.get(`workshop:${order.id}`) ?? [],
         fee: 0,
+        delivery: 0,
+        costLines: [],
         createdAt: order.createdAt,
         dueOn: null,
         paymentDueAt: null,
@@ -232,7 +236,9 @@ export async function loadWork(db: Database, now = new Date()) {
         amount: sale.amount,
         payments: dealPayments.get(`manual:${sale.id}`) ?? [],
         fee: sale.fee,
-        createdAt: noon(sale.soldOn),
+        delivery: 0,
+        costLines: crm.costLines.get(`manual:${sale.id}`) ?? [],
+        createdAt: moscowNoon(sale.soldOn),
         dueOn: sale.dueOn,
         paymentDueAt: null,
         stageSince: sale.statusChangedAt,
@@ -267,6 +273,8 @@ export async function loadWork(db: Database, now = new Date()) {
           amount: 0,
           payments: [],
           fee: 0,
+          delivery: 0,
+          costLines: [],
           createdAt: request.createdAt,
           dueOn: null,
           paymentDueAt: null,
@@ -295,8 +303,18 @@ function orderHref(order: WorkOrder) {
   }
 }
 
-/** Строка ленты для админки: суммы в рублях, просрочка и дни на этапе. */
-function orderView(order: WorkOrder, today: string, now: Date) {
+/**
+ * Строка ленты для админки: суммы в рублях, просрочка и дни на этапе. Затраты и
+ * прибыль — когда по заказу есть движение денег, иначе считать ещё нечего.
+ */
+function orderView(
+  order: WorkOrder,
+  today: string,
+  now: Date,
+  rates: FinanceRates,
+) {
+  const economics = orderEconomics(order, rates, now);
+  const hasMoney = order.payments.length > 0 || order.costLines.length > 0;
   return {
     kind: order.kind,
     id: order.id,
@@ -314,6 +332,10 @@ function orderView(order: WorkOrder, today: string, now: Date) {
     paid: rubles(paidSum(order)),
     toCollect: rubles(toCollect(order)),
     fee: rubles(order.fee),
+    costs: hasMoney ? rubles(economics.costs) : null,
+    profit: hasMoney ? rubles(economics.profit) : null,
+    profitExpected: economics.expected,
+    missingMaterials: economics.missingMaterials,
     createdAt: order.createdAt,
     dueOn: order.dueOn,
     paymentDueAt: order.paymentDueAt,
@@ -342,7 +364,7 @@ function byUrgency(a: WorkOrderView, b: WorkOrderView) {
   );
 }
 
-const periodOf = (input: { from?: string; to?: string }): Period => ({
+export const periodOf = (input: { from?: string; to?: string }): Period => ({
   from: input.from ? moscowDay(input.from) : null,
   to: input.to ? new Date(moscowDay(input.to).getTime() + DAY) : null,
 });
@@ -362,6 +384,8 @@ export const orders = adminProcedure
       channel: z.enum(["site", ...ORDER_CHANNELS]).optional(),
       type: z.enum(TYPES).optional(),
       query: z.string().trim().max(100).optional(),
+      // Только оплаченные заказы, по которым не внесены материалы
+      missingMaterials: z.boolean().optional(),
       from: daySchema.optional(),
       to: daySchema.optional(),
       limit: z.number().int().min(1).max(500).default(100),
@@ -371,7 +395,7 @@ export const orders = adminProcedure
   .handler(async ({ context, input }) => {
     const now = new Date();
     const today = toMoscowDay(now);
-    const { orders: all } = await loadWork(context.db, now);
+    const { orders: all, rates } = await loadWork(context.db, now);
     const period = periodOf(input);
 
     const query = input.query?.toLowerCase().replace(/^№/, "");
@@ -395,6 +419,7 @@ export const orders = adminProcedure
         (!input.type || order.type === input.type) &&
         (!period.from || order.createdAt >= period.from) &&
         (!period.to || order.createdAt < period.to) &&
+        (!input.missingMaterials || needsMaterials(order)) &&
         matches(order),
     );
 
@@ -420,7 +445,7 @@ export const orders = adminProcedure
 
     const found = scoped
       .filter((order) => !input.stage || order.stage === input.stage)
-      .map((order) => orderView(order, today, now));
+      .map((order) => orderView(order, today, now, rates));
     found.sort(
       input.view === "active"
         ? byUrgency
@@ -432,6 +457,7 @@ export const orders = adminProcedure
       total: found.length,
       stages,
       kinds,
+      missingMaterials: scoped.filter(needsMaterials).length,
     };
   });
 

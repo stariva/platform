@@ -11,12 +11,29 @@ export interface OrderEmailOrder {
   number: number;
   status: string;
   amountTotal: number;
+  amountDelivery: number;
   depositAmount: number | null;
   leadTime: string | null;
   paymentDueAt: Date | null;
   approvedAt: Date | null;
   trackingNumber: string | null;
   declineReason: string | null;
+  /** Под заказ: посылка и расчёт доставки (priceKopecks пуст, пока покупатель не выбрал пункт). */
+  checkoutSnapshot: unknown;
+}
+
+/**
+ * Изделие готово, мастер указал параметры посылки, а покупатель ещё не выбрал
+ * пункт: доставки в доплате пока нет. Так же считает витрина
+ * (apps/web, made-to-order-flow.ts).
+ */
+function deliveryQuoteNeeded(order: OrderEmailOrder): boolean {
+  if (order.status !== "awaiting_balance") return false;
+  const snapshot = order.checkoutSnapshot as {
+    parcel?: unknown;
+    priceKopecks?: number | null;
+  } | null;
+  return Boolean(snapshot?.parcel) && snapshot?.priceKopecks == null;
 }
 
 const dueLabel = (date: Date) =>
@@ -57,14 +74,20 @@ export function buildOrderStatusEmail({
     orderUrl: `${siteUrl.replace(/\/$/, "")}/order/${order.id}`,
     items,
     amountTotal: order.amountTotal,
+    amountDelivery: order.amountDelivery,
     depositAmount: order.depositAmount,
     leadTime: order.leadTime,
     paymentDueLabel: order.paymentDueAt ? dueLabel(order.paymentDueAt) : null,
     trackingNumber: order.trackingNumber,
     declineReason: order.declineReason,
+    deliveryQuoteNeeded: deliveryQuoteNeeded(order),
   };
   return {
-    idempotencyKey: `order:${order.id}:${status}:${order.approvedAt?.getTime() ?? 0}`,
+    // Доплату могут выставить заново с другой доставкой: это другое письмо,
+    // и с прежним ключом Resend отклонил бы его (409). Ручная доставка за 0 ₽
+    // не меняет итог, но меняет текст (оплатить вместо «выберите пункт»), поэтому
+    // в ключ входит и признак ожидания расчёта
+    idempotencyKey: `order:${order.id}:${status}:${order.approvedAt?.getTime() ?? 0}${status === "awaiting_balance" ? `:${order.amountTotal}:${props.deliveryQuoteNeeded ? "quote" : "ready"}` : ""}`,
     to: [to],
     subject: orderEmailSubject(props),
     props,

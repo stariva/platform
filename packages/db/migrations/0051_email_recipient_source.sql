@@ -1,0 +1,1 @@
+ALTER TABLE "email_campaign_recipients" ADD COLUMN "source" text DEFAULT 'buyer' NOT NULL;

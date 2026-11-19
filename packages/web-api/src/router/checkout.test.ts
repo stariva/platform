@@ -6,11 +6,15 @@ const { safe } = await import("@orpc/client");
 const {
   CheckoutCheckFailedError,
   DeliveryNotAvailableError,
+  DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
+  normalizeTelegramHandle,
   OptionsUnavailableError,
   PaymentCreateFailedError,
   PaymentsUnavailableError,
+  ProductsPriceChangedError,
+  TELEGRAM_HANDLE_ERROR,
 } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
 
@@ -34,6 +38,7 @@ const quote = {
 const createInput = {
   contactName: "Анна",
   contactPhone: "+7 900 123-45-67",
+  contactEmail: "anna@example.com",
   items: [{ productSlug: "elka", quantity: 1 }],
   delivery: { method: "pickup" as const, pointId: "123" },
   personalDataConsent: true as const,
@@ -43,6 +48,8 @@ const createInput = {
 const madeToOrderInput = {
   contactName: "Анна",
   contactPhone: "+7 900 123-45-67",
+  contactEmail: "anna@example.com",
+  deliveryPointId: "1234",
   items: [
     {
       productSlug: "korzina",
@@ -92,11 +99,30 @@ test("checks the phone against Ozon Delivery", async () => {
   expect(seen).toEqual(["+7 900 123-45-67"]);
 });
 
-test("asks for a phone before calling Ozon", async () => {
-  const client = wireClient({ services: { checkout: checkout() } });
-  const [error] = await safe(client.checkout.checkPhone({ phone: "12" }));
-  expect(error).toMatchObject({ code: "BAD_REQUEST" });
-  expect(firstIssue(error)).toBe("Укажите телефон");
+test("asks for a full phone before calling Ozon", async () => {
+  let calls = 0;
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        checkPhone: async () => {
+          calls += 1;
+          return { status: "ok", check: { available: true } };
+        },
+      }),
+    },
+  });
+  // Слишком короткий, неполный (+7 и код) и с лишним текстом вместо цифр
+  for (const phone of ["12", "+7 900", "+7 (900) 12", "телефон"]) {
+    const [error] = await safe(client.checkout.checkPhone({ phone }));
+    expect(error).toMatchObject({ code: "BAD_REQUEST" });
+    expect(firstIssue(error)).toBe("Укажите телефон полностью");
+  }
+  expect(calls).toBe(0);
+
+  expect(
+    await client.checkout.checkPhone({ phone: "8 (900) 123-45-67" }),
+  ).toEqual({ available: true });
+  expect(calls).toBe(1);
 });
 
 test("reports missing Ozon keys and Ozon failures differently", async () => {
@@ -139,6 +165,51 @@ test("quotes the delivery to the chosen point", async () => {
       delivery: { method: "pickup", pointId: "123" },
     }),
   ).toEqual(quote);
+});
+
+test("quote passes a manual (Ozon unavailable) delivery through", async () => {
+  const manual = {
+    available: true,
+    deliveryPriceKopecks: 0,
+    shipments: [],
+    manual: true,
+  };
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        quote: async () => ({ status: "ok", quote: manual }),
+      }),
+    },
+  });
+  expect(
+    await client.checkout.quote({
+      contactPhone: "+7 900 123-45-67",
+      items: [{ productSlug: "elka", quantity: 1 }],
+      delivery: { method: "pickup", pointId: "123" },
+    }),
+  ).toEqual(manual);
+});
+
+test("create hands the expected delivery price and point label to the service", async () => {
+  const seen: unknown[] = [];
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        create: async (input) => {
+          seen.push([input.expectedDeliveryKopecks, input.delivery]);
+          return { status: "ok", order: createdOrder };
+        },
+      }),
+    },
+  });
+  await client.checkout.create({
+    ...createInput,
+    delivery: { ...createInput.delivery, pointLabel: "ПВЗ, Москва" },
+    expectedDeliveryKopecks: 0,
+  });
+  expect(seen).toEqual([
+    [0, { method: "pickup", pointId: "123", pointLabel: "ПВЗ, Москва" }],
+  ]);
 });
 
 test("quote tells which items are gone with a 409", async () => {
@@ -251,6 +322,8 @@ test("maps every create failure to its own error", async () => {
     [{ status: "unconfigured" }, PaymentsUnavailableError, 503],
     [{ status: "check_failed" }, CheckoutCheckFailedError, 502],
     [{ status: "delivery_unavailable" }, DeliveryNotAvailableError, 400],
+    [{ status: "delivery_price_changed" }, DeliveryPriceChangedError, 409],
+    [{ status: "products_price_changed" }, ProductsPriceChangedError, 409],
     [{ status: "payment_failed" }, PaymentCreateFailedError, 502],
     [
       { status: "items_unavailable", unavailableProductSlugs: ["elka"] },
@@ -317,6 +390,85 @@ test("made-to-order failures keep their own texts", async () => {
   );
   expect(failed).toBeInstanceOf(CheckoutCheckFailedError);
   expect((failed as Error).message).toBe("Не удалось проверить заявку");
+});
+
+test("an order needs a valid email for the receipt and status updates", async () => {
+  const client = wireClient({ services: { checkout: checkout() } });
+  const { contactEmail: _, ...withoutEmail } = createInput;
+  const [missing] = await safe(
+    // @ts-expect-error email обязателен в контракте
+    client.checkout.create(withoutEmail),
+  );
+  expect(missing).toMatchObject({ code: "BAD_REQUEST" });
+  expect(firstIssue(missing)).toBe("Укажите email");
+  const [invalid] = await safe(
+    client.checkout.create({ ...createInput, contactEmail: "anna" }),
+  );
+  expect(invalid).toMatchObject({ code: "BAD_REQUEST" });
+});
+
+test("made-to-order accepts legacy phone and current email requests over RPC", async () => {
+  const seen: unknown[] = [];
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        requestMadeToOrder: async (input) => {
+          seen.push(input);
+          return {
+            status: "ok",
+            request: { orderId: "ord_2", estimate: 4500 },
+          };
+        },
+      }),
+    },
+  });
+  for (const preferredContactChannel of ["phone", "email"] as const) {
+    const input = { ...madeToOrderInput, preferredContactChannel };
+    expect(await client.checkout.requestMadeToOrder(input)).toEqual({
+      orderId: "ord_2",
+      estimate: 4500,
+    });
+    expect(seen.at(-1)).toMatchObject(input);
+  }
+});
+
+test("made-to-order asks for a Telegram handle when Telegram is chosen", async () => {
+  const client = wireClient({ services: { checkout: checkout() } });
+  const [missing] = await safe(
+    client.checkout.requestMadeToOrder({
+      ...madeToOrderInput,
+      preferredContactChannel: "telegram",
+    }),
+  );
+  expect(missing).toMatchObject({ code: "BAD_REQUEST" });
+  expect(firstIssue(missing)).toBe(TELEGRAM_HANDLE_ERROR);
+
+  const [invalid] = await safe(
+    client.checkout.requestMadeToOrder({
+      ...madeToOrderInput,
+      preferredContactChannel: "telegram",
+      contactMessenger: "https://t.me/StarivaBot?start=abc",
+    }),
+  );
+  expect(invalid).toMatchObject({ code: "BAD_REQUEST" });
+});
+
+test("telegram handle accepts a link, @nick or nick", () => {
+  expect(normalizeTelegramHandle("@anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("t.me/anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("https://t.me/anna_star")).toBe("@anna_star");
+  expect(normalizeTelegramHandle("+7 900 123-45-67")).toBeNull();
+});
+
+test("made-to-order requires an email", async () => {
+  const client = wireClient({ services: { checkout: checkout() } });
+  const { contactEmail: _, ...withoutEmail } = madeToOrderInput;
+  const [error] = await safe(
+    // @ts-expect-error email обязателен в контракте
+    client.checkout.requestMadeToOrder(withoutEmail),
+  );
+  expect(error).toMatchObject({ code: "BAD_REQUEST" });
 });
 
 test("made-to-order limits the size and colour to a short text", async () => {

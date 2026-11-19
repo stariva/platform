@@ -10,6 +10,16 @@ export interface AdminOrderView {
   contactName: string;
   contactPhone: string;
   contactEmail: string | null;
+  /** Где покупателю удобнее ответить; null — старая заявка без выбора. */
+  preferredContactChannel:
+    | "telegram"
+    | "whatsapp"
+    | "max"
+    | "phone"
+    | "email"
+    | null;
+  /** Ник в Telegram, если выбран Telegram. */
+  contactMessenger: string | null;
   amountTotal: number;
   amountProducts: number;
   amountDelivery: number;
@@ -20,8 +30,12 @@ export interface AdminOrderView {
   depositPaidAt: string | null;
   declineReason: string | null;
   customerNotes: string | null;
+  /** Заявка с сайта, по которой мастер выставила счёт из админки. */
+  requestNumber: number | null;
   deliveryMethod: "pickup" | "courier" | "manual";
   deliveryPointId: string | null;
+  /** Доплата ждёт, пока покупатель выберет пункт и сайт посчитает доставку. */
+  deliveryQuotePending: boolean;
   deliveryAddress: {
     address: string | null;
     title: string | null;
@@ -77,6 +91,17 @@ export interface AdminOrderView {
   /** Привязанные чеки, которые не отправлены покупателю. */
   receiptsUnsent?: number;
 }
+
+export const CONTACT_CHANNEL_LABELS: Record<
+  NonNullable<AdminOrderView["preferredContactChannel"]>,
+  string
+> = {
+  telegram: "Telegram",
+  whatsapp: "WhatsApp",
+  max: "MAX",
+  email: "Email",
+  phone: "Звонок",
+};
 
 /** Чеков меньше, чем оплат: нет чека на предоплату, доплату или на весь заказ. */
 export function needsReceipt(order: AdminOrderView): boolean {
@@ -169,8 +194,10 @@ export const STATUSES_BY_KIND: Record<AdminOrderView["kind"], string[]> = {
     "in_production",
     "awaiting_balance",
     "ready_to_ship",
+    "fulfilling",
     "shipped",
     "delivered",
+    "ozon_order_failed",
     "declined",
     "canceled",
     "refunded",
@@ -250,11 +277,22 @@ export const KIND_LABELS: Record<AdminOrderView["kind"], string> = {
   made_to_order: "Под заказ",
 };
 
+/**
+ * Тон плашки статуса для `Badge` из "@stariva/ui/reui": жёлтый — ждёт мастера,
+ * фиолетовый — изготавливается, в пути или ждёт покупателя, зелёный — деньги получены.
+ */
 export function statusVariant(
   status: string,
-): "default" | "secondary" | "destructive" | "outline" {
-  if (status === "ozon_order_failed") return "destructive";
-  if (NEEDS_ATTENTION.has(status)) return "default";
+):
+  | "warning-light"
+  | "info-light"
+  | "success-light"
+  | "destructive-light"
+  | "outline" {
+  if (status === "ozon_order_failed") return "destructive-light";
+  if (status === "in_production") return "info-light";
+  if (NEEDS_ATTENTION.has(status)) return "warning-light";
+  if (status === "paid" || status === "delivered") return "success-light";
   if (
     status === "pending" ||
     status === "canceled" ||
@@ -263,7 +301,7 @@ export function statusVariant(
   ) {
     return "outline";
   }
-  return "secondary";
+  return "info-light";
 }
 
 export const rubles = new Intl.NumberFormat("ru-RU", {
@@ -272,7 +310,16 @@ export const rubles = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 0,
 });
 
+// Сервер админки живёт в UTC, а читает её Москва: пояс задаём явно
 export const dateTime = new Intl.DateTimeFormat("ru-RU", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: "Europe/Moscow",
+});
+
+/** С секундами: события корзины идут с разницей в секунды. */
+export const dateTimeSeconds = new Intl.DateTimeFormat("ru-RU", {
+  dateStyle: "medium",
+  timeStyle: "medium",
+  timeZone: "Europe/Moscow",
 });

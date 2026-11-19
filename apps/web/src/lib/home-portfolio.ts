@@ -14,7 +14,7 @@ interface HomeCopy {
 const sectionCopy: Record<string, HomeCopy> = {
   clothes: {
     title: "Одежда по вашим меркам",
-    details: "Подберём длину и посадку. Поможем снять мерки и выбрать цвет.",
+    details: "Подберу длину и посадку, помогу снять мерки и выбрать цвет.",
   },
   lampshades: {
     title: "Абажур для вашего пространства",
@@ -28,7 +28,7 @@ const sectionCopy: Record<string, HomeCopy> = {
   },
   interior: {
     title: "Декор для вашего дома",
-    details: "Подберём размер и оттенок под ваш интерьер.",
+    details: "Подберу размер и оттенок под ваш интерьер.",
   },
 };
 
@@ -37,8 +37,8 @@ export function getHomeCopy(
 ): HomeCopy {
   return (
     sectionCopy[productSectionKey(product)] ?? {
-      title: "Сплетём для вас",
-      details: "Размер, цвет и детали обсудим для вашего заказа.",
+      title: "Сплету для вас",
+      details: "Размер, цвет и детали обсудим вместе.",
     }
   );
 }

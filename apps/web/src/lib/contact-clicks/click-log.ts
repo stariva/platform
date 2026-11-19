@@ -15,7 +15,7 @@ const text = (max: number) =>
     .refine((value) => !/\p{Cc}/u.test(value))
     .optional();
 
-const entrySchema = z.object({
+export const entrySchema = z.object({
   landing: z.string().max(200),
   referrer: text(100),
   utm_source: text(120),

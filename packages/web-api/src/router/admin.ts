@@ -8,7 +8,9 @@ import {
 const pushStock = admin.ozon.pushStock.handler(async ({ input, errors }) => {
   if (!isOzonSellerConfigured()) throw errors.OZON_NOT_CONFIGURED();
   try {
-    return await pushStockToOzon(input.slugs);
+    return await pushStockToOzon(input.slugs, {
+      visibilityOnly: input.visibilityOnly,
+    });
   } catch (error) {
     // Текст ответа Ozon остаётся в логе сайта, админке хватает кода
     logger.error("ozon.stock.push_error", error);

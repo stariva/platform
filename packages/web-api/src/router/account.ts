@@ -6,6 +6,17 @@ import {
   lessonExists,
   upsertLessonProgress,
 } from "../services/course-access";
+import {
+  getLatestRelease,
+  getLessonDetails,
+  listCatalogCourses,
+  listMobileCourses,
+  saveLessonChecklist as saveChecklist,
+} from "../services/mobile-courses";
+import {
+  getWorkshopReview,
+  saveWorkshopReview as saveReview,
+} from "../services/workshop-reviews";
 
 const workshopAccess = account.workshopAccess.handler(
   async ({ input, context }) => {
@@ -38,6 +49,47 @@ const saveLessonProgress = account.saveLessonProgress.handler(
     });
   },
 );
+
+const myCourses = account.myCourses.handler(async ({ context }) => {
+  const user = context.session?.user;
+  if (!user) throw new ORPCError("UNAUTHORIZED");
+  return listMobileCourses(user.id);
+});
+
+const catalogCourses = account.catalogCourses.handler(() =>
+  listCatalogCourses(),
+);
+
+const lessonDetails = account.lessonDetails.handler(
+  async ({ input, context, errors }) => {
+    const result = await getLessonDetails({
+      userId: context.session?.user.id ?? null,
+      ...input,
+    });
+    switch (result.status) {
+      case "ok":
+        return result.details;
+      case "not_found":
+        throw errors.LESSON_NOT_FOUND();
+      case "unauthorized":
+        throw new ORPCError("UNAUTHORIZED");
+      case "forbidden":
+        throw new ORPCError("FORBIDDEN");
+    }
+  },
+);
+
+const saveLessonChecklist = account.saveLessonChecklist.handler(
+  async ({ input, context, errors }) => {
+    const user = context.session?.user;
+    if (!user) throw new ORPCError("UNAUTHORIZED");
+    const result = await saveChecklist({ userId: user.id, ...input });
+    if (result === "not_found") throw errors.LESSON_NOT_FOUND();
+    if (result === "forbidden") throw new ORPCError("FORBIDDEN");
+  },
+);
+
+const latestRelease = account.latestRelease.handler(() => getLatestRelease());
 
 const lessonVideo = account.lessonVideo.handler(
   async ({ input, context, errors }) => {
@@ -92,9 +144,73 @@ const materialUrl = account.materialUrl.handler(
   },
 );
 
+/** Страницы, где виден опубликованный отзыв о мастер-классе. */
+function workshopReviewPages(slug: string): string[] {
+  return [`/workshops/${slug}`, "/reviews"];
+}
+
+const workshopReview = account.workshopReview.handler(
+  async ({ input, context }) => {
+    const user = context.session?.user;
+    if (!user) throw new ORPCError("UNAUTHORIZED");
+    return getWorkshopReview(user.id, input.slug);
+  },
+);
+
+const saveWorkshopReview = account.saveWorkshopReview.handler(
+  async ({ input, context, errors }) => {
+    const user = context.session?.user;
+    if (!user) throw new ORPCError("UNAUTHORIZED");
+    // Отзыв оставляет только купивший: админ без покупки — тоже нет
+    if (!(await hasAccess(user.id, input.slug))) {
+      throw new ORPCError("FORBIDDEN");
+    }
+
+    const result = await saveReview({
+      userId: user.id,
+      workshopSlug: input.slug,
+      rating: input.rating,
+      text: input.text,
+      reviewerName: input.reviewerName,
+      keepPhotos: input.keepPhotos,
+      photos: input.photos,
+    });
+    switch (result.status) {
+      case "not_found":
+        throw new ORPCError("FORBIDDEN");
+      case "photo_invalid":
+        throw errors.REVIEW_PHOTO_INVALID();
+      case "unavailable":
+        throw errors.REVIEW_UNAVAILABLE();
+    }
+
+    // Правка снимает отзыв с сайта до проверки — убираем его со страниц
+    if (result.wasPublished) {
+      context.services.revalidatePaths(workshopReviewPages(input.slug));
+    }
+    // Серия правок подряд — одно сообщение мастеру, а не по одному на каждую
+    if (result.notify)
+      context.services.notifyWorkshopReview({
+        workshopSlug: input.slug,
+        workshopTitle: result.workshopTitle,
+        email: user.email,
+        created: result.created,
+        review: result.review,
+      });
+    return result.review;
+  },
+);
+
 export const accountRouter = {
+  catalogCourses,
   workshopAccess,
+  myCourses,
+  lessonDetails,
+  saveLessonChecklist,
+  latestRelease,
   saveLessonProgress,
   lessonVideo,
   materialUrl,
+  workshopReview,
+  saveWorkshopReview,
 };

@@ -17,10 +17,7 @@ export const byId = adminProcedure
     if (!row) {
       throw new ORPCError("NOT_FOUND", { message: "Мастер-класс не найден" });
     }
-    const videos = await loadLessonVideos(
-      context.db,
-      row.lessons.map((lesson) => lesson.videoKey),
-    );
+    const videos = await loadLessonVideos(context.db, row.lessons);
     return {
       id: row.id,
       values: rowToForm(row),
@@ -45,8 +42,5 @@ export const videos = adminProcedure
     if (!row) {
       throw new ORPCError("NOT_FOUND", { message: "Мастер-класс не найден" });
     }
-    return loadLessonVideos(
-      context.db,
-      row.lessons.map((lesson) => lesson.videoKey),
-    );
+    return loadLessonVideos(context.db, row.lessons);
   });

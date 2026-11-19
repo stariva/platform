@@ -13,6 +13,8 @@ export interface Review {
   productIds: string[];
   photos: string[];
   source: "ozon" | "avito" | "site";
+  /** Отзыв участницы о мастер-классе, оставленный в кабинете после покупки */
+  workshopSlug?: string;
 }
 
 // ─── Internal Product Types ───────────────────────────────────────────────────
@@ -31,7 +33,8 @@ export type ProductSubcategory =
   | "baskets"
   | "totes"
   | "crossbody"
-  | "trees";
+  | "trees"
+  | "kits";
 
 export interface Product {
   id: string;
@@ -66,6 +69,8 @@ export interface Product {
   material: string;
   dimensions?: string;
   careInstructions?: string;
+  /** Автор идеи изделия — выводим сноской в карточке. */
+  ideaAuthor?: string;
   color?: string;
   sizes?: string[];
   /** «Лучше всего для: …» — где изделие смотрится лучше всего. */

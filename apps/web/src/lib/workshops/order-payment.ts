@@ -7,6 +7,7 @@ import {
 } from "@/lib/payments/orders";
 import type { Payment } from "@/lib/payments/payment";
 import { fetchPayment } from "@/lib/payments/status";
+import { getBundle } from "./bundles";
 import { notifyWorkshopBooked } from "./notifications";
 import { earnsPreorderBonus } from "./preorder-bonus";
 import { getWorkshopBySlug } from "./workshops-db";

@@ -32,6 +32,11 @@ const suites: Suite[] = [
     database: "stariva_access_code_test",
   },
   {
+    file: "apps/web/src/lib/workshops/kit-access.integration.test.ts",
+    env: "KIT_ACCESS_TEST_DATABASE_URL",
+    database: "stariva_kit_access_test",
+  },
+  {
     file: "apps/web/src/lib/custom-order/inbox.integration.test.ts",
     env: "CUSTOM_ORDER_TEST_DATABASE_URL",
     database: "stariva_custom_order_test",
@@ -53,11 +58,21 @@ const suites: Suite[] = [
     database: "stariva_npd_test",
   },
   {
+    file: "apps/web/src/lib/commerce/made-to-order-unapproved.integration.test.ts",
+    env: "ORDER_SHIPMENT_TEST_DATABASE_URL",
+    database: "stariva_order_shipment_test",
+  },
+  {
     file: "packages/web-api/src/services/video-renditions.integration.test.ts",
     env: "RENDITION_TEST_DATABASE_URL",
     database: "stariva_rendition_test",
     // Тест ждёт пустой каталог мастер-классов, а 0007 его засевает
     prepare: "TRUNCATE workshops CASCADE",
+  },
+  {
+    file: "packages/web-api/src/services/workshop-reviews.integration.test.ts",
+    env: "WORKSHOP_REVIEW_TEST_DATABASE_URL",
+    database: "stariva_workshop_review_test",
   },
 ];
 

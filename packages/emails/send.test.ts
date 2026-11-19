@@ -1,5 +1,6 @@
 import { expect, mock, spyOn, test } from "bun:test";
 import { logger } from "@stariva/config";
+import { createElement } from "react";
 
 const send = mock(async (..._args: unknown[]) => ({
   error: null as { message: string } | null,
@@ -16,7 +17,10 @@ const env: Record<string, unknown> = {
   POSTBOX_ACCESS_KEY_ID: "synthetic-key-id",
   POSTBOX_SECRET_ACCESS_KEY: "synthetic-secret",
 };
+const recordEmail = mock(async (_entry: unknown) => {});
 mock.module("./env", () => ({ env }));
+const wasEmailSent = mock(async (_key: string) => false);
+mock.module("./log", () => ({ recordEmail, wasEmailSent }));
 mock.module("resend", () => ({
   Resend: class {
     emails = { send };
@@ -48,8 +52,14 @@ test("passes the deterministic key as Resend options only", async () => {
     idempotencyKey: "workshop:order:booked:email",
   };
   await sendEmail(email);
+  // Письмо уходит готовым HTML: в него уже вставлен пиксель открытия
   expect(send.mock.calls[0]).toEqual([
-    { to: email.to, from: env.EMAIL_FROM, subject: email.subject, react: null },
+    {
+      to: email.to,
+      from: env.EMAIL_FROM,
+      subject: email.subject,
+      html: expect.stringContaining("/api/m/o/"),
+    },
     { idempotencyKey: email.idempotencyKey },
   ]);
   env.EMAIL_SANDBOX_ENABLED = true;
@@ -78,6 +88,8 @@ function resetMocks() {
   send.mockClear();
   smtp.mockClear();
   postbox.mockClear();
+  recordEmail.mockClear();
+  wasEmailSent.mockClear();
   globalThis.fetch = postbox as unknown as typeof fetch;
 }
 
@@ -87,6 +99,29 @@ function restore() {
   env.EMAIL_FALLBACK_PROVIDER = undefined;
   env.POSTBOX_SECRET_ACCESS_KEY = "synthetic-secret";
 }
+
+test("skips an email whose idempotency key was already sent", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  env.EMAIL_FALLBACK_PROVIDER = "resend";
+  try {
+    wasEmailSent.mockImplementationOnce(async () => true);
+    await sendEmail({ ...email, idempotencyKey: "custom-order/1" });
+    expect(wasEmailSent).toHaveBeenCalledWith("custom-order/1");
+    expect(postbox).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    expect(recordEmail).not.toHaveBeenCalled();
+
+    await sendEmail({ ...email, idempotencyKey: "custom-order/2" });
+    expect(postbox).toHaveBeenCalledTimes(1);
+
+    await sendEmail(email);
+    expect(wasEmailSent).toHaveBeenCalledTimes(2);
+    expect(postbox).toHaveBeenCalledTimes(2);
+  } finally {
+    restore();
+  }
+});
 
 test("sends through the Postbox REST API when it is the default provider", async () => {
   resetMocks();
@@ -119,6 +154,125 @@ test("sends through the Postbox REST API when it is the default provider", async
         },
       },
     });
+  } finally {
+    restore();
+  }
+});
+
+test("records the Postbox message id and sends with the configuration set", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  env.POSTBOX_CONFIGURATION_SET = "stariva-events";
+  try {
+    await sendEmail(email);
+    const body = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body));
+    expect(body.ConfigurationSetName).toBe("stariva-events");
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      attempts: [{ provider: "postbox", ok: true, messageId: "synthetic-id" }],
+    });
+
+    // Письмо принято, но ответ не разобрать: не ошибка, просто без id
+    resetMocks();
+    postbox.mockImplementationOnce(async () => new Response("ok"));
+    await sendEmail(email);
+    const entry = recordEmail.mock.calls[0]?.[0] as { attempts: object[] };
+    const [attempt] = entry.attempts;
+    expect(attempt).toMatchObject({ provider: "postbox", ok: true });
+    expect(attempt).not.toHaveProperty("messageId");
+  } finally {
+    env.POSTBOX_CONFIGURATION_SET = undefined;
+    restore();
+  }
+});
+
+test("adds an open pixel and logs its token, unless the email has its own", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  try {
+    await sendEmail(email);
+    const entry = recordEmail.mock.calls[0]?.[0] as {
+      openToken: string;
+      html: string;
+    };
+    expect(entry.openToken).toMatch(/^[A-Za-z0-9_-]{24}$/);
+    const body = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body));
+    const sent = body.Content.Simple.Body.Html.Data as string;
+    expect(sent).toContain(`https://stariva.ru/api/m/o/${entry.openToken}`);
+    // В журнале пиксель выключен: просмотр в админке — не открытие
+    expect(entry.html).not.toContain(entry.openToken);
+    expect(entry.html).toBe(
+      sent.replace(`/api/m/o/${entry.openToken}`, "/api/m/o/preview"),
+    );
+
+    // Рассылка ставит пиксель сама: второго не добавляем, токен — её
+    resetMocks();
+    await sendEmail({
+      ...email,
+      react: createElement("img", {
+        src: "https://stariva.ru/api/m/o/recipient-token-1234",
+      }),
+      openToken: "recipient-token-1234",
+    });
+    const own = recordEmail.mock.calls[0]?.[0] as {
+      openToken: string;
+      html: string;
+    };
+    const ownSent = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body)).Content
+      .Simple.Body.Html.Data as string;
+    expect(own.openToken).toBe("recipient-token-1234");
+    expect(ownSent.match(/<img[^>]*\/api\/m\/o\//g)).toHaveLength(1);
+    expect(own.html).toContain("/api/m/o/preview");
+    expect(own.html).not.toContain("recipient-token-1234");
+  } finally {
+    restore();
+  }
+});
+
+test("the letter text reaches the provider along with the pixel", async () => {
+  resetMocks();
+  await sendEmail({
+    ...email,
+    react: createElement("p", null, "Текст письма"),
+  });
+  const sent = send.mock.calls[0]?.[0] as { html: string };
+  const { html } = sent;
+  expect(html).toContain("Текст письма");
+  expect(html).toContain("/api/m/o/");
+});
+
+test("a retry with the same idempotency key sends the same html", async () => {
+  resetMocks();
+  const keyed = { ...email, idempotencyKey: "workshop:o1:booked:email" };
+  await sendEmail(keyed);
+  await sendEmail(keyed);
+  await sendEmail({ ...keyed, idempotencyKey: "workshop:o2:booked:email" });
+  const [first, retry, other] = send.mock.calls.map(
+    (call) => (call[0] as { html: string }).html,
+  );
+  expect(first).toContain("/api/m/o/");
+  expect(retry).toBe(first);
+  expect(other).not.toBe(first);
+});
+
+test("passes extra headers to Postbox and Resend", async () => {
+  resetMocks();
+  env.EMAIL_PROVIDER = "postbox";
+  env.EMAIL_FALLBACK_PROVIDER = "resend";
+  const headers = {
+    "List-Unsubscribe": "<https://stariva.example.test/api/m/u/t1>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+  try {
+    await sendEmail({ ...email, headers });
+    const body = JSON.parse(String(postbox.mock.calls[0]?.[1]?.body));
+    expect(body.Content.Simple.Headers).toEqual([
+      { Name: "List-Unsubscribe", Value: headers["List-Unsubscribe"] },
+      { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+    ]);
+
+    env.EMAIL_PROVIDER = "resend";
+    await sendEmail({ ...email, headers });
+    expect(send.mock.calls[0]?.[0]).toMatchObject({ headers });
   } finally {
     restore();
   }
@@ -302,9 +456,56 @@ test("falls back from Postbox to Resend when Postbox rejects the request", async
       new Response('{"message":"sender not verified"}', { status: 403 }),
   );
   try {
-    await sendEmail(email);
+    await sendEmail({ ...email, idempotencyKey: "workshop:o1:booked:email" });
     expect(postbox).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledTimes(1);
+    expect(recordEmail).toHaveBeenCalledTimes(1);
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      to: email.to,
+      subject: "Test",
+      idempotencyKey: "workshop:o1:booked:email",
+      attempts: [
+        {
+          provider: "postbox",
+          ok: false,
+          error: expect.stringContaining("403"),
+        },
+        { provider: "resend", ok: true },
+      ],
+    });
+  } finally {
+    restore();
+  }
+});
+
+test("logs the rendered html", async () => {
+  resetMocks();
+  try {
+    await sendEmail(email);
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      html: expect.stringContaining("<!DOCTYPE html"),
+    });
+  } finally {
+    restore();
+  }
+});
+
+test("logs a failed send with every attempt when all providers fail", async () => {
+  resetMocks();
+  env.EMAIL_FALLBACK_PROVIDER = "postbox";
+  send.mockImplementationOnce(async () => ({ error: { message: "down" } }));
+  postbox.mockImplementationOnce(
+    async () => new Response("unavailable", { status: 503 }),
+  );
+  try {
+    await expect(sendEmail(email)).rejects.toThrow();
+    expect(recordEmail).toHaveBeenCalledTimes(1);
+    expect(recordEmail.mock.calls[0]?.[0]).toMatchObject({
+      attempts: [
+        { provider: "resend", ok: false, error: "Resend error: down" },
+        { provider: "postbox", ok: false },
+      ],
+    });
   } finally {
     restore();
   }

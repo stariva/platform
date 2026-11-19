@@ -19,6 +19,8 @@ const valid: ProductFormValues = {
   color: "",
   dimensions: "",
   careInstructions: "",
+  ideaAuthor: "",
+  workshopSlug: "",
   sizes: [],
   bestFor: "",
   highlights: [],

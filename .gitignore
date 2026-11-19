@@ -30,6 +30,7 @@ build
 # misc
 .DS_Store
 *.pem
+.playwright-mcp/
 
 # debug
 npm-debug.log*
@@ -54,3 +55,6 @@ dist/
 
 # tanstack
 .tanstack
+
+# Playwright MCP local traces
+.playwright-mcp/

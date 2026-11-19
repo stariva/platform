@@ -1,8 +1,14 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { NextRequest } from "next/server";
+import type { CampaignAttribution } from "@stariva/db/schema";
 import type { CartEventInput } from "@/lib/cart/event-log";
+import { ATTRIBUTION_COOKIE } from "@/lib/campaign-attribution";
 
-const recorded: { event: CartEventInput; userId: string | null }[] = [];
+const recorded: {
+  event: CartEventInput;
+  userId: string | null;
+  attribution: CampaignAttribution | null;
+}[] = [];
 let sessionUserId: string | null = null;
 
 mock.module("@/lib/auth/session", () => ({
@@ -15,9 +21,12 @@ mock.module("@/lib/cart/event-log", () => ({
   ...eventLog,
   recordCartEvent: async (
     event: CartEventInput,
-    { userId }: { userId: string | null },
+    {
+      userId,
+      attribution,
+    }: { userId: string | null; attribution: CampaignAttribution | null },
   ) => {
-    recorded.push({ event, userId });
+    recorded.push({ event, userId, attribution });
   },
 }));
 
@@ -66,6 +75,34 @@ test("привязывает событие к аккаунту, если пос
   expect(recorded[0]?.userId).toBe("user-1");
 });
 
+test("пишет заход вкладки и UTM из cookie: с какой рекламы пришли", async () => {
+  const touch = {
+    utm_source: "yandex",
+    utm_medium: "cpc",
+    utm_campaign: "gnomes",
+    landing: "/catalog",
+    at: "2026-10-30T10:00:00.000Z",
+  };
+  const entry = { ...touch, yclid: "123", at: "2026-10-30T10:05:00.000Z" };
+  await POST(
+    request(
+      { ...event, entry },
+      {
+        cookie: `${ATTRIBUTION_COOKIE}=${encodeURIComponent(JSON.stringify({ first: touch, last: touch }))}`,
+      },
+    ),
+  );
+  expect(recorded[0]?.event.entry).toEqual(entry);
+  expect(recorded[0]?.attribution?.last.utm_campaign).toBe("gnomes");
+});
+
+test("битый заход не теряет событие", async () => {
+  const response = await POST(request({ ...event, entry: { landing: 5 } }));
+  expect(response.status).toBe(204);
+  expect(recorded[0]?.event.entry).toBeUndefined();
+  expect(recorded[0]?.attribution).toBeNull();
+});
+
 test("ботов не пишет", async () => {
   const response = await POST(
     request(event, { "user-agent": "Googlebot/2.1" }),
@@ -80,6 +117,22 @@ test("отклоняет запрос с чужого сайта", async () => {
   );
   expect(response.status).toBe(403);
   expect(recorded).toHaveLength(0);
+});
+
+test("за прокси сравнивает Origin с хостом посетителя, а не с адресом пода", async () => {
+  // На проде nextUrl.host — имя пода, а сайт открыт по stariva.ru
+  const proxied = new NextRequest("http://stariva-7d9f:3000/api/cart/events", {
+    method: "POST",
+    headers: {
+      "user-agent": CHROME,
+      origin: "https://stariva.ru",
+      host: "stariva.ru",
+      "x-forwarded-host": "stariva.ru",
+    },
+    body: JSON.stringify(event),
+  });
+  expect((await POST(proxied)).status).toBe(204);
+  expect(recorded).toHaveLength(1);
 });
 
 test("отклоняет неизвестное действие и кривой id корзины", async () => {

@@ -10,6 +10,8 @@ import { cookieMatchesOrder } from "./order-cookie";
 export interface WorkshopPurchase {
   userId: string;
   workshopSlug: string;
+  /** Комбо или null: заказ одного курса не открываем вместо комбо и наоборот. */
+  bundleSlug?: string | null;
   amountKopecks: number;
 }
 
@@ -31,6 +33,7 @@ export function canReuseOrder(
     parseRobokassaPaymentId(order.paymentId ?? "") === null &&
     order.userId === purchase.userId &&
     order.workshopSlug === purchase.workshopSlug &&
+    (order.bundleSlug ?? null) === (purchase.bundleSlug ?? null) &&
     order.amount === purchase.amountKopecks &&
     cookieMatchesOrder(cookie, order)
   );

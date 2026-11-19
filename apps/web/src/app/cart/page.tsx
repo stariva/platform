@@ -26,16 +26,22 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackProductEvent } from "@/lib/analytics";
 import {
-  type CartItem,
   cartLineKey,
   type FulfillmentType,
+  type PricedCartItem,
   useCart,
 } from "@/lib/cart/cart-context";
 import {
   type CartLineState,
   useCartValidation,
 } from "@/lib/cart/use-cart-validation";
-import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
+import {
+  IN_STOCK_HREF,
+  IN_STOCK_SHIP_DAYS,
+  pluralItems,
+  shipsFromLabel,
+} from "@/lib/in-stock";
+import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { CartItemRow } from "./cart-item-row";
 import { CartSummary, MobileCheckoutBar } from "./cart-summary";
 
@@ -63,10 +69,11 @@ export default function CartPage() {
     setQty,
     clear,
   } = useCart();
-  const { states, loading, notices, dismissNotices } = useCartValidation();
+  const { states, leadTimes, loading, notices, dismissNotices } =
+    useCartValidation();
   const ctaRef = useRef<HTMLDivElement>(null);
 
-  const stateOf = (item: CartItem): CartLineState =>
+  const stateOf = (item: PricedCartItem): CartLineState =>
     states.get(cartLineKey(item)) ?? { status: "unknown" };
   // Готовые изделия и изделия под заказ оформляются и оплачиваются раздельно
   const sections = SECTION_ORDER.map((kind) => {
@@ -82,6 +89,19 @@ export default function CartPage() {
       ),
       subtotal: buyable.reduce((sum, i) => sum + i.price * i.quantity, 0),
       count: buyable.reduce((sum, i) => sum + i.quantity, 0),
+      // Срок берём из изделий; у тех, у кого своего нет, — общий
+      leadTime: madeToOrderLeadTimeOf(
+        buyable.map((item) => ({
+          leadTimeDays: leadTimes.get(cartLineKey(item)),
+        })),
+      ),
+      // Одна отправка на секцию: если в ней есть товар с датой, ждёт весь заказ
+      shipsFrom:
+        kind === "stock"
+          ? (buyable
+              .map((item) => shipsFromLabel(item.productSlug))
+              .find((label) => label !== null) ?? null)
+          : null,
     };
   }).filter((section) => section.items.length > 0);
   // Мобильная панель — только когда оформление одно: при двух секциях
@@ -89,7 +109,7 @@ export default function CartPage() {
   const single = sections.length === 1 ? sections[0] : undefined;
   const ctaInView = useInView(ctaRef, hydrated && Boolean(single));
 
-  function removeItem(item: CartItem) {
+  function removeItem(item: PricedCartItem) {
     remove(cartLineKey(item));
     trackProductEvent("remove", [
       {
@@ -99,14 +119,16 @@ export default function CartPage() {
         quantity: item.quantity,
       },
     ]);
-    const { quantity, ...product } = item;
+    // Возвращаем цену каталога: скидку комплекта корзина посчитает заново
+    const { quantity, listPrice, ...product } = item;
+    product.price = listPrice ?? product.price;
     toast("Изделие удалено из корзины", {
       description: item.name,
       action: { label: "Вернуть", onClick: () => add(product, quantity) },
     });
   }
 
-  function removeUnavailable(unavailable: CartItem[]) {
+  function removeUnavailable(unavailable: PricedCartItem[]) {
     for (const item of unavailable) remove(cartLineKey(item));
   }
 
@@ -242,10 +264,12 @@ export default function CartPage() {
                       count={section.count}
                       unavailableCount={section.unavailable.length}
                       checking={loading}
+                      leadTime={section.leadTime}
                       onRemoveUnavailable={() =>
                         removeUnavailable(section.unavailable)
                       }
                       ctaRef={single ? ctaRef : undefined}
+                      shipsFrom={section.shipsFrom}
                     />
                   </div>
                 </section>

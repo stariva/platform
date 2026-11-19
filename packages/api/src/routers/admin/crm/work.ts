@@ -1,6 +1,16 @@
-import type { CrmOrderStatus, OrderChannel } from "@stariva/db/schema";
+import type {
+  CrmOrderStatus,
+  OrderChannel,
+  OrderCostCategory,
+} from "@stariva/db/schema";
 
-import { type Client, moscowDay, type Period, toMoscowDay } from "./model";
+import {
+  type Client,
+  moscowDay,
+  type Period,
+  toMoscowDay,
+  within,
+} from "./model";
 
 /**
  * Все заказы в одной ленте: с сайта (готовые и под заказ), записи на
@@ -87,6 +97,15 @@ export const workshopStage = (status: string): Stage =>
 export const manualStage = (status: CrmOrderStatus): Stage =>
   MANUAL_STAGES[status] ?? "in_work";
 
+/** Затрата по заказу, внесённая мастером. */
+export interface CostLine {
+  id: string;
+  category: OrderCostCategory;
+  spentOn: string;
+  amount: number;
+  note: string | null;
+}
+
 /** Заказ в общей ленте. Суммы в копейках. */
 export interface WorkOrder {
   kind: "product" | "workshop" | "manual" | "request";
@@ -108,6 +127,9 @@ export interface WorkOrder {
   // Поступившие деньги; у возвращённых и отменённых — пусто
   payments: { at: Date; amount: number }[];
   fee: number;
+  // Доставка, которую заплатил покупатель: эти деньги уходят службе доставки
+  delivery: number;
+  costLines: CostLine[];
   createdAt: Date;
   // Срок, обещанный клиенту, «2026-10-20»
   dueOn: string | null;
@@ -162,10 +184,7 @@ export function clientKeys(clients: Client[]) {
     (phone && byPhone.get(phone)) || (email && byEmail.get(email)) || null;
 }
 
-const within = (at: Date, { from, to }: Period) =>
-  (!from || at >= from) && (!to || at < to);
-
-const firstPayment = (order: WorkOrder) =>
+export const firstPayment = (order: Pick<WorkOrder, "payments">) =>
   order.payments.reduce<Date | null>(
     (min, payment) => (!min || payment.at < min ? payment.at : min),
     null,

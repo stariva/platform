@@ -26,9 +26,9 @@ function guard(request: NextRequest) {
     ["INVALID_TOKEN", "EXPIRED_TOKEN"].includes(
       request.nextUrl.searchParams.get("error") ?? "",
     ) &&
-    request.nextUrl.pathname !== "/magic-link"
+    request.nextUrl.pathname !== "/sign-in"
   ) {
-    const recovery = new URL("/magic-link", request.url);
+    const recovery = new URL("/sign-in", request.url);
     recovery.searchParams.set("error", "INVALID_TOKEN");
     return NextResponse.redirect(recovery);
   }
@@ -48,7 +48,7 @@ function guard(request: NextRequest) {
   return NextResponse.next();
 }
 
-/** Заход по UTM-ссылке → first-party cookie для атрибуции заказа. */
+/** Заход по UTM-ссылке или с чужого сайта → first-party cookie для атрибуции заказа. */
 function rememberCampaign(request: NextRequest, response: NextResponse) {
   if (request.method !== "GET") return response;
   const touch = touchFromUrl(request.nextUrl, request.headers.get("referer"));
@@ -96,6 +96,18 @@ export const config = {
     {
       source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
       has: [{ type: "query", key: "utm_term" }],
+    },
+    // Переход с чужого сайта без меток (поиск, соцсети): источник — Referer.
+    // Свой домен отсеян здесь же, чтобы proxy не работал на каждом клике по сайту.
+    {
+      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      has: [
+        {
+          type: "header",
+          key: "referer",
+          value: "^https?://(?!(?:[^/]*\\.)?stariva\\.ru(?:[:/]|$)).+",
+        },
+      ],
     },
   ],
 };

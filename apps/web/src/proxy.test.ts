@@ -44,3 +44,42 @@ test("proxy bounds encoded Unicode cookies and updates last on repeat visits", (
     }
   }
 });
+
+test("proxy remembers a visit from another site without UTM, but not own navigation", () => {
+  const organic = proxy(
+    new NextRequest("https://stariva.ru/elka-makrame", {
+      headers: { referer: "https://www.google.com/" },
+    }),
+  );
+  const [pair] = (organic.headers.get("set-cookie") ?? "").split(";");
+  assert.ok(pair?.startsWith(`${ATTRIBUTION_COOKIE}=`));
+  const attribution = attributionFromRequest(
+    new Request("https://stariva.ru/", { headers: { cookie: pair ?? "" } }),
+  );
+  assert.equal(attribution?.first.referrer, "www.google.com");
+  assert.equal(attribution?.first.utm_source, undefined);
+
+  const internal = proxy(
+    new NextRequest("https://stariva.ru/catalog", {
+      headers: { referer: "https://stariva.ru/" },
+    }),
+  );
+  assert.equal(internal.headers.get("set-cookie"), null);
+});
+
+test("proxy matcher skips own referer and accepts foreign hosts", async () => {
+  const { config } = await import("./proxy");
+  const entry = config.matcher.find(
+    (item): item is Exclude<typeof item, string> =>
+      typeof item !== "string" &&
+      item.has?.some((has) => has.type === "header") === true,
+  );
+  const value =
+    entry?.has?.[0] && "value" in entry.has[0] ? entry.has[0].value : "";
+  const pattern = new RegExp(value ?? "");
+  assert.ok(pattern.test("https://www.google.com/search?q=x"));
+  assert.ok(pattern.test("https://notstariva.ru/"));
+  assert.ok(!pattern.test("https://stariva.ru/catalog"));
+  assert.ok(!pattern.test("https://www.stariva.ru/"));
+  assert.ok(!pattern.test("https://stariva.ru:3000/"));
+});

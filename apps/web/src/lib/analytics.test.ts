@@ -18,6 +18,8 @@ test("analyticsPath hides ids that open an order or a video without sign-in", ()
     analyticsPath("/api/workshops/access/tok"),
     "/api/workshops/access/:token",
   );
+  assert.equal(analyticsPath("/unsubscribe/tok"), "/unsubscribe/:token");
+  assert.equal(analyticsPath("/api/m/c/tok"), "/api/m/c/:token");
   assert.equal(analyticsPath("/catalog/clothes"), "/catalog/clothes");
   assert.equal(analyticsPath("/account/orders/42"), "/account/orders/42");
 });

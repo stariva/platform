@@ -2,11 +2,21 @@ import { isAdminUser } from "@stariva/auth";
 import { hasAccess } from "@stariva/web-api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CommunityLinks } from "@/components/stariva/community-invite";
 import { getCourseProgressMap } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { getProductBySlug } from "@/lib/catalog/service";
+import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
+import {
+  ELKA_KIT_SLUG,
+  ELKA_WORKSHOP_SLUG,
+} from "@/lib/commerce/elka-kit-price";
+import { COMMUNITY_LINKS } from "@/lib/community";
+import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
 import { VideoPlayer } from "./video-player";
+import { ElkaKitOffer } from "../../../elka-kit-offer";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +40,13 @@ export default async function LessonPlayerPage({
   // Предзаказ: до старта уроки закрыты, в кабинете — дата и подготовка
   if (!admin && isPreorder(workshop)) redirect(`/account/workshops/${slug}`);
 
+  const kit =
+    slug === ELKA_WORKSHOP_SLUG &&
+    (await hasPurchasedElkaWorkshop(session.user.id))
+      ? await getProductBySlug(ELKA_KIT_SLUG)
+      : undefined;
+
+  const supportChat = await getSupportChatUrl(slug);
   const lessons = getWorkshopLessons(workshop);
   const index = lessons.findIndex((l) => l.id === lessonId);
   if (index === -1) notFound();
@@ -74,6 +91,39 @@ export default async function LessonPlayerPage({
               {lesson.title}
             </h1>
           </div>
+
+          {kit ? (
+            <div className="mt-6">
+              <ElkaKitOffer product={kit} compact />
+            </div>
+          ) : null}
+
+          {supportChat ? (
+            <p className="mt-3 text-sm text-taupe">
+              Обсуждайте мастер-класс, показывайте свои работы и спрашивайте в{" "}
+              <a
+                href={supportChat}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-espresso underline underline-offset-4 hover:text-terracotta"
+              >
+                чате участниц
+              </a>
+              . Если что-то не получается, Ольга подскажет.
+            </p>
+          ) : COMMUNITY_LINKS.length > 0 ? (
+            <p className="mt-3 text-sm text-taupe">
+              Что-то не получается? Спросите в группе участниц — Ольга
+              подскажет.{" "}
+              <CommunityLinks
+                source="account_lesson"
+                labelPrefix="Группа в "
+                className="inline-flex flex-wrap gap-x-3"
+                linkClassName="inline-flex items-center gap-1.5 text-espresso underline underline-offset-4 hover:text-terracotta"
+                iconClassName="size-3.5 shrink-0"
+              />
+            </p>
+          ) : null}
 
           {(prev || next) && (
             <div className="flex items-center justify-between mt-8 gap-3">

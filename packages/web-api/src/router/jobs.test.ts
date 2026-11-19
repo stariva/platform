@@ -1,5 +1,9 @@
 import { expect, mock, test } from "bun:test";
-import type { ReminderSweepResult, WebClient } from "../contract";
+import type {
+  OzonStockPullResult,
+  ReminderSweepResult,
+  WebClient,
+} from "../contract";
 import { JOBS_SECRET as secret } from "../testing/setup";
 
 const storage = await import("@stariva/storage");
@@ -64,6 +68,20 @@ mock.module("../services/yandex/direct", () => ({
   },
 }));
 
+let ozonConfigured = true;
+let ozonPull = async (): Promise<OzonStockPullResult> => ({
+  configured: true,
+  checked: 1,
+  lowered: [{ slug: "nabor", category: "interior", from: 5, to: 3 }],
+});
+mock.module("../services/ozon-stock", () => ({
+  isOzonSellerConfigured: () => ozonConfigured,
+  pullStockFromOzon: () => ozonPull(),
+  pushStockToOzon: async () => {
+    throw new Error("not used in jobs");
+  },
+}));
+
 const { safe } = await import("@orpc/client");
 const { AttemptLostError, RemindersFailedError } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
@@ -72,10 +90,22 @@ const { recentRange } = await import("../services/yandex/common");
 let sweep: ReminderSweepResult = { checked: 0, delivered: 0, failed: 0 };
 let sweeps = 0;
 let npdSweeps = 0;
+let emailSyncs = 0;
 const services = {
   runNpdIssuingSweep: async () => {
     npdSweeps++;
     return { checked: 2 };
+  },
+  syncEmailEvents: async () => {
+    emailSyncs++;
+    return {
+      configured: true,
+      read: 3,
+      stored: 2,
+      rejected: 0,
+      suppressed: 1,
+      updated: 2,
+    };
   },
   runWorkshopReminderSweep: async () => {
     sweeps++;
@@ -179,6 +209,22 @@ test("NPD sweep requires the jobs secret and calls only its own service", async 
   expect(lastStatus()).toBe(200);
 });
 
+test("email events sync requires the jobs secret and returns its counts", async () => {
+  emailSyncs = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.emails.syncEvents());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(emailSyncs).toBe(0);
+  expect(await client(`Bearer ${secret}`).jobs.emails.syncEvents()).toEqual({
+    configured: true,
+    read: 3,
+    stored: 2,
+    rejected: 0,
+    suppressed: 1,
+    updated: 2,
+  });
+  expect(emailSyncs).toBe(1);
+});
+
 test("storage sweep requires the jobs secret and hides deleted keys", async () => {
   storageSweeps.length = 0;
   const [error] = await safe(client("Bearer wrong").jobs.storage.sweep());
@@ -243,4 +289,43 @@ test("analytics jobs ask Hatchet to retry while Yandex prepares data", async () 
   const [, , direct] = await safe(api.directReport({ report: "stats" }));
   expect(direct?.code).toBe("ANALYTICS_PENDING");
   yandexPending = false;
+});
+
+test("ozon stock sync lowers stock and refreshes the product pages", async () => {
+  const revalidatePaths = mock((_paths: string[]) => {});
+  const api = wireClient({
+    authorization: `Bearer ${secret}`,
+    services: { ...services, revalidatePaths },
+  }).jobs.ozon;
+
+  const result = await api.syncStock();
+  expect(result.lowered).toEqual([
+    { slug: "nabor", category: "interior", from: 5, to: 3 },
+  ]);
+  expect(revalidatePaths).toHaveBeenCalledWith(["/catalog/interior/nabor"]);
+
+  // Nothing sold on Ozon: no pages to refresh
+  revalidatePaths.mockClear();
+  ozonPull = async () => ({ configured: true, checked: 1, lowered: [] });
+  await api.syncStock();
+  expect(revalidatePaths).not.toHaveBeenCalled();
+});
+
+test("ozon stock sync is a quiet no-op without Seller API keys", async () => {
+  ozonConfigured = false;
+  const result = await client(`Bearer ${secret}`).jobs.ozon.syncStock();
+  ozonConfigured = true;
+  expect(result).toEqual({ configured: false, checked: 0, lowered: [] });
+});
+
+test("ozon stock sync hides Ozon failure details", async () => {
+  ozonPull = async () => {
+    throw new Error("ozon_seller_request_failed_500: secret detail");
+  };
+  const [error, , definedError] = await safe(
+    client(`Bearer ${secret}`).jobs.ozon.syncStock(),
+  );
+  expect(definedError?.code).toBe("OZON_REQUEST_FAILED");
+  expect(String(error)).not.toContain("secret detail");
+  expect(lastStatus()).toBe(502);
 });

@@ -28,22 +28,65 @@ export interface StarivaWorkshopEmailProps {
   telegramUrl?: string;
   /** Подарок за предзаказ — в письме о покупке и во всех напоминаниях. */
   bonus?: { title: string; releaseLabel: string };
+  /** Второй курс комбо; без даты — он уже открыт в кабинете. */
+  bundle?: { title: string; releaseLabel?: string };
   /** Подписи PDF-брифа во вложении — только в письме о покупке. */
   attachedFiles?: string[];
+  /**
+   * Мастер-класс идёт в наборе с сайта: доступ открывается сразу после оплаты,
+   * а коробку привозит Ozon. Список покупок и бриф не нужны — всё в коробке.
+   */
+  kit?: boolean;
 }
 
 const muted = { color: colors.darkGrey, fontSize: 14, lineHeight: "23px" };
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** Плашка про второй курс: подарок за предзаказ или курс из комбо. */
+function extraCourse({ kind, bonus, bundle }: StarivaWorkshopEmailProps) {
+  const booked = kind === "booked";
+  if (bonus) {
+    return {
+      label: `🎁 ${booked ? "Подарок за предзаказ" : "Не забудьте о подарке"}`,
+      text: booked
+        ? `${capitalize(bonus.title)}. Он появится в вашем кабинете ${bonus.releaseLabel} — доплачивать ничего не нужно.`
+        : `${capitalize(bonus.releaseLabel)} в вашем кабинете бесплатно откроется ${bonus.title}.`,
+    };
+  }
+  if (!bundle) return undefined;
+  return {
+    label: "🎄 Второй мастер-класс комбо",
+    text: bundle.releaseLabel
+      ? `${capitalize(bundle.title)} уже оплачен и откроется в вашем кабинете ${bundle.releaseLabel}.`
+      : `${capitalize(bundle.title)} уже открыт в вашем кабинете — по той же кнопке.`,
+  };
+}
+
 function copy({
   kind,
   workshopTitle,
   releaseLabel,
+  kit,
 }: StarivaWorkshopEmailProps) {
   const title = `«${workshopTitle}»`;
   switch (kind) {
     case "booked":
+      if (kit) {
+        return releaseLabel
+          ? {
+              preview: `Набор куплен: урок ${title} откроется ${releaseLabel}`,
+              heading: "Набор куплен!",
+              intro: `Спасибо за покупку! Видеоурок ${title} откроется ${releaseLabel}, а мы напомним о старте. Сам набор мы отправим Ozon-доставкой.`,
+              button: "Открыть кабинет",
+            }
+          : {
+              preview: `Доступ к уроку ${title} открыт`,
+              heading: "Доступ открыт",
+              intro: `Спасибо за покупку! Видеоурок ${title} уже ждёт вас в личном кабинете: смотрите его хоть сейчас, не дожидаясь коробки. Сам набор мы отправим Ozon-доставкой. Доступ бессрочный.`,
+              button: "Смотреть урок",
+            };
+      }
       return releaseLabel
         ? {
             preview: `Вы записаны на мастер-класс ${title}`,
@@ -105,7 +148,11 @@ export default function StarivaWorkshopEmail(
   },
 ) {
   const text = copy(props);
-  const showMaterials = props.materials.length > 0 && props.kind !== "release";
+  // В наборе материалы лежат в коробке, покупать их не нужно
+  const showMaterials =
+    props.materials.length > 0 && props.kind !== "release" && !props.kit;
+  const extra = extraCourse(props);
+  const kitBox = props.kit && props.kind === "booked";
 
   return (
     <StarivaLayout
@@ -116,7 +163,30 @@ export default function StarivaWorkshopEmail(
       buttonUrl={props.accessUrl}
       footnote="Кнопка в письме открывает ваш кабинет без пароля, поэтому не пересылайте это письмо другим людям."
     >
-      {props.bonus && (
+      {extra && (
+        <Section
+          style={{
+            marginTop: 36,
+            padding: "20px 22px",
+            borderRadius: 12,
+            background: colors.offWhite,
+            border: `1px solid ${colors.lightGrey}`,
+          }}
+        >
+          <Text style={{ ...labelCaps, margin: "0 0 8px" }}>{extra.label}</Text>
+          <Text
+            style={{
+              margin: 0,
+              fontSize: 14,
+              lineHeight: "23px",
+              color: colors.nearBlack,
+            }}
+          >
+            {extra.text}
+          </Text>
+        </Section>
+      )}
+      {kitBox && (
         <Section
           style={{
             marginTop: 36,
@@ -127,10 +197,7 @@ export default function StarivaWorkshopEmail(
           }}
         >
           <Text style={{ ...labelCaps, margin: "0 0 8px" }}>
-            🎁{" "}
-            {props.kind === "booked"
-              ? "Подарок за предзаказ"
-              : "Не забудьте о подарке"}
+            📦 Набор приедет по Ozon
           </Text>
           <Text
             style={{
@@ -140,9 +207,12 @@ export default function StarivaWorkshopEmail(
               color: colors.nearBlack,
             }}
           >
-            {props.kind === "booked"
-              ? `${capitalize(props.bonus.title)}. Он появится в вашем кабинете ${props.bonus.releaseLabel} — доплачивать ничего не нужно.`
-              : `${capitalize(props.bonus.releaseLabel)} в вашем кабинете бесплатно откроется ${props.bonus.title}.`}
+            Шнур, основа и декор уже лежат в коробке — докупать ничего не нужно.
+            Дома пригодятся только ножницы, сантиметровая лента и малярный
+            скотч.{" "}
+            {props.releaseLabel
+              ? "Когда урок откроется, посмотрите его целиком до начала плетения: так будет легче."
+              : "Пока набор в пути, посмотрите урок целиком: так плести будет легче."}
           </Text>
         </Section>
       )}

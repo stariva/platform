@@ -65,8 +65,14 @@ export const categories: Category[] = [
       { slug: "tipis", name: "Вигвамы и кресла", categorySlug: "interior" },
       { slug: "pannos", name: "Панно", categorySlug: "interior" },
       { slug: "placemats", name: "Плейсматы", categorySlug: "interior" },
-      { slug: "planters", name: "Игрушки и прочее", categorySlug: "interior" },
+      { slug: "planters", name: "Декор и прочее", categorySlug: "interior" },
       { slug: "trees", name: "Ёлки", categorySlug: "interior" },
+      // Публикация и откат наборов: docs/product-kits-rollout.md.
+      {
+        slug: "kits",
+        name: "Наборы для творчества",
+        categorySlug: "interior",
+      },
     ],
   },
 ];

@@ -11,6 +11,7 @@ import {
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
 import { ProductAnalytics } from "@/components/stariva/product-analytics";
 import { Reviews } from "@/components/stariva/reviews";
+import { kitFaq } from "@/lib/catalog/product-faq";
 import {
   productMetaDescription,
   productMetaTitle,
@@ -22,7 +23,13 @@ import {
   getReviews,
   summarizeRatings,
 } from "@/lib/catalog/service";
-import { IN_STOCK_SHIP_DAYS_RANGE } from "@/lib/in-stock";
+import {
+  IN_STOCK_SHIP_DAYS_RANGE,
+  isKit,
+  isPurchasable,
+  shipsFromHandlingDays,
+  shipsFromLabel,
+} from "@/lib/in-stock";
 import {
   madeToOrderLeadTime,
   madeToOrderLeadTimeDays,
@@ -109,6 +116,9 @@ const categoryFaqJsonLd = (
 });
 
 export const revalidate = 3600;
+
+/** «Ёлка», «елочка», «ёлочки» — в названии товара и в тексте отзыва. */
+const TREE_TOPIC = /[её]л(к|оч)/i;
 
 interface ProductPageProps {
   params: Promise<{ category: string; slug: string }>;
@@ -201,6 +211,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   // отзывы с Авито показываем, но в разметку товара не отдаём
   const markupReviews = productReviews.filter((r) => r.source !== "avito");
   const faq = categoryFaqJsonLd(madeToOrderLeadTime(product));
+  // У набора своих отзывов пока нет: показываем отзывы о готовых ёлках
+  const kitTreeReviews = isKit(product) && TREE_TOPIC.test(product.name);
 
   return (
     <>
@@ -229,11 +241,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         )}
         price={product.price}
         currency={product.currency}
-        inStock={product.inStock}
+        inStock={isPurchasable(product)}
         madeToOrder={product.madeToOrder}
         handlingDays={
-          product.inStock
-            ? IN_STOCK_SHIP_DAYS_RANGE
+          isPurchasable(product)
+            ? (shipsFromHandlingDays(product.slug) ?? IN_STOCK_SHIP_DAYS_RANGE)
             : madeToOrderLeadTimeDays(product)
         }
         url={url}
@@ -244,7 +256,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={summarizeRatings(markupReviews)}
         reviews={markupReviews}
       />
-      <FAQJsonLd items={faq[categorySlug] ?? faq.interior} />
+      <FAQJsonLd
+        items={
+          isKit(product)
+            ? kitFaq(
+                isPurchasable(product) ? shipsFromLabel(product.slug) : null,
+              )
+            : (faq[categorySlug] ?? faq.interior)
+        }
+      />
       <ProductDetails
         product={product}
         category={category}
@@ -253,7 +273,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
         rating={rating}
       />
       <BuyingGuide product={product} />
-      <Reviews productId={product.id} heading="Отзывы о товаре" />
+      <Reviews
+        productId={product.id}
+        heading="Отзывы о товаре"
+        {...(kitTreeReviews && {
+          fallbackTopic: TREE_TOPIC,
+          fallbackHeading: "Отзывы о моих ёлках",
+          fallbackNote:
+            "О наборе отзывов пока нет — вот что пишут о готовых ёлках, которые я сплела.",
+        })}
+      />
       <Footer />
       <MobileStickyBar />
     </>

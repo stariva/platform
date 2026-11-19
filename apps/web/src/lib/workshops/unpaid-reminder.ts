@@ -23,6 +23,7 @@ import {
 } from "@/lib/payments/orders";
 import { formatPrice } from "@/lib/products";
 import { formatReleaseDateTime } from "@/lib/workshops-data";
+import { getBundle } from "./bundles";
 import { siteUrl } from "./notifications";
 import { syncPendingWorkshopOrder } from "./order-payment";
 import { earnsPreorderBonus } from "./preorder-bonus";
@@ -34,8 +35,10 @@ import {
 } from "./unpaid-schedule";
 
 /** Страница курса с кнопкой оплаты; метка — чтобы видеть, сколько вернуло письмо. */
-function payUrl(slug: string): string {
+function payUrl(slug: string, bundleSlug: string | null): string {
   const utm = "utm_source=email&utm_medium=reminder&utm_campaign=unpaid";
+  const bundle = getBundle(bundleSlug);
+  if (bundle) return `${siteUrl()}${bundle.path}?${utm}`;
   return slug === WORKSHOP_SLUG
     ? `${siteUrl()}${WORKSHOP_PATH}?${utm}#workshop`
     : `${siteUrl()}/workshops/${slug}?${utm}`;
@@ -63,6 +66,7 @@ function preorderInfo(workshop: WorkshopRow, now: Date) {
 
 interface Candidate extends UnpaidCandidate {
   paymentId: string | null;
+  bundleSlug: string | null;
   workshop: WorkshopRow;
 }
 
@@ -74,6 +78,7 @@ async function loadCandidates(now: Date): Promise<Candidate[]> {
       id: orders.id,
       userId: orders.userId,
       workshopSlug: orders.workshopSlug,
+      bundleSlug: orders.bundleSlug,
       status: orders.status,
       createdAt: orders.createdAt,
       paymentId: orders.paymentId,
@@ -222,7 +227,7 @@ async function deliver(candidate: Candidate, now: Date): Promise<boolean> {
       subject: workshopUnpaidEmailSubject({ workshopTitle: workshop.title }),
       react: StarivaWorkshopUnpaidEmail({
         workshopTitle: workshop.title,
-        payUrl: payUrl(workshop.slug),
+        payUrl: payUrl(workshop.slug, candidate.bundleSlug),
         preorder: preorderInfo(workshop, now),
       }),
     });

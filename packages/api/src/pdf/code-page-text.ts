@@ -6,6 +6,14 @@
 
 export const CODE_PAGE_URL = "https://stariva.ru/code";
 
+/**
+ * Адрес с уже подставленным кодом — для QR на купоне в коробке с набором:
+ * покупателю остаётся указать почту. Код принимается в любом виде, «482 719».
+ */
+export function codeRedeemUrl(code: string): string {
+  return `${CODE_PAGE_URL}?c=${code.replace(/\D/g, "")}`;
+}
+
 // Неразрывный пробел: тире не начинает строку, предлог не висит в конце
 const NBSP = String.fromCharCode(0xa0);
 

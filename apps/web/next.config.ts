@@ -136,6 +136,10 @@ const config: NextConfig = {
         destination: "/catalog/interior/:slug*",
         permanent: true,
       },
+      // Регистрация и вход по ссылке теперь на /sign-in: вход по коду из
+      // письма. Параметры (callbackURL, error) переносятся сами.
+      { source: "/sign-up", destination: "/sign-in", permanent: false },
+      { source: "/magic-link", destination: "/sign-in", permanent: false },
       // Адреса старого сайта и снятых страниц, которые Google ещё обходит
       { source: "/privacy", destination: "/privacy-policy", permanent: true },
       { source: "/terms", destination: "/offer", permanent: true },

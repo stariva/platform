@@ -36,27 +36,48 @@ const workshopOrderStatusLabels: Record<string, string> = {
   refunded: "Возврат",
 };
 
+/** Якорь блока выбора пункта выдачи: на него ведёт подсказка у кнопки доплаты. */
+export const DELIVERY_POINT_ANCHOR = "delivery-point";
+
 /** Что дальше, для заказа под заказ: по статусу. */
 export const madeToOrderHints: Record<string, string> = {
   requested:
-    "Оплачивать пока ничего не нужно. Мастер свяжется с вами, чтобы уточнить мерки, цвет, цену и доставку. Мерки и пожелания можно указать ниже.",
+    "Оплачивать пока ничего не нужно. Мастер свяжется с вами, чтобы уточнить мерки, цвет и цену. Мерки и пожелания можно указать ниже.",
   awaiting_deposit:
     "Мастер согласовал заказ. Внесите предоплату 50% — и мастер начнёт плести.",
   in_production:
     "Предоплата получена — мастер плетёт ваше изделие. Когда оно будет готово, здесь появится доплата.",
   awaiting_balance:
-    "Изделие готово! Внесите доплату — и мастер отправит заказ.",
+    "Изделие готово! Внесите доплату, в неё уже входит доставка — и мастер отправит заказ.",
   ready_to_ship: "Заказ оплачен полностью. Мастер готовит отправку.",
+  ozon_order_failed:
+    "Оплата получена. Мастер оформит доставку вручную и напишет вам.",
+  fulfilling:
+    "Заказ оформлен в Ozon Доставке. Когда посылку отправят, следить за ней можно будет в приложении Ozon, там же появится штрихкод для получения.",
   shipped: "Заказ отправлен.",
   delivered: "Заказ получен. Спасибо!",
   canceled: "Заказ отменён.",
 };
 
+/**
+ * Подсказка «что дальше» для заказа под заказ. Когда изделие готово, а доставка
+ * ещё не посчитана, просим выбрать пункт выдачи: сайт считает доставку сам.
+ */
+export function madeToOrderHint(
+  status: string,
+  deliveryQuoteNeeded: boolean,
+): string | undefined {
+  if (status === "awaiting_balance" && deliveryQuoteNeeded) {
+    return "Изделие готово! Выберите пункт выдачи Ozon: сайт сразу посчитает доставку, и вы сможете внести доплату — мастер отправит заказ.";
+  }
+  return madeToOrderHints[status];
+}
+
 /** Что дальше, для готового изделия: по статусу. */
 export const stockOrderHints: Record<string, string> = {
   pending:
     "Заказ ждёт оплаты. Если вы закрыли страницу оплаты, оформите заказ заново из корзины.",
-  paid: "Оплата получена. Передаём заказ в Ozon Доставку.",
+  paid: "Оплата получена. Оформляем заказ в Ozon Доставке.",
   ozon_order_failed:
     "Оплата получена. Мастер оформит доставку вручную и напишет вам.",
   fulfilling: "Заказ собирается и скоро уйдёт в доставку.",
@@ -103,6 +124,49 @@ export function isOrderActive(kind: OrderKind, status: string): boolean {
   return tone === "attention" || tone === "progress";
 }
 
+/**
+ * Что показать покупателю, вернувшемуся из ЮKassa. Адрес возврата один и для
+ * успешной, и для брошенной оплаты, поэтому судим только по заказу:
+ * - `confirmed` — оплата зачтена, заказ идёт дальше;
+ * - `checking` — заказ всё ещё ждёт оплату: вебхук опаздывает или платёж брошен;
+ * - `failed` — платёж отменён, заказ из наличия закрыт;
+ * - null — заказ ушёл дальше (старая ссылка) или закрыт иначе: обычная страница.
+ */
+export type PaymentReturnState = "confirmed" | "checking" | "failed";
+
+const PAYMENT_CONFIRMED_STATUSES: Record<"stock" | "made_to_order", string[]> =
+  {
+    stock: ["paid", "ozon_order_failed", "fulfilling"],
+    made_to_order: [
+      "in_production",
+      "ready_to_ship",
+      "ozon_order_failed",
+      "fulfilling",
+    ],
+  };
+
+export function paymentReturnState(order: {
+  kind: "stock" | "made_to_order";
+  status: string;
+  paid: boolean;
+  paymentStep: unknown;
+  paymentOverdue: boolean;
+}): PaymentReturnState | null {
+  if (
+    order.status === "pending" ||
+    order.paymentStep !== null ||
+    order.paymentOverdue
+  ) {
+    return "checking";
+  }
+  if (order.kind === "stock" && order.status === "canceled" && !order.paid) {
+    return "failed";
+  }
+  return PAYMENT_CONFIRMED_STATUSES[order.kind].includes(order.status)
+    ? "confirmed"
+    : null;
+}
+
 const STOCK_STEPS = ["Оформлен", "Оплачен", "Собирается", "В пути", "Получен"];
 
 const STOCK_STEP_BY_STATUS: Record<string, number> = {
@@ -129,6 +193,8 @@ const MADE_TO_ORDER_STEP_BY_STATUS: Record<string, number> = {
   in_production: 2,
   awaiting_balance: 3,
   ready_to_ship: 3,
+  ozon_order_failed: 3,
+  fulfilling: 3,
   shipped: 4,
   delivered: 5,
 };

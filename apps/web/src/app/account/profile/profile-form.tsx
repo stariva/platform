@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PasswordHints } from "@/components/stariva/password-hints";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -18,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-strength";
 
 const nameSchema = z.object({
   name: z.string().trim().min(1, "Введите имя"),
@@ -41,16 +43,26 @@ const passwordSchema = z.object({
 });
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+const newPasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .min(PASSWORD_MIN_LENGTH, "Пароль должен быть не короче 8 символов"),
+});
+type NewPasswordFormValues = z.infer<typeof newPasswordSchema>;
+
 interface ProfileFormProps {
   initialName: string;
   email: string;
   emailVerified: boolean;
+  /** Пароль уже задан. Нет — входят по коду, и пароль можно задать с нуля. */
+  hasPassword: boolean;
 }
 
 export function ProfileForm({
   initialName,
   email,
   emailVerified,
+  hasPassword,
 }: ProfileFormProps) {
   const router = useRouter();
 
@@ -72,6 +84,11 @@ export function ProfileForm({
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "" },
+  });
+
+  const newPasswordForm = useForm<NewPasswordFormValues>({
+    resolver: zodResolver(newPasswordSchema),
+    defaultValues: { newPassword: "" },
   });
 
   async function saveName(data: NameFormValues) {
@@ -117,6 +134,24 @@ export function ProfileForm({
     }
     toast.success("Пароль обновлён");
     passwordForm.reset({ currentPassword: "", newPassword: "" });
+  }
+
+  async function setFirstPassword(data: NewPasswordFormValues) {
+    setSavingPassword(true);
+    const res = await fetch("/api/account/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: data.newPassword }),
+    }).catch(() => null);
+    setSavingPassword(false);
+    if (!res?.ok) {
+      const body = await res?.json().catch(() => null);
+      toast.error(body?.error || "Не удалось задать пароль");
+      return;
+    }
+    toast.success("Пароль задан. Теперь можно входить и с ним");
+    newPasswordForm.reset({ newPassword: "" });
+    router.refresh();
   }
 
   const card = "bg-white border border-espresso/10 rounded-2xl p-6";
@@ -190,53 +225,94 @@ export function ProfileForm({
       </Form>
 
       {/* Пароль */}
-      <Form {...passwordForm}>
-        <form
-          onSubmit={passwordForm.handleSubmit(changePassword)}
-          className={card}
-        >
-          <h2 className="font-serif text-xl text-espresso mb-4">
-            Смена пароля
-          </h2>
-          <FormField
-            control={passwordForm.control}
-            name="currentPassword"
-            render={({ field }) => (
-              <FormItem className="mb-3">
-                <FormLabel>Текущий пароль</FormLabel>
-                <FormControl>
-                  <PasswordInput autoComplete="current-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={passwordForm.control}
-            name="newPassword"
-            render={({ field }) => (
-              <FormItem className="mb-4">
-                <FormLabel>Новый пароль</FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    autoComplete="new-password"
-                    placeholder="Минимум 8 символов"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button
-            type="submit"
-            disabled={savingPassword}
-            className="bg-espresso text-parchment hover:bg-espresso/90"
+      {hasPassword ? null : (
+        <Form {...newPasswordForm}>
+          <form
+            onSubmit={newPasswordForm.handleSubmit(setFirstPassword)}
+            className={card}
           >
-            {savingPassword ? "Сохраняем…" : "Сменить пароль"}
-          </Button>
-        </form>
-      </Form>
+            <h2 className="font-serif text-xl text-espresso mb-1">Пароль</h2>
+            <p className="text-taupe text-sm mb-4">
+              Необязательно: входить можно по коду из письма. Задайте пароль,
+              если удобнее входить с ним.
+            </p>
+            <FormField
+              control={newPasswordForm.control}
+              name="newPassword"
+              render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel>Новый пароль</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      autoComplete="new-password"
+                      placeholder="Минимум 8 символов"
+                      {...field}
+                    />
+                  </FormControl>
+                  <PasswordHints value={field.value} />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              disabled={savingPassword}
+              className="bg-espresso text-parchment hover:bg-espresso/90"
+            >
+              {savingPassword ? "Сохраняем…" : "Задать пароль"}
+            </Button>
+          </form>
+        </Form>
+      )}
+      {hasPassword ? (
+        <Form {...passwordForm}>
+          <form
+            onSubmit={passwordForm.handleSubmit(changePassword)}
+            className={card}
+          >
+            <h2 className="font-serif text-xl text-espresso mb-4">
+              Смена пароля
+            </h2>
+            <FormField
+              control={passwordForm.control}
+              name="currentPassword"
+              render={({ field }) => (
+                <FormItem className="mb-3">
+                  <FormLabel>Текущий пароль</FormLabel>
+                  <FormControl>
+                    <PasswordInput autoComplete="current-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={passwordForm.control}
+              name="newPassword"
+              render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel>Новый пароль</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      autoComplete="new-password"
+                      placeholder="Минимум 8 символов"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              disabled={savingPassword}
+              className="bg-espresso text-parchment hover:bg-espresso/90"
+            >
+              {savingPassword ? "Сохраняем…" : "Сменить пароль"}
+            </Button>
+          </form>
+        </Form>
+      ) : null}
     </div>
   );
 }

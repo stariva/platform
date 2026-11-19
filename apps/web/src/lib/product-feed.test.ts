@@ -40,6 +40,21 @@ test("lampshades get their own feed category, other decor keeps its id", () => {
   assert.match(xml, /<offer id="panno-1".*?<categoryId>3<\/categoryId>/);
 });
 
+test("clothes stay in the feed but are not offered as ready-made", () => {
+  const xml = productFeed([
+    product,
+    {
+      ...product,
+      id: "tunic-1",
+      slug: "tunic-1",
+      category: "clothes",
+      subcategory: "tops",
+    },
+  ]);
+  assert.match(xml, /<offer id="lamp-1" available="true">/);
+  assert.match(xml, /<offer id="tunic-1" available="false">/);
+});
+
 test("unavailable, unpriced and non-ruble products are not advertised", () => {
   for (const invalid of [
     { inStock: false },

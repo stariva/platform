@@ -33,6 +33,7 @@ export const productSubcategory = pgEnum("product_subcategory", [
   "crossbody",
   // В конце: ADD VALUE дописывает значение последним
   "trees",
+  "kits",
 ]);
 
 export const productStatus = pgEnum("product_status", [
@@ -73,10 +74,15 @@ export const products = pgTable(
     color: text("color"),
     dimensions: text("dimensions"),
     careInstructions: text("care_instructions"),
+    // Автор идеи изделия — указываем в карточке сноской, если попросили
+    ideaAuthor: text("idea_author"),
     sizes: text("sizes").array().notNull().default(sql`'{}'::text[]`),
     // Текст для витрины: «Лучше всего для: …» и короткие преимущества
     bestFor: text("best_for"),
     highlights: text("highlights").array().notNull().default(sql`'{}'::text[]`),
+    // Мастер-класс, который идёт с товаром (набор для плетения): оплатили на
+    // сайте — открываем уроки на почту покупателя. null — без мастер-класса.
+    workshopSlug: text("workshop_slug"),
 
     // ── Под заказ ──
     madeToOrder: boolean("made_to_order").notNull().default(true),
@@ -95,6 +101,11 @@ export const products = pgTable(
     stockAvailable: integer("stock_available").notNull().default(0),
     // Не используется: остатки больше не сверяются с Ozon
     stockSyncedAt: timestamp("stock_synced_at", { withTimezone: true }),
+    // Товар продаётся и на маркетплейсе Ozon, а не только на сайте. Остальные
+    // готовые изделия с витрины Ozon скрыты. У такого товара остаток общий:
+    // продажи на Ozon уменьшают его на складе Ozon, и сайт подтягивает
+    // это значение по расписанию (jobs.ozon.syncStock).
+    sellOnOzon: boolean("sell_on_ozon").notNull().default(false),
 
     // ── Витрина ──
     featured: boolean("featured").notNull().default(false),

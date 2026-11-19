@@ -84,6 +84,47 @@ export function parseMasterPlaylist(text: string): HlsVariantInfo[] {
   return variants.sort((a, b) => b.bandwidth - a.bandwidth);
 }
 
+/** Длина куска HLS, секунды: так режет воркер (apps/jobs/src/lib/hls.ts). */
+export const HLS_SEGMENT_SECONDS = 6;
+
+/**
+ * Качества, в которые воркер режет видео, по короткой стороне кадра верхнего
+ * (оно уже не больше 1080p): само оно, а ниже — 720p и 480p, если верхнее
+ * больше них. Повторяет planVariants в apps/jobs/src/lib/hls.ts.
+ */
+export function plannedHlsSizes(top: number): number[] {
+  return [top, ...[720, 480].filter((size) => top > size)];
+}
+
+/**
+ * Размер кадра из init.mp4 нарезки: первый tkhd с ненулевыми шириной и
+ * высотой (у звуковой дорожки они нулевые). Ширина и высота — последние
+ * восемь байт tkhd, числа 16.16. null — не нашли.
+ */
+export function mp4FrameSize(
+  bytes: Uint8Array,
+): { width: number; height: number } | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  for (let i = 4; i + 4 <= bytes.length; i++) {
+    // "tkhd"
+    if (
+      bytes[i] !== 0x74 ||
+      bytes[i + 1] !== 0x6b ||
+      bytes[i + 2] !== 0x68 ||
+      bytes[i + 3] !== 0x64
+    ) {
+      continue;
+    }
+    const start = i - 4;
+    const size = view.getUint32(start);
+    if (size < 16 || start + size > bytes.length) continue;
+    const width = Math.round(view.getUint32(start + size - 8) / 65536);
+    const height = Math.round(view.getUint32(start + size - 4) / 65536);
+    if (width > 0 && height > 0) return { width, height };
+  }
+  return null;
+}
+
 /** Content-Type файла HLS-версии. Подписывается в ссылке на загрузку. */
 export function hlsContentType(file: string): string {
   if (file.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
@@ -159,16 +200,21 @@ export interface WorkshopSweepPlan {
  * попытка нарезки получают свой ключ, поэтому после замены видео, PDF или
  * перерезки прежние файлы остаются лежать. Удаляем всё, на что не ссылаются
  * курсы (включая черновики) и их нарезки, кроме недавнего:
- * - файл моложе `graceMs` — его могли загрузить в ещё не сохранённую форму;
- * - курс или нарезку меняли позже `graceMs` назад — старое видео ещё
+ * - файл моложе `fileGraceMs` — его могли загрузить в ещё не сохранённую форму;
+ * - курс или нарезку меняли позже `changeGraceMs` назад — старое видео ещё
  *   досматривают по выданным ссылкам.
  */
 export function planWorkshopSweep(
   objects: { key: string; size: number; lastModified: Date }[],
   state: { workshops: SweepWorkshop[]; renditions: SweepRendition[] },
-  { now, graceMs }: { now: Date; graceMs: number },
+  {
+    now,
+    fileGraceMs,
+    changeGraceMs,
+  }: { now: Date; fileGraceMs: number; changeGraceMs: number },
 ): WorkshopSweepPlan {
-  const cutoff = now.getTime() - graceMs;
+  const fileCutoff = now.getTime() - fileGraceMs;
+  const changeCutoff = now.getTime() - changeGraceMs;
   const videoKeys = new Set(state.workshops.flatMap((w) => w.videoKeys));
   const keepKeys = new Set([
     ...videoKeys,
@@ -179,7 +225,7 @@ export function planWorkshopSweep(
   const recentFolders: string[] = [];
 
   for (const workshop of state.workshops) {
-    if (workshop.updatedAt.getTime() > cutoff) {
+    if (workshop.updatedAt.getTime() > changeCutoff) {
       recentFolders.push(`${workshopStoragePrefix(workshop.slug)}/`);
     }
   }
@@ -191,7 +237,7 @@ export function planWorkshopSweep(
       keepFolders.push(`${rendition.readyHlsPrefix}/`);
     if (rendition.status !== "failed")
       keepFolders.push(`${rendition.hlsPrefix}/`);
-    if (rendition.updatedAt.getTime() > cutoff) {
+    if (rendition.updatedAt.getTime() > changeCutoff) {
       recentFolders.push(`${workshopHlsPrefix(rendition.videoKey)}/`);
     }
   }
@@ -201,7 +247,7 @@ export function planWorkshopSweep(
   const doomed = objects.filter(
     (object) =>
       !keepKeys.has(object.key) &&
-      object.lastModified.getTime() <= cutoff &&
+      object.lastModified.getTime() <= fileCutoff &&
       !inFolder(object.key, keepFolders) &&
       !inFolder(object.key, recentFolders),
   );
@@ -219,7 +265,7 @@ export function planWorkshopSweep(
         (rendition) =>
           !videoKeys.has(rendition.videoKey) &&
           !remaining.has(rendition.videoKey) &&
-          rendition.updatedAt.getTime() <= cutoff,
+          rendition.updatedAt.getTime() <= changeCutoff,
       )
       .map((rendition) => rendition.videoKey),
   };

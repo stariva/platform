@@ -1,10 +1,13 @@
 import { getProductsResult } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
+import { sellsReadyMade } from "@/lib/in-stock";
 import {
   getProductMadeToOrder,
   isMadeToOrderColor,
   isMadeToOrderSize,
 } from "@/lib/made-to-order";
+import { applyBundlePricing } from "./bundles";
+import { elkaKitPrice } from "./elka-kit-price";
 import {
   MAX_MADE_TO_ORDER_QUANTITY,
   type MadeToOrderOptions,
@@ -15,6 +18,7 @@ export const MAX_ITEM_QUANTITY = 99;
 const MAX_PRICE_KOPECKS = 2_147_483_647;
 
 export interface RequestedCatalogItem {
+  productId?: string;
   productSlug: string;
   quantity: number;
 }
@@ -49,11 +53,13 @@ export function priceInKopecks(product: Product): number | null {
 
 /**
  * Можно ли продать хотя бы одно изделие: есть остаток, цена в рублях и SKU
- * для Ozon Доставки. Одно правило для корзины и для оформления заказа.
+ * для Ozon Доставки, и это не одежда — её готовой не продаём.
+ * Одно правило для корзины и для оформления заказа.
  */
 export function isCatalogProductBuyable(product: Product | undefined): boolean {
   return Boolean(
     product?.inStock &&
+      sellsReadyMade(product) &&
       (product.stockAvailable ?? 0) >= 1 &&
       product.currency === "RUB" &&
       Number.isSafeInteger(product.ozonSku) &&
@@ -149,6 +155,7 @@ export async function resolveMadeToOrderItems(
 /** Resolves all price and fulfillment data from the server-side catalog. */
 export async function resolveCatalogItems(
   requestedItems: RequestedCatalogItem[],
+  options: { elkaKitOwner?: boolean } = {},
 ): Promise<ResolvedCatalogItem[]> {
   const { products, status } = await getProductsResult();
   // Каталог недоступен — это сбой, а не отсутствие товаров: иначе
@@ -174,6 +181,12 @@ export async function resolveCatalogItems(
     const price = product ? priceInKopecks(product) : null;
     if (
       !product ||
+      requestedItems.some(
+        (item) =>
+          item.productSlug === productSlug &&
+          item.productId &&
+          item.productId !== product.id,
+      ) ||
       price === null ||
       !isCatalogProductBuyable(product) ||
       quantity > product.stockAvailable
@@ -194,5 +207,13 @@ export async function resolveCatalogItems(
   if (unavailable.length > 0) {
     throw new CatalogItemsUnavailableError(unavailable);
   }
-  return resolved;
+  // Цены комплектов считает сервер: сумма заказа и платёж берутся отсюда
+  return applyBundlePricing(resolved).map((item) => ({
+    ...item,
+    price: elkaKitPrice(
+      item.productSlug,
+      item.price,
+      options.elkaKitOwner ?? false,
+    ),
+  }));
 }

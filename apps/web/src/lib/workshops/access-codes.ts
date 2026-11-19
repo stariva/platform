@@ -83,7 +83,8 @@ export async function releaseAccessCodeAttempt(
 function channelAttribution(channel: string): CampaignAttribution {
   const touch = {
     utm_source: channel,
-    utm_medium: "marketplace",
+    // kit — купон к набору, купленному на сайте; остальное — площадки
+    utm_medium: channel === "kit" ? "site" : "marketplace",
     landing: "/code",
     at: new Date().toISOString(),
   };

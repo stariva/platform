@@ -12,11 +12,13 @@ import {
 const COOKIE_BANNER = '[role="dialog"][aria-label="Настройки cookie"]';
 
 /**
- * Кнопка предзаказа внизу экрана на телефоне. Из рекламы приходят сразу на
- * #workshop, а форма оплаты — на несколько экранов ниже. Видна только в блоке
- * мастер-класса и прячется, когда форма уже на экране или открыта
- * клавиатура; над cookie-баннером поднимается,
- * а не исчезает — большинство посетителей баннер не закрывают.
+ * Кнопка покупки внизу экрана. Из рекламы приходят сразу на #workshop, а форма
+ * оплаты — на несколько экранов ниже. На телефоне видна только в блоке
+ * мастер-класса, на десктопе — и ниже него (фото покупателей, отзывы, вопросы):
+ * там блок короче экрана и пролистывается целиком. Прячется, когда кнопка под
+ * заголовком или форма уже на экране или открыта клавиатура; над
+ * cookie-баннером поднимается, а не исчезает — большинство посетителей баннер
+ * не закрывают.
  */
 export function WorkshopStickyCta({
   label,
@@ -33,6 +35,8 @@ export function WorkshopStickyCta({
   goal?: string;
 }) {
   const [inSection, setInSection] = useState(false);
+  const [pastSection, setPastSection] = useState(false);
+  const [desktop, setDesktop] = useState(false);
   // Кнопка в тексте блока или форма оплаты уже на экране — дублировать незачем.
   const [ctaVisible, setCtaVisible] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState(false);
@@ -46,8 +50,12 @@ export function WorkshopStickyCta({
     if (!section) return;
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (entry.target === section) setInSection(entry.isIntersecting);
-        else
+        if (entry.target === section) {
+          setInSection(entry.isIntersecting);
+          setPastSection(
+            !entry.isIntersecting && entry.boundingClientRect.bottom <= 0,
+          );
+        } else
           setCtaVisible((prev) => ({
             ...prev,
             [entry.target.id]: entry.isIntersecting,
@@ -58,6 +66,15 @@ export function WorkshopStickyCta({
     for (const target of targets) observer.observe(target);
     return () => observer.disconnect();
   }, [sectionId, buyId, quickBuyId]);
+
+  useEffect(() => {
+    // Брейкпоинт lg из Tailwind: с него фото и текст стоят в две колонки.
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     const updateEditing = () =>
@@ -87,9 +104,14 @@ export function WorkshopStickyCta({
 
   return (
     <div
-      hidden={!inSection || Object.values(ctaVisible).some(Boolean) || editing}
-      // Справа оставляем место под круглую кнопку чата.
-      className="lg:hidden fixed left-3 right-[4.75rem] z-[60]"
+      hidden={
+        !(inSection || (desktop && pastSection)) ||
+        Object.values(ctaVisible).some(Boolean) ||
+        editing
+      }
+      // Справа оставляем место под круглую кнопку чата. На десктопе кнопка
+      // не растягивается на всю ширину, а стоит рядом с чатом.
+      className="fixed left-3 right-[4.75rem] z-[60] lg:left-auto"
       style={{
         bottom: `calc(${bannerOffset + 12}px + env(safe-area-inset-bottom))`,
       }}

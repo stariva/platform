@@ -75,7 +75,7 @@ export default async function CrmClientPage({
                   </dd>
                 </div>
                 {client.touch && (
-                  <Field label="Первый заход по метке">
+                  <Field label="Первый заход">
                     {[
                       utmLabel(
                         client.touch.utm_source ?? null,

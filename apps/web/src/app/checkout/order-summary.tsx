@@ -5,8 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useId, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
-import type { CartItem } from "@/lib/cart/cart-context";
-import { pluralItems } from "@/lib/in-stock";
+import type { PricedCartItem } from "@/lib/cart/cart-context";
+import { pluralItems, shipsFromLabel } from "@/lib/in-stock";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ export type DeliveryCost =
   | { status: "ready"; kopecks: number };
 
 interface OrderSummaryProps {
-  items: CartItem[];
+  items: PricedCartItem[];
   subtotal: number;
   delivery: DeliveryCost;
 }
@@ -121,12 +121,19 @@ function SummaryBody({ items, subtotal, delivery }: OrderSummaryProps) {
                 </span>
               )}
             </div>
-            <p className="flex-1 min-w-0 text-[13px] leading-snug text-espresso line-clamp-2">
-              {item.name}
-              {item.quantity > 1 && (
-                <span className="sr-only">, {item.quantity} шт.</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] leading-snug text-espresso line-clamp-2">
+                {item.name}
+                {item.quantity > 1 && (
+                  <span className="sr-only">, {item.quantity} шт.</span>
+                )}
+              </p>
+              {shipsFromLabel(item.productSlug) && (
+                <p className="mt-1 inline-block rounded-md bg-terracotta/10 px-2 py-0.5 text-xs font-semibold text-terracotta-dark">
+                  Отправим с {shipsFromLabel(item.productSlug)}
+                </p>
               )}
-            </p>
+            </div>
             <span className="shrink-0 text-[13px] text-espresso tabular-nums">
               {formatPrice((item.price * item.quantity) / 100)}
             </span>

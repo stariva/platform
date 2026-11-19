@@ -1,5 +1,5 @@
+import type { VisitorInfo } from "@stariva/db/schema";
 import {
-  Badge,
   Card,
   CardContent,
   CardHeader,
@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@stariva/ui";
+import { Badge } from "@stariva/ui/reui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -19,19 +20,27 @@ import {
   optionsLabel,
   visitorSummary,
 } from "~/components/carts/cart-meta";
+import { CartSourceBlock } from "~/components/carts/cart-source";
+import { RemoveCart } from "~/components/carts/remove-cart";
+import { RemoveCartEvent } from "~/components/carts/remove-cart-event";
 import { SiteHeader } from "~/components/layout";
 import {
   dateTime,
+  dateTimeSeconds,
   KIND_LABELS,
   productSiteUrl,
   rubles,
   STATUS_LABELS,
   statusVariant,
 } from "~/components/orders/order-meta";
-import { VisitorCard } from "~/components/visitors/visitor-card";
+import { isLocalIp, VisitorCard } from "~/components/visitors/visitor-card";
 import { api } from "~/orpc/server";
 
 export const dynamic = "force-dynamic";
+
+/** «Москва · МТС»; пусто, если по IP ничего не определилось. */
+const guestPlace = (visitor: VisitorInfo | null) =>
+  [visitor?.city, visitor?.isp].filter(Boolean).join(" · ");
 
 /** «2 → 3», «было 2», а у новой строки — просто количество. */
 function quantityChange(before: number, after: number) {
@@ -64,9 +73,14 @@ export default async function CartPage({
           >
             ← Все корзины
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Корзина
-          </h1>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Корзина</h1>
+            <RemoveCart
+              id={cart.cartId}
+              label={`Корзина от ${dateTime.format(cart.lastAt)}, событий: ${cart.events.length}`}
+              redirectTo="/carts"
+            />
+          </div>
           <p className="text-muted-foreground text-sm">
             {cart.users.length > 0
               ? cart.users.map((person, index) => (
@@ -82,7 +96,7 @@ export default async function CartPage({
                 ))
               : "Гость без входа в кабинет"}
             {guest && ` · ${guest}`} · с {dateTime.format(cart.firstAt)} по{" "}
-            {dateTime.format(cart.lastAt)}
+            {dateTime.format(cart.lastAt)} (МСК)
           </p>
         </div>
 
@@ -180,16 +194,18 @@ export default async function CartPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Когда</TableHead>
+                  <TableHead>Когда (МСК)</TableHead>
                   <TableHead>Что</TableHead>
+                  <TableHead>Реклама</TableHead>
                   <TableHead>Откуда</TableHead>
+                  <TableHead className="w-px" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {cart.events.map((event) => (
                   <TableRow key={event.id}>
                     <TableCell className="text-muted-foreground align-top text-sm whitespace-nowrap">
-                      {dateTime.format(event.createdAt)}
+                      {dateTimeSeconds.format(event.createdAt)}
                     </TableCell>
                     <TableCell className="align-top text-sm whitespace-normal">
                       <div className="font-medium">
@@ -219,14 +235,40 @@ export default async function CartPage({
                         ))}
                       </ul>
                     </TableCell>
+                    <TableCell className="max-w-[240px] align-top">
+                      <CartSourceBlock source={event.source} />
+                    </TableCell>
                     <TableCell className="text-muted-foreground align-top text-xs">
                       {event.visitor?.page}
-                      <div>{event.ip}</div>
+                      {event.ip && (
+                        <div className="font-mono">
+                          {event.ip}
+                          {isLocalIp(event.ip) && " (локальный)"}
+                        </div>
+                      )}
+                      {guestPlace(event.visitor) && (
+                        <div>{guestPlace(event.visitor)}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <RemoveCartEvent
+                        id={event.id}
+                        label={`${ACTION_LABELS[event.action]}, ${dateTimeSeconds.format(event.createdAt)}`}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Реклама</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CartSourceBlock source={cart.source} />
           </CardContent>
         </Card>
 

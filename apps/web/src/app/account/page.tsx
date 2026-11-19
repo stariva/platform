@@ -6,6 +6,12 @@ import {
   listGiftedSlugs,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
+import { getProductBySlug } from "@/lib/catalog/service";
+import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
+import {
+  ELKA_KIT_SLUG,
+  ELKA_WORKSHOP_SLUG,
+} from "@/lib/commerce/elka-kit-price";
 import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
@@ -14,6 +20,7 @@ import {
   levelLabels,
 } from "@/lib/workshops-data";
 import { CourseCover } from "./course-cover";
+import { ElkaKitOffer } from "./elka-kit-offer";
 
 export const dynamic = "force-dynamic";
 
@@ -76,9 +83,19 @@ export default async function AccountCoursesPage() {
   const summaries = await Promise.all(
     workshops.map((w) => getCourseProgressSummary(session.user.id, w)),
   );
+  const kit =
+    slugs.includes(ELKA_WORKSHOP_SLUG) &&
+    (await hasPurchasedElkaWorkshop(session.user.id))
+      ? await getProductBySlug(ELKA_KIT_SLUG)
+      : undefined;
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {kit ? (
+        <div className="sm:col-span-2 lg:col-span-3">
+          <ElkaKitOffer product={kit} />
+        </div>
+      ) : null}
       {workshops.map((workshop, i) => {
         const summary = summaries[i];
         if (!summary) return null;
@@ -86,7 +103,7 @@ export default async function AccountCoursesPage() {
         return (
           <div
             key={workshop.slug}
-            className="bg-white border border-espresso/10 rounded-2xl overflow-hidden flex flex-col sm:flex-row"
+            className="bg-white border border-espresso/10 rounded-2xl overflow-hidden flex flex-col"
           >
             <CourseCover
               href={`/account/workshops/${workshop.slug}`}
@@ -98,7 +115,7 @@ export default async function AccountCoursesPage() {
                 {categoryLabels[workshop.category]} ·{" "}
                 {levelLabels[workshop.level]}
               </p>
-              <h2 className="font-serif text-xl text-espresso mb-2">
+              <h2 className="font-serif text-xl text-espresso leading-snug mb-4">
                 {workshop.title}
               </h2>
 
@@ -112,7 +129,7 @@ export default async function AccountCoursesPage() {
                   </p>
                   <Button
                     asChild
-                    className="bg-espresso text-parchment hover:bg-espresso/90"
+                    className="w-full bg-espresso text-parchment hover:bg-espresso/90"
                   >
                     <Link href={`/account/workshops/${workshop.slug}`}>
                       Как подготовиться
@@ -135,10 +152,10 @@ export default async function AccountCoursesPage() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center gap-3">
                     <Button
                       asChild
-                      className="bg-espresso text-parchment hover:bg-espresso/90"
+                      className="w-full bg-espresso text-parchment hover:bg-espresso/90"
                     >
                       <Link
                         href={

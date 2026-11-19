@@ -5,6 +5,7 @@ import { chtoNadetNaFotosessiyuVPuteshestvii } from "./chto-nadet-na-fotosessiyu
 import { dizainMakrameSChegoNachatEsliVyNeKhudozhnik } from "./dizain-makrame-s-chego-nachat-esli-vy-ne-khudozhnik";
 import { elkaIzMakrameSvoimiRukami } from "./elka-iz-makrame-svoimi-rukami";
 import { filosofiyaSlowLivingIRuchnayaRabota } from "./filosofiya-slow-living-i-ruchnaya-rabota";
+import { gnomyVInterereOsenniyDekor } from "./gnomy-v-interere-osenniy-dekor-dlya-doma";
 import { istoriyaMakrameOtMoryakovDoInterera } from "./istoriya-makrame-ot-moryakov-do-interera";
 import { kakUkhazhivatZaMakrameStirkaChistkaKhranenie } from "./kak-ukhazhivat-za-makrame-stirka-chistka-khranenie";
 import { kakUkrasiteDetskuyuKomnatuMakrame } from "./kak-ukrasite-detskuyu-komnatu-makrame";
@@ -63,6 +64,7 @@ export const blogPosts: BlogPost[] = [
   makrameNaSvadbe,
   elkaIzMakrameSvoimiRukami,
   chtoNadetNaFotosessiyuVPuteshestvii,
+  gnomyVInterereOsenniyDekor,
 ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export function getPostBySlug(slug: string): BlogPost | undefined {

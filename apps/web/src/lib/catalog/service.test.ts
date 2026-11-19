@@ -58,6 +58,7 @@ const {
   getInStockProducts,
   getInStockProductsResult,
   getReviews,
+  getWorkshopReviews,
   getProductByStaleSlug,
   getRatingSummary,
   summarizeRatings,
@@ -96,9 +97,11 @@ test("catalog results distinguish an unavailable database from a successful empt
 });
 
 test("in-stock results filter purchasable products and retain catalog availability", async () => {
-  const unavailableProducts = [
+  const unavailableProducts: Product[] = [
     { ...product, id: "sold-out", inStock: false },
     { ...product, id: "no-sku", ozonSku: undefined },
+    // Одежду готовой не продаём
+    { ...product, id: "clothes", category: "clothes" },
   ];
   const products = [product, ...unavailableProducts];
   fetchProducts.mockResolvedValue(products);
@@ -190,6 +193,57 @@ test("store-wide reviews put photo reviews first and spread products", async () 
   assert.deepEqual(
     reviews.map((r) => r.id),
     ["bag", "belt-old", "belt-new"],
+  );
+});
+
+test("workshop reviews stay out of store-wide product reviews", async () => {
+  fetchReviews.mockResolvedValueOnce([
+    ...publishedReviews,
+    review({ id: "mk", source: "site", workshopSlug: "elka-makrame" }),
+  ]);
+  assert.deepEqual(
+    (await getReviews()).map((r) => r.id),
+    ["bag", "belt-old", "belt-new"],
+  );
+});
+
+test("a workshop review never reaches a product card, even if linked", async () => {
+  fetchReviews.mockResolvedValueOnce([
+    review({ id: "belt", productIds: ["belt-cream"] }),
+    review({
+      id: "mk",
+      source: "site",
+      workshopSlug: "elka-makrame",
+      productIds: ["belt-cream"],
+    }),
+  ]);
+  assert.deepEqual(
+    (await getReviews({ productId: "belt-cream" })).map((r) => r.id),
+    ["belt"],
+  );
+});
+
+test("workshop reviews: only this workshop, photo reviews first", async () => {
+  fetchReviews.mockResolvedValueOnce([
+    review({
+      id: "mk-new",
+      source: "site",
+      workshopSlug: "elka-makrame",
+      date: "2026-11-05T00:00:00.000Z",
+    }),
+    review({
+      id: "mk-photo",
+      source: "site",
+      workshopSlug: "elka-makrame",
+      photos: ["https://cdn.example/elka.jpg"],
+      date: "2026-11-01T00:00:00.000Z",
+    }),
+    review({ id: "other", source: "site", workshopSlug: "gnome" }),
+    review({ id: "belt" }),
+  ]);
+  assert.deepEqual(
+    (await getWorkshopReviews("elka-makrame")).map((r) => r.id),
+    ["mk-photo", "mk-new"],
   );
 });
 

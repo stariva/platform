@@ -132,6 +132,17 @@ export const workshopFormSchema = z
         (value) => value === "" || z.url().safeParse(value).success,
         "Нужна ссылка",
       ),
+    // Закрытый чат для купивших, например https://t.me/+AbCd… Пусто — чата нет.
+    supportChatUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(
+        (value) =>
+          value === "" ||
+          z.url({ protocol: /^https$/ }).safeParse(value).success,
+        "Нужна ссылка вида https://…",
+      ),
     featured: z.boolean(),
     sortOrder: z.number().int().min(-100_000).max(100_000),
     testimonialText: z.string().trim().max(1000),

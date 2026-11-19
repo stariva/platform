@@ -11,10 +11,10 @@ const STATE_URL =
 const PAYMENT_ID_PREFIX = "robokassa:";
 
 /**
- * Способы оплаты на странице Robokassa — Alias из GetCurrencies. Карты и СБП
- * идут через ЮKassa: в Robokassa они дороже.
+ * BankCard принимает в том числе иностранные карты, если способ включён
+ * для магазина Robokassa. Российские карты и СБП также есть через ЮKassa.
  */
-const PAYMENT_METHODS = ["YandexPay", "YandexPaySplit"];
+const PAYMENT_METHODS = ["BankCard", "YandexPay", "YandexPaySplit"];
 
 export type RobokassaInvoice = typeof robokassaInvoices.$inferSelect;
 
@@ -141,7 +141,7 @@ export function invoiceTarget(invoice: RobokassaInvoice): InvoiceTarget {
 }
 
 /**
- * Ссылка на страницу оплаты Robokassa с выбором Яндекс Пэй или Сплита.
+ * Ссылка на страницу оплаты Robokassa с выбором карты, Яндекс Пэй или Сплита.
  * Email покупателя не передаём: ссылка — GET, а адрес не должен оседать
  * в логах. Robokassa спросит его сама, чек мы отправляем свой.
  * `extra` уходит пользовательскими Shp_*: Robokassa хранит их с платежом

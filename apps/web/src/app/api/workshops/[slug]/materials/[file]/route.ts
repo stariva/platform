@@ -1,6 +1,8 @@
+import { env } from "@stariva/config";
 import { getObjectStream } from "@stariva/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
+import { grantedMaterialUser } from "@/lib/workshops/material-token";
 import { findMaterialFile } from "@/lib/workshops/signed-media";
 
 export const runtime = "nodejs";
@@ -13,16 +15,27 @@ const ERROR_STATUS = {
 } as const;
 
 /**
- * PDF-материал курса по адресу сайта, а не бакета: проверяем покупку и отдаём
- * файл потоком. Ссылку на этот адрес выдаёт account.materialUrl.
+ * Материал курса (PDF или схема урока) по адресу сайта, а не бакета:
+ * проверяем покупку и отдаём файл потоком. Ссылку на этот адрес выдаёт
+ * account.materialUrl. Покупателя узнаём по пропуску из ссылки (приложение
+ * входит bearer-токеном), а без пропуска — по cookie сессии.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string; file: string }> },
 ) {
   const { slug, file } = await params;
-  const session = await auth.api.getSession({ headers: request.headers });
-  const material = await findMaterialFile(slug, file, session?.user.id ?? null);
+  // Пропуск приложения важнее cookie: в браузере может быть открыт другой аккаунт
+  const userId =
+    grantedMaterialUser(
+      request.nextUrl.searchParams.get("token"),
+      env.AUTH_SECRET,
+      slug,
+      file,
+    ) ??
+    (await auth.api.getSession({ headers: request.headers }))?.user.id ??
+    null;
+  const material = await findMaterialFile(slug, file, userId);
   if (material.status !== "ok") {
     return NextResponse.json(
       { error: material.status },
@@ -32,10 +45,10 @@ export async function GET(
 
   try {
     const { body, contentLength } = await getObjectStream(material.key);
-    const name = `${material.label}.pdf`;
+    const name = `${material.label}.${material.extension}`;
     return new Response(body, {
       headers: {
-        "Content-Type": "application/pdf",
+        "Content-Type": material.contentType,
         // Открываем в браузере; при сохранении — понятное имя вместо ключа
         "Content-Disposition": `inline; filename="${file}"; filename*=UTF-8''${encodeURIComponent(name)}`,
         ...(contentLength ? { "Content-Length": String(contentLength) } : {}),
@@ -52,3 +65,5 @@ export async function GET(
     return NextResponse.json({ error: "unavailable" }, { status: 502 });
   }
 }
+
+/** Владелец пропуска из ссылки, если пропуск выдан на этот файл и не истёк. */

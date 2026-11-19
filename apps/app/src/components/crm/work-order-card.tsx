@@ -79,6 +79,12 @@ export function WorkOrderCard({ order }: { order: WorkOrderRow }) {
       </div>
       <div className="text-xs">
         <OrderMoney order={order} />
+        {order.costs !== null && (
+          <div className="text-muted-foreground tabular-nums">
+            затраты {rubles.format(order.costs)}
+            {order.missingMaterials && " · без материалов"}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         {order.overdue && <Badge variant="destructive">просрочен</Badge>}

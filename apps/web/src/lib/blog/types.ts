@@ -8,6 +8,8 @@ export interface BlogPost {
   coverImage: string;
   /** CSS object-position for the cover, when the default center crop cuts off the subject */
   coverPosition?: string;
+  /** "portrait" puts a vertical cover beside the title instead of cropping it into the wide banner */
+  coverOrientation?: "portrait";
   content: BlogContent[];
 }
 
@@ -17,6 +19,8 @@ export interface BlogContent {
   src?: string;
   alt?: string;
   caption?: string;
+  /** "portrait" shows a vertical photo in a narrower 4:5 frame instead of cropping it to 4:3 */
+  orientation?: "portrait";
   /** Internal link href for "cta" blocks (e.g. "/catalog/interior") */
   href?: string;
   /** Button label for "cta" blocks */

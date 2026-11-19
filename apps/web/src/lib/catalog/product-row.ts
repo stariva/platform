@@ -44,6 +44,7 @@ export function productRowToProduct(row: ProductRow): Product {
     material: row.material || DEFAULT_MATERIAL,
     dimensions: row.dimensions ?? undefined,
     careInstructions: row.careInstructions ?? undefined,
+    ideaAuthor: row.ideaAuthor ?? undefined,
     color: row.color ?? undefined,
     sizes: row.sizes.length > 0 ? row.sizes : undefined,
     bestFor: row.bestFor ?? undefined,

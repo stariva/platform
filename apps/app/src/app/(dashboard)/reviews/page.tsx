@@ -23,11 +23,18 @@ export default async function ReviewsPage() {
             виден на карточках привязанных товаров; без товара — только в общих
             блоках «Отзывы о Stariva».
           </p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Отзывы о мастер-классах участницы оставляют в кабинете, разрешив
+            публикацию текста, подписи и фото. Новый или изменённый отзыв скрыт,
+            пока его не включат здесь. На сайте он появится на странице
+            мастер-класса и в общих отзывах.
+          </p>
         </div>
         <ReviewsTable
           initialReviews={reviews.map((review) => ({
             ...review,
             reviewedAt: review.reviewedAt.toISOString(),
+            updatedAt: review.updatedAt.toISOString(),
           }))}
           products={products.map(({ id, name, ozonOfferId }) => ({
             id,

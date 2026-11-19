@@ -2,10 +2,77 @@ import { test } from "bun:test";
 import assert from "node:assert/strict";
 import {
   isOrderActive,
+  madeToOrderHint,
   orderProgress,
   orderStatusLabel,
   orderStatusTone,
+  paymentReturnState,
 } from "./order-status";
+
+test("the deposit hint never asks for a pickup point, the finished product does until the delivery is priced", () => {
+  assert.doesNotMatch(
+    madeToOrderHint("awaiting_deposit", false) ?? "",
+    /пункт выдачи/i,
+  );
+  // Пункт нужен только готовому изделию и только пока доставка не посчитана
+  assert.match(
+    madeToOrderHint("awaiting_balance", true) ?? "",
+    /Выберите пункт выдачи Ozon/,
+  );
+  assert.doesNotMatch(
+    madeToOrderHint("awaiting_balance", false) ?? "",
+    /Выберите пункт/,
+  );
+  assert.equal(
+    madeToOrderHint("in_production", true),
+    madeToOrderHint("in_production", false),
+  );
+});
+
+const returned = (
+  kind: "stock" | "made_to_order",
+  status: string,
+  extra: Partial<Parameters<typeof paymentReturnState>[0]> = {},
+) =>
+  paymentReturnState({
+    kind,
+    status,
+    paid: false,
+    paymentStep: null,
+    paymentOverdue: false,
+    ...extra,
+  });
+
+test("возврат с оплаты: зачтённая оплата подтверждена", () => {
+  assert.equal(returned("stock", "paid", { paid: true }), "confirmed");
+  // Оплаченный заказ из наличия тут же уходит в сборку Ozon
+  assert.equal(returned("stock", "fulfilling", { paid: true }), "confirmed");
+  assert.equal(returned("made_to_order", "in_production"), "confirmed");
+  assert.equal(
+    returned("made_to_order", "ready_to_ship", { paid: true }),
+    "confirmed",
+  );
+});
+
+test("возврат с оплаты: заказ ещё ждёт оплату — проверяем, а не радуемся", () => {
+  assert.equal(returned("stock", "pending"), "checking");
+  assert.equal(
+    returned("made_to_order", "awaiting_deposit", {
+      paymentStep: { type: "deposit", amount: 250000 },
+    }),
+    "checking",
+  );
+  assert.equal(
+    returned("made_to_order", "awaiting_balance", { paymentOverdue: true }),
+    "checking",
+  );
+});
+
+test("возврат с оплаты: отменённый платёж и старая ссылка", () => {
+  assert.equal(returned("stock", "canceled"), "failed");
+  assert.equal(returned("stock", "delivered", { paid: true }), null);
+  assert.equal(returned("made_to_order", "canceled"), null);
+});
 
 test("мастер-класс без шкалы этапов", () => {
   assert.equal(orderProgress("workshop", "paid"), null);

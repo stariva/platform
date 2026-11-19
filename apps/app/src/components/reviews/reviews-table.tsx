@@ -15,6 +15,7 @@ import {
 } from "@stariva/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { useConfirm } from "~/components/confirm-dialog";
 import { orpc } from "~/orpc/react";
 import {
   type ReviewProductOption,
@@ -32,16 +33,21 @@ export interface AdminReview {
   productIds: string[];
   photos: string[];
   reviewedAt: string;
+  /** Версия отзыва: публикуем только ту, что видна в таблице */
+  updatedAt: string;
   published: boolean;
   showPhotos: boolean;
+  /** Отзыв участницы о мастер-классе из кабинета */
+  workshopSlug: string | null;
 }
 
-type Filter = "all" | "published" | "hidden" | "unlinked";
+type Filter = "all" | "published" | "hidden" | "workshops" | "unlinked";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Все" },
   { id: "published", label: "На сайте" },
   { id: "hidden", label: "Скрытые" },
+  { id: "workshops", label: "Мастер-классы" },
   { id: "unlinked", label: "Без товара" },
 ];
 
@@ -57,8 +63,10 @@ function matchesFilter(review: AdminReview, filter: Filter) {
       return review.published;
     case "hidden":
       return !review.published;
+    case "workshops":
+      return review.workshopSlug !== null;
     case "unlinked":
-      return review.productIds.length === 0;
+      return review.workshopSlug === null && review.productIds.length === 0;
     default:
       return true;
   }
@@ -99,7 +107,12 @@ export function ReviewsTable({
       setReviews((current) =>
         current.map((r) =>
           r.id === review.id
-            ? { ...r, ...review, reviewedAt: review.reviewedAt.toISOString() }
+            ? {
+                ...r,
+                ...review,
+                reviewedAt: review.reviewedAt.toISOString(),
+                updatedAt: review.updatedAt.toISOString(),
+              }
             : r,
         ),
       );
@@ -120,6 +133,20 @@ export function ReviewsTable({
       );
     },
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
+  });
+
+  const confirm = useConfirm();
+  const remove = useMutation({
+    ...orpc.admin.reviews.remove.mutationOptions(),
+    onSuccess: ({ id, revalidated }) => {
+      toast.success(
+        revalidated
+          ? "Отзыв удалён, сайт обновлён"
+          : "Отзыв удалён. На сайте он пропадёт в течение часа",
+      );
+      setReviews((current) => current.filter((r) => r.id !== id));
+    },
+    onError: (error: Error) => toast.error(error.message || "Не удалилось"),
   });
 
   const visible = reviews.filter((r) => matchesFilter(r, filter));
@@ -153,13 +180,16 @@ export function ReviewsTable({
               <TableHead className="w-44">Подпись</TableHead>
               <TableHead className="w-24 text-center">На сайте</TableHead>
               <TableHead className="w-28 text-center">Фото на сайте</TableHead>
+              <TableHead className="w-28">
+                <span className="sr-only">Действия</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visible.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Отзывов нет
@@ -214,6 +244,9 @@ export function ReviewsTable({
                         {SOURCE_LABELS[review.source]}
                       </Badge>
                     )}
+                    {review.workshopSlug && (
+                      <Badge variant="secondary">Мастер-класс</Badge>
+                    )}
                     {review.productTitle && (
                       <span className="text-muted-foreground text-xs">
                         {review.productTitle}
@@ -226,14 +259,20 @@ export function ReviewsTable({
                   </p>
                 </TableCell>
                 <TableCell className="align-top whitespace-normal">
-                  <ReviewProductsPicker
-                    products={products}
-                    selected={review.productIds}
-                    disabled={setProducts.isPending}
-                    onChange={(productIds) =>
-                      setProducts.mutate({ id: review.id, productIds })
-                    }
-                  />
+                  {review.workshopSlug ? (
+                    <span className="text-muted-foreground text-xs">
+                      На странице мастер-класса и в общих отзывах
+                    </span>
+                  ) : (
+                    <ReviewProductsPicker
+                      products={products}
+                      selected={review.productIds}
+                      disabled={setProducts.isPending}
+                      onChange={(productIds) =>
+                        setProducts.mutate({ id: review.id, productIds })
+                      }
+                    />
+                  )}
                 </TableCell>
                 <TableCell className="align-top">
                   <Input
@@ -256,7 +295,11 @@ export function ReviewsTable({
                     disabled={update.isPending}
                     aria-label="Показывать отзыв на сайте"
                     onCheckedChange={(published) =>
-                      update.mutate({ id: review.id, published })
+                      update.mutate({
+                        id: review.id,
+                        published,
+                        expectedUpdatedAt: review.updatedAt,
+                      })
                     }
                   />
                 </TableCell>
@@ -269,6 +312,29 @@ export function ReviewsTable({
                       update.mutate({ id: review.id, showPhotos })
                     }
                   />
+                </TableCell>
+                <TableCell className="text-right align-top">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    aria-label={`Удалить отзыв: ${review.reviewerName}, ${dateFormat.format(new Date(review.reviewedAt))}`}
+                    disabled={remove.isPending}
+                    onClick={async () => {
+                      if (
+                        !(await confirm({
+                          title: "Удалить отзыв?",
+                          description: `Отзыв от ${review.reviewerName} будет удалён безвозвратно. Чтобы просто убрать его с сайта, снимите переключатель «На сайте».`,
+                          confirmLabel: "Удалить",
+                          destructive: true,
+                        }))
+                      ) {
+                        return;
+                      }
+                      remove.mutate({ id: review.id });
+                    }}
+                  >
+                    Удалить
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

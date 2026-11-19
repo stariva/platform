@@ -2,8 +2,10 @@
 
 import {
   type CheckoutQuote,
+  DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
+  ProductsPriceChangedError,
 } from "@stariva/web-api/contract";
 import {
   ArrowRightIcon,
@@ -22,13 +24,19 @@ import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { env } from "@/env";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
 import {
+  type KitAccessMode,
+  priceKitBundleLines,
+  resolveKitOrderGift,
+} from "@/lib/commerce/elka-kit-bundle";
+import { rememberOrderPhone } from "@/lib/commerce/order-phone";
+import {
   formatDateRange,
   localDateKey,
+  pickupPointAddressLine,
   pointKindLabel,
 } from "@/lib/ozon-delivery/format";
 import type { DeliverySelection, PickupPoint } from "@/lib/ozon-delivery/types";
@@ -59,13 +67,32 @@ type QuoteState =
 
 export default function CheckoutPage() {
   const { items: cartItems, hydrated, clear, remove } = useCart();
+  const [kitAccessMode, setKitAccessMode] = useState<KitAccessMode | null>(
+    null,
+  );
+  const [kitGift, setKitGift] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("kitAccessMode");
+    setKitAccessMode(
+      mode === "single_lesson" || mode === "separate_gifts" ? mode : null,
+    );
+    setKitGift(params.get("kitGift") === "1");
+  }, []);
   // Изделия под заказ оплачиваются отдельно — на /checkout/made-to-order
-  const items = useMemo(
+  const rawItems = useMemo(
     () => cartItems.filter((item) => item.fulfillmentType === "stock"),
     [cartItems],
   );
+  const items = kitAccessMode
+    ? (priceKitBundleLines(rawItems, kitAccessMode) ?? [])
+    : rawItems;
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const { notices, dismissNotices } = useCartValidation();
+  // Подарок с кодом доступа имеет смысл только для набора с мастер-классом
+  const hasKit = items.some((item) => item.kit);
+  const { notices, dismissNotices, refresh, loading } = useCartValidation(
+    kitAccessMode ?? undefined,
+  );
 
   const [step, setStep] = useState<Step>("contact");
   const [contact, setContact] = useState<ContactFormValues | null>(null);
@@ -75,10 +102,6 @@ export default function CheckoutPage() {
   const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
-  // yookassa — карта или СБП, robokassa — Яндекс Пэй или Сплит
-  const [provider, setProvider] = useState<"yookassa" | "robokassa">(
-    "yookassa",
-  );
 
   const checkoutTracked = useRef(false);
   useEffect(() => {
@@ -111,6 +134,7 @@ export default function CheckoutPage() {
           {
             contactPhone: phone,
             items: items.map((i) => ({
+              productId: i.productId,
               productSlug: i.productSlug,
               quantity: i.quantity,
             })),
@@ -197,39 +221,66 @@ export default function CheckoutPage() {
     reachGoal("checkout_delivery_complete");
   }
 
-  async function handleConfirm(chosen: "yookassa" | "robokassa") {
-    if (quoteState.status !== "ready" || !selectedPoint || !contact) return;
-    setProvider(chosen);
+  async function handleConfirm() {
+    if (
+      !items.length ||
+      quoteState.status !== "ready" ||
+      !selectedPoint ||
+      !contact
+    )
+      return;
     // Форма уже не пропускает без согласия; здесь сужаем тип до того, что просит API
     if (contact.personalDataConsent !== true) return;
-    const delivery: DeliverySelection = {
-      method: "pickup",
+    const delivery = {
+      method: "pickup" as const,
       pointId: selectedPoint.id,
-    };
+      // Адрес для мастера на случай, если Ozon не ответит и заказ уйдёт вручную
+      pointLabel: pickupPointAddressLine(
+        selectedPoint.title,
+        selectedPoint.address,
+      ),
+    } satisfies DeliverySelection & { pointLabel: string };
 
     setSubmitting(true);
     try {
       const created = await webApi.checkout.create({
         contactName: contact.name,
         contactPhone: contact.phone,
-        contactEmail: contact.email || undefined,
+        contactEmail: contact.email,
         comment: contact.comment || undefined,
+        gift: resolveKitOrderGift(
+          kitAccessMode,
+          hasKit && (kitGift || contact.gift === true) ? true : undefined,
+        ),
+        kitAccessMode: kitAccessMode ?? undefined,
         items: items.map((item) => ({
+          productId: item.productId,
           productSlug: item.productSlug,
           quantity: item.quantity,
         })),
         delivery,
+        // Сервер не возьмёт за доставку больше, чем показано на странице
+        expectedDeliveryKopecks: quoteState.quote.deliveryPriceKopecks,
+        expectedProductsKopecks: subtotal,
         personalDataConsent: contact.personalDataConsent,
         offerAccepted: true,
-        paymentProvider: chosen,
       });
       await trackCreatedOrder(created.analytics);
+      // После оплаты ЮKassa вернёт на страницу заказа — откроем его без телефона
+      rememberOrderPhone(created.orderId, contact.phone);
       setRedirecting(true);
       clear("stock", created.orderId);
       window.location.href = created.confirmationUrl;
     } catch (error) {
       if (error instanceof ItemsUnavailableError) {
         dropUnavailableItems(error.data.unavailableProductSlugs);
+      } else if (error instanceof DeliveryPriceChangedError) {
+        // Ozon ожил или цена сдвинулась: пересчитываем и показываем новую сумму
+        setQuoteAttempt((n) => n + 1);
+        toast.error(error.message);
+      } else if (error instanceof ProductsPriceChangedError) {
+        refresh();
+        toast.error(error.message);
       } else {
         toast.error(
           formErrorMessage(
@@ -249,15 +300,14 @@ export default function CheckoutPage() {
           <Spinner className="size-6" />
           <p className="text-espresso">Переходим к оплате…</p>
           <p className="text-sm text-taupe">
-            Откроется защищённая страница{" "}
-            {provider === "robokassa" ? "Robokassa" : "ЮKassa"}
+            Откроется защищённая страница ЮKassa
           </p>
         </div>
       </Shell>
     );
   }
 
-  if (!hydrated) {
+  if (!hydrated || (kitAccessMode && loading && items.length === 0)) {
     return (
       <Shell>
         <div
@@ -287,16 +337,22 @@ export default function CheckoutPage() {
             />
           </div>
           <h1 className="font-serif text-3xl text-espresso mb-3">
-            Корзина пуста
+            {kitAccessMode ? "Комплект недоступен" : "Корзина пуста"}
           </h1>
           <p className="text-taupe text-sm mb-8">
-            Добавьте изделия из каталога, чтобы оформить заказ.
+            {kitAccessMode
+              ? "Состав или цена изменились. Выберите наборы заново."
+              : "Добавьте изделия из каталога, чтобы оформить заказ."}
           </p>
           <Button
             asChild
             className="h-12 px-7 rounded-full bg-espresso text-parchment hover:bg-espresso/85"
           >
-            <Link href="/catalog">В каталог</Link>
+            {kitAccessMode ? (
+              <Link href="/nabor-elka">Выбрать наборы</Link>
+            ) : (
+              <Link href="/catalog">В каталог</Link>
+            )}
           </Button>
         </div>
       </Shell>
@@ -372,7 +428,7 @@ export default function CheckoutPage() {
                     <p className="text-espresso">{contact.name}</p>
                     <p>
                       {contact.phone}
-                      {contact.email && ` · ${contact.email}`}
+                      {` · ${contact.email}`}
                     </p>
                     {contact.comment && (
                       <p className="whitespace-pre-line">
@@ -387,6 +443,7 @@ export default function CheckoutPage() {
                 initial={contact}
                 busy={checkingPhone}
                 submitLabel={contact ? "Сохранить" : "Продолжить"}
+                offerGift={hasKit && !kitGift && !kitAccessMode}
                 onSubmit={handleContactSubmit}
               />
             </CheckoutSection>
@@ -482,40 +539,20 @@ export default function CheckoutPage() {
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
-                  {env.NEXT_PUBLIC_ROBOKASSA_ENABLED
-                    ? "Картой или СБП — на защищённой странице ЮKassa, Яндекс Пэй и Сплит — на странице Robokassa. После оплаты вернём вас на страницу заказа."
-                    : "Оплата на защищённой странице ЮKassa. После оплаты вернём вас на страницу заказа."}
+                  Оплата на защищённой странице ЮKassa. После оплаты вернём вас
+                  на страницу заказа.
                 </p>
                 <Button
-                  onClick={() => handleConfirm("yookassa")}
+                  onClick={handleConfirm}
                   disabled={submitting || !quote}
                   className="w-full h-14 rounded-full bg-espresso text-parchment hover:bg-espresso/85 text-[15px]"
                 >
-                  {submitting && provider === "yookassa" ? (
+                  {submitting ? (
                     <Spinner />
                   ) : (
                     `Оплатить ${formatPrice(total / 100)}`
                   )}
                 </Button>
-                {env.NEXT_PUBLIC_ROBOKASSA_ENABLED && (
-                  <div className="space-y-1.5">
-                    <Button
-                      onClick={() => handleConfirm("robokassa")}
-                      disabled={submitting || !quote}
-                      aria-label={`Оплатить ${formatPrice(total / 100)} через Яндекс Пэй или частями в Сплит`}
-                      className="w-full h-14 rounded-full border border-espresso/20 bg-transparent text-espresso hover:bg-sand text-[15px]"
-                    >
-                      {submitting && provider === "robokassa" ? (
-                        <Spinner />
-                      ) : (
-                        "Яндекс Пэй или Сплит"
-                      )}
-                    </Button>
-                    <p className="text-center text-xs text-taupe">
-                      В Сплите можно оплатить частями
-                    </p>
-                  </div>
-                )}
                 <OfferAcceptanceNote action="Оплатить" />
               </div>
             </CheckoutSection>
@@ -588,6 +625,17 @@ function QuoteStatus({
           Повторить
         </button>
       </div>
+    );
+  }
+  if (state.status === "ready" && state.quote.manual) {
+    return (
+      <p
+        className="rounded-xl bg-sand px-4 py-3 text-sm text-espresso"
+        aria-live="polite"
+      >
+        Расчёт доставки Ozon сейчас недоступен. Доставка для вас бесплатна —
+        отправим заказ вручную и напишем, когда он будет в пути.
+      </p>
     );
   }
   if (state.status === "ready") {

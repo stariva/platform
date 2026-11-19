@@ -9,11 +9,17 @@ import {
   FAQJsonLd,
 } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
+import { getProductsResult } from "@/lib/catalog/service";
 import { WORKSHOP_PATH, WORKSHOP_SLUG } from "@/lib/elka/data";
 import { loadBigTreeWorkshop, loadElkaData } from "@/lib/elka/load";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { getBundle } from "@/lib/workshops/bundles";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
+import { KOMBO_SLUG } from "../elka-makrame-kombo/_data";
+import { ElkaAuthor } from "./_components/elka-author";
+import { ElkaKit } from "./_components/elka-kit";
 import { ElkaReadyTrees } from "./_components/elka-ready-trees";
+import { ElkaTariffs } from "./_components/elka-tariffs";
 import { ElkaWorkshop, workshopOffer } from "./_components/elka-workshop";
 import { LegacyModelsRedirect } from "./_components/legacy-models-redirect";
 import { WORKSHOP_BUY_ID, workshopFaq } from "./_data";
@@ -78,10 +84,15 @@ const METADATA: Metadata = {
 };
 
 export default async function ElkaMakramePage() {
-  const [{ trees: treesResult, workshop }, bigTree] = await Promise.all([
-    loadElkaData("elka_workshop"),
-    loadBigTreeWorkshop(),
-  ]);
+  const [{ trees: treesResult, workshop }, bigTree, catalog] =
+    await Promise.all([
+      loadElkaData("elka_workshop"),
+      loadBigTreeWorkshop(),
+      getProductsResult(),
+    ]);
+  const kit = catalog.products.find(
+    (product) => product.slug === "nabor-makrame-elka",
+  );
   const trees = treesResult.products;
   const reviewProductId = trees[0]?.id;
   const treePrices = trees.map((tree) => tree.price).filter((p) => p > 0);
@@ -89,6 +100,9 @@ export default async function ElkaMakramePage() {
     treePrices.length > 0 ? Math.min(...treePrices) : undefined;
   const { preorder, releaseLabel } = workshopOffer(workshop);
   const faq = workshopFaq({ preorder, releaseLabel, bigTree });
+  // Тарифы — после старта уроков, когда продаются оба мастер-класса.
+  const tariffs =
+    workshop && bigTree && !preorder ? { workshop, bigTree } : undefined;
 
   return (
     <>
@@ -118,13 +132,21 @@ export default async function ElkaMakramePage() {
         <ElkaWorkshop
           workshop={workshop}
           bigTree={bigTree}
+          tariffs={Boolean(tariffs)}
           readyTreePrice={readyTreePrice}
         />
+        {tariffs ? (
+          <ElkaTariffs {...tariffs} bundle={getBundle(KOMBO_SLUG)} />
+        ) : null}
+        {kit || catalog.status === "unavailable" ? (
+          <ElkaKit product={kit} />
+        ) : null}
         <ElkaCustomerLooks
           source="elka_workshop"
           eyebrow="Идеи для украшения"
           title="Как наряжают ёлку макраме покупатели"
-          intro="Так готовые ёлки Stariva выглядят дома у покупателей. Ёлку, которую вы сплетёте сами, тоже можно каждый год украшать по-новому."
+          intro="Так мои готовые ёлки выглядят дома у покупателей. Ёлку, которую вы сплетёте сами, тоже можно каждый год украшать по-новому."
+          firstPerson
           cta={{
             href: `#${WORKSHOP_BUY_ID}`,
             label: "Хочу сплести такую",
@@ -136,11 +158,14 @@ export default async function ElkaMakramePage() {
           productId={reviewProductId}
           heading="Отзывы покупателей Stariva"
         />
+        <ElkaAuthor />
         <ElkaFaq
           items={faq}
           title="Частые вопросы о мастер-классе"
           message="Здравствуйте, Ольга! У меня вопрос про мастер-класс по ёлке макраме."
+          note="Не нашли ответ? Напишите — я отвечу в течение часа."
           source="elka_faq"
+          community
         />
         <ElkaReadyTrees trees={trees} />
         <LegacyModelsRedirect />
