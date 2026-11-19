@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ChevronLeft, Circle, CircleCheck } from "lucide-react";
 import { useCallback } from "react";
-import { CraftHlsPlayer, type ProgressSnapshot } from "@/components/CraftHlsPlayer";
+import {
+  CraftHlsPlayer,
+  type ProgressSnapshot,
+} from "@/components/CraftHlsPlayer";
 import { absoluteUrl, api, errorMessage } from "@/lib/api";
 import { formatTime } from "@/lib/format";
 

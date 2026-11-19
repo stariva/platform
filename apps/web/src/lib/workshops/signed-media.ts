@@ -95,7 +95,11 @@ async function signLessonVideo({
   const mobileBearer =
     Boolean(userId) &&
     headers.get("authorization")?.toLowerCase().startsWith("bearer ") === true;
-  if (rendition && env.AUTH_SECRET && (!userId || fingerprint || mobileBearer)) {
+  if (
+    rendition &&
+    env.AUTH_SECRET &&
+    (!userId || fingerprint || mobileBearer)
+  ) {
     const token = signHlsGrant(
       {
         prefix: rendition.hlsPrefix,

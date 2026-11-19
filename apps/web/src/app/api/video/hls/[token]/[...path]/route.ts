@@ -1,5 +1,5 @@
+import { allowedCorsOrigin, corsPreflight, withCors } from "@stariva/auth/cors";
 import { env } from "@stariva/config";
-import { corsPreflight, withCors } from "@stariva/auth/cors";
 import {
   getDownloadUrl,
   getObjectText,
@@ -8,6 +8,7 @@ import {
 } from "@stariva/storage";
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
+import { signPlaylistSegments } from "@/lib/workshops/hls-playlist";
 import { sessionFingerprint, verifyHlsGrant } from "@/lib/workshops/hls-token";
 
 export const runtime = "nodejs";
@@ -57,7 +58,21 @@ async function serveHls(
   const key = `${grant.prefix}/${file}`;
   try {
     if (file.endsWith(".m3u8")) {
-      return new Response(await getObjectText(key), {
+      let playlist = await getObjectText(key);
+      // Приложение (чужой origin) не пройдёт перенаправление в бакет: после
+      // него браузер шлёт Origin: null. Даём ему прямые ссылки на куски,
+      // живущие столько же, сколько пропуск.
+      if (file !== "master.m3u8" && allowedCorsOrigin(request)) {
+        const dir = file.slice(0, file.lastIndexOf("/") + 1);
+        const expiresIn = Math.max(
+          SEGMENT_URL_TTL_SECONDS,
+          grant.expiresAt - Math.floor(Date.now() / 1000),
+        );
+        playlist = await signPlaylistSegments(playlist, dir, (segment) =>
+          getDownloadUrl(`${grant.prefix}/${segment}`, { expiresIn }),
+        );
+      }
+      return new Response(playlist, {
         headers: {
           "Content-Type": "application/vnd.apple.mpegurl",
           ...NO_STORE,

@@ -23,8 +23,8 @@ import { formatTime } from "@/lib/format";
 import { readJson, writeJson } from "@/lib/storage";
 import {
   nativeHlsQualities,
-  qualityLabel,
   type QualityOption,
+  qualityLabel,
 } from "@/lib/video-quality";
 
 const STEP_SECONDS = 10;
@@ -315,7 +315,14 @@ export function CraftHlsPlayer({
           void fetch(src.url)
             .then((response) => (response.ok ? response.text() : ""))
             .then((playlist) => {
-              if (!cancelled) setQualities(nativeHlsQualities(playlist, src.url));
+              if (!cancelled) {
+                setQualities(
+                  nativeHlsQualities(
+                    playlist,
+                    new URL(src.url, window.location.href).href,
+                  ),
+                );
+              }
             })
             .catch(() => {});
         }
@@ -421,7 +428,10 @@ export function CraftHlsPlayer({
       "loadedmetadata",
       () => {
         if (Number.isFinite(video.duration)) {
-          video.currentTime = Math.min(position, Math.max(0, video.duration - 0.1));
+          video.currentTime = Math.min(
+            position,
+            Math.max(0, video.duration - 0.1),
+          );
         }
         video.playbackRate = speedRef.current;
         if (wasPlaying) void video.play().catch(() => {});
@@ -463,7 +473,11 @@ export function CraftHlsPlayer({
           : "bg-bg text-fg"
       }
     >
-      <div className={fullscreen ? "absolute inset-0 bg-black" : "relative bg-black"}>
+      <div
+        className={
+          fullscreen ? "absolute inset-0 bg-black" : "relative bg-black"
+        }
+      >
         <video
           ref={videoRef}
           playsInline
@@ -520,7 +534,7 @@ export function CraftHlsPlayer({
         </div>
 
         {failed && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 p-6 text-center text-white">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/80 p-6 text-center text-white">
             <p>Не получилось загрузить видео</p>
             <button
               type="button"
@@ -541,7 +555,9 @@ export function CraftHlsPlayer({
         }
       >
         {/* Полоса перемотки */}
-        <div className={`flex items-center gap-3 text-xs tabular-nums ${fullscreen ? "text-white" : "text-muted"}`}>
+        <div
+          className={`flex items-center gap-3 text-xs tabular-nums ${fullscreen ? "text-white" : "text-muted"}`}
+        >
           <span className="w-12 text-right">{formatTime(time)}</span>
           <div
             ref={trackRef}
@@ -565,7 +581,9 @@ export function CraftHlsPlayer({
             // Высота 48 px — попасть пальцем легко, а видна тонкая линия
             className="relative flex h-12 flex-1 touch-none items-center"
           >
-            <div className={`relative h-2 w-full rounded-full ${fullscreen ? "bg-white/40" : "bg-line"}`}>
+            <div
+              className={`relative h-2 w-full rounded-full ${fullscreen ? "bg-white/40" : "bg-line"}`}
+            >
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-accent"
                 style={{ width: percent(time) }}
@@ -580,7 +598,9 @@ export function CraftHlsPlayer({
         </div>
 
         {/* Главное: −10 / пауза / +10 — огромные области тапа */}
-        <div className={`grid grid-cols-[1fr_1.4fr_1fr] gap-3 ${fullscreen ? "mx-auto max-w-sm" : ""}`}>
+        <div
+          className={`grid grid-cols-[1fr_1.4fr_1fr] gap-3 ${fullscreen ? "mx-auto max-w-sm" : ""}`}
+        >
           <BigButton
             label="Назад на 10 секунд"
             onClick={() => seekTo(currentTime() - STEP_SECONDS)}
@@ -612,22 +632,28 @@ export function CraftHlsPlayer({
         </div>
 
         <div className="relative">
-            <button
-              type="button"
-              aria-label="Качество видео"
-              aria-expanded={qualityOpen}
-              disabled={qualities.length < 2 || duration === 0}
-              onClick={() => setQualityOpen((open) => !open)}
-              className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-3 text-sm font-semibold disabled:opacity-60 ${fullscreen ? "bg-white/20 text-white" : "bg-surface text-fg ring-1 ring-line"}`}
+          <button
+            type="button"
+            aria-label="Качество видео"
+            aria-expanded={qualityOpen}
+            disabled={qualities.length < 2 || duration === 0}
+            onClick={() => setQualityOpen((open) => !open)}
+            className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-3 text-sm font-semibold disabled:opacity-60 ${fullscreen ? "bg-white/20 text-white" : "bg-surface text-fg ring-1 ring-line"}`}
+          >
+            Качество ·{" "}
+            {src.type === "mp4"
+              ? "Исходное"
+              : quality === "auto"
+                ? "Авто"
+                : (qualities.find((option) => option.index === quality)
+                    ?.label ?? "Авто")}
+          </button>
+          {qualityOpen && (
+            <div
+              className={`absolute right-0 bottom-full z-20 mb-2 w-full min-w-36 overflow-hidden rounded-2xl p-1 shadow-lg ${fullscreen ? "bg-neutral-900 text-white" : "bg-surface text-fg ring-1 ring-line"}`}
             >
-              Качество · {src.type === "mp4" ? "Исходное" : quality === "auto" ? "Авто" : (qualities.find((option) => option.index === quality)?.label ?? "Авто")}
-            </button>
-            {qualityOpen && (
-              <div className={`absolute right-0 bottom-full z-20 mb-2 w-full min-w-36 overflow-hidden rounded-2xl p-1 shadow-lg ${fullscreen ? "bg-neutral-900 text-white" : "bg-surface text-fg ring-1 ring-line"}`}>
-                {[
-                  { index: "auto" as const, label: "Авто" },
-                  ...qualities,
-                ].map((option) => (
+              {[{ index: "auto" as const, label: "Авто" }, ...qualities].map(
+                (option) => (
                   <button
                     key={option.index}
                     type="button"
@@ -637,9 +663,10 @@ export function CraftHlsPlayer({
                   >
                     {option.label}
                   </button>
-                ))}
-              </div>
-            )}
+                ),
+              )}
+            </div>
+          )}
         </div>
 
         {/* Скорости — в один тап, без вложенных меню */}
