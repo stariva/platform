@@ -211,22 +211,31 @@ export const checkoutServices: CheckoutServices = {
       return { status: "check_failed" };
     }
 
-    const order = await createProductOrder({
-      userId: userId ?? undefined,
-      attribution: attributionFromRequest({ headers }),
-      visitor: await collectVisitor({ headers }),
-      contactName: data.contactName,
-      contactPhone: data.contactPhone,
-      contactEmail: data.contactEmail,
-      comment: data.comment,
-      gift: resolveKitOrderGift(data.kitAccessMode, data.gift),
-      kitAccessMode: data.kitAccessMode,
-      items,
-      delivery: data.delivery,
-      pickupPoint,
-      pointLabel: data.delivery.pointLabel,
-      checkout: deliveryQuote,
-    });
+    let order: Awaited<ReturnType<typeof createProductOrder>>;
+    try {
+      order = await createProductOrder({
+        userId: userId ?? undefined,
+        attribution: attributionFromRequest({ headers }),
+        visitor: await collectVisitor({ headers }),
+        contactName: data.contactName,
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+        comment: data.comment,
+        gift: resolveKitOrderGift(data.kitAccessMode, data.gift),
+        kitAccessMode: data.kitAccessMode,
+        items,
+        delivery: data.delivery,
+        pickupPoint,
+        pointLabel: data.delivery.pointLabel,
+        checkout: deliveryQuote,
+      });
+    } catch (error) {
+      if (error instanceof CatalogItemsUnavailableError) {
+        return unavailableItems(error);
+      }
+      console.error("[checkout/create] Ошибка сохранения заказа:", error);
+      return { status: "check_failed" };
+    }
 
     try {
       const payment = await createPayment({

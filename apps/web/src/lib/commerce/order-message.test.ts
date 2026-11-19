@@ -200,6 +200,7 @@ test("stock order message mentions the Ozon order", () => {
   const { title, message } = formatPaidOrderMessage(
     { ...order, kind: "stock", ozonOrderId: "OZ-1" },
     [{ ...item, ozonSku: 123, options: null }],
+    0,
   );
 
   assert.ok(!title.includes("под заказ"));
@@ -211,6 +212,7 @@ test("stock order message carries the buyer comment", () => {
   const { message } = formatPaidOrderMessage(
     { ...order, kind: "stock", customerNotes: "Позвоните перед доставкой" },
     [{ ...item, ozonSku: 123, options: null }],
+    0,
   );
 
   assert.ok(message.includes("Комментарий: Позвоните перед доставкой"));
@@ -221,8 +223,9 @@ test("a gift order tells the master to print the coupon", () => {
   const gift = formatPaidOrderMessage(
     { ...order, kind: "stock", gift: true },
     items,
+    1,
   );
-  const plain = formatPaidOrderMessage({ ...order, kind: "stock" }, items);
+  const plain = formatPaidOrderMessage({ ...order, kind: "stock" }, items, 0);
 
   assert.ok(gift.message.includes("ПОДАРОК"));
   assert.ok(gift.message.includes("купон"));
@@ -233,9 +236,20 @@ test("separate tree gifts ask for one coupon per box", () => {
   const message = formatPaidOrderMessage(
     { ...order, kind: "stock", gift: true, kitAccessMode: "separate_gifts" },
     [{ ...item, quantity: 2 }],
+    2,
   ).message;
   assert.ok(message.includes("2 коробки"));
   assert.ok(message.includes("отдельный купон"));
+});
+
+test("a missing gift code is flagged instead of asking the master to print it", () => {
+  const message = formatPaidOrderMessage(
+    { ...order, kind: "stock", gift: true, kitAccessMode: "separate_gifts" },
+    [{ ...item, quantity: 2 }],
+    1,
+  ).message;
+  assert.match(message, /не хватает кодов доступа \(1 из 2\)/);
+  assert.doesNotMatch(message, /Напечатайте/);
 });
 
 test("the balance message says where to ship and that Ozon takes over", () => {

@@ -31,6 +31,10 @@ export const KIT_COLORS = [
 
 const KIT_SLUGS = new Set<string>(KIT_COLORS.map((color) => color.slug));
 
+export function isElkaKitSlug(slug: string): boolean {
+  return KIT_SLUGS.has(slug);
+}
+
 export interface KitBundleLine {
   productSlug: string;
   quantity: number;
@@ -59,7 +63,7 @@ export function priceKitBundleLines<T extends KitBundleLine>(
     !lines.length ||
     lines.some(
       (line) =>
-        !KIT_SLUGS.has(line.productSlug) ||
+        !isElkaKitSlug(line.productSlug) ||
         line.fulfillmentType === "made_to_order" ||
         line.quantity < 1,
     )

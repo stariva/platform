@@ -17,7 +17,7 @@ import {
   kitCodeNote,
   kitWorkshopOrderId,
 } from "@stariva/web-api";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, sum } from "drizzle-orm";
 import { getProductOrderCustomerEmail } from "@/lib/commerce/orders";
 import { findOrCreateBuyer } from "./buyer";
 import { notifyWorkshopBooked } from "./notifications";
@@ -47,8 +47,7 @@ const CODE_ATTEMPTS = 5;
  */
 async function issueGiftCodes(
   orderNumber: number,
-  slugs: string[],
-  copies = 1,
+  targets: { slug: string; copies: number }[],
 ) {
   const note = kitCodeNote(orderNumber);
   await db.transaction(async (tx) => {
@@ -56,7 +55,7 @@ async function issueGiftCodes(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`gift-codes:${note}`}, 0))`,
     );
-    for (const slug of slugs) {
+    for (const { slug, copies } of targets) {
       const existing = await tx
         .select({ id: workshopAccessCodes.id })
         .from(workshopAccessCodes)
@@ -127,7 +126,10 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
 
   // Новые позиции используют снимок; старые сохраняют связь через каталог.
   const linked = await db
-    .selectDistinct({ slug: workshops.slug })
+    .select({
+      slug: workshops.slug,
+      quantity: sum(productOrderItems.quantity).mapWith(Number),
+    })
     .from(productOrderItems)
     .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
     .innerJoin(
@@ -137,24 +139,17 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
         sql`case when ${productOrderItems.workshopLinkCaptured} then ${productOrderItems.workshopSlug} else ${products.workshopSlug} end`,
       ),
     )
-    .where(and(eq(productOrderItems.orderId, productOrderId)));
+    .where(eq(productOrderItems.orderId, productOrderId))
+    .groupBy(workshops.slug);
   if (linked.length === 0) return;
 
   if (order.gift) {
-    const copies =
-      order.kitAccessMode === "separate_gifts"
-        ? await db
-            .select({ quantity: productOrderItems.quantity })
-            .from(productOrderItems)
-            .where(eq(productOrderItems.orderId, productOrderId))
-            .then((items) =>
-              items.reduce((sum, item) => sum + item.quantity, 0),
-            )
-        : 1;
     await issueGiftCodes(
       order.number,
-      linked.map(({ slug }) => slug),
-      copies,
+      linked.map(({ slug, quantity }) => ({
+        slug,
+        copies: order.kitAccessMode === "separate_gifts" ? quantity : 1,
+      })),
     );
     return;
   }
