@@ -95,30 +95,36 @@ export async function sweepWorkshopStorage({
     if (isProviderConfigured(mirror)) {
       try {
         const mirrorObjects = await listObjects("workshops/", mirror);
-        const mirrorPlan = planWorkshopSweep(
-          mirrorObjects,
-          {
-            workshops: rows.map((row) => ({
-              slug: row.slug,
-              updatedAt: row.updatedAt,
-              videoKeys: row.lessons
-                .map((lesson) => lesson.videoKey)
-                .filter(Boolean),
-              materialKeys: row.materialFiles.map((file) => file.key),
-            })),
-            renditions,
-          },
-          {
-            now,
-            fileGraceMs: STORAGE_SWEEP_FILE_GRACE_MS,
-            changeGraceMs: STORAGE_SWEEP_CHANGE_GRACE_MS,
-          },
-        );
-        await deleteObjects(mirrorPlan.deleteKeys, mirror);
-        logger.info("workshop.storage.sweep.mirror", {
-          deleted: mirrorPlan.deleteKeys.length,
-          bytes: mirrorPlan.bytes,
-        });
+        if (rows.length === 0 && mirrorObjects.length > 0) {
+          logger.warn("workshop.storage.sweep.mirror_no_workshops", {
+            objects: mirrorObjects.length,
+          });
+        } else {
+          const mirrorPlan = planWorkshopSweep(
+            mirrorObjects,
+            {
+              workshops: rows.map((row) => ({
+                slug: row.slug,
+                updatedAt: row.updatedAt,
+                videoKeys: row.lessons
+                  .map((lesson) => lesson.videoKey)
+                  .filter(Boolean),
+                materialKeys: row.materialFiles.map((file) => file.key),
+              })),
+              renditions,
+            },
+            {
+              now,
+              fileGraceMs: STORAGE_SWEEP_FILE_GRACE_MS,
+              changeGraceMs: STORAGE_SWEEP_CHANGE_GRACE_MS,
+            },
+          );
+          await deleteObjects(mirrorPlan.deleteKeys, mirror);
+          logger.info("workshop.storage.sweep.mirror", {
+            deleted: mirrorPlan.deleteKeys.length,
+            bytes: mirrorPlan.bytes,
+          });
+        }
       } catch (error) {
         logger.warn("workshop.storage.sweep.mirror_failed", {
           error: String(error),

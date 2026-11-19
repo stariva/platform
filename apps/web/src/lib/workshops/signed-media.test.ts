@@ -295,7 +295,7 @@ test("a mirrored rendition is watched from the mirror, an unsynced one from the 
     unsynced.url.split("/").at(-2) ?? "",
     secret,
   );
-  assert.equal(unsyncedToken?.storage, null);
+  assert.equal(unsyncedToken?.storage, "yandex");
 
   // Синхронизация долила папку целиком — зритель уходит в зеркало
   rendition = {
@@ -308,6 +308,17 @@ test("a mirrored rendition is watched from the mirror, an unsynced one from the 
   assert.equal(
     verifyHlsGrant(mirrored.url.split("/").at(-2) ?? "", secret)?.storage,
     "vkcloud",
+  );
+
+  videoReadsFromMirror = false;
+  const sameProvider = await sign(
+    "user",
+    "better-auth.session_token=token.sig",
+  );
+  assert.ok(sameProvider.status === "ok" && sameProvider.type === "hls");
+  assert.equal(
+    verifyHlsGrant(sameProvider.url.split("/").at(-2) ?? "", secret)?.storage,
+    null,
   );
 
   videoReadsFromMirror = false;

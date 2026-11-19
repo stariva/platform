@@ -45,16 +45,21 @@ describe("planMirrorSync", () => {
     expect(byFiles.remainingFiles).toBe(6);
 
     const byBytes = planMirrorSync(source, [], { maxFiles: 10, maxBytes: 25 });
-    expect(byBytes.copy).toHaveLength(3); // 10 + 10 → лимит, последний сверх него
+    expect(byBytes.copy).toHaveLength(2);
     expect(byBytes.remainingBytes).toBe(60);
   });
 
-  test("a single oversized file still gets its batch slot", () => {
-    const plan = planMirrorSync([object("huge.mp4", 4000)], [], {
+  test("defers oversized files without blocking smaller files or losing them", () => {
+    const source = [object("huge.mp4", 4000, 900), object("small.pdf", 10)];
+    const plan = planMirrorSync(source, [], { maxFiles: 10, maxBytes: 10 });
+    expect(plan.copy).toEqual([{ key: "small.pdf", size: 10 }]);
+    expect(plan.remainingFiles).toBe(2);
+    expect(plan.remainingBytes).toBe(4010);
+    const later = planMirrorSync(source, [object("small.pdf", 10)], {
       maxFiles: 10,
-      maxBytes: 1,
+      maxBytes: 4000,
     });
-    expect(plan.copy).toEqual([{ key: "huge.mp4", size: 4000 }]);
+    expect(later.copy).toEqual([{ key: "huge.mp4", size: 4000 }]);
   });
 
   test("oldest files go first so the mirror catches up on backlog", () => {

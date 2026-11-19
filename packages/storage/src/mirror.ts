@@ -20,8 +20,8 @@ export interface MirrorSyncPlan {
  * Что скопировать из активного бакета в зеркало. Копируем файлы, которых в
  * зеркале нет или чей размер не совпал (PUT в S3 атомарен, так что расхождение
  * — признак чужого файла под нашим ключом; перезапишем). Пачку набираем до
- * `maxFiles` или пока не набрали `maxBytes` — последний файл кладём и сверх
- * лимита, иначе один большой исходник не скопируется никогда.
+ * `maxFiles` и `maxBytes`. Не поместившиеся файлы остаются в очереди для
+ * следующего прогона с достаточным бюджетом и не блокируют меньшие файлы.
  *
  * Повтор прогона безопасен: скопированное исчезает из следующего плана.
  */
@@ -47,6 +47,7 @@ export function planMirrorSync(
   let batchBytes = 0;
   for (const object of pending) {
     if (copy.length >= limits.maxFiles || batchBytes >= limits.maxBytes) break;
+    if (object.size > limits.maxBytes - batchBytes) continue;
     copy.push({ key: object.key, size: object.size });
     batchBytes += object.size;
   }

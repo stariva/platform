@@ -124,10 +124,12 @@ async function signLessonVideo({
     // синхронизация скопировала её папку целиком: недостающие куски плеер
     // увидел бы как обрыв посреди урока. Пропуск закрепляет выбор, поэтому
     // досмотр не скачет между хранилищами.
-    const storage =
-      videoProvider !== activeStorageProvider() && rendition.mirrored
+    const activeProvider = activeStorageProvider();
+    const storage = rendition.mirrored
+      ? videoProvider !== activeProvider
         ? videoProvider
-        : null;
+        : null
+      : activeProvider;
     const token = signHlsGrant(
       {
         prefix: rendition.hlsPrefix,

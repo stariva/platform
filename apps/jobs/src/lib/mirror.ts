@@ -148,8 +148,8 @@ export async function mirrorSync(options: { budgetMs?: number } = {}): Promise<{
   let remainingBytes = 0;
 
   for (;;) {
-    // Пачку берём только под остаток бюджета: три потока по
-    // EXPECTED_BYTES_PER_SECOND должны успеть её скопировать. Иначе Hatchet
+    // Пачку берём под скорость одного потока: большой файл нельзя
+    // разделить между COPY_CONCURRENCY потоками. Иначе Hatchet
     // убил бы задачу на середине пачки, теряя её целиком каждый прогон.
     const restMs = deadline - Date.now();
     if (restMs <= MIN_BATCH_MS) {
@@ -157,7 +157,7 @@ export async function mirrorSync(options: { budgetMs?: number } = {}): Promise<{
       break;
     }
     const affordableBytes = Math.floor(
-      (restMs / 1000) * COPY_CONCURRENCY * EXPECTED_BYTES_PER_SECOND,
+      (restMs / 1000) * EXPECTED_BYTES_PER_SECOND,
     );
     const batch: MirrorBatch = await webApi.jobs.storage.mirrorSync(
       {
