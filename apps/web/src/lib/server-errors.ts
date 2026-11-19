@@ -135,11 +135,11 @@ export async function reportServerError(
     const now = Date.now();
     if (isDuplicate(error, now) || overLimit(now)) return;
     const posthog = await client();
-    await posthog?.captureExceptionImmediate(
-      sanitizeError(error),
-      SERVER_DISTINCT_ID,
-      { $process_person_profile: false, ...properties },
-    );
+    await posthog?.captureExceptionImmediate(sanitizeError(error), {
+      distinctId: SERVER_DISTINCT_ID,
+      properties,
+      options: { process_person_profile: false },
+    });
   } catch {
     // Мониторинг не должен ронять запрос.
   }
