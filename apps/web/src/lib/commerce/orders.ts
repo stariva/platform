@@ -8,7 +8,10 @@ import {
   products,
   user,
   type VisitorInfo,
+  workshopAccessCodes,
+  workshops,
 } from "@stariva/db/schema";
+import { kitCodeNote } from "@stariva/web-api";
 import type { MadeToOrderParcel } from "@stariva/web-api/contract";
 import {
   and,
@@ -28,6 +31,8 @@ import type {
   DeliverySelection,
   PickupPoint,
 } from "@/lib/ozon-delivery/types";
+import { CatalogItemsUnavailableError } from "./catalog";
+import { isElkaKitSlug } from "./elka-kit-bundle";
 import type { MadeToOrderPaymentType } from "./made-to-order-flow";
 import type { MadeToOrderOptions } from "./made-to-order-options";
 
@@ -50,6 +55,7 @@ export interface CreateProductOrderInput {
   comment?: string;
   /** Набор в подарок: доступ к мастер-классу выдаётся кодом, а не письмом. */
   gift?: boolean;
+  kitAccessMode?: "single_lesson" | "separate_gifts";
   items: OrderLineInput[];
   delivery: DeliverySelection;
   /** Выбранный пункт выдачи — чтобы мастер видел его адрес, а не только id. */
@@ -199,6 +205,30 @@ export async function createProductOrder(
   const amountTotal = amountProducts + amountDelivery;
   assertValidOrderTotal(amountTotal);
 
+  const workshopLinks = await db
+    .select({ slug: products.slug, workshopSlug: workshops.slug })
+    .from(products)
+    .leftJoin(workshops, eq(workshops.slug, products.workshopSlug))
+    .where(
+      inArray(
+        products.slug,
+        input.items.map((item) => item.productSlug),
+      ),
+    );
+  const workshopByProduct = new Map(
+    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
+  );
+  const unlinkedKits = input.items
+    .map(({ productSlug }) => productSlug)
+    .filter(
+      (slug) =>
+        (input.kitAccessMode || isElkaKitSlug(slug)) &&
+        !workshopByProduct.get(slug),
+    );
+  if (unlinkedKits.length > 0) {
+    throw new CatalogItemsUnavailableError(unlinkedKits);
+  }
+
   const [created] = await db
     .insert(productOrders)
     .values({
@@ -216,6 +246,7 @@ export async function createProductOrder(
       currency: "RUB",
       customerNotes: input.comment || null,
       gift: input.gift ?? false,
+      kitAccessMode: input.kitAccessMode ?? null,
       // Без расчёта Ozon отправление создаётся вручную — заказ «manual»,
       // но пункт, который выбрал покупатель, сохраняем
       deliveryMethod: input.checkout ? input.delivery.method : "manual",
@@ -235,18 +266,6 @@ export async function createProductOrder(
     .returning({ number: productOrders.number });
   if (!created) throw new Error("product_order_not_created");
 
-  const workshopLinks = await db
-    .select({ slug: products.slug, workshopSlug: products.workshopSlug })
-    .from(products)
-    .where(
-      inArray(
-        products.slug,
-        input.items.map((item) => item.productSlug),
-      ),
-    );
-  const workshopByProduct = new Map(
-    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
-  );
   await db.insert(productOrderItems).values(
     input.items.map((item) => ({
       id: randomUUID(),
@@ -272,6 +291,16 @@ export async function attachPaymentId(
     .update(productOrders)
     .set({ paymentId })
     .where(eq(productOrders.id, orderId));
+}
+
+export async function countKitGiftCodes(orderNumber: number): Promise<number> {
+  return db.$count(
+    workshopAccessCodes,
+    and(
+      eq(workshopAccessCodes.channel, "kit"),
+      eq(workshopAccessCodes.note, kitCodeNote(orderNumber)),
+    ),
+  );
 }
 
 export async function getProductOrderById(orderId: string) {

@@ -207,7 +207,18 @@ export function formatMadeToOrderPaymentMessage(
 export function formatPaidOrderMessage(
   order: OrderRow,
   items: OrderItemRow[],
+  giftCodeCount: number,
 ): OrderMessage {
+  const separateGifts = order.kitAccessMode === "separate_gifts";
+  const expectedCodes = separateGifts
+    ? items.reduce((sum, item) => sum + item.quantity, 0)
+    : 1;
+  const giftNote =
+    giftCodeCount < expectedCodes
+      ? `\n🎁 ПОДАРОК: не хватает кодов доступа (${giftCodeCount} из ${expectedCodes}). Перед отправкой проверьте выдачу доступа в админке → «Мастер-класс к набору».`
+      : separateGifts
+        ? `\n🎁 ОТДЕЛЬНЫЕ ПОДАРКИ: соберите ${expectedCodes} коробки. Ссылки на почту не отправляем. Напечатайте отдельный купон с кодом для каждой коробки (заказ в админке → «Мастер-класс к набору»).`
+        : "\n🎁 ПОДАРОК: доступ к уроку не отправляем на почту. Напечатайте купон с кодом (заказ в админке → «Мастер-класс к набору») и положите в коробку.";
   return {
     title: `Оплачен заказ №${order.number} · ${money(order.amountTotal)}`,
     message: joinLines([
@@ -215,8 +226,7 @@ export function formatPaidOrderMessage(
       "",
       "Изделия:",
       ...itemLines(items),
-      order.gift &&
-        "\n🎁 ПОДАРОК: доступ к уроку не отправляем на почту. Напечатайте купон с кодом (заказ в админке → «Мастер-класс к набору») и положите в коробку.",
+      order.gift && giftNote,
       order.customerNotes && `\nКомментарий: ${order.customerNotes}`,
       order.ozonOrderId && `\nЗаказ Ozon Доставка: ${order.ozonOrderId}`,
       ...manualDeliveryLines(order),

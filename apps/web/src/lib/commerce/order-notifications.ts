@@ -21,6 +21,7 @@ import {
 import {
   claimPaymentNotification,
   claimStaffNotification,
+  countKitGiftCodes,
   getOrderPayment,
   getProductCoverImages,
   getProductOrderById,
@@ -71,10 +72,11 @@ export async function notifyOrderPaid(orderId: string): Promise<void> {
   try {
     const order = await getProductOrderById(orderId);
     if (!order) return;
-    const message = formatPaidOrderMessage(
-      order,
-      await getProductOrderItems(orderId),
-    );
+    const [items, giftCodeCount] = await Promise.all([
+      getProductOrderItems(orderId),
+      order.gift ? countKitGiftCodes(order.number) : 0,
+    ]);
+    const message = formatPaidOrderMessage(order, items, giftCodeCount);
     if (!(await send(orderId, message, "order-paid"))) {
       throw new Error("staff_notification_failed");
     }

@@ -23,6 +23,7 @@ export const fulfillmentTypeSchema = z.enum(["stock", "made_to_order"]);
 export type FulfillmentType = z.infer<typeof fulfillmentTypeSchema>;
 
 const cartItemSchema = z.object({
+  productId: z.string().min(1).optional(),
   productSlug: z.string().min(1),
   /** Нет у изделий под заказ: они не проходят через склад Ozon. */
   ozonSku: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),

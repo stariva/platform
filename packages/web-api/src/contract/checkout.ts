@@ -76,6 +76,7 @@ export function isDeliveryPhone(value: string): boolean {
 const phone = z.string().max(32).refine(isDeliveryPhone, DELIVERY_PHONE_ERROR);
 
 const stockItemSchema = z.object({
+  productId: z.string().min(1).optional(),
   productSlug: z.string().min(1),
   quantity: z.number().int().positive().max(99),
 });
@@ -138,6 +139,8 @@ export const createOrderInputSchema = z.object({
    * кодом на купоне в коробке. Без наборов в заказе флаг ничего не меняет.
    */
   gift: z.boolean().optional(),
+  /** Special pricing for an order containing only two or three tree kits. */
+  kitAccessMode: z.enum(["single_lesson", "separate_gifts"]).optional(),
   items: z.array(stockItemSchema).min(1).max(100),
   delivery: pickupDeliverySchema,
   /**

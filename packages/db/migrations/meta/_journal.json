@@ -512,6 +512,13 @@
       "when": 1795105681560,
       "tag": "0072_link_color_kits_to_ozon",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1795112452134,
+      "tag": "0073_elka_kit_access_mode",
+      "breakpoints": true
     }
   ]
 }
