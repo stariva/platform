@@ -77,7 +77,9 @@ type WakeState = "off" | "on" | "unsupported";
  * - hls.js, а где нет MSE (iOS WKWebView) — нативный HLS; MP4 как есть;
  * - Wake Lock: Capacitor KeepAwake (в браузере и TMA — Screen Wake Lock API);
  * - шаги ±10 с и скорости 0.5×…1.5× одним тапом;
- * - прогресс: каждые 10 с, на паузе, при сворачивании и выходе.
+ * - прогресс: каждые 10 с, на паузе, при сворачивании и выходе;
+ * - полный экран — свой CSS-оверлей: Element Fullscreen в WebView не работает,
+ *   а поворот телефона в горизонталь разворачивает видео сам.
  */
 export function CraftHlsPlayer({
   src,
@@ -95,8 +97,8 @@ export function CraftHlsPlayer({
     wasPlaying: boolean;
     onMeta: () => void;
   } | null>(null);
-  const playerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const autoFullscreen = useRef(false);
 
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -135,34 +137,37 @@ export function CraftHlsPlayer({
 
   const currentTime = () => videoRef.current?.currentTime ?? 0;
 
-  useEffect(() => {
-    const updateFullscreen = () =>
-      setFullscreen(document.fullscreenElement === playerRef.current);
-    document.addEventListener("fullscreenchange", updateFullscreen);
-    return () =>
-      document.removeEventListener("fullscreenchange", updateFullscreen);
-  }, []);
-
-  const toggleFullscreen = async () => {
-    if (document.fullscreenElement === playerRef.current) {
-      await document.exitFullscreen();
-      return;
-    }
-
-    if (document.fullscreenEnabled && playerRef.current?.requestFullscreen) {
-      try {
-        await playerRef.current.requestFullscreen();
-        return;
-      } catch {
-        // WKWebView может объявлять API, но запрещать fullscreen для div.
-      }
-    }
-
-    const video = videoRef.current as
-      | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
-      | null;
-    video?.webkitEnterFullscreen?.();
+  /**
+   * Полный экран рисуем CSS-оверлеем, а не Element Fullscreen API: в Android
+   * WebView Capacitor сразу закрывает нативный custom view, поэтому
+   * `requestFullscreen()` там не даёт результата, а в WKWebView элементного
+   * fullscreen нет вовсе. Оверлей растягивается на `100dvh` и сам следует
+   * за поворотом экрана.
+   */
+  const toggleFullscreen = () => {
+    autoFullscreen.current = false;
+    setFullscreen((value) => !value);
   };
+
+  // Телефон повернули в горизонталь — открываем видео на весь экран.
+  // Обратно в портрет выходим, но только если развернули сами: ручной
+  // полный экран в портрете не закрываем.
+  useEffect(() => {
+    const landscape = window.matchMedia("(orientation: landscape)");
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        autoFullscreen.current = true;
+        setFullscreen(true);
+        return;
+      }
+      if (autoFullscreen.current) {
+        autoFullscreen.current = false;
+        setFullscreen(false);
+      }
+    };
+    landscape.addEventListener("change", onChange);
+    return () => landscape.removeEventListener("change", onChange);
+  }, []);
 
   const seekTo = useCallback((seconds: number) => {
     const video = videoRef.current;
@@ -481,10 +486,9 @@ export function CraftHlsPlayer({
 
   return (
     <div
-      ref={playerRef}
       className={
         fullscreen
-          ? "relative h-dvh w-full overflow-hidden bg-black text-white"
+          ? "fixed inset-0 z-50 h-dvh w-full touch-none overflow-hidden bg-black text-white"
           : "bg-bg text-fg"
       }
     >
@@ -526,7 +530,7 @@ export function CraftHlsPlayer({
           aria-label={
             fullscreen ? "Выйти из полноэкранного режима" : "На весь экран"
           }
-          onClick={() => void toggleFullscreen()}
+          onClick={toggleFullscreen}
           className="absolute top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] flex size-11 items-center justify-center rounded-full bg-black/60 text-white"
         >
           {fullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}

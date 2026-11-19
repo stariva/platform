@@ -102,8 +102,9 @@ function LessonContent({
           Урок {currentIndex + 1} из {lesson.lessons.length}
         </p>
       </div>
-      {/* Плеер остаётся на месте, пока листаешь уроки */}
-      <div className="sticky top-0 z-10 border-b border-line bg-bg">
+      {/* Плеер остаётся на месте, пока листаешь уроки. z-50 — чтобы его
+          полноэкранный оверлей перекрыл таб-бар (z-40) */}
+      <div className="sticky top-0 z-50 border-b border-line bg-bg">
         <CraftHlsPlayer
           // Другой урок — новый плеер: прогресс не должен перепутаться
           key={lessonId}
