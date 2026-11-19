@@ -36,3 +36,22 @@ test("native HLS variants resolve relative URLs and keep their original indices"
     },
   ]);
 });
+
+test("native HLS variants skip broken entries and keep valid ones", () => {
+  const master = [
+    "#EXTM3U",
+    "#EXT-X-STREAM-INF:BANDWIDTH=2900000,RESOLUTION=720x1280",
+    "http://[",
+    "#EXT-X-STREAM-INF:BANDWIDTH=6100000,RESOLUTION=1080x1920",
+    "v1/index.m3u8",
+  ].join("\n");
+  expect(
+    nativeHlsQualities(master, "https://stariva.ru/hls/token/master.m3u8"),
+  ).toEqual([
+    {
+      label: "1080p",
+      index: 0,
+      url: "https://stariva.ru/hls/token/v1/index.m3u8",
+    },
+  ]);
+});

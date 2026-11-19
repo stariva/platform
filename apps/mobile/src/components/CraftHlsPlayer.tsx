@@ -90,6 +90,11 @@ export function CraftHlsPlayer({
 }: CraftHlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const qualitySwitch = useRef<{
+    position: number;
+    wasPlaying: boolean;
+    onMeta: () => void;
+  } | null>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -336,6 +341,13 @@ export function CraftHlsPlayer({
       saveProgress();
       resumeAt.current = progress.current?.positionSeconds ?? null;
       if (onMeta) video.removeEventListener("loadedmetadata", onMeta);
+      if (qualitySwitch.current) {
+        video.removeEventListener(
+          "loadedmetadata",
+          qualitySwitch.current.onMeta,
+        );
+        qualitySwitch.current = null;
+      }
       video.removeEventListener("error", onNativeError);
       hls?.destroy();
       hlsRef.current = null;
@@ -422,22 +434,25 @@ export function CraftHlsPlayer({
         ? src.url
         : qualities.find((option) => option.index === selected)?.url;
     if (!video || !url || video.src === url) return;
-    const position = video.currentTime;
-    const wasPlaying = !video.paused;
-    video.addEventListener(
-      "loadedmetadata",
-      () => {
-        if (Number.isFinite(video.duration)) {
-          video.currentTime = Math.min(
-            position,
-            Math.max(0, video.duration - 0.1),
-          );
-        }
-        video.playbackRate = speedRef.current;
-        if (wasPlaying) void video.play().catch(() => {});
-      },
-      { once: true },
-    );
+    // Прошлое переключение ещё не загрузилось: load() уже сбросил время,
+    // поэтому берём позицию из него, а его обработчик снимаем
+    const pending = qualitySwitch.current;
+    if (pending) video.removeEventListener("loadedmetadata", pending.onMeta);
+    const position = pending?.position ?? video.currentTime;
+    const wasPlaying = pending?.wasPlaying ?? !video.paused;
+    const onMeta = () => {
+      qualitySwitch.current = null;
+      if (Number.isFinite(video.duration)) {
+        video.currentTime = Math.min(
+          position,
+          Math.max(0, video.duration - 0.1),
+        );
+      }
+      video.playbackRate = speedRef.current;
+      if (wasPlaying) void video.play().catch(() => {});
+    };
+    qualitySwitch.current = { position, wasPlaying, onMeta };
+    video.addEventListener("loadedmetadata", onMeta, { once: true });
     video.src = url;
     video.load();
   };
