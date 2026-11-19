@@ -107,6 +107,8 @@ export function CraftHlsPlayer({
   const [wake, setWake] = useState<WakeState>("off");
   const [failed, setFailed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const fullscreenRef = useRef(fullscreen);
+  fullscreenRef.current = fullscreen;
   const [attempt, setAttempt] = useState(0);
   const [qualities, setQualities] = useState<QualityOption[]>([]);
   const [quality, setQuality] = useState<number | "auto">("auto");
@@ -154,10 +156,15 @@ export function CraftHlsPlayer({
   // полный экран в портрете не закрываем.
   useEffect(() => {
     const landscape = window.matchMedia("(orientation: landscape)");
+    const enterAuto = () => {
+      // Уже развернули вручную — поворот не делает это автоматическим
+      if (fullscreenRef.current) return;
+      autoFullscreen.current = true;
+      setFullscreen(true);
+    };
     const onChange = (event: MediaQueryListEvent) => {
       if (event.matches) {
-        autoFullscreen.current = true;
-        setFullscreen(true);
+        enterAuto();
         return;
       }
       if (autoFullscreen.current) {
@@ -165,6 +172,8 @@ export function CraftHlsPlayer({
         setFullscreen(false);
       }
     };
+    // Урок открыли уже в горизонтали
+    if (landscape.matches) enterAuto();
     landscape.addEventListener("change", onChange);
     return () => landscape.removeEventListener("change", onChange);
   }, []);
