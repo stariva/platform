@@ -1,8 +1,10 @@
 import { mock, test } from "bun:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
+import { cartValidationResponseSchema } from "@/lib/cart/validation";
 import type { ProductsResult } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
+import { priceKitBundleLines } from "@/lib/commerce/elka-kit-bundle";
 
 const product: Product = {
   id: "ozon-1",
@@ -123,6 +125,40 @@ test("shows the owner price for the tree kit only with a purchased course", asyn
   const guestLines = (await guest.json()) as { lines: { price: number }[] };
   assert.equal(guestLines.lines[0]?.price, 198_000);
   eligible = false;
+});
+
+test("validates two separately gifted kits at the bundle price for a course owner", async () => {
+  const slug = "nabor-makrame-elka";
+  catalog = {
+    products: [
+      {
+        ...product,
+        slug,
+        category: "interior",
+        subcategory: "kits",
+        price: 1980,
+      },
+    ],
+    status: "available",
+  };
+  signedIn = true;
+  eligible = true;
+  try {
+    const mode = "separate_gifts";
+    const response = await POST(
+      request({ lines: [stock(slug)], kitAccessMode: mode }),
+    );
+    assert.equal(response.status, 200);
+    const { lines } = cartValidationResponseSchema.parse(await response.json());
+    const [item] = lines;
+    assert.ok(item?.available);
+    assert.equal(item.price, 198_000);
+    const priced = priceKitBundleLines([{ ...item, quantity: 2 }], mode);
+    assert.equal(priced?.[0]?.price, 189_000);
+  } finally {
+    signedIn = false;
+    eligible = false;
+  }
 });
 
 test("ready-made clothes from an old cart are no longer for sale", async () => {

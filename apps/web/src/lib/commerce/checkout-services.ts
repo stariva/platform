@@ -15,7 +15,7 @@ import {
   resolveCatalogItems,
   resolveMadeToOrderItems,
 } from "./catalog";
-import { priceKitBundleLines } from "./elka-kit-bundle";
+import { priceKitBundleLines, resolveKitOrderGift } from "./elka-kit-bundle";
 import { hasPurchasedElkaWorkshop } from "./elka-kit-offer";
 import {
   notifyCustomer,
@@ -219,7 +219,7 @@ export const checkoutServices: CheckoutServices = {
       contactPhone: data.contactPhone,
       contactEmail: data.contactEmail,
       comment: data.comment,
-      gift: data.kitAccessMode === "separate_gifts" ? true : data.gift,
+      gift: resolveKitOrderGift(data.kitAccessMode, data.gift),
       kitAccessMode: data.kitAccessMode,
       items,
       delivery: data.delivery,

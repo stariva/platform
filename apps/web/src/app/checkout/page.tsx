@@ -30,6 +30,7 @@ import { useCartValidation } from "@/lib/cart/use-cart-validation";
 import {
   type KitAccessMode,
   priceKitBundleLines,
+  resolveKitOrderGift,
 } from "@/lib/commerce/elka-kit-bundle";
 import { rememberOrderPhone } from "@/lib/commerce/order-phone";
 import {
@@ -83,14 +84,15 @@ export default function CheckoutPage() {
     () => cartItems.filter((item) => item.fulfillmentType === "stock"),
     [cartItems],
   );
-  const bundleItems = kitAccessMode
-    ? priceKitBundleLines(rawItems, kitAccessMode)
-    : null;
-  const items = bundleItems ?? rawItems;
+  const items = kitAccessMode
+    ? (priceKitBundleLines(rawItems, kitAccessMode) ?? [])
+    : rawItems;
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   // Подарок с кодом доступа имеет смысл только для набора с мастер-классом
   const hasKit = items.some((item) => item.kit);
-  const { notices, dismissNotices, refresh } = useCartValidation();
+  const { notices, dismissNotices, refresh, loading } = useCartValidation(
+    kitAccessMode ?? undefined,
+  );
 
   const [step, setStep] = useState<Step>("contact");
   const [contact, setContact] = useState<ContactFormValues | null>(null);
@@ -220,7 +222,13 @@ export default function CheckoutPage() {
   }
 
   async function handleConfirm() {
-    if (quoteState.status !== "ready" || !selectedPoint || !contact) return;
+    if (
+      !items.length ||
+      quoteState.status !== "ready" ||
+      !selectedPoint ||
+      !contact
+    )
+      return;
     // Форма уже не пропускает без согласия; здесь сужаем тип до того, что просит API
     if (contact.personalDataConsent !== true) return;
     const delivery = {
@@ -240,9 +248,11 @@ export default function CheckoutPage() {
         contactPhone: contact.phone,
         contactEmail: contact.email,
         comment: contact.comment || undefined,
-        // Черновик мог сохранить галочку из прошлой корзины с набором
-        gift: hasKit && (kitGift || contact.gift === true) ? true : undefined,
-        kitAccessMode: bundleItems ? (kitAccessMode ?? undefined) : undefined,
+        gift: resolveKitOrderGift(
+          kitAccessMode,
+          hasKit && (kitGift || contact.gift === true) ? true : undefined,
+        ),
+        kitAccessMode: kitAccessMode ?? undefined,
         items: items.map((item) => ({
           productId: item.productId,
           productSlug: item.productSlug,
@@ -297,7 +307,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!hydrated) {
+  if (!hydrated || (kitAccessMode && loading && items.length === 0)) {
     return (
       <Shell>
         <div
@@ -327,16 +337,22 @@ export default function CheckoutPage() {
             />
           </div>
           <h1 className="font-serif text-3xl text-espresso mb-3">
-            Корзина пуста
+            {kitAccessMode ? "Комплект недоступен" : "Корзина пуста"}
           </h1>
           <p className="text-taupe text-sm mb-8">
-            Добавьте изделия из каталога, чтобы оформить заказ.
+            {kitAccessMode
+              ? "Состав или цена изменились. Выберите наборы заново."
+              : "Добавьте изделия из каталога, чтобы оформить заказ."}
           </p>
           <Button
             asChild
             className="h-12 px-7 rounded-full bg-espresso text-parchment hover:bg-espresso/85"
           >
-            <Link href="/catalog">В каталог</Link>
+            {kitAccessMode ? (
+              <Link href="/nabor-elka">Выбрать наборы</Link>
+            ) : (
+              <Link href="/catalog">В каталог</Link>
+            )}
           </Button>
         </div>
       </Shell>
@@ -427,7 +443,7 @@ export default function CheckoutPage() {
                 initial={contact}
                 busy={checkingPhone}
                 submitLabel={contact ? "Сохранить" : "Продолжить"}
-                offerGift={hasKit && !kitGift && !bundleItems}
+                offerGift={hasKit && !kitGift && !kitAccessMode}
                 onSubmit={handleContactSubmit}
               />
             </CheckoutSection>

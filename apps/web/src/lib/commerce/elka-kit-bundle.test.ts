@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { priceKitBundleLines } from "./elka-kit-bundle";
+import { priceKitBundleLines, resolveKitOrderGift } from "./elka-kit-bundle";
 
 const beige = {
   productSlug: "nabor-makrame-elka-bezhevyy",
@@ -48,4 +48,12 @@ test("kit pricing rejects unrelated products and invalid quantities", () => {
       "single_lesson",
     ),
   ).toBeNull();
+});
+
+test("the bundle mode overrides a stored gift choice without changing ordinary checkout", () => {
+  expect(resolveKitOrderGift("single_lesson", true)).toBe(false);
+  expect(resolveKitOrderGift("separate_gifts", false)).toBe(true);
+  expect(resolveKitOrderGift(undefined, true)).toBe(true);
+  expect(resolveKitOrderGift(undefined, false)).toBe(false);
+  expect(resolveKitOrderGift(undefined)).toBeUndefined();
 });

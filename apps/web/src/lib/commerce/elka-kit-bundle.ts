@@ -1,6 +1,13 @@
 /** The landing and checkout share this price allocation; checkout validates it again. */
 export type KitAccessMode = "single_lesson" | "separate_gifts";
 
+export function resolveKitOrderGift(
+  mode: KitAccessMode | null | undefined,
+  gift?: boolean,
+): boolean | undefined {
+  return mode ? mode === "separate_gifts" : gift;
+}
+
 export const KIT_COLORS = [
   {
     slug: "nabor-makrame-elka-bezhevyy",
