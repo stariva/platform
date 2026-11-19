@@ -11,20 +11,20 @@
     "format": "biome format .",
     "lint": "biome lint .",
     "check": "biome check .",
-    "trigger:dev": "bunx trigger.dev@4.8.5 dev",
-    "trigger:deploy": "bunx trigger.dev@4.8.5 deploy",
+    "trigger:dev": "bunx trigger.dev@4.8.7 dev",
+    "trigger:deploy": "bunx trigger.dev@4.8.7 deploy",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hatchet-dev/typescript-sdk": "1.47.2",
-    "@orpc/client": "2.0.0-beta.51",
+    "@hatchet-dev/typescript-sdk": "1.47.4",
+    "@orpc/client": "2.0.0-beta.52",
     "@stariva/web-api": "workspace:*",
-    "@trigger.dev/sdk": "4.8.5",
+    "@trigger.dev/sdk": "4.8.7",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@stariva/tsconfig": "workspace:*",
-    "@trigger.dev/build": "4.8.5",
+    "@trigger.dev/build": "4.8.7",
     "@types/node": "26.6.6",
     "typescript": "7.1.0-dev.20261114.1"
   }
