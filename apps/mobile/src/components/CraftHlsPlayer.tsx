@@ -1,7 +1,6 @@
 import { KeepAwake } from "@capacitor-community/keep-awake";
 import Hls from "hls.js";
 import {
-  FlipHorizontal2,
   Maximize2,
   Minimize2,
   Pause,
@@ -9,7 +8,6 @@ import {
   RotateCcw,
   RotateCw,
   Sun,
-  X,
 } from "lucide-react";
 import {
   type PointerEvent,
@@ -23,12 +21,16 @@ import {
 import { z } from "zod";
 import { formatTime } from "@/lib/format";
 import { readJson, writeJson } from "@/lib/storage";
+import {
+  nativeHlsQualities,
+  qualityLabel,
+  type QualityOption,
+} from "@/lib/video-quality";
 
 const STEP_SECONDS = 10;
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5] as const;
 /** Как часто сохраняем место просмотра, пока видео идёт. */
 const SAVE_INTERVAL_MS = 10_000;
-const MIRROR_KEY = "stariva:player:mirror";
 
 export interface CraftHlsPlayerHandle {
   /** Перемотать и продолжить с этой секунды (тап по главе). */
@@ -74,8 +76,7 @@ type WakeState = "off" | "on" | "unsupported";
  *
  * - hls.js, а где нет MSE (iOS WKWebView) — нативный HLS; MP4 как есть;
  * - Wake Lock: Capacitor KeepAwake (в браузере и TMA — Screen Wake Lock API);
- * - A-B Loop: зацикливает фрагмент, на полосе перемотки он закрашен;
- * - шаги ±10 с, скорости 0.5×…1.5× одним тапом, зеркало для левшей;
+ * - шаги ±10 с и скорости 0.5×…1.5× одним тапом;
  * - прогресс: каждые 10 с, на паузе, при сворачивании и выходе.
  */
 export function CraftHlsPlayer({
@@ -88,6 +89,7 @@ export function CraftHlsPlayer({
   ref,
 }: CraftHlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -95,22 +97,17 @@ export function CraftHlsPlayer({
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<number>(1);
-  const [mirrored, setMirrored] = useState(false);
-  const [loopA, setLoopA] = useState<number | null>(null);
-  const [loopB, setLoopB] = useState<number | null>(null);
   const [wake, setWake] = useState<WakeState>("off");
   const [failed, setFailed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [qualities, setQualities] = useState<QualityOption[]>([]);
+  const [quality, setQuality] = useState<number | "auto">("auto");
+  const [qualityOpen, setQualityOpen] = useState(false);
 
   // Колбэки и состояние для обработчиков, которые не должны пересоздаваться
   const latest = useRef({ onSaveProgress, onTimeUpdate, onSourceExpired });
   latest.current = { onSaveProgress, onTimeUpdate, onSourceExpired };
-  const loop = useRef<{ a: number | null; b: number | null }>({
-    a: null,
-    b: null,
-  });
-  loop.current = { a: loopA, b: loopB };
   // Секунда, на которую вернуться после смены источника (новая ссылка)
   const resumeAt = useRef<number | null>(null);
   const lastSavedAt = useRef(-1);
@@ -144,14 +141,22 @@ export function CraftHlsPlayer({
   const toggleFullscreen = async () => {
     if (document.fullscreenElement === playerRef.current) {
       await document.exitFullscreen();
-    } else if (playerRef.current?.requestFullscreen) {
-      await playerRef.current.requestFullscreen();
-    } else {
-      const video = videoRef.current as
-        | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
-        | null;
-      video?.webkitEnterFullscreen?.();
+      return;
     }
+
+    if (document.fullscreenEnabled && playerRef.current?.requestFullscreen) {
+      try {
+        await playerRef.current.requestFullscreen();
+        return;
+      } catch {
+        // WKWebView может объявлять API, но запрещать fullscreen для div.
+      }
+    }
+
+    const video = videoRef.current as
+      | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
+      | null;
+    video?.webkitEnterFullscreen?.();
   };
 
   const seekTo = useCallback((seconds: number) => {
@@ -220,6 +225,9 @@ export function CraftHlsPlayer({
     const video = videoRef.current;
     if (!video) return;
     setFailed(false);
+    setQualities([]);
+    setQuality("auto");
+    setQualityOpen(false);
     let cancelled = false;
     let hls: Hls | null = null;
     let onMeta: (() => void) | undefined;
@@ -261,6 +269,21 @@ export function CraftHlsPlayer({
 
       if (src.type === "hls" && Hls.isSupported()) {
         hls = new Hls({ enableWorker: true });
+        hlsRef.current = hls;
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (cancelled || !hls) return;
+          setQualities(
+            hls.levels
+              .map((level, index) => ({
+                index,
+                label: qualityLabel(level.width, level.height),
+              }))
+              .sort(
+                (a, b) =>
+                  Number.parseInt(b.label, 10) - Number.parseInt(a.label, 10),
+              ),
+          );
+        });
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (!data.fatal) return;
           const status = data.response?.code;
@@ -288,6 +311,14 @@ export function CraftHlsPlayer({
         // iOS WKWebView без MSE играет HLS сам; MP4 — тем более
         video.addEventListener("error", onNativeError);
         video.src = src.url;
+        if (src.type === "hls" && src.url.includes("master.m3u8")) {
+          void fetch(src.url)
+            .then((response) => (response.ok ? response.text() : ""))
+            .then((playlist) => {
+              if (!cancelled) setQualities(nativeHlsQualities(playlist, src.url));
+            })
+            .catch(() => {});
+        }
       }
     };
     void start();
@@ -300,6 +331,7 @@ export function CraftHlsPlayer({
       if (onMeta) video.removeEventListener("loadedmetadata", onMeta);
       video.removeEventListener("error", onNativeError);
       hls?.destroy();
+      hlsRef.current = null;
       video.removeAttribute("src");
       video.load();
     };
@@ -363,63 +395,41 @@ export function CraftHlsPlayer({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [playing, acquireWake]);
 
-  /* ---------- Скорость и зеркало ---------- */
+  /* ---------- Скорость ---------- */
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = speed;
   }, [speed]);
 
-  useEffect(() => {
-    void readJson(MIRROR_KEY, z.boolean()).then((value) => {
-      if (value) setMirrored(true);
-    });
-  }, []);
+  const selectQuality = (selected: number | "auto") => {
+    setQuality(selected);
+    setQualityOpen(false);
+    if (hlsRef.current) {
+      hlsRef.current.nextLevel = selected === "auto" ? -1 : selected;
+      return;
+    }
 
-  const toggleMirror = () => {
-    setMirrored((value) => {
-      void writeJson(MIRROR_KEY, !value);
-      return !value;
-    });
-  };
-
-  /* ---------- A-B Loop ---------- */
-
-  // timeupdate приходит раз в ~250 мс — узел «гуляет». Пока видео идёт и
-  // отрезок задан, следим за временем каждый кадр и возвращаемся в точку А.
-  useEffect(() => {
-    if (!playing || loopA === null || loopB === null) return;
-    let frame = 0;
-    const tick = () => {
-      const video = videoRef.current;
-      const { a, b } = loop.current;
-      if (video && a !== null && b !== null && video.currentTime >= b) {
-        video.currentTime = a;
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [playing, loopA, loopB]);
-
-  const markA = () => {
-    const t = currentTime();
-    setLoopA(t);
-    // Точка А после Б делает отрезок пустым — Б начинаем заново
-    if (loopB !== null && loopB <= t) setLoopB(null);
-  };
-
-  const markB = () => {
-    const t = currentTime();
-    // Без А отрезком считаем всё от начала видео до этой секунды
-    const a = loopA ?? 0;
-    if (t - a < 1) return;
-    if (loopA === null) setLoopA(0);
-    setLoopB(t);
-  };
-
-  const clearLoop = () => {
-    setLoopA(null);
-    setLoopB(null);
+    const video = videoRef.current;
+    const url =
+      selected === "auto"
+        ? src.url
+        : qualities.find((option) => option.index === selected)?.url;
+    if (!video || !url || video.src === url) return;
+    const position = video.currentTime;
+    const wasPlaying = !video.paused;
+    video.addEventListener(
+      "loadedmetadata",
+      () => {
+        if (Number.isFinite(video.duration)) {
+          video.currentTime = Math.min(position, Math.max(0, video.duration - 0.1));
+        }
+        video.playbackRate = speedRef.current;
+        if (wasPlaying) void video.play().catch(() => {});
+      },
+      { once: true },
+    );
+    video.src = url;
+    video.load();
   };
 
   /* ---------- Управление ---------- */
@@ -443,18 +453,17 @@ export function CraftHlsPlayer({
 
   const percent = (seconds: number) =>
     duration > 0 ? `${Math.min(100, (seconds / duration) * 100)}%` : "0%";
-  const loopActive = loopA !== null && loopB !== null;
 
   return (
     <div
       ref={playerRef}
       className={
         fullscreen
-          ? "flex min-h-dvh flex-col justify-center overflow-y-auto bg-bg text-fg"
+          ? "relative h-dvh w-full overflow-hidden bg-black text-white"
           : "bg-bg text-fg"
       }
     >
-      <div className="relative bg-black">
+      <div className={fullscreen ? "absolute inset-0 bg-black" : "relative bg-black"}>
         <video
           ref={videoRef}
           playsInline
@@ -479,9 +488,7 @@ export function CraftHlsPlayer({
             setTime(e.currentTarget.currentTime);
             latest.current.onTimeUpdate?.(e.currentTarget.currentTime);
           }}
-          className={`mx-auto aspect-video w-full object-contain ${fullscreen ? "max-h-[60dvh]" : "max-h-[34dvh]"} ${
-            mirrored ? "scale-x-[-1]" : ""
-          }`}
+          className={`mx-auto w-full object-contain ${fullscreen ? "h-full" : "aspect-video max-h-[34dvh]"}`}
         >
           <track kind="captions" />
         </video>
@@ -490,15 +497,15 @@ export function CraftHlsPlayer({
           aria-label={
             fullscreen ? "Выйти из полноэкранного режима" : "На весь экран"
           }
-          onClick={() => void toggleFullscreen().catch(() => {})}
-          className="absolute top-2 right-2 flex size-11 items-center justify-center rounded-full bg-black/60 text-white"
+          onClick={() => void toggleFullscreen()}
+          className="absolute top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] flex size-11 items-center justify-center rounded-full bg-black/60 text-white"
         >
           {fullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
         </button>
 
         <div
           role="status"
-          className={`absolute top-2 left-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur ${
+          className={`absolute top-[max(0.5rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur ${
             wake === "on"
               ? "bg-sage/90 text-white"
               : "bg-black/50 text-white/70"
@@ -526,9 +533,15 @@ export function CraftHlsPlayer({
         )}
       </div>
 
-      <div className="space-y-3 px-4 pt-3 pb-4">
-        {/* Полоса перемотки: отрезок A-B закрашен, края — маркеры */}
-        <div className="flex items-center gap-3 text-xs tabular-nums text-muted">
+      <div
+        className={
+          fullscreen
+            ? "absolute inset-x-0 bottom-0 z-10 space-y-2 bg-gradient-to-t from-black/85 via-black/60 to-transparent px-4 pt-8 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            : "space-y-3 px-4 pt-3 pb-4"
+        }
+      >
+        {/* Полоса перемотки */}
+        <div className={`flex items-center gap-3 text-xs tabular-nums ${fullscreen ? "text-white" : "text-muted"}`}>
           <span className="w-12 text-right">{formatTime(time)}</span>
           <div
             ref={trackRef}
@@ -552,27 +565,13 @@ export function CraftHlsPlayer({
             // Высота 48 px — попасть пальцем легко, а видна тонкая линия
             className="relative flex h-12 flex-1 touch-none items-center"
           >
-            <div className="relative h-2 w-full rounded-full bg-line">
-              {loopA !== null && (
-                <div
-                  className="absolute inset-y-0 rounded-full bg-accent/35"
-                  style={{
-                    left: percent(loopA),
-                    width:
-                      loopB !== null
-                        ? `${((loopB - loopA) / (duration || 1)) * 100}%`
-                        : "0.5rem",
-                  }}
-                />
-              )}
+            <div className={`relative h-2 w-full rounded-full ${fullscreen ? "bg-white/40" : "bg-line"}`}>
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-accent"
                 style={{ width: percent(time) }}
               />
-              {loopA !== null && <LoopMarker at={percent(loopA)} label="А" />}
-              {loopB !== null && <LoopMarker at={percent(loopB)} label="Б" />}
               <div
-                className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg"
+                className={`absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full ${fullscreen ? "bg-white" : "bg-fg"}`}
                 style={{ left: percent(time) }}
               />
             </div>
@@ -581,10 +580,11 @@ export function CraftHlsPlayer({
         </div>
 
         {/* Главное: −10 / пауза / +10 — огромные области тапа */}
-        <div className="grid grid-cols-[1fr_1.4fr_1fr] gap-3">
+        <div className={`grid grid-cols-[1fr_1.4fr_1fr] gap-3 ${fullscreen ? "mx-auto max-w-sm" : ""}`}>
           <BigButton
             label="Назад на 10 секунд"
             onClick={() => seekTo(currentTime() - STEP_SECONDS)}
+            compact={fullscreen}
           >
             <RotateCcw className="size-6" aria-hidden />
             <span>−10 с</span>
@@ -593,7 +593,7 @@ export function CraftHlsPlayer({
             type="button"
             aria-label={playing ? "Пауза" : "Играть"}
             onClick={togglePlay}
-            className="flex min-h-16 items-center justify-center rounded-2xl bg-accent text-accent-fg active:opacity-80"
+            className={`flex items-center justify-center rounded-2xl bg-accent text-accent-fg active:opacity-80 ${fullscreen ? "min-h-12" : "min-h-16"}`}
           >
             {playing ? (
               <Pause className="size-8" aria-hidden />
@@ -604,47 +604,46 @@ export function CraftHlsPlayer({
           <BigButton
             label="Вперёд на 10 секунд"
             onClick={() => seekTo(currentTime() + STEP_SECONDS)}
+            compact={fullscreen}
           >
             <RotateCw className="size-6" aria-hidden />
             <span>+10 с</span>
           </BigButton>
         </div>
 
-        {/* Зацикливание узла и зеркало */}
-        <div className="grid grid-cols-3 gap-3">
-          <ToggleButton
-            active={loopA !== null}
-            onClick={markA}
-            label="Поставить точку А"
-          >
-            А{loopA !== null ? ` ${formatTime(loopA)}` : ""}
-          </ToggleButton>
-          <ToggleButton
-            active={loopB !== null}
-            onClick={loopActive ? clearLoop : markB}
-            label={loopActive ? "Сбросить повтор" : "Поставить точку Б"}
-          >
-            {loopActive ? (
-              <>
-                <X className="size-5" aria-hidden />
-                {formatTime(loopB)}
-              </>
-            ) : (
-              "Б"
+        <div className="relative">
+            <button
+              type="button"
+              aria-label="Качество видео"
+              aria-expanded={qualityOpen}
+              disabled={qualities.length < 2 || duration === 0}
+              onClick={() => setQualityOpen((open) => !open)}
+              className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-3 text-sm font-semibold disabled:opacity-60 ${fullscreen ? "bg-white/20 text-white" : "bg-surface text-fg ring-1 ring-line"}`}
+            >
+              Качество · {src.type === "mp4" ? "Исходное" : quality === "auto" ? "Авто" : (qualities.find((option) => option.index === quality)?.label ?? "Авто")}
+            </button>
+            {qualityOpen && (
+              <div className={`absolute right-0 bottom-full z-20 mb-2 w-full min-w-36 overflow-hidden rounded-2xl p-1 shadow-lg ${fullscreen ? "bg-neutral-900 text-white" : "bg-surface text-fg ring-1 ring-line"}`}>
+                {[
+                  { index: "auto" as const, label: "Авто" },
+                  ...qualities,
+                ].map((option) => (
+                  <button
+                    key={option.index}
+                    type="button"
+                    aria-pressed={quality === option.index}
+                    onClick={() => selectQuality(option.index)}
+                    className={`min-h-11 w-full rounded-xl px-3 text-left text-sm ${quality === option.index ? "bg-accent font-semibold text-accent-fg" : "active:bg-black/10"}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             )}
-          </ToggleButton>
-          <ToggleButton
-            active={mirrored}
-            onClick={toggleMirror}
-            label="Отразить видео по горизонтали"
-          >
-            <FlipHorizontal2 className="size-5" aria-hidden />
-            Зеркало
-          </ToggleButton>
         </div>
 
         {/* Скорости — в один тап, без вложенных меню */}
-        <div className="grid grid-cols-5 gap-2">
+        <div className={`grid grid-cols-5 gap-2 ${fullscreen ? "hidden" : ""}`}>
           {SPEEDS.map((value) => (
             <button
               key={value}
@@ -666,62 +665,23 @@ export function CraftHlsPlayer({
   );
 }
 
-function LoopMarker({ at, label }: { at: string; label: string }) {
-  return (
-    <div
-      className="absolute -top-5 flex -translate-x-1/2 flex-col items-center"
-      style={{ left: at }}
-    >
-      <span className="rounded bg-accent px-1 text-[10px] leading-4 font-bold text-accent-fg">
-        {label}
-      </span>
-    </div>
-  );
-}
-
 function BigButton({
   label,
   onClick,
   children,
+  compact = false,
 }: {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
+  compact?: boolean;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-2xl bg-surface text-sm font-semibold text-fg ring-1 ring-line active:bg-line"
-    >
-      {children}
-    </button>
-  );
-}
-
-function ToggleButton({
-  active,
-  label,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={active}
-      onClick={onClick}
-      className={`flex min-h-12 items-center justify-center gap-1.5 rounded-2xl text-sm font-semibold ${
-        active
-          ? "bg-accent text-accent-fg"
-          : "bg-surface text-fg ring-1 ring-line"
-      }`}
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl text-sm font-semibold ${compact ? "min-h-12 bg-white/20 text-white active:bg-white/30" : "min-h-16 bg-surface text-fg ring-1 ring-line active:bg-line"}`}
     >
       {children}
     </button>

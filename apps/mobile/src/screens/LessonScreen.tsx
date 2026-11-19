@@ -1,100 +1,9 @@
-import type { LessonDetails } from "@stariva/web-api/contract";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  Check,
-  ChevronLeft,
-  Circle,
-  CircleCheck,
-  Download,
-} from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  CraftHlsPlayer,
-  type CraftHlsPlayerHandle,
-  type ProgressSnapshot,
-} from "@/components/CraftHlsPlayer";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, ChevronLeft, Circle, CircleCheck } from "lucide-react";
+import { useCallback } from "react";
+import { CraftHlsPlayer, type ProgressSnapshot } from "@/components/CraftHlsPlayer";
 import { absoluteUrl, api, errorMessage } from "@/lib/api";
-import { activeChapterIndex, formatTime } from "@/lib/format";
-import { native } from "@/lib/native";
-
-type Tab = "chapters" | "checklist" | "lessons" | "files";
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: "chapters", label: "Таймкоды" },
-  { id: "checklist", label: "Нарезка" },
-  { id: "lessons", label: "Уроки" },
-  { id: "files", label: "Схемы" },
-];
-
-/** Пауза после последней отметки, чтобы не слать запрос на каждый тап. */
-const CHECKLIST_SAVE_DELAY_MS = 600;
-
-interface ChecklistQueue {
-  /** Самый свежий снимок, который ещё не ушёл на сервер. */
-  pending: string[] | null;
-  sending: boolean;
-  timer: number | undefined;
-}
-
-/**
- * Очередь сохранения чек-листа по урокам живёт вне компонента: если выйти из
- * урока, пока запрос в пути, и вернуться, новый экран встаёт в ту же очередь
- * и не обгоняет старый запрос. Сервер заменяет массив целиком, поэтому порядок
- * записей важен.
- */
-const checklistQueues = new Map<string, ChecklistQueue>();
-
-function checklistQueue(slug: string, lessonId: string): ChecklistQueue {
-  const key = `${slug}:${lessonId}`;
-  let queue = checklistQueues.get(key);
-  if (!queue) {
-    queue = { pending: null, sending: false, timer: undefined };
-    checklistQueues.set(key, queue);
-  }
-  return queue;
-}
-
-function scheduleChecklistSave(
-  slug: string,
-  lessonId: string,
-  snapshot: string[],
-) {
-  const queue = checklistQueue(slug, lessonId);
-  queue.pending = snapshot;
-  window.clearTimeout(queue.timer);
-  queue.timer = window.setTimeout(
-    () => void flushChecklistSave(slug, lessonId),
-    CHECKLIST_SAVE_DELAY_MS,
-  );
-}
-
-async function flushChecklistSave(slug: string, lessonId: string) {
-  const queue = checklistQueue(slug, lessonId);
-  window.clearTimeout(queue.timer);
-  if (queue.sending) return;
-  queue.sending = true;
-  try {
-    while (queue.pending !== null) {
-      const snapshot = queue.pending;
-      queue.pending = null;
-      try {
-        await api.account.saveLessonChecklist(
-          { slug, lessonId, checkedMaterials: snapshot },
-          { context: { keepalive: true } },
-        );
-      } catch {
-        // Более свежий снимок включает все изменения и имеет приоритет
-        if (queue.pending === null) {
-          queue.pending = snapshot;
-          break;
-        }
-      }
-    }
-  } finally {
-    queue.sending = false;
-  }
-}
+import { formatTime } from "@/lib/format";
 
 interface LessonScreenProps {
   slug: string;
@@ -103,7 +12,7 @@ interface LessonScreenProps {
   onBack: () => void;
 }
 
-/** Экран видеоурока с плеером, главами, списком уроков и материалами. */
+/** Экран видеоурока с плеером и списком уроков. */
 export function LessonScreen(props: LessonScreenProps) {
   return <LessonContent key={`${props.slug}:${props.lessonId}`} {...props} />;
 }
@@ -114,43 +23,10 @@ function LessonContent({
   onSelectLesson,
   onBack,
 }: LessonScreenProps) {
-  const playerRef = useRef<CraftHlsPlayerHandle>(null);
-  const [tab, setTab] = useState<Tab>("chapters");
-  const [time, setTime] = useState(0);
-
   const details = useQuery({
     queryKey: ["lesson", slug, lessonId],
     queryFn: () => api.account.lessonDetails({ slug, lessonId }),
   });
-
-  const queryClient = useQueryClient();
-  const [checked, setChecked] = useState<Set<string> | null>(null);
-
-  const flushChecklist = useCallback(
-    () => flushChecklistSave(slug, lessonId),
-    [slug, lessonId],
-  );
-
-  // Выход с экрана отправляет последний снимок через общую очередь урока
-  useEffect(
-    () => () => {
-      void flushChecklist();
-    },
-    [flushChecklist],
-  );
-
-  const toggleMaterial = (id: string) => {
-    const next = new Set(checked ?? details.data?.checkedMaterials ?? []);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setChecked(next);
-    // Кеш урока тоже обновляем: при возврате на экран отметки не откатятся
-    queryClient.setQueryData<LessonDetails>(
-      ["lesson", slug, lessonId],
-      (data) => data && { ...data, checkedMaterials: [...next] },
-    );
-    scheduleChecklistSave(slug, lessonId, [...next]);
-  };
 
   const video = useQuery({
     queryKey: ["lesson-video", slug, lessonId],
@@ -210,7 +86,6 @@ function LessonContent({
   }
 
   const lesson = details.data;
-  const activeChapter = activeChapterIndex(lesson.chapters, time);
   const currentIndex = lesson.lessons.findIndex((item) => item.id === lessonId);
   const nextLesson = lesson.lessons[currentIndex + 1];
 
@@ -224,12 +99,11 @@ function LessonContent({
           Урок {currentIndex + 1} из {lesson.lessons.length}
         </p>
       </div>
-      {/* Плеер остаётся на месте, пока листаешь вкладки */}
+      {/* Плеер остаётся на месте, пока листаешь уроки */}
       <div className="sticky top-0 z-10 border-b border-line bg-bg">
         <CraftHlsPlayer
           // Другой урок — новый плеер: прогресс не должен перепутаться
           key={lessonId}
-          ref={playerRef}
           src={{
             url: absoluteUrl(video.data.url),
             type: video.data.type,
@@ -237,91 +111,16 @@ function LessonContent({
           startAt={lesson.positionSeconds}
           progressKey={`${slug}:${lessonId}`}
           onSaveProgress={saveProgress}
-          onTimeUpdate={setTime}
           onSourceExpired={refreshVideo}
         />
       </div>
 
-      <div role="tablist" className="grid grid-cols-4 gap-2 px-4 pt-4">
-        {TABS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            className={`min-h-12 rounded-2xl px-1 text-xs font-semibold ${
-              tab === id
-                ? "bg-fg text-bg"
-                : "bg-surface text-muted ring-1 ring-line"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       <div className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {tab === "chapters" && (
-          <ChapterList
-            chapters={lesson.chapters}
-            active={activeChapter}
-            onSelect={(seconds) => playerRef.current?.seekTo(seconds)}
-          />
-        )}
-        {tab === "checklist" && (
-          <MaterialsChecklist
-            // Отметки привязаны к уроку: при смене урока список начинается заново
-            key={lessonId}
-            items={lesson.checklist}
-            checked={checked ?? new Set(lesson.checkedMaterials)}
-            onToggle={toggleMaterial}
-            onFlush={flushChecklist}
-          />
-        )}
-        {tab === "lessons" && (
-          <LessonList
-            lessons={lesson.lessons}
-            currentId={lessonId}
-            onSelect={onSelectLesson}
-          />
-        )}
-        {tab === "files" && (
-          <div className="space-y-2">
-            {lesson.attachments.length ? (
-              lesson.attachments.map((file) => (
-                <button
-                  key={file.key}
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const result = await api.account.materialUrl({
-                        slug,
-                        key: file.key,
-                      });
-                      // Не уходим из приложения: файл открывается в браузере
-                      // системы, вход — по пропуску в ссылке
-                      await native.openExternal(absoluteUrl(result.url));
-                    } catch (error) {
-                      window.alert(
-                        errorMessage(error, "Не удалось открыть материал"),
-                      );
-                    }
-                  }}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-2xl bg-surface px-4 text-left ring-1 ring-line"
-                >
-                  <Download size={21} className="text-accent" />
-                  <span className="flex-1 font-medium">{file.label}</span>
-                  <span className="text-xs uppercase text-muted">
-                    {file.kind}
-                  </span>
-                </button>
-              ))
-            ) : (
-              <Empty>Для этого урока схем пока нет</Empty>
-            )}
-          </div>
-        )}
+        <LessonList
+          lessons={lesson.lessons}
+          currentId={lessonId}
+          onSelect={onSelectLesson}
+        />
         {nextLesson && (
           <button
             type="button"
@@ -360,107 +159,6 @@ function Shell({
         <h1 className="truncate text-base font-semibold">{title}</h1>
       </header>
       {children}
-    </div>
-  );
-}
-
-function ChapterList({
-  chapters,
-  active,
-  onSelect,
-}: {
-  chapters: { time: number; title: string }[];
-  active: number;
-  onSelect: (seconds: number) => void;
-}) {
-  if (chapters.length === 0) {
-    return <Empty>Для этого урока таймкодов пока нет</Empty>;
-  }
-  return (
-    <ul className="space-y-2">
-      {chapters.map((chapter, index) => {
-        const isActive = index === active;
-        return (
-          <li key={chapter.time}>
-            <button
-              type="button"
-              aria-current={isActive ? "step" : undefined}
-              onClick={() => onSelect(chapter.time)}
-              className={`flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 text-left ${
-                isActive
-                  ? "bg-accent text-accent-fg"
-                  : "bg-surface ring-1 ring-line"
-              }`}
-            >
-              <span className="w-12 shrink-0 font-semibold tabular-nums">
-                {formatTime(chapter.time)}
-              </span>
-              <span className="font-medium">{chapter.title}</span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function MaterialsChecklist({
-  items,
-  checked,
-  onToggle,
-  onFlush,
-}: {
-  items: { id: string; label: string }[];
-  checked: Set<string>;
-  onToggle: (id: string) => void;
-  onFlush: () => Promise<void>;
-}) {
-  // Выход с вкладки отправляет последний снимок через общую очередь урока.
-  useEffect(
-    () => () => {
-      void onFlush();
-    },
-    [onFlush],
-  );
-
-  if (items.length === 0) {
-    return <Empty>Список материалов для этого урока не заполнен</Empty>;
-  }
-
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted">
-        Нарезано {checked.size} из {items.length}. Отметьте нити до старта
-        видео, чтобы руки не отрывались от узлов.
-      </p>
-      <ul className="space-y-2">
-        {items.map((item) => {
-          const isChecked = checked.has(item.id);
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                aria-pressed={isChecked}
-                onClick={() => onToggle(item.id)}
-                className={`flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 py-2 text-left ring-1 ${
-                  isChecked ? "bg-sage/20 ring-sage" : "bg-surface ring-line"
-                }`}
-              >
-                <span
-                  className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${
-                    isChecked ? "bg-sage text-white" : "ring-2 ring-muted/60"
-                  }`}
-                >
-                  {isChecked && <Check className="size-5" aria-hidden />}
-                </span>
-                <span className={isChecked ? "text-muted line-through" : ""}>
-                  {item.label}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }
@@ -512,8 +210,4 @@ function LessonList({
       })}
     </ul>
   );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="py-8 text-center text-muted">{children}</p>;
 }

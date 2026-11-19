@@ -90,7 +90,12 @@ async function signLessonVideo({
   const fingerprint = userId
     ? sessionFingerprint(getSessionCookie(headers))
     : null;
-  if (rendition && env.AUTH_SECRET && (!userId || fingerprint)) {
+  // Мобильный клиент входит bearer-токеном без cookie. После проверки покупки
+  // выдаём ему HLS-пропуск, как для превью, чтобы были доступны качества.
+  const mobileBearer =
+    Boolean(userId) &&
+    headers.get("authorization")?.toLowerCase().startsWith("bearer ") === true;
+  if (rendition && env.AUTH_SECRET && (!userId || fingerprint || mobileBearer)) {
     const token = signHlsGrant(
       {
         prefix: rendition.hlsPrefix,

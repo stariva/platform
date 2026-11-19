@@ -1,4 +1,5 @@
 import { env } from "@stariva/config";
+import { corsPreflight, withCors } from "@stariva/auth/cors";
 import {
   getDownloadUrl,
   getObjectText,
@@ -27,7 +28,7 @@ const NO_STORE = { "Cache-Control": "private, no-store" };
  * seg-NNNNN.m4s), в несколько — master.m3u8 и те же файлы в v0/, v1/…:
  * `<пропуск>/master.m3u8` → `<пропуск>/v1/index.m3u8` → `<пропуск>/v1/seg-…`.
  */
-export async function GET(
+async function serveHls(
   request: NextRequest,
   { params }: { params: Promise<{ token: string; path: string[] }> },
 ) {
@@ -72,3 +73,10 @@ export async function GET(
     return NextResponse.json({ error: "unavailable" }, { status: 502 });
   }
 }
+
+export const GET = async (
+  request: NextRequest,
+  context: { params: Promise<{ token: string; path: string[] }> },
+) => withCors(request, await serveHls(request, context));
+
+export const OPTIONS = (request: Request) => corsPreflight(request);
