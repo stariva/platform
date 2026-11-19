@@ -50,6 +50,10 @@ export async function applyWorkshopPayment(
   });
   if (bonus) await grantAccess(order.userId, bonus.slug, order.id);
 
+  for (const extra of getBundle(order.bundleSlug)?.extras ?? []) {
+    await grantAccess(order.userId, extra.slug, order.id);
+  }
+
   if (wasUpdated) {
     console.info(
       `[payments] Заказ ${order.id} оплачен, доступ к «${order.workshopSlug}» выдан`,

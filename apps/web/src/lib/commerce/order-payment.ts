@@ -26,6 +26,8 @@ import { kopecksToValue, type Payment } from "@/lib/payments/payment";
 import { fetchPayment } from "@/lib/payments/status";
 import { grantKitWorkshops } from "@/lib/workshops/kit-access";
 
+import { createMadeToOrderShipment } from "./made-to-order-shipment";
+
 type ProductOrder = NonNullable<
   Awaited<ReturnType<typeof getProductOrderById>>
 >;
@@ -67,6 +69,8 @@ export async function applyProductOrderPayment(
     return;
   }
 
+  await grantKitWorkshops(orderId);
+
   // Письмо покупателю — до Ozon: сбой отправления не должен задержать
   // подтверждение оплаты, а повтор webhook письмо не продублирует
   if (await markProductOrderPaid(orderId)) {
@@ -96,6 +100,11 @@ export async function applyProductOrderPayment(
       },
       expected: 1,
     });
+
+    if (order.deliveryMethod === "manual") {
+      await notifyOrderPaid(orderId);
+      return;
+    }
 
     attemptId = await claimProductOrderShipment(orderId);
     if (!attemptId) return;
@@ -137,6 +146,7 @@ export async function applyProductOrderPayment(
       `[payments/webhook] Заказ товаров ${orderId} оплачен, создан заказ Ozon Доставка ${ozonOrder.orderId}`,
     );
   } catch (error) {
+    if (order.deliveryMethod === "manual") throw error;
     console.error(
       `[payments/webhook] КРИТИЧНО: заказ ${orderId} оплачен, но создание заказа в Ozon Доставка не удалось:`,
       error,
@@ -237,6 +247,16 @@ async function handleMadeToOrderPayment(
     },
     expected: payments.filter((p) => p.status === "succeeded").length,
   });
+
+  if (row.type === "balance") {
+    await grantKitWorkshops(orderId);
+    try {
+      await createMadeToOrderShipment(orderId, row.id);
+    } catch (error) {
+      await notifyMadeToOrderPayment(row.id);
+      throw error;
+    }
+  }
 
   // При сбое бросает ошибку — YooKassa повторит webhook, и мы отправим снова
   await notifyMadeToOrderPayment(row.id);

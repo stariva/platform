@@ -26,10 +26,10 @@ export const robokassaInvoices = pgTable(
       .generatedAlwaysAsIdentity({ startWith: 1001 }),
     productOrderId: text("product_order_id").references(
       () => productOrders.id,
-      { onDelete: "cascade" },
+      { onDelete: "restrict" },
     ),
     workshopOrderId: text("workshop_order_id").references(() => orders.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     // Сумма в копейках — ровно столько запросили у Robokassa
     amount: integer("amount").notNull(),
