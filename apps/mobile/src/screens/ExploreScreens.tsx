@@ -1,12 +1,5 @@
-import {
-  ArrowLeft,
-  ArrowRight,
-  Heart,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
-import { useMemo, useState } from "react";
-import { WorkshopCard } from "@/components/ui/WorkshopCard";
+import type { MobileCourse } from "@stariva/web-api/contract";
+import { ArrowLeft, ArrowRight, Heart } from "lucide-react";
 import {
   Badge,
   BottomSheet,
@@ -16,9 +9,15 @@ import {
   ErrorState,
   Skeleton,
 } from "@/components/ui/Primitives";
+import { WorkshopCard } from "@/components/ui/WorkshopCard";
 import { API_URL } from "@/lib/api";
-import { useCatalog, type CatalogWorkshop } from "@/lib/catalog";
+import { type CatalogWorkshop, useCatalog } from "@/lib/catalog";
 import { native } from "@/lib/native";
+
+const courseCountLabel = (count: number) => {
+  const plural = new Intl.PluralRules("ru-RU").select(count);
+  return `${count} ${plural === "one" ? "курс" : plural === "few" ? "курса" : "курсов"}`;
+};
 
 export function HomeScreen({
   onCatalog,
@@ -92,22 +91,7 @@ export function CatalogScreen({
   onOpen: (workshop: CatalogWorkshop) => void;
 }) {
   const catalog = useCatalog();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("Все");
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [sort, setSort] = useState<"default" | "name">("default");
-  const items = useMemo(() => {
-    const list = (catalog.data ?? []).filter(
-      (w) =>
-        (category === "Все" || w.category === category) &&
-        w.title
-          .toLocaleLowerCase("ru-RU")
-          .includes(search.toLocaleLowerCase("ru-RU")),
-    );
-    return sort === "name"
-      ? [...list].sort((a, b) => a.title.localeCompare(b.title, "ru-RU"))
-      : list;
-  }, [catalog.data, search, category, sort]);
+  const items = catalog.data ?? [];
   return (
     <main className="screen">
       <span className="text-xs font-bold uppercase tracking-[.25em] text-accent">
@@ -115,46 +99,15 @@ export function CatalogScreen({
       </span>
       <h1 className="display mt-3">Найдите своё</h1>
       <p className="mt-3 text-sm text-muted">
-        Видеокурсы по макраме. Выберите проект, оплатите на сайте и смотрите
-        здесь.
+        Видеокурсы по макраме. Выберите проект и смотрите уроки в приложении.
       </p>
-      <div className="mt-7 flex gap-2">
-        <label className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-md)] bg-surface px-4 ring-1 ring-line">
-          <Search size={19} aria-hidden className="shrink-0 text-muted" />
-          <span className="sr-only">Поиск мастер-класса</span>
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Что хотите создать?"
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
-          />
-        </label>
-        <Button
-          variant="secondary"
-          aria-label="Фильтры"
-          onClick={() => setFiltersOpen(true)}
-          className="px-4"
-        >
-          <SlidersHorizontal size={20} />
-        </Button>
-      </div>
-      <div
-        className="mt-5 flex gap-2 overflow-x-auto pb-2"
-        style={{ scrollbarWidth: "none" }}
-      >
-        {["Все", "Абажуры", "Декор интерьера", "Одежда"].map((value) => (
-          <Chip
-            key={value}
-            active={category === value}
-            onClick={() => setCategory(value)}
-          >
-            {value}
-          </Chip>
-        ))}
-      </div>
-      <div className="mt-5 flex items-center justify-between">
+      <div className="mt-7 flex items-center justify-between">
         <h2 className="section-title">Подборка</h2>
-        <span className="text-sm text-muted">{items.length} курса</span>
+        {catalog.isSuccess && (
+          <span className="text-sm text-muted">
+            {courseCountLabel(items.length)}
+          </span>
+        )}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         {items.map((workshop) => (
@@ -184,38 +137,10 @@ export function CatalogScreen({
         <div className="mt-6">
           <EmptyState
             title="Пока ничего"
-            description="Попробуйте другой запрос или категорию."
-            action={
-              <Button
-                onClick={() => {
-                  setSearch("");
-                  setCategory("Все");
-                }}
-              >
-                Сбросить поиск
-              </Button>
-            }
+            description="Новые мастер-классы скоро появятся."
           />
         </div>
       )}
-      <BottomSheet
-        title="Фильтры"
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-      >
-        <p className="mb-3 text-sm text-muted">Порядок показа</p>
-        <div className="space-y-2">
-          <Chip active={sort === "default"} onClick={() => setSort("default")}>
-            Рекомендуем
-          </Chip>
-          <Chip active={sort === "name"} onClick={() => setSort("name")}>
-            По названию
-          </Chip>
-        </div>
-        <Button className="mt-6 w-full" onClick={() => setFiltersOpen(false)}>
-          Показать
-        </Button>
-      </BottomSheet>
     </main>
   );
 }
@@ -225,11 +150,25 @@ export function DetailScreen({
   onBack,
   favorite,
   onToggleFavorite,
+  ownedCourse,
+  accessLoading,
+  accessError,
+  onRetryAccess,
+  onOpenCourse,
+  purchaseOpen,
+  onPurchaseOpenChange,
 }: {
   workshop: CatalogWorkshop;
   onBack: () => void;
   favorite: boolean;
   onToggleFavorite: () => void;
+  ownedCourse: MobileCourse | null;
+  accessLoading: boolean;
+  accessError: boolean;
+  onRetryAccess: () => void;
+  onOpenCourse: (course: MobileCourse) => void;
+  purchaseOpen: boolean;
+  onPurchaseOpenChange: (open: boolean) => void;
 }) {
   return (
     <main className="min-h-dvh bg-bg pb-28 text-fg">
@@ -299,20 +238,47 @@ export function DetailScreen({
             <br />
             <strong className="text-sm text-fg">{workshop.price}</strong>
           </span>
-          <a
-            href={`${API_URL || "https://stariva.ru"}${workshop.href}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(event) => {
-              event.preventDefault();
-              void native.openExternal(event.currentTarget.href);
-            }}
-            className="flex min-h-12 items-center gap-2 rounded-[var(--radius-md)] bg-accent px-5 text-sm font-semibold text-accent-fg"
+          <Button
+            disabled={accessLoading}
+            onClick={() =>
+              accessError
+                ? onRetryAccess()
+                : ownedCourse
+                  ? onOpenCourse(ownedCourse)
+                  : onPurchaseOpenChange(true)
+            }
           >
-            Посмотреть и купить <ArrowRight size={18} />
-          </a>
+            {accessLoading
+              ? "Проверяем доступ…"
+              : accessError
+                ? "Повторить проверку"
+                : ownedCourse
+                  ? "Смотреть уроки"
+                  : "Как получить доступ"}
+            <ArrowRight size={18} />
+          </Button>
         </div>
       </div>
+      <BottomSheet
+        title="Доступ к курсу"
+        open={purchaseOpen}
+        onClose={() => onPurchaseOpenChange(false)}
+      >
+        <p className="text-sm leading-relaxed text-muted">
+          Оформите курс на сайте Stariva. После покупки войдите в приложении с
+          тем же email — видеоуроки появятся в разделе «Мои».
+        </p>
+        <Button
+          className="mt-6 w-full"
+          onClick={() =>
+            void native.openExternal(
+              `${API_URL || "https://stariva.ru"}${workshop.href}`,
+            )
+          }
+        >
+          Оформить на сайте <ArrowRight size={18} />
+        </Button>
+      </BottomSheet>
     </main>
   );
 }

@@ -5,9 +5,10 @@ import { mobileCoursesCacheSchema } from "@/api/schemas";
 import { api } from "@/lib/api";
 
 const cacheKey = (userId: string) => `stariva:my-courses:${userId}`;
-export function useMyCourses(userId: string | null) {
+export function useMyCourses(userId: string | null, enabled = true) {
   return useQuery({
     queryKey: ["my-courses", userId],
+    enabled,
     queryFn: async (): Promise<MobileCourses> => {
       let data: MobileCourses;
       try {
