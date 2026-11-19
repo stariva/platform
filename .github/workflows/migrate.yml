@@ -57,7 +57,7 @@ jobs:
             local err attempt
             err="$(mktemp)"
             for attempt in 1 2 3 4 5; do
-              if "$@" 2>"$err"; then
+              if kubectl "$@" 2>"$err"; then
                 rm -f "$err"
                 return 0
               fi
