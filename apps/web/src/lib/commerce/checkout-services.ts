@@ -9,13 +9,14 @@ import { getCachedPickupPointsInfo } from "@/lib/ozon-delivery/pickup-points-cac
 import type { DeliveryCheckoutResponse } from "@/lib/ozon-delivery/types";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { collectVisitor } from "@/lib/visitor";
-import { hasPurchasedElkaWorkshop } from "./elka-kit-offer";
 import {
   CatalogItemsUnavailableError,
   MadeToOrderOptionsError,
   resolveCatalogItems,
   resolveMadeToOrderItems,
 } from "./catalog";
+import { priceKitBundleLines, resolveKitOrderGift } from "./elka-kit-bundle";
+import { hasPurchasedElkaWorkshop } from "./elka-kit-offer";
 import {
   notifyCustomer,
   notifyMadeToOrderRequested,
@@ -122,7 +123,10 @@ export const checkoutServices: CheckoutServices = {
     let items: Awaited<ReturnType<typeof resolveCatalogItems>>;
     try {
       items = await resolveCatalogItems(data.items, {
-        elkaKitOwner: userId ? await hasPurchasedElkaWorkshop(userId) : false,
+        elkaKitOwner:
+          !data.kitAccessMode && userId
+            ? await hasPurchasedElkaWorkshop(userId)
+            : false,
       });
     } catch (error) {
       if (error instanceof CatalogItemsUnavailableError) {
@@ -132,6 +136,11 @@ export const checkoutServices: CheckoutServices = {
       return { status: "check_failed" };
     }
 
+    if (data.kitAccessMode) {
+      const priced = priceKitBundleLines(items, data.kitAccessMode);
+      if (!priced) return { status: "check_failed" };
+      items = priced;
+    }
     const productsKopecks = items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
@@ -202,21 +211,31 @@ export const checkoutServices: CheckoutServices = {
       return { status: "check_failed" };
     }
 
-    const order = await createProductOrder({
-      userId: userId ?? undefined,
-      attribution: attributionFromRequest({ headers }),
-      visitor: await collectVisitor({ headers }),
-      contactName: data.contactName,
-      contactPhone: data.contactPhone,
-      contactEmail: data.contactEmail,
-      comment: data.comment,
-      gift: data.gift,
-      items,
-      delivery: data.delivery,
-      pickupPoint,
-      pointLabel: data.delivery.pointLabel,
-      checkout: deliveryQuote,
-    });
+    let order: Awaited<ReturnType<typeof createProductOrder>>;
+    try {
+      order = await createProductOrder({
+        userId: userId ?? undefined,
+        attribution: attributionFromRequest({ headers }),
+        visitor: await collectVisitor({ headers }),
+        contactName: data.contactName,
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+        comment: data.comment,
+        gift: resolveKitOrderGift(data.kitAccessMode, data.gift),
+        kitAccessMode: data.kitAccessMode,
+        items,
+        delivery: data.delivery,
+        pickupPoint,
+        pointLabel: data.delivery.pointLabel,
+        checkout: deliveryQuote,
+      });
+    } catch (error) {
+      if (error instanceof CatalogItemsUnavailableError) {
+        return unavailableItems(error);
+      }
+      console.error("[checkout/create] Ошибка сохранения заказа:", error);
+      return { status: "check_failed" };
+    }
 
     try {
       const payment = await createPayment({

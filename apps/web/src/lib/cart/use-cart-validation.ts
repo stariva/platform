@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { KitAccessMode } from "@/lib/commerce/elka-kit-bundle";
 import { formatPrice } from "@/lib/products";
 import { cartLineKey, type PricedCartItem, useCart } from "./cart-context";
 import {
@@ -23,7 +24,7 @@ export type CartLineState =
  * удалось, корзина работает как раньше — окончательное слово за сервером
  * при оформлении. Состояния отдаются по ключу строки корзины (`cartLineKey`).
  */
-export function useCartValidation() {
+export function useCartValidation(kitAccessMode?: KitAccessMode) {
   const { items, hydrated, syncWithCatalog, setUnavailableKeys } = useCart();
   const [lines, setLines] = useState<Map<string, CartValidationLine>>(
     () => new Map(),
@@ -43,7 +44,10 @@ export function useCartValidation() {
 
   const itemsRef = useRef<PricedCartItem[]>(items);
   itemsRef.current = items;
-  const checked = useRef(new Set<string>());
+  const checked = useRef({
+    kitAccessMode,
+    keys: new Set<string>(),
+  });
 
   // Проверяем товар, а не строку: размеры и цвета одного изделия на цену не влияют
   const productKey = useMemo(
@@ -66,13 +70,16 @@ export function useCartValidation() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshAttempt запускает повторную проверку после изменения цены на сервере
   useEffect(() => {
     if (!hydrated) return;
+    if (checked.current.kitAccessMode !== kitAccessMode) {
+      checked.current = { kitAccessMode, keys: new Set() };
+    }
+    const checkedKeys = checked.current.keys;
     const keys = productKey ? productKey.split("\n") : [];
     const currentKeys = new Set(keys);
-    for (const key of checked.current) {
-      if (!currentKeys.has(key)) checked.current.delete(key);
+    for (const key of checkedKeys) {
+      if (!currentKeys.has(key)) checkedKeys.delete(key);
     }
-    if (keys.length === 0 || keys.every((key) => checked.current.has(key)))
-      return;
+    if (keys.length === 0 || keys.every((key) => checkedKeys.has(key))) return;
 
     const requestLines = keys.map((key) => {
       const separator = key.indexOf(":");
@@ -89,7 +96,7 @@ export function useCartValidation() {
         const res = await fetch("/api/cart/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lines: requestLines }),
+          body: JSON.stringify({ lines: requestLines, kitAccessMode }),
           signal: AbortSignal.any([
             controller.signal,
             AbortSignal.timeout(VALIDATION_TIMEOUT_MS),
@@ -97,9 +104,9 @@ export function useCartValidation() {
         });
         if (!res.ok) return;
         const parsed = cartValidationResponseSchema.safeParse(await res.json());
-        if (!parsed.success) return;
+        if (!parsed.success || controller.signal.aborted) return;
 
-        for (const key of keys) checked.current.add(key);
+        for (const key of keys) checkedKeys.add(key);
         setLines((prev) => {
           const next = new Map(prev);
           for (const line of parsed.data.lines) {
@@ -124,7 +131,7 @@ export function useCartValidation() {
       controller.abort();
       setLoading(false);
     };
-  }, [hydrated, productKey, refreshAttempt, syncWithCatalog]);
+  }, [hydrated, kitAccessMode, productKey, refreshAttempt, syncWithCatalog]);
 
   const states = useMemo(() => {
     const map = new Map<string, CartLineState>();
@@ -159,7 +166,7 @@ export function useCartValidation() {
     leadTimes,
     loading,
     refresh: () => {
-      checked.current.clear();
+      checked.current.keys.clear();
       setRefreshAttempt((attempt) => attempt + 1);
     },
     notices,

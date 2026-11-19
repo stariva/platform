@@ -63,6 +63,11 @@ export const productOrderKind = pgEnum("product_order_kind", [
   "made_to_order",
 ]);
 
+export const kitAccessMode = pgEnum("kit_access_mode", [
+  "single_lesson",
+  "separate_gifts",
+]);
+
 /** Заказ на товары из каталога, оформленный на сайте и доставляемый Ozon Доставка. */
 export const productOrders = pgTable(
   "product_orders",
@@ -125,6 +130,7 @@ export const productOrders = pgTable(
     // Набор в подарок: доступ к мастер-классу не уходит на почту покупателя,
     // а выдаётся кодом на купоне в коробке — его вводит получатель.
     gift: boolean("gift").notNull().default(false),
+    kitAccessMode: kitAccessMode("kit_access_mode"),
     // Внутренняя заметка мастера, покупателю не показывается.
     masterNotes: text("master_notes"),
     // Под заказ: служба и номер отправления, которые мастер вводит при отправке;

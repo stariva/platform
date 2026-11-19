@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+import type { CreateProductOrderInput } from "@/lib/commerce/orders";
 
 test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
   "a paid kit order opens its workshop once and emails the buyer",
@@ -237,5 +238,119 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
         .from(orders)
         .where(eq(orders.workshopSlug, workshopSlug)),
     ).toHaveLength(2);
+  },
+);
+
+test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
+  "checkout requires a real workshop for each tree kit and gifts issue one code per linked box",
+  async () => {
+    const url = new URL(process.env.KIT_ACCESS_TEST_DATABASE_URL ?? "");
+    expect(url.hostname).toBe("127.0.0.1");
+    expect(url.pathname).toBe("/stariva_kit_access_test");
+    process.env.POSTGRES_URL = url.href;
+
+    mock.module("server-only", () => ({}));
+    const { db } = await import("@stariva/db");
+    const { productOrders, products, workshops, workshopAccessCodes } =
+      await import("@stariva/db/schema");
+    const { kitCodeNote } = await import("@stariva/web-api");
+    const { eq } = await import("drizzle-orm");
+    const { countKitGiftCodes, createProductOrder } = await import(
+      "@/lib/commerce/orders"
+    );
+    const { grantKitWorkshops } = await import("./kit-access");
+
+    const run = crypto.randomUUID();
+    const firstWorkshop = `first-${run}`;
+    const secondWorkshop = `second-${run}`;
+    const firstKit = "nabor-makrame-elka-bezhevyy";
+    const secondKit = "nabor-makrame-elka-shalfey";
+    const contactEmail = `bundle-${run}@example.test`;
+    const input = {
+      contactName: "Анна",
+      contactPhone: "+79001234567",
+      contactEmail,
+      kitAccessMode: "separate_gifts",
+      gift: true,
+      items: [
+        {
+          productSlug: firstKit,
+          quantity: 2,
+          name: "Бежевый",
+          ozonSku: 101,
+          price: 180_000,
+        },
+        {
+          productSlug: secondKit,
+          quantity: 1,
+          name: "Шалфей",
+          ozonSku: 102,
+          price: 180_000,
+        },
+      ],
+      checkout: null,
+      delivery: { method: "pickup", pointId: "1234" },
+    } satisfies CreateProductOrderInput;
+
+    await db.insert(workshops).values([
+      { slug: firstWorkshop, title: "Первый", category: "interior" },
+      { slug: secondWorkshop, title: "Второй", category: "interior" },
+    ]);
+    await db
+      .update(products)
+      .set({ workshopSlug: firstWorkshop })
+      .where(eq(products.slug, firstKit));
+    for (const workshopSlug of [null, `missing-${run}`]) {
+      await db
+        .update(products)
+        .set({ workshopSlug })
+        .where(eq(products.slug, secondKit));
+      await expect(createProductOrder(input)).rejects.toMatchObject({
+        name: "CatalogItemsUnavailableError",
+        productSlugs: [secondKit],
+      });
+      await expect(
+        createProductOrder({
+          ...input,
+          kitAccessMode: undefined,
+          items: input.items.filter((item) => item.productSlug === secondKit),
+        }),
+      ).rejects.toMatchObject({
+        name: "CatalogItemsUnavailableError",
+        productSlugs: [secondKit],
+      });
+    }
+    expect(
+      await db.$count(
+        productOrders,
+        eq(productOrders.contactEmail, contactEmail),
+      ),
+    ).toBe(0);
+
+    await db
+      .update(products)
+      .set({ workshopSlug: secondWorkshop })
+      .where(eq(products.slug, secondKit));
+    const order = await createProductOrder(input);
+    await db
+      .update(productOrders)
+      .set({ status: "paid" })
+      .where(eq(productOrders.id, order.id));
+    await db
+      .update(products)
+      .set({ workshopSlug: null })
+      .where(eq(products.slug, secondKit));
+
+    await Promise.all([
+      grantKitWorkshops(order.id),
+      grantKitWorkshops(order.id),
+    ]);
+    expect(await countKitGiftCodes(order.number)).toBe(3);
+    const codes = await db
+      .select({ slug: workshopAccessCodes.workshopSlug })
+      .from(workshopAccessCodes)
+      .where(eq(workshopAccessCodes.note, kitCodeNote(order.number)));
+    expect(codes.filter(({ slug }) => slug === firstWorkshop)).toHaveLength(2);
+    expect(codes.filter(({ slug }) => slug === secondWorkshop)).toHaveLength(1);
   },
 );

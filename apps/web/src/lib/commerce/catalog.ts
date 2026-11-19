@@ -18,6 +18,7 @@ export const MAX_ITEM_QUANTITY = 99;
 const MAX_PRICE_KOPECKS = 2_147_483_647;
 
 export interface RequestedCatalogItem {
+  productId?: string;
   productSlug: string;
   quantity: number;
 }
@@ -180,6 +181,12 @@ export async function resolveCatalogItems(
     const price = product ? priceInKopecks(product) : null;
     if (
       !product ||
+      requestedItems.some(
+        (item) =>
+          item.productSlug === productSlug &&
+          item.productId &&
+          item.productId !== product.id,
+      ) ||
       price === null ||
       !isCatalogProductBuyable(product) ||
       quantity > product.stockAvailable

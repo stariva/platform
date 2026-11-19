@@ -17,7 +17,7 @@ import {
   kitCodeNote,
   kitWorkshopOrderId,
 } from "@stariva/web-api";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, sum } from "drizzle-orm";
 import { getProductOrderCustomerEmail } from "@/lib/commerce/orders";
 import { findOrCreateBuyer } from "./buyer";
 import { notifyWorkshopBooked } from "./notifications";
@@ -45,15 +45,18 @@ const CODE_ATTEMPTS = 5;
  * печатают на купоне и кладут в коробку, получатель вводит его на /code.
  * Идемпотентно: повторный вебхук не выдаёт второй код на тот же курс.
  */
-async function issueGiftCodes(orderNumber: number, slugs: string[]) {
+async function issueGiftCodes(
+  orderNumber: number,
+  targets: { slug: string; copies: number }[],
+) {
   const note = kitCodeNote(orderNumber);
   await db.transaction(async (tx) => {
     // Два вебхука подряд не должны выдать два кода на один курс
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`gift-codes:${note}`}, 0))`,
     );
-    for (const slug of slugs) {
-      const [existing] = await tx
+    for (const { slug, copies } of targets) {
+      const existing = await tx
         .select({ id: workshopAccessCodes.id })
         .from(workshopAccessCodes)
         .where(
@@ -62,28 +65,27 @@ async function issueGiftCodes(orderNumber: number, slugs: string[]) {
             eq(workshopAccessCodes.note, note),
             eq(workshopAccessCodes.workshopSlug, slug),
           ),
-        )
-        .limit(1);
-      if (existing) continue;
-
-      let issued = false;
-      for (let attempt = 0; attempt < CODE_ATTEMPTS && !issued; attempt++) {
-        const [row] = await tx
-          .insert(workshopAccessCodes)
-          .values({
-            id: crypto.randomUUID(),
-            code: generateAccessCode(),
-            workshopSlug: slug,
-            channel: "kit",
-            // Мастер-класс уже оплачен в цене набора
-            amount: 0,
-            note,
-          })
-          .onConflictDoNothing({ target: workshopAccessCodes.code })
-          .returning({ id: workshopAccessCodes.id });
-        issued = Boolean(row);
+        );
+      for (let copy = existing.length; copy < copies; copy++) {
+        let issued = false;
+        for (let attempt = 0; attempt < CODE_ATTEMPTS && !issued; attempt++) {
+          const [row] = await tx
+            .insert(workshopAccessCodes)
+            .values({
+              id: crypto.randomUUID(),
+              code: generateAccessCode(),
+              workshopSlug: slug,
+              channel: "kit",
+              // Мастер-класс уже оплачен в цене набора
+              amount: 0,
+              note,
+            })
+            .onConflictDoNothing({ target: workshopAccessCodes.code })
+            .returning({ id: workshopAccessCodes.id });
+          issued = Boolean(row);
+        }
+        if (!issued) throw new Error("access_code_not_issued");
       }
-      if (!issued) throw new Error("access_code_not_issued");
       console.info(
         `[workshops/kit] Заказ №${orderNumber}: подарок, выдан код на «${slug}»`,
       );
@@ -111,6 +113,7 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
       id: productOrders.id,
       number: productOrders.number,
       gift: productOrders.gift,
+      kitAccessMode: productOrders.kitAccessMode,
       userId: productOrders.userId,
       contactEmail: productOrders.contactEmail,
       contactName: productOrders.contactName,
@@ -123,7 +126,10 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
 
   // Новые позиции используют снимок; старые сохраняют связь через каталог.
   const linked = await db
-    .selectDistinct({ slug: workshops.slug })
+    .select({
+      slug: workshops.slug,
+      quantity: sum(productOrderItems.quantity).mapWith(Number),
+    })
     .from(productOrderItems)
     .leftJoin(products, eq(products.slug, productOrderItems.productSlug))
     .innerJoin(
@@ -133,13 +139,17 @@ export async function grantKitWorkshops(productOrderId: string): Promise<void> {
         sql`case when ${productOrderItems.workshopLinkCaptured} then ${productOrderItems.workshopSlug} else ${products.workshopSlug} end`,
       ),
     )
-    .where(and(eq(productOrderItems.orderId, productOrderId)));
+    .where(eq(productOrderItems.orderId, productOrderId))
+    .groupBy(workshops.slug);
   if (linked.length === 0) return;
 
   if (order.gift) {
     await issueGiftCodes(
       order.number,
-      linked.map(({ slug }) => slug),
+      linked.map(({ slug, quantity }) => ({
+        slug,
+        copies: order.kitAccessMode === "separate_gifts" ? quantity : 1,
+      })),
     );
     return;
   }
