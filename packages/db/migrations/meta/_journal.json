@@ -505,6 +505,13 @@
       "when": 1795103503585,
       "tag": "0071_sage_kit",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1795105681560,
+      "tag": "0072_link_color_kits_to_ozon",
+      "breakpoints": true
     }
   ]
 }
