@@ -8,6 +8,7 @@ import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 import { GNOMES_PATH } from "./gnomy/_data";
+import { ELKA_KIT_PATH } from "./nabor-elka/_data";
 
 export const revalidate = 3600;
 
@@ -28,6 +29,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${BASE_URL}${BIG_TREE_PATH}`,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}${ELKA_KIT_PATH}`,
       changeFrequency: "weekly",
       priority: 0.8,
     },

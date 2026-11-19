@@ -1,3 +1,6 @@
+/** Лендинг набора для плетения ёлки — на него ведёт реклама и checkout. */
+export const ELKA_KIT_PATH = "/nabor-elka";
+
 export const FAQ = [
   {
     question: "Справится ли новичок?",
