@@ -23,7 +23,14 @@ const revalidate = admin.revalidate.handler(({ input, context }) => {
   return { revalidated: input.paths.length };
 });
 
+const notifyBoostyOrder = admin.notifyBoostyOrder.handler(
+  async ({ input, context }) => {
+    return { sent: await context.services.notifyBoostyOrder(input.orderId) };
+  },
+);
+
 export const adminRouter = {
   ozon: { pushStock },
   revalidate,
+  notifyBoostyOrder,
 };

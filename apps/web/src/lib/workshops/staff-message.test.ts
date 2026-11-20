@@ -12,6 +12,7 @@ const order = {
   currency: "RUB",
   status: "paid",
   paymentId: null,
+  boostyActivationRequestedAt: null,
   createdAt: new Date("2026-10-01T10:00:00Z"),
   paidAt: new Date("2026-10-01T10:05:00Z"),
   contactEmail: "buyer@example.test",
@@ -109,6 +110,7 @@ for (const source of ["kit", "ozon"]) {
         {
           ...order,
           paymentId: "payment",
+          boostyActivationRequestedAt: null,
           attribution: { first: touch, last: touch },
         },
         { title: "Ёлка макраме", releaseAt: null },

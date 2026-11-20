@@ -160,6 +160,8 @@ export const workshops = pgTable(
       .default(sql`'{"howTo":"","shops":[],"outro":"","image":""}'::jsonb`),
 
     ozonUrl: text("ozon_url"),
+    // Платный пост Boosty для покупки этого мастер-класса.
+    boostyUrl: text("boosty_url"),
     // Закрытый чат поддержки покупателей (приглашение в Telegram). Ссылку
     // видят только купившие, поэтому на витрину она не попадает. null — у
     // курса нет чата.

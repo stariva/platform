@@ -28,6 +28,21 @@ function storefrontApi(timeoutMs: number): WebClient | null {
   );
 }
 
+/** После ручной сверки Boosty отправляет покупателю письмо со ссылкой входа. */
+export async function notifyBoostyOrder(orderId: string): Promise<boolean> {
+  try {
+    const api = storefrontApi(15_000);
+    if (!api) return false;
+    return (await api.admin.notifyBoostyOrder({ orderId })).sent;
+  } catch (error) {
+    logger.warn("storefront.boosty_notify.failed", {
+      orderId,
+      error: String(error),
+    });
+    return false;
+  }
+}
+
 /**
  * Просит витрину продублировать остаток товаров на FBS-склад Ozon (и скрыть
  * готовые изделия с витрины Ozon либо показать те, что продаются и там): без

@@ -89,6 +89,7 @@ export function ElkaTariffs({
           >
             <WorkshopPreorderButton
               slug={bigTree.slug}
+              boostyUrl={bigTree.boostyUrl}
               price={bigTree.price}
               title={bigTree.title}
               preorder={Boolean(bigPreorder)}
@@ -126,6 +127,7 @@ export function ElkaTariffs({
             >
               <WorkshopPreorderButton
                 slug={workshop.slug}
+                boostyUrl={workshop.boostyUrl}
                 bundle={bundle.slug}
                 price={kombo.price}
                 title={`Комбо «${bundle.title}»`}

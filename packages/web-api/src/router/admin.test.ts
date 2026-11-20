@@ -108,6 +108,26 @@ test("revalidate passes the paths to the storefront", async () => {
   expect(revalidatePaths).toHaveBeenCalledWith(paths);
 });
 
+test("Boosty purchase notification needs the admin secret", async () => {
+  const notifyBoostyOrder = mock(async (_orderId: string) => true);
+  const orderId = "ca3c92e8-1de4-4b88-8f73-249719e87b80";
+  const [error] = await safe(
+    wireClient({
+      authorization: `Bearer ${JOBS_SECRET}`,
+      services: { notifyBoostyOrder },
+    }).admin.notifyBoostyOrder({ orderId }),
+  );
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(notifyBoostyOrder).not.toHaveBeenCalled();
+
+  const result = await wireClient({
+    authorization: `Bearer ${secret}`,
+    services: { notifyBoostyOrder },
+  }).admin.notifyBoostyOrder({ orderId });
+  expect(result).toEqual({ sent: true });
+  expect(notifyBoostyOrder).toHaveBeenCalledWith(orderId);
+});
+
 test("revalidate refuses anything that is not a page path", async () => {
   const revalidatePaths = mock((_paths: string[]) => {});
   for (const paths of [[], ["https://evil.example/"], ["/a?b=1"]]) {

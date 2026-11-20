@@ -11,6 +11,7 @@ import { WORKSHOP_SECTION_ID } from "../_data";
  */
 export function WorkshopPreorderButton({
   slug,
+  boostyUrl,
   price,
   title,
   preorder,
@@ -23,6 +24,7 @@ export function WorkshopPreorderButton({
   /** Своя подпись кнопки — в блоке тарифов. */
   buyLabel?: string;
   slug: string;
+  boostyUrl?: string;
   price: number;
   title: string;
   preorder: boolean;
@@ -31,6 +33,7 @@ export function WorkshopPreorderButton({
   return (
     <WorkshopPurchase
       slug={slug}
+      boostyUrl={boostyUrl}
       bundle={bundle}
       price={price}
       title={title}

@@ -673,6 +673,7 @@ export default async function WorkshopDetailPage({
 
                   <WorkshopPurchase
                     slug={workshop.slug}
+                    boostyUrl={workshop.boostyUrl}
                     price={workshop.price}
                     title={workshop.title}
                     buyLabel={

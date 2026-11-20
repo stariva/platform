@@ -99,6 +99,9 @@ export const ozonContract = {
 
 export const adminContract = {
   ozon: ozonContract,
+  notifyBoostyOrder: base
+    .input(z.object({ orderId: z.string().uuid() }))
+    .output(z.object({ sent: z.boolean() })),
 
   /**
    * Сбрасывает кэш страниц витрины после правок каталога. Путь с `[…]`

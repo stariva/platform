@@ -43,7 +43,11 @@ export function workshopReceiptsExpected(order: {
   status: string;
   paymentId: string | null;
 }): number {
-  return order.status === "paid" && order.paymentId ? 1 : 0;
+  return order.status === "paid" &&
+    order.paymentId &&
+    !order.paymentId.startsWith("boosty:")
+    ? 1
+    : 0;
 }
 
 export interface ReceiptStats {

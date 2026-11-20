@@ -60,6 +60,7 @@ export const EMPTY_WORKSHOP: WorkshopFormValues = {
   materialFiles: [],
   brief: EMPTY_WORKSHOP_BRIEF_VALUES,
   ozonUrl: "",
+  boostyUrl: "",
   supportChatUrl: "",
   featured: false,
   sortOrder: 0,
@@ -457,6 +458,14 @@ export function WorkshopForm({
               error={errors.ozonUrl?.message}
             >
               <Input id="ozonUrl" {...register("ozonUrl")} />
+            </FieldRow>
+            <FieldRow
+              label="Платный пост Boosty"
+              htmlFor="boostyUrl"
+              hint="Если указать ссылку, покупатели этого мастер-класса смогут выбрать оплату через Boosty."
+              error={errors.boostyUrl?.message}
+            >
+              <Input id="boostyUrl" {...register("boostyUrl")} />
             </FieldRow>
             <FieldRow
               label="Чат поддержки"

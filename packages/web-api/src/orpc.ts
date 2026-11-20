@@ -25,6 +25,7 @@ import {
  * Telegram, заказы). Витрина передаёт её в контекст, процедуры только зовут.
  */
 export interface WebServices {
+  notifyBoostyOrder: (orderId: string) => Promise<boolean>;
   /** Рассылка о мастер-классах: apps/web/src/lib/workshops/notifications.ts */
   runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
   /** Проверка зависших заявок НПД без повторного запроса в ФНС. */

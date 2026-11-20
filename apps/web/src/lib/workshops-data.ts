@@ -82,6 +82,7 @@ export interface Workshop {
   materialFiles?: WorkshopMaterialFile[];
   brief: WorkshopBrief;
   ozonUrl?: string;
+  boostyUrl?: string;
   featured?: boolean;
   /** Один отзыв для страницы курса (вместо общей ленты отзывов с Ozon). */
   testimonial?: { text: string; author: string };
