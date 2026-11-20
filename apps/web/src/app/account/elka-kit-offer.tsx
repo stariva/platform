@@ -63,8 +63,8 @@ export function ElkaKitOffer({
         </div>
         <div className={hasImage ? "col-span-2 sm:col-start-2" : ""}>
           <p className="text-sm leading-relaxed text-dark-grey">
-            Мастер-класс у вас уже есть. В наборе — 100 м хлопкового шнура,
-            деревянная основа, бусины и звезда.
+            Мастер-класс у вас уже есть. В наборе — 110–120 м хлопкового шнура,
+            уже нарезанного на отрезки, деревянная основа, бусины и звезда.
             {product.price * 100 > price
               ? ` Обычная цена — ${formatPrice(product.price)}.`
               : ""}
