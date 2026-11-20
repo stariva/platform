@@ -102,6 +102,9 @@ function getProviderClient(provider: StorageProvider): S3Client {
   const client = new S3Client({
     region,
     credentials: { accessKeyId, secretAccessKey },
+    // Presigned PUT has no Body yet. With the SDK default, its URL contains
+    // CRC32 for an empty payload, so uploading a real file fails with HTTP 400.
+    requestChecksumCalculation: "WHEN_REQUIRED",
     ...(endpoint ? { endpoint, forcePathStyle } : {}),
   });
   cachedClients.set(provider, client);

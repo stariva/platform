@@ -95,10 +95,30 @@ function attemptCopy(file: MirrorBatch["files"][number]): Promise<void> {
       put.setHeader("Content-Length", String(file.size));
       put.once("error", fail);
       put.once("response", (target) => {
-        // Тело ответа не нужно: статус говорит всё
-        target.resume();
-        if (target.statusCode === 200) finish();
-        else fail(new Error(`PUT: HTTP ${target.statusCode}`));
+        if (target.statusCode === 200) {
+          target.resume();
+          finish();
+          return;
+        }
+        // S3 сообщает причину 400 в XML. Не выводим весь ответ: в нём могут
+        // быть детали подписи; достаточно кода и короткого сообщения.
+        let body = "";
+        target.setEncoding("utf8");
+        target.on("data", (chunk: string) => {
+          if (body.length < 8192) body += chunk.slice(0, 8192 - body.length);
+        });
+        target.once("error", fail);
+        target.once("end", () => {
+          const code = /<Code>([^<]{1,100})<\/Code>/.exec(body)?.[1];
+          const message = /<Message>([^<]{1,300})<\/Message>/.exec(body)?.[1];
+          fail(
+            new Error(
+              `PUT: HTTP ${target.statusCode}` +
+                (code ? ` ${code}` : "") +
+                (message ? `: ${message}` : ""),
+            ),
+          );
+        });
       });
       response.once("error", fail);
       response.pipe(put);
