@@ -1,7 +1,7 @@
 import { logger } from "@stariva/config";
 import { db, inArray } from "@stariva/db";
-import { videoRenditions, workshops } from "@stariva/db/schema";
 import type { videoRenditionStatus } from "@stariva/db/schema";
+import { videoRenditions, workshops } from "@stariva/db/schema";
 import {
   activeStorageProvider,
   deleteObjects,
