@@ -152,6 +152,41 @@ export const storageContract = {
         renditions: z.number().int().nonnegative(),
       }),
     ),
+
+  /**
+   * Пачка файлов для копирования из активного бакета в зеркало (VK Cloud):
+   * подписанное чтение из активного и заливка в зеркало. Воркер копирует
+   * пачку и зовёт процедуру снова, пока files не опустеет. Повтор прогона
+   * безопасен: скопированное исчезает из следующей пачки. `configured:
+   * false` — зеркало не задано в окружении, воркер тихо ждёт следующего
+   * прогона.
+   */
+  mirrorSync: jobProcedure
+    .errors({ [StorageNotConfiguredError.code]: StorageNotConfiguredError })
+    .input(
+      z
+        .object({
+          maxFiles: z.number().int().positive().max(1000).optional(),
+          maxBytes: z.number().int().positive().optional(),
+        })
+        .optional(),
+    )
+    .output(
+      z.object({
+        configured: z.boolean(),
+        files: z.array(
+          z.object({
+            key: z.string(),
+            size: z.number().int().nonnegative(),
+            contentType: z.string(),
+            getUrl: z.url(),
+            putUrl: z.url(),
+          }),
+        ),
+        remainingFiles: z.number().int().nonnegative(),
+        remainingBytes: z.number().int().nonnegative(),
+      }),
+    ),
 };
 
 /** На сайте нет OAuth-токена Метрики или Директа. */

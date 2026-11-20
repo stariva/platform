@@ -1,8 +1,8 @@
 import { beforeEach, expect, mock, test } from "bun:test";
-import { NextRequest } from "next/server";
 import type { CampaignAttribution } from "@stariva/db/schema";
-import type { CartEventInput } from "@/lib/cart/event-log";
+import { NextRequest } from "next/server";
 import { ATTRIBUTION_COOKIE } from "@/lib/campaign-attribution";
+import type { CartEventInput } from "@/lib/cart/event-log";
 
 const recorded: {
   event: CartEventInput;

@@ -15,8 +15,8 @@ import { COMMUNITY_LINKS } from "@/lib/community";
 import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { getWorkshopLessons, isPreorder } from "@/lib/workshops-data";
-import { VideoPlayer } from "./video-player";
 import { ElkaKitOffer } from "../../../elka-kit-offer";
+import { VideoPlayer } from "./video-player";
 
 export const dynamic = "force-dynamic";
 

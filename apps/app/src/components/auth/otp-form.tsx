@@ -1,5 +1,6 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { paths } from "@stariva/config";
 import {
   Button,
@@ -20,7 +21,6 @@ import {
   InputOTPSlot,
 } from "@stariva/ui";
 import { type OTPFormData, otpFormSchema } from "@stariva/validators";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";

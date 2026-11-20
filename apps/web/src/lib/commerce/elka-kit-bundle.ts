@@ -42,13 +42,54 @@ export interface KitBundleLine {
   fulfillmentType?: string;
 }
 
+/**
+ * Цены набора складываются из материалов и видеоурока — по 990 ₽. Урок всегда
+ * оплачивается полностью за каждый доступ, скидка действует только на
+ * материалы: 2 набора — по 900 ₽ (−90 ₽ с комплекта), 3 набора — по 810 ₽
+ * (−180 ₽ с комплекта).
+ */
+const KIT_LESSON_PRICE_KOPECKS = 99_000;
+const KIT_MATERIALS_LIST_PRICE_KOPECKS = 99_000;
+const KIT_MATERIALS_UNIT_PRICE_KOPECKS: Partial<Record<number, number>> = {
+  2: 90_000,
+  3: 81_000,
+};
+
+function kitLessonsTotal(count: number, mode: KitAccessMode): number {
+  return KIT_LESSON_PRICE_KOPECKS * (mode === "single_lesson" ? 1 : count);
+}
+
 export function kitBundleTotal(
   count: number,
   mode: KitAccessMode,
 ): number | null {
-  if (count === 2) return mode === "single_lesson" ? 333_000 : 378_000;
-  if (count === 3) return mode === "single_lesson" ? 468_000 : 540_000;
-  return null;
+  const materials = KIT_MATERIALS_UNIT_PRICE_KOPECKS[count];
+  if (!materials) return null;
+  return materials * count + kitLessonsTotal(count, mode);
+}
+
+/**
+ * Зачёркнутая база комплекта: те же доступы к уроку, но материалы без
+ * скидки. Экономия на материалах — 180 ₽ для двух наборов, 540 ₽ для трёх.
+ */
+export function kitBundleBaseTotal(
+  count: number,
+  mode: KitAccessMode,
+): number | null {
+  const materials = KIT_MATERIALS_UNIT_PRICE_KOPECKS[count];
+  if (!materials) return null;
+  return (
+    KIT_MATERIALS_LIST_PRICE_KOPECKS * count + kitLessonsTotal(count, mode)
+  );
+}
+
+/** Цена одного набора внутри комплекта: 1 395 ₽, 1 890 ₽ и так далее. */
+export function kitBundleUnitPrice(
+  count: number,
+  mode: KitAccessMode,
+): number | null {
+  const total = kitBundleTotal(count, mode);
+  return total && total % count === 0 ? total / count : null;
 }
 
 /** Return null unless the entire order is an eligible two or three kit bundle. */

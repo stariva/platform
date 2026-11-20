@@ -12,6 +12,7 @@ import {
   isOzonSellerConfigured,
   pullStockFromOzon,
 } from "../services/ozon-stock";
+import { claimMirrorSyncBatch } from "../services/storage-mirror";
 import {
   claimNextVideo,
   completeRendition,
@@ -108,6 +109,13 @@ const storageSweep = jobs.storage.sweep.handler(async ({ input, errors }) => {
   return { deleted, bytes, renditions };
 });
 
+const storageMirrorSync = jobs.storage.mirrorSync.handler(
+  async ({ input, errors }) => {
+    if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
+    return claimMirrorSyncBatch(input ?? {});
+  },
+);
+
 // Визиты за день закрываются через полчаса после полуночи, а Директ
 // дописывает конверсии задним числом — поэтому окна с запасом.
 const METRIKA_DAYS = 7;
@@ -191,7 +199,7 @@ export const jobsRouter = {
     ),
   },
   reminders: { sweep },
-  storage: { sweep: storageSweep },
+  storage: { sweep: storageSweep, mirrorSync: storageMirrorSync },
   analytics: { metrikaGoals, metrikaLogs, directReport },
   ozon: { syncStock: ozonSyncStock },
   npd: {

@@ -1,5 +1,5 @@
-import type { CatalogWorkshop } from "@/lib/catalog";
 import { Badge } from "@/components/ui/Primitives";
+import type { CatalogWorkshop } from "@/lib/catalog";
 
 export function WorkshopCard({
   workshop,

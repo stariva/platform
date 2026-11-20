@@ -5,12 +5,12 @@ import {
   type WorkshopRow,
   workshops,
 } from "@stariva/db/schema";
+import { currentWorkshopPrice } from "@stariva/validators";
 import { cache } from "react";
 import {
   isGiftOnly,
   preorderBonusParent,
 } from "@/lib/workshops/preorder-bonus";
-import { currentWorkshopPrice } from "@stariva/validators";
 import {
   formatDurationLabel,
   type Workshop,

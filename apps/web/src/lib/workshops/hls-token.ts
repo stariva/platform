@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import type { StorageProvider } from "@stariva/storage";
 
 /**
  * Пропуск к кускам HLS-версии урока. Плеер получает его вместе с адресом
@@ -17,6 +18,12 @@ export interface HlsGrant {
   expiresAt: number;
   /** Отпечаток cookie сессии; null — бесплатное превью без входа. */
   session: string | null;
+  /**
+   * Из какого хранилища отдавать файлы: когда видео смотрят из зеркала,
+   * пропуск закрепляет выбор за ним на всё время просмотра. null — активное
+   * (пропуски, выданные до появления зеркала, продолжают работать).
+   */
+  storage: StorageProvider | null;
 }
 
 /** Пропуск живёт дольше урока с паузами; истёк — плеер возьмёт новый. */
@@ -42,10 +49,19 @@ export function sessionFingerprint(cookieValue: string | null | undefined) {
 
 export function signHlsGrant(grant: HlsGrant, secret: string): string {
   const payload = Buffer.from(
-    JSON.stringify({ p: grant.prefix, e: grant.expiresAt, s: grant.session }),
+    JSON.stringify({
+      p: grant.prefix,
+      e: grant.expiresAt,
+      s: grant.session,
+      // null опускаем: пропуски без поля — из активного хранилища
+      ...(grant.storage ? { t: grant.storage } : {}),
+    }),
   ).toString("base64url");
   return `${payload}.${sign(payload, secret).toString("base64url")}`;
 }
+
+/** Хранилища, которые бывают в пропуске; прочее — как отсутствие поля. */
+const GRANT_STORAGES: readonly string[] = ["yandex", "vkcloud"];
 
 /** Разбирает пропуск. null — подделан, повреждён или истёк. */
 export function verifyHlsGrant(
@@ -68,9 +84,17 @@ export function verifyHlsGrant(
   } catch {
     return null;
   }
-  const { p, e, s } = (data ?? {}) as Record<string, unknown>;
+  const { p, e, s, t } = (data ?? {}) as Record<string, unknown>;
   if (typeof p !== "string" || typeof e !== "number") return null;
   if (s !== null && typeof s !== "string") return null;
+  if (t !== undefined && t !== null && !GRANT_STORAGES.includes(t as string)) {
+    return null;
+  }
   if (e <= nowSeconds) return null;
-  return { prefix: p, expiresAt: e, session: s };
+  return {
+    prefix: p,
+    expiresAt: e,
+    session: s,
+    storage: t !== undefined && t !== null ? (t as StorageProvider) : null,
+  };
 }

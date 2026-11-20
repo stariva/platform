@@ -50,7 +50,8 @@ export async function applyWorkshopPayment(
   });
   if (bonus) await grantAccess(order.userId, bonus.slug, order.id);
 
-  for (const extra of getBundle(order.bundleSlug)?.extras ?? []) {
+  const bundle = getBundle(order.bundleSlug);
+  for (const extra of bundle?.extras ?? []) {
     await grantAccess(order.userId, extra.slug, order.id);
   }
 

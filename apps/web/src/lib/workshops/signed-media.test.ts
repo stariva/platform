@@ -11,6 +11,20 @@ let owned = true;
 let admin = false;
 let releaseAt: string | undefined;
 let rateLimited = false;
+/** STORAGE_VIDEO_READ_PROVIDER=vkcloud: просмотр видео из зеркала. */
+let videoReadsFromMirror = false;
+/** objectExists в зеркале: скопирован ли туда исходник MP4. */
+let mirrorHasSource = true;
+/** getReadyRendition: null — видео ещё не нарезано, отдаём MP4. */
+let rendition: {
+  hlsPrefix: string;
+  playlist: string;
+  mirrored: boolean;
+} | null = {
+  hlsPrefix: "workshops/test/hls/lesson/attempt",
+  playlist: "master.m3u8",
+  mirrored: false,
+};
 const materialFiles = [
   { key: "brief.pdf", label: "Бриф" },
   { key: "workshops/test/materials/first/guide.pdf", label: "Первый файл" },
@@ -24,7 +38,14 @@ mock.module("@stariva/config", () => ({
 mock.module("@stariva/storage", () => ({
   ...storage,
   isStorageConfigured: () => true,
-  getDownloadUrl: async (key: string) => `https://storage.example.test/${key}`,
+  isProviderConfigured: () => true,
+  activeStorageProvider: () => "yandex",
+  videoStorageProvider: () => (videoReadsFromMirror ? "vkcloud" : "yandex"),
+  objectExists: async () => mirrorHasSource,
+  getDownloadUrl: async (
+    key: string,
+    options?: { provider?: "yandex" | "vkcloud" },
+  ) => `https://${options?.provider ?? "yandex"}.example.test/${key}`,
 }));
 mock.module("@/lib/workshops/video-access", () => ({
   isVideoSignRateLimited: async () => rateLimited,
@@ -35,10 +56,7 @@ mock.module("@stariva/web-api", () => ({
   ...webApi,
   canWatchCourse: async () => owned || admin,
   isAdminUserId: async () => admin,
-  getReadyRendition: async () => ({
-    hlsPrefix: "workshops/test/hls/lesson/attempt",
-    playlist: "master.m3u8",
-  }),
+  getReadyRendition: async () => rendition,
 }));
 mock.module("@/lib/workshops/workshops-db", () => ({
   getWorkshopBySlug: async () => ({
@@ -259,4 +277,79 @@ test("materials with the same filename resolve to their own storage keys", async
     });
   }
   assert.equal(urls.size, 2);
+});
+
+test("a mirrored rendition is watched from the mirror, an unsynced one from the active bucket", async () => {
+  free = false;
+  videoReadsFromMirror = true;
+  rendition = {
+    hlsPrefix: "workshops/test/hls/lesson/attempt",
+    playlist: "master.m3u8",
+    mirrored: false,
+  };
+
+  // Нарезка ещё не скопирована в зеркало — пропуск закрепляет активное хранилище
+  const unsynced = await sign("user", "better-auth.session_token=token.sig");
+  assert.ok(unsynced.status === "ok" && unsynced.type === "hls");
+  const unsyncedToken = verifyHlsGrant(
+    unsynced.url.split("/").at(-2) ?? "",
+    secret,
+  );
+  assert.equal(unsyncedToken?.storage, "yandex");
+
+  // Синхронизация долила папку целиком — зритель уходит в зеркало
+  rendition = {
+    hlsPrefix: "workshops/test/hls/lesson/attempt",
+    playlist: "master.m3u8",
+    mirrored: true,
+  };
+  const mirrored = await sign("user", "better-auth.session_token=token.sig");
+  assert.ok(mirrored.status === "ok" && mirrored.type === "hls");
+  assert.equal(
+    verifyHlsGrant(mirrored.url.split("/").at(-2) ?? "", secret)?.storage,
+    "vkcloud",
+  );
+
+  videoReadsFromMirror = false;
+  const sameProvider = await sign(
+    "user",
+    "better-auth.session_token=token.sig",
+  );
+  assert.ok(sameProvider.status === "ok" && sameProvider.type === "hls");
+  assert.equal(
+    verifyHlsGrant(sameProvider.url.split("/").at(-2) ?? "", secret)?.storage,
+    null,
+  );
+
+  videoReadsFromMirror = false;
+  rendition = {
+    hlsPrefix: "workshops/test/hls/lesson/attempt",
+    playlist: "master.m3u8",
+    mirrored: false,
+  };
+});
+
+test("an uncut video falls back to the active bucket until the mirror has the file", async () => {
+  free = false;
+  videoReadsFromMirror = true;
+  rendition = null;
+
+  // Исходник ещё не скопирован в зеркало — короткая ссылка в активный бакет
+  mirrorHasSource = false;
+  const active = await sign("user", "better-auth.session_token=token.sig");
+  assert.ok(active.status === "ok" && active.type === "mp4");
+  assert.match(active.url, /^https:\/\/yandex\.example\.test\//);
+
+  // Синхронизация долила исходник — ссылка ведёт в зеркало
+  mirrorHasSource = true;
+  const mirrored = await sign("user", "better-auth.session_token=token.sig");
+  assert.ok(mirrored.status === "ok" && mirrored.type === "mp4");
+  assert.match(mirrored.url, /^https:\/\/vkcloud\.example\.test\//);
+
+  videoReadsFromMirror = false;
+  rendition = {
+    hlsPrefix: "workshops/test/hls/lesson/attempt",
+    playlist: "master.m3u8",
+    mirrored: false,
+  };
 });

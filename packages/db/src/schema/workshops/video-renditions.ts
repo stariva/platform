@@ -26,6 +26,11 @@ export const videoRenditions = pgTable("video_renditions", {
   // перерезают в новую версию, плеер показывает старую
   readyHlsPrefix: text("ready_hls_prefix"),
   readyVersion: integer("ready_version"),
+  // Готовая нарезка скопирована во второе хранилище (зеркало) целиком:
+  // с этого момента её можно отдавать зрителям оттуда. Сбрасывается при
+  // новой готовой нарезке, выставляет синхронизация зеркала
+  // (jobs.storage.mirrorSync) по спискам бакетов
+  mirrorSyncedAt: timestamp("mirror_synced_at", { withTimezone: true }),
   durationSeconds: integer("duration_seconds"),
   attempts: integer("attempts").notNull().default(0),
   // До этого времени видео занято воркером (или ждёт повтора после ошибки)

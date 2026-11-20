@@ -14,8 +14,13 @@ import {
 } from "@stariva/db";
 import { videoRenditions, workshops } from "@stariva/db/schema";
 import {
+  activeStorageProvider,
+  countUnderPrefixes,
   hlsPlaylistFile,
+  isMirrorFolderComplete,
+  listObjects,
   objectExists,
+  otherStorageProvider,
   workshopHlsPrefix,
 } from "@stariva/storage";
 
@@ -33,6 +38,12 @@ export interface ReadyRendition {
   hlsPrefix: string;
   /** index.m3u8 (одно качество) или master.m3u8 (несколько). */
   playlist: string;
+  /**
+   * Папка скопирована в зеркало целиком: зрителям нарезку можно отдавать и
+   * из второго хранилища (STORAGE_VIDEO_READ_PROVIDER). Отсутствие кусков в
+   * нём плеер бы увидел как обрыв посреди урока.
+   */
+  mirrored: boolean;
 }
 
 /**
@@ -53,6 +64,7 @@ export async function getReadyRendition(
       return {
         hlsPrefix: row.readyHlsPrefix,
         playlist: hlsPlaylistFile(row.readyVersion ?? 1),
+        mirrored: Boolean(row.mirrorSyncedAt),
       };
     }
     // Готово, но без ready_*: дорезал воркер, ещё не знающий о версиях
@@ -60,6 +72,7 @@ export async function getReadyRendition(
       return {
         hlsPrefix: row.hlsPrefix,
         playlist: hlsPlaylistFile(row.version),
+        mirrored: Boolean(row.mirrorSyncedAt),
       };
     }
     return null;
@@ -275,7 +288,8 @@ export async function extendRenditionLease(
 /**
  * Воркер залил все куски. Отмечаем готовым, только если плейлист правда
  * лежит в бакете: он заливается последним (у версии 2 — master.m3u8). С
- * этого момента зрители смотрят новую нарезку.
+ * этого момента зрители смотрят новую нарезку. Отметку зеркала сбрасываем:
+ * новая папка ещё не скопирована, синхронизация выставит её снова.
  */
 export async function completeRendition(
   attempt: RenditionAttempt,
@@ -294,6 +308,7 @@ export async function completeRendition(
       hlsPrefix,
       readyHlsPrefix: hlsPrefix,
       readyVersion: version,
+      mirrorSyncedAt: null,
       durationSeconds: Math.round(durationSeconds),
       leaseUntil: null,
       error: null,
@@ -320,4 +335,92 @@ export async function failRendition(
       updatedAt: now,
     })
     .where(isCurrentAttempt(attempt));
+}
+
+/**
+ * Папка нарезки, которую видят зрители: у текущей готовой попытки она в
+ * ready_hls_prefix, у старой нарезки без ready_* (дорезал воркер до версий)
+ * — в hls_prefix.
+ */
+function viewerFolder(row: {
+  status: string;
+  hlsPrefix: string;
+  readyHlsPrefix: string | null;
+}): string | null {
+  return row.readyHlsPrefix ?? (row.status === "ready" ? row.hlsPrefix : null);
+}
+
+/**
+ * Сверяет листинги активного бакета и зеркала и обновляет отметки «готовая
+ * нарезка скопирована в зеркало целиком»: по ним витрина решает, из какого
+ * хранилища отдавать видео зрителям. Отметка ставится только про ту папку,
+ * которую проверили: пока шла проверка, нарезку могли перерезать, и новая
+ * папка обязана снова дождаться своей синхронизации.
+ */
+/** Папка мастер-классов в закрытом бакете: всё, что копирует зеркало. */
+const WORKSHOPS_PREFIX = "workshops/";
+
+export async function syncRenditionMirrorFlags(
+  source?: { key: string }[],
+  mirror?: { key: string }[],
+): Promise<{ marked: number; cleared: number }> {
+  const rows = await db
+    .select({
+      videoKey: videoRenditions.videoKey,
+      status: videoRenditions.status,
+      hlsPrefix: videoRenditions.hlsPrefix,
+      readyHlsPrefix: videoRenditions.readyHlsPrefix,
+      mirrorSyncedAt: videoRenditions.mirrorSyncedAt,
+    })
+    .from(videoRenditions);
+
+  const folders = [
+    ...new Set(
+      rows
+        .map((row) => viewerFolder(row))
+        .filter((folder): folder is string => Boolean(folder)),
+    ),
+  ];
+  if (folders.length === 0) return { marked: 0, cleared: 0 };
+
+  // Сначала читаем строки, потом — листинги: пока мы смотрели базу, нарезка
+  // могла стать готовой, и её файлы уже должны быть в активном бакете.
+  const [sourceObjects, mirrorObjects] = await Promise.all([
+    source ?? listObjects(WORKSHOPS_PREFIX, activeStorageProvider()),
+    mirror ??
+      listObjects(
+        WORKSHOPS_PREFIX,
+        otherStorageProvider(activeStorageProvider()),
+      ),
+  ]);
+  const sourceCounts = countUnderPrefixes(sourceObjects, folders);
+  const mirrorCounts = countUnderPrefixes(mirrorObjects, folders);
+  const now = new Date();
+  let marked = 0;
+  let cleared = 0;
+
+  for (const row of rows) {
+    const folder = viewerFolder(row);
+    if (!folder) continue;
+    // Забор от перерезки между чтением строк и записью: условие про ту
+    // самую папку, полноту которой проверили
+    const sameFolder = row.readyHlsPrefix
+      ? eq(videoRenditions.readyHlsPrefix, folder)
+      : and(
+          isNull(videoRenditions.readyHlsPrefix),
+          eq(videoRenditions.status, "ready"),
+          eq(videoRenditions.hlsPrefix, folder),
+        );
+    const complete = isMirrorFolderComplete(sourceCounts, mirrorCounts, folder);
+    const changed =
+      (complete && !row.mirrorSyncedAt) || (!complete && row.mirrorSyncedAt);
+    if (!changed) continue;
+    const [updated] = await db
+      .update(videoRenditions)
+      .set({ mirrorSyncedAt: complete ? now : null })
+      .where(and(eq(videoRenditions.videoKey, row.videoKey), sameFolder))
+      .returning({ videoKey: videoRenditions.videoKey });
+    if (updated) complete ? marked++ : cleared++;
+  }
+  return { marked, cleared };
 }

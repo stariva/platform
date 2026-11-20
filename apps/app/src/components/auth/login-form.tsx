@@ -1,5 +1,6 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { paths } from "@stariva/config";
 import {
   Button,
@@ -18,7 +19,6 @@ import {
   Input,
 } from "@stariva/ui";
 import { type LoginFormData, loginFormSchema } from "@stariva/validators";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";

@@ -6,7 +6,9 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useCart } from "@/lib/cart/cart-context";
 import {
   type KitAccessMode,
+  kitBundleBaseTotal,
   kitBundleTotal,
+  kitBundleUnitPrice,
 } from "@/lib/commerce/elka-kit-bundle";
 import { CONTACTS } from "@/lib/contacts";
 import { formatPrice } from "@/lib/products";
@@ -64,15 +66,22 @@ export function KitLanding({
     count === 1
       ? (selected[0]?.price ?? first?.price ?? 0)
       : (kitBundleTotal(count, mode) ?? 0) / 100;
+  // База для зачёркнутой цены: для одного набора — каталог, для комплекта —
+  // материалы без скидки плюс урок(и), поэтому экономия равна скидке на
+  // материалы: 180 ₽ за два набора, 540 ₽ за три
   const compare =
     count === 1
       ? (selected[0]?.oldPrice ?? selected[0]?.price ?? 0)
-      : selected.reduce((sum, item) => sum + (item?.price ?? 0), 0);
+      : (kitBundleBaseTotal(count, mode) ?? 0) / 100;
   const saving = Math.max(compare - total, 0);
+  const catalogTotalKopecks = selected.reduce(
+    (sum, item) => sum + Math.round((item?.price ?? 0) * 100),
+    0,
+  );
   const complete =
     selected.length === count &&
     selected.every((item) => item && available(item)) &&
-    (count === 1 || compare >= total);
+    (count === 1 || catalogTotalKopecks >= (kitBundleTotal(count, mode) ?? 0));
 
   useEffect(() => {
     const node = orderRef.current;
@@ -229,6 +238,10 @@ export function KitLanding({
                   </s>
                 )}
               </div>
+              <p className="mt-3 text-sm text-dark-grey">
+                Авторский набор Ольги Карпычевой · видеоурок 2 ч 20 мин и
+                поддержка в чате
+              </p>
               <button
                 type="button"
                 onClick={scrollToOrder}
@@ -408,25 +421,41 @@ export function KitLanding({
                 1. Сколько наборов?
               </legend>
               <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={stockTotal < value}
-                    aria-pressed={count === value}
-                    onClick={() => chooseCount(value)}
-                    className={`min-h-16 rounded-2xl border px-2 py-3 text-sm text-espresso disabled:cursor-not-allowed disabled:opacity-40 ${count === value ? "border-espresso bg-sand" : "border-espresso/15"}`}
-                  >
-                    <span className="block font-medium">
-                      {value} {value === 1 ? "набор" : "набора"}
-                    </span>
-                    {value > 1 && (
-                      <span className="block text-xs text-terracotta">
-                        {value === 2 ? "Выгоднее" : "Макс. выгода"}
+                {[1, 2, 3].map((value) => {
+                  const unit =
+                    value === 1
+                      ? (selected[0]?.price ??
+                        first?.price ??
+                        variants[0]?.price ??
+                        0)
+                      : (kitBundleUnitPrice(value, mode) ?? 0) / 100;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={stockTotal < value}
+                      aria-pressed={count === value}
+                      onClick={() => chooseCount(value)}
+                      className={`min-h-16 rounded-2xl border px-2 py-3 text-sm text-espresso disabled:cursor-not-allowed disabled:opacity-40 ${count === value ? "border-espresso bg-sand" : "border-espresso/15"}`}
+                    >
+                      <span className="block font-medium">
+                        {value} {value === 1 ? "набор" : "набора"}
                       </span>
-                    )}
-                  </button>
-                ))}
+                      {unit > 0 && (
+                        <span className="block text-xs text-terracotta">
+                          {value === 1
+                            ? formatPrice(unit)
+                            : `по ${formatPrice(unit)}`}
+                        </span>
+                      )}
+                      {value === 3 && (
+                        <span className="mt-1 inline-block rounded-full bg-terracotta/15 px-2 py-0.5 text-[11px] leading-4 text-terracotta">
+                          Выгоднее всего
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </fieldset>
             {count > 1 && (
@@ -452,13 +481,13 @@ export function KitLanding({
                         <span className="flex-1">
                           <strong className="block text-espresso">
                             {value === "single_lesson"
-                              ? "Плету сама (1 видеоурок)"
-                              : "В подарок разным людям (урок в каждой коробке)"}
+                              ? "Плету сама"
+                              : "В подарок разным людям"}
                           </strong>
                           <span className="mt-1 block text-sm text-dark-grey">
                             {value === "single_lesson"
-                              ? "Не переплачиваете за повторный урок. Материалы соберём в одну посылку."
-                              : "Отдельные подарочные коробки, в каждой свой QR-код к уроку и чату."}
+                              ? "1 доступ к уроку, материалы в одной коробке"
+                              : "Отдельная подарочная коробка и личный QR-код для каждого"}
                           </span>
                         </span>
                         <span className="whitespace-nowrap font-medium text-espresso">
@@ -544,13 +573,24 @@ export function KitLanding({
             <div className="border-t border-espresso/10 pt-6">
               <div className="flex items-baseline justify-between gap-3 text-espresso">
                 <span>Итого за наборы</span>
-                <strong className="font-serif text-4xl">
-                  {total ? formatPrice(total) : "—"}
-                </strong>
+                <span className="flex items-baseline gap-3">
+                  {count > 1 && compare > total && (
+                    <s className="text-lg text-taupe">{formatPrice(compare)}</s>
+                  )}
+                  <strong className="font-serif text-4xl">
+                    {total ? formatPrice(total) : "—"}
+                  </strong>
+                </span>
               </div>
+              {count > 1 && total > 0 && (
+                <p className="mt-1 text-sm text-dark-grey">
+                  по {formatPrice(total / count)} за набор
+                </p>
+              )}
               {saving > 0 && (
                 <p className="mt-2 text-sm text-terracotta">
-                  Экономия {formatPrice(saving)}
+                  {count > 1 ? "Экономия на материалах " : "Экономия "}
+                  {formatPrice(saving)}
                 </p>
               )}
               <button
