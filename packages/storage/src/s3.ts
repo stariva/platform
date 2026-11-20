@@ -102,6 +102,11 @@ function getProviderClient(provider: StorageProvider): S3Client {
   const client = new S3Client({
     region,
     credentials: { accessKeyId, secretAccessKey },
+    // SDK по умолчанию считает CRC32 по пустому телу и вписывает её в
+    // подписанную ссылку (`x-amz-checksum-crc32=AAAAAA==`): заливка любого
+    // непустого файла получала от S3 HTTP 400 (BadDigest). Контрольную сумму
+    // считаем только там, где её требует операция (каталоговые бакеты).
+    requestChecksumCalculation: "WHEN_REQUIRED",
     ...(endpoint ? { endpoint, forcePathStyle } : {}),
   });
   cachedClients.set(provider, client);

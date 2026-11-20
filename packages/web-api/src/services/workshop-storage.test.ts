@@ -1,6 +1,6 @@
 import { beforeEach, expect, mock, test } from "bun:test";
-import type { SweepWorkshopStorageDeps } from "./workshop-storage/sweep";
-import { sweepWorkshopStorage } from "./workshop-storage/sweep";
+import type { SweepWorkshopStorageDeps } from "./workshop-sweep";
+import { sweepWorkshopStorage } from "./workshop-sweep";
 
 const rows: {
   slug: string;
@@ -40,7 +40,14 @@ beforeEach(() => {
 });
 
 test("keeps mirror objects and warns when the workshop query is empty", async () => {
+  console.log(
+    "DBG1 name:",
+    sweepWorkshopStorage.name,
+    "toString:",
+    String(sweepWorkshopStorage).slice(0, 120),
+  );
   await sweepWorkshopStorage({}, deps);
+  console.log("DBG2 calls:", JSON.stringify(deleteObjects.mock.calls));
   expect(deleteObjects.mock.calls).toEqual([[[]]]);
   expect(warn).toHaveBeenCalledWith(
     "workshop.storage.sweep.mirror_no_workshops",
@@ -55,7 +62,14 @@ test("deletes mirror orphans and logs normally when workshops exist", async () =
     lessons: [],
     materialFiles: [],
   });
+  console.log(
+    "DBG1 name:",
+    sweepWorkshopStorage.name,
+    "toString:",
+    String(sweepWorkshopStorage).slice(0, 120),
+  );
   await sweepWorkshopStorage({}, deps);
+  console.log("DBG2 calls:", JSON.stringify(deleteObjects.mock.calls));
   expect(deleteObjects).toHaveBeenCalledWith([orphan.key], "vkcloud");
   expect(info).toHaveBeenCalledWith("workshop.storage.sweep.mirror", {
     deleted: 1,
