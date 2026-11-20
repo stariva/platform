@@ -73,6 +73,11 @@ function deleteRisks(order: AdminOrderView): string[] {
   if (order.ozonOrderId) {
     risks.push("заказ в Ozon Доставка не отменится — отмените его в Ozon");
   }
+  if (order.hasRobokassaInvoice) {
+    risks.push(
+      "у заказа есть счёт Robokassa — он хранит историю оплат, удалить заказ нельзя",
+    );
+  }
   return risks;
 }
 
@@ -132,6 +137,13 @@ export function OrderEditor({
   }
 
   async function confirmRemove() {
+    // Счёт Robokassa держит заказ внешним ключом — сервер откажет и без force
+    if (order.hasRobokassaInvoice) {
+      toast.error(
+        "Заказ со счётом Robokassa удалить нельзя: счёт хранит историю оплат",
+      );
+      return;
+    }
     const risks = deleteRisks(order);
     if (isSafeToDelete(order) && risks.length === 0) {
       if (
@@ -452,14 +464,21 @@ export function OrderEditor({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button
-              className="w-full"
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={confirmRemove}
-            >
-              {remove.isPending ? "Удаляем…" : "Удалить заказ"}
-            </Button>
+            {order.hasRobokassaInvoice ? (
+              <p className="text-sm text-taupe">
+                Заказ оплачивался через счёт Robokassa. Счёт хранит историю
+                оплат, поэтому удалить заказ нельзя.
+              </p>
+            ) : (
+              <Button
+                className="w-full"
+                variant="destructive"
+                disabled={remove.isPending}
+                onClick={confirmRemove}
+              >
+                {remove.isPending ? "Удаляем…" : "Удалить заказ"}
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

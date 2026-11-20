@@ -240,11 +240,40 @@ await test("a deposit never touches the shipment", async () => {
   expect(calls).toEqual(["notify:row-1"]);
 });
 
+await test("kit access is retried before shipment claims", async () => {
+  const error = new Error("access unavailable");
+  grantKitWorkshops.mockRejectedValueOnce(error);
+  await expect(apply()).rejects.toBe(error);
+  expect(claimProductOrderShipment).not.toHaveBeenCalled();
+  await apply();
+  expect(grantKitWorkshops).toHaveBeenCalledTimes(2);
+});
+
+await test("kit access runs even when shipment is already claimed", async () => {
+  claimProductOrderShipment.mockResolvedValue(null);
+  await apply();
+  await apply();
+  expect(grantKitWorkshops).toHaveBeenCalledTimes(2);
+  expect(createOzonDeliveryOrder).not.toHaveBeenCalled();
+});
+
+await test("balance fulfillment retries after shipment failure", async () => {
+  createMadeToOrderShipment.mockRejectedValueOnce(new Error("retry shipment"));
+  await expect(applyStage("balance")).rejects.toThrow("retry shipment");
+  await applyStage("balance");
+  expect(createMadeToOrderShipment).toHaveBeenCalledTimes(2);
+  expect(grantKitWorkshops).toHaveBeenCalledTimes(2);
+});
+
 if (
-  scenario.includes("balance") ||
+  scenario ===
+    "a balance payment gives the shipment its own id before the master is told" ||
   scenario === "a deposit never touches the shipment"
 ) {
   expect(grantKitWorkshops).toHaveBeenCalledTimes(
-    scenario.includes("balance") ? 1 : 0,
+    scenario ===
+      "a balance payment gives the shipment its own id before the master is told"
+      ? 1
+      : 0,
   );
 }

@@ -1,26 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { env } from "@/env";
+import { kopecksToValue, type Payment } from "./payment";
+
+export { kopecksToValue };
 
 const API_BASE = "https://api.yookassa.ru/v3";
 
-export interface YooKassaAmount {
-  value: string; // "1490.00"
-  currency: string; // "RUB"
-}
-
-export interface YooKassaPayment {
-  id: string;
-  status: "pending" | "waiting_for_capture" | "succeeded" | "canceled";
-  paid: boolean;
-  amount: YooKassaAmount;
-  /** ISO 8601: когда платёж создан и когда деньги списаны. */
-  created_at?: string;
-  captured_at?: string;
+export interface YooKassaPayment extends Payment {
   confirmation?: {
     type: string;
     confirmation_url?: string;
   };
-  metadata?: Record<string, string>;
 }
 
 function authHeader(): string {
@@ -30,11 +20,6 @@ function authHeader(): string {
     throw new Error("yookassa_not_configured");
   }
   return `Basic ${Buffer.from(`${shopId}:${secret}`).toString("base64")}`;
-}
-
-/** Сумма в копейках → строка "1490.00" для YooKassa. */
-export function kopecksToValue(kopecks: number): string {
-  return (kopecks / 100).toFixed(2);
 }
 
 interface CreatePaymentInput {
