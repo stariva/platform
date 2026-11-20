@@ -10,6 +10,12 @@ import {
   createOrder,
   type WorkshopOrder,
 } from "@/lib/payments/orders";
+import {
+  createInvoice,
+  isRobokassaConfigured,
+  paymentUrl,
+  robokassaPaymentId,
+} from "@/lib/payments/robokassa";
 import { createPayment, isYooKassaConfigured } from "@/lib/payments/yookassa";
 import { collectVisitor } from "@/lib/visitor";
 import { bundleSlugs, getBundle } from "@/lib/workshops/bundles";
@@ -37,6 +43,8 @@ const bodySchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254).optional(),
   name: z.string().trim().max(120).optional(),
   personalDataConsent: z.boolean().optional(),
+  // robokassa — иностранная карта, Яндекс Пэй или Сплит; без поля — ЮKassa
+  provider: z.enum(["yookassa", "robokassa"]).default("yookassa"),
 });
 
 /**
@@ -131,12 +139,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ free: true, emailSent: !session });
   }
 
-  if (!isYooKassaConfigured()) {
+  if (
+    input.provider === "robokassa"
+      ? !isRobokassaConfigured()
+      : !isYooKassaConfigured()
+  ) {
     return NextResponse.json(
       { error: "Приём платежей временно недоступен" },
       { status: 503 },
     );
   }
+
+  const description = bundle
+    ? `Комбо мастер-классов «${bundle.title}» — Stariva`
+    : `Мастер-класс «${workshop.title}» — Stariva`;
+  // Фиксация согласия и акцепта: редакция документов на момент заказа
+  const consents = {
+    offerAccepted: LEGAL_VERSION,
+    ...(session ? {} : { pdConsent: LEGAL_VERSION }),
+  };
 
   const reused = await reusePendingOrder(
     request.cookies.get(WORKSHOP_ORDER_COOKIE)?.value,
@@ -145,7 +166,9 @@ export async function POST(request: NextRequest) {
       workshopSlug: workshop.slug,
       bundleSlug: bundle?.slug ?? null,
       amountKopecks,
+      paymentProvider: input.provider,
     },
+    (invoice) => paymentUrl(invoice, description, consents),
   );
   if (reused) return paymentResponse(reused.order, reused.confirmationUrl);
 
@@ -160,28 +183,34 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const payment = await createPayment({
-      amountKopecks,
-      description: bundle
-        ? `Комбо мастер-классов «${bundle.title}» — Stariva`
-        : `Мастер-класс «${workshop.title}» — Stariva`,
-      returnUrl: `${siteUrl()}/workshops/${workshop.slug}/booked?order=${order.id}`,
-      metadata: {
-        orderId: order.id,
-        userId: buyer.id,
-        slug: workshop.slug,
-        ...(bundle ? { bundle: bundle.slug } : {}),
-        // Фиксация согласия и акцепта: редакция документов на момент заказа
-        offerAccepted: LEGAL_VERSION,
-        ...(session ? {} : { pdConsent: LEGAL_VERSION }),
-      },
-      // Идемпотентность по заказу — повторный клик не создаст второй платёж
-      idempotenceKey: order.id,
-    });
+    let confirmationUrl: string | undefined;
+    if (input.provider === "robokassa") {
+      const invoice = await createInvoice(
+        { kind: "workshop", orderId: order.id },
+        amountKopecks,
+      );
+      await attachPaymentId(order.id, robokassaPaymentId(invoice.id));
+      confirmationUrl = paymentUrl(invoice, description, consents);
+    } else {
+      const payment = await createPayment({
+        amountKopecks,
+        description,
+        returnUrl: `${siteUrl()}/workshops/${workshop.slug}/booked?order=${order.id}`,
+        metadata: {
+          orderId: order.id,
+          userId: buyer.id,
+          slug: workshop.slug,
+          ...(bundle ? { bundle: bundle.slug } : {}),
+          ...consents,
+        },
+        // Идемпотентность по заказу — повторный клик не создаст второй платёж
+        idempotenceKey: order.id,
+      });
 
-    await attachPaymentId(order.id, payment.id);
+      await attachPaymentId(order.id, payment.id);
+      confirmationUrl = payment.confirmation?.confirmation_url;
+    }
 
-    const confirmationUrl = payment.confirmation?.confirmation_url;
     if (!confirmationUrl) {
       return NextResponse.json(
         { error: "Не удалось получить ссылку на оплату" },

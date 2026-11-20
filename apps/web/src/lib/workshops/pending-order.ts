@@ -1,5 +1,9 @@
 import { getOrderById, type WorkshopOrder } from "@/lib/payments/orders";
-import { parseRobokassaPaymentId } from "@/lib/payments/robokassa";
+import {
+  getInvoice,
+  parseRobokassaPaymentId,
+  type RobokassaInvoice,
+} from "@/lib/payments/robokassa";
 import {
   getPayment,
   kopecksToValue,
@@ -13,24 +17,27 @@ export interface WorkshopPurchase {
   /** Комбо или null: заказ одного курса не открываем вместо комбо и наоборот. */
   bundleSlug?: string | null;
   amountKopecks: number;
+  /** Провайдер оплаты: счёт Robokassa нельзя открыть как платёж ЮKassa. */
+  paymentProvider?: "yookassa" | "robokassa";
 }
 
 /**
  * Заказ из cookie можно открыть снова: его оформил этот же браузер, на того же
- * покупателя, тот же курс и по той же цене, а платёж в ЮKassa уже создан.
- * Без проверки cookie гость, введя чужой email, получил бы метку Telegram
- * и страницу «Вы записаны» чужого заказа.
+ * покупателя, тот же курс и по той же цене, а платёж у выбранного провайдера
+ * уже создан. Без проверки cookie гость, введя чужой email, получил бы метку
+ * Telegram и страницу «Вы записаны» чужого заказа.
  */
 export function canReuseOrder(
   order: WorkshopOrder,
   cookie: string | undefined,
   purchase: WorkshopPurchase,
 ): boolean {
+  const invoiceId = parseRobokassaPaymentId(order.paymentId ?? "");
+  const wantsRobokassa = purchase.paymentProvider === "robokassa";
+  if (wantsRobokassa !== (invoiceId !== null)) return false;
   return (
     order.status === "pending" &&
     Boolean(order.paymentId) &&
-    // Счёт Robokassa не платёж ЮKassa — его не спросить через getPayment
-    parseRobokassaPaymentId(order.paymentId ?? "") === null &&
     order.userId === purchase.userId &&
     order.workshopSlug === purchase.workshopSlug &&
     (order.bundleSlug ?? null) === (purchase.bundleSlug ?? null) &&
@@ -53,15 +60,33 @@ export function pendingConfirmationUrl(
  * Неоплаченный заказ этого браузера, платёж по которому ещё жив. Покупатель
  * вернулся с формы оплаты и снова нажал «Купить» — отдаём тот же платёж,
  * а не заводим второй заказ, который потом истечёт и повиснет отменённым.
+ * Для Robokassa ссылку на оплату собирает вызывающий: ей нужны описание и
+ * согласия того заказа.
  */
 export async function reusePendingOrder(
   cookie: string | undefined,
   purchase: WorkshopPurchase,
+  robokassaUrl?: (invoice: RobokassaInvoice) => string,
 ): Promise<{ order: WorkshopOrder; confirmationUrl: string } | null> {
   const orderId = cookie?.split(".")[0];
   if (!orderId) return null;
   const order = await getOrderById(orderId);
   if (!order?.paymentId || !canReuseOrder(order, cookie, purchase)) return null;
+
+  const invoiceId = parseRobokassaPaymentId(order.paymentId);
+  if (invoiceId !== null) {
+    if (!robokassaUrl) return null;
+    try {
+      const invoice = await getInvoice(invoiceId);
+      if (!invoice?.paidAt && invoice?.amount === purchase.amountKopecks) {
+        return { order, confirmationUrl: robokassaUrl(invoice) };
+      }
+      return null;
+    } catch (error) {
+      console.error("[payments/create] Не удалось проверить счёт:", error);
+      return null;
+    }
+  }
 
   try {
     const payment = await getPayment(order.paymentId);

@@ -63,17 +63,25 @@ export async function applyWorkshopPayment(
 
   // Вне wasUpdated: если прошлый вызов упал до чека, повтор вебхука его догонит
   const title = workshop?.title ?? order.workshopSlug;
+  const name = bundle
+    ? `Доступ к видеоматериалам «${title}» и ${bundle.extras.map((extra) => extra.title).join(", ")}`
+    : `Доступ к видеоматериалу «${title}»`;
   await issueNpdReceipt({
     payment,
     target: { kind: "workshop", orderId: order.id },
     services: [
       {
-        name: `Доступ к видеоматериалу «${title}»`,
+        name,
         amount: order.amount,
         quantity: 1,
       },
     ],
-    email: { to: order.contactEmail, subject: `мастер-классу «${title}»` },
+    email: {
+      to: order.contactEmail,
+      subject: bundle
+        ? `комбо мастер-классов «${bundle.title}»`
+        : `мастер-классу «${title}»`,
+    },
     expected: 1,
   });
 }

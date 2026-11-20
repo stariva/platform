@@ -1,3 +1,4 @@
+import { madeToOrderReceiptLines } from "@/lib/commerce/made-to-order-flow";
 import {
   notifyCustomer,
   notifyMadeToOrderPayment,
@@ -69,14 +70,24 @@ export async function applyProductOrderPayment(
     return;
   }
 
-  await grantKitWorkshops(orderId);
-
   // Письмо покупателю — до Ozon: сбой отправления не должен задержать
   // подтверждение оплаты, а повтор webhook письмо не продублирует
   if (await markProductOrderPaid(orderId)) {
     await notifyCustomer(orderId, "paid");
   }
 
+  // С набором идёт мастер-класс — уроки на почту сразу, не дожидаясь посылки.
+  // Сбой не должен помешать чеку и отправлению: повтор вебхука откроет доступ
+  try {
+    await grantKitWorkshops(orderId);
+  } catch (error) {
+    console.error(
+      `[payments/webhook] Не удалось открыть мастер-класс к набору из заказа ${orderId}:`,
+      error,
+    );
+  }
+
+  const manualDelivery = order.deliveryMethod === "manual";
   let attemptId: string | null = null;
   try {
     // До Ozon: сбой отправления бросает ошибку, а чек нужен в любом случае
@@ -101,52 +112,62 @@ export async function applyProductOrderPayment(
       expected: 1,
     });
 
-    if (order.deliveryMethod === "manual") {
-      await notifyOrderPaid(orderId);
-      return;
+    if (manualDelivery) {
+      // Ozon не ответил при оформлении, расчёта нет: отправление в Ozon
+      // не создаём. Мастер получит адрес в уведомлении и отправит заказ сама.
+      console.warn(
+        `[payments/webhook] Заказ товаров ${orderId} оплачен с ручной доставкой: отправление в Ozon Доставка создаёт мастер`,
+      );
+    } else {
+      attemptId = await claimProductOrderShipment(orderId);
+      if (!attemptId) return;
+
+      const delivery =
+        order.deliveryMethod === "pickup"
+          ? { method: "pickup" as const, pointId: order.deliveryPointId ?? "" }
+          : {
+              method: "courier" as const,
+              address:
+                (order.deliveryAddress as { address: string })?.address ?? "",
+              latitude: (order.deliveryAddress as { lat: number })?.lat ?? 0,
+              longitude: (order.deliveryAddress as { lng: number })?.lng ?? 0,
+            };
+
+      const ozonOrder = await createOzonDeliveryOrder({
+        items: items.map((i) => {
+          if (i.ozonSku === null) {
+            throw new Error(`order_item_without_ozon_sku:${i.id}`);
+          }
+          return { sku: i.ozonSku, quantity: i.quantity, price: i.price };
+        }),
+        delivery,
+        recipient: {
+          name: order.contactName,
+          phone: order.contactPhone,
+          email: order.contactEmail ?? undefined,
+        },
+        checkout: order.checkoutSnapshot as DeliveryCheckoutResponse,
+      });
+
+      await attachOzonOrder(
+        orderId,
+        attemptId,
+        ozonOrder.orderId,
+        ozonOrder.postingNumbers,
+      );
+      console.info(
+        `[payments/webhook] Заказ товаров ${orderId} оплачен, создан заказ Ozon Доставка ${ozonOrder.orderId}`,
+      );
     }
-
-    attemptId = await claimProductOrderShipment(orderId);
-    if (!attemptId) return;
-
-    const delivery =
-      order.deliveryMethod === "pickup"
-        ? { method: "pickup" as const, pointId: order.deliveryPointId ?? "" }
-        : {
-            method: "courier" as const,
-            address:
-              (order.deliveryAddress as { address: string })?.address ?? "",
-            latitude: (order.deliveryAddress as { lat: number })?.lat ?? 0,
-            longitude: (order.deliveryAddress as { lng: number })?.lng ?? 0,
-          };
-
-    const ozonOrder = await createOzonDeliveryOrder({
-      items: items.map((i) => {
-        if (i.ozonSku === null) {
-          throw new Error(`order_item_without_ozon_sku:${i.id}`);
-        }
-        return { sku: i.ozonSku, quantity: i.quantity, price: i.price };
-      }),
-      delivery,
-      recipient: {
-        name: order.contactName,
-        phone: order.contactPhone,
-        email: order.contactEmail ?? undefined,
-      },
-      checkout: order.checkoutSnapshot as DeliveryCheckoutResponse,
-    });
-
-    await attachOzonOrder(
-      orderId,
-      attemptId,
-      ozonOrder.orderId,
-      ozonOrder.postingNumbers,
-    );
-    console.info(
-      `[payments/webhook] Заказ товаров ${orderId} оплачен, создан заказ Ozon Доставка ${ozonOrder.orderId}`,
-    );
   } catch (error) {
-    if (order.deliveryMethod === "manual") throw error;
+    if (manualDelivery) {
+      // Отправление вручную: сбой чека не про Ozon, повтор webhook доделает
+      console.error(
+        `[payments/webhook] Заказ ${orderId} с ручной доставкой: не удалось подготовить чек:`,
+        error,
+      );
+      throw error;
+    }
     console.error(
       `[payments/webhook] КРИТИЧНО: заказ ${orderId} оплачен, но создание заказа в Ozon Доставка не удалось:`,
       error,
@@ -161,7 +182,11 @@ export async function applyProductOrderPayment(
   }
 
   // Заказ уже создан в Ozon — сбой уведомления не должен заставлять YooKassa
-  // повторять webhook, поэтому здесь он только попадает в лог.
+  // повторять webhook, поэтому здесь он только попадает в лог. С ручной
+  // доставкой иначе: уведомление — единственный сигнал создать отправление,
+  // и потерянное оставит оплаченный заказ без отправки. Повтор безопасен:
+  // notifyOrderPaid при сбое возвращает захват, письмо покупателю уходит
+  // только при первой отметке об оплате, а чек выпускается один раз на платёж.
   try {
     await notifyOrderPaid(orderId);
   } catch (error) {
@@ -169,6 +194,7 @@ export async function applyProductOrderPayment(
       `[payments/webhook] Не удалось уведомить мастера о заказе ${orderId}:`,
       error,
     );
+    if (manualDelivery) throw error;
   }
 }
 
@@ -225,22 +251,31 @@ async function handleMadeToOrderPayment(
     }
   }
 
+  // Финальная доплата завершает оплату; повтор вебхука повторит выдачу.
+  if (row.type === "balance") {
+    try {
+      await grantKitWorkshops(orderId);
+    } catch (error) {
+      console.error(
+        `[payments/webhook] Не удалось открыть мастер-класс к набору ${orderId}:`,
+        error,
+      );
+    }
+  }
+
   // Чек на каждый этап — до уведомления мастеру, которое может бросить ошибку
   const [items, payments] = await Promise.all([
     getProductOrderItems(orderId),
     listOrderPayments(orderId),
   ]);
-  const stage = row.type === "deposit" ? "предоплата" : "доплата";
   await issueNpdReceipt({
     payment,
     target: { kind: "product", orderId },
-    services: [
-      {
-        name: `${items[0]?.name ?? "Изделие на заказ"}, ${stage}`,
-        amount: row.amount,
-        quantity: 1,
-      },
-    ],
+    services: madeToOrderReceiptLines(
+      items[0]?.name ?? "Изделие на заказ",
+      row,
+      order.amountDelivery,
+    ),
     email: {
       to: await getProductOrderCustomerEmail(order),
       subject: `заказу №${order.number}`,
@@ -248,18 +283,20 @@ async function handleMadeToOrderPayment(
     expected: payments.filter((p) => p.status === "succeeded").length,
   });
 
+  // Сбой отправления не должен задержать уведомление об оплате: мастеру важны оба
+  let shipmentError: unknown;
   if (row.type === "balance") {
-    await grantKitWorkshops(orderId);
-    try {
-      await createMadeToOrderShipment(orderId, row.id);
-    } catch (error) {
-      await notifyMadeToOrderPayment(row.id);
-      throw error;
-    }
+    // Заказ может оказаться созданным в Ozon, но не подтверждённым: тогда
+    // уведомление об этой оплате (оно могло уйти при прошлой попытке без этого
+    // предупреждения) снова станет неотправленным — об этом знает сама оплата
+    await createMadeToOrderShipment(orderId, row.id).catch((error: unknown) => {
+      shipmentError = error;
+    });
   }
 
   // При сбое бросает ошибку — YooKassa повторит webhook, и мы отправим снова
   await notifyMadeToOrderPayment(row.id);
+  if (shipmentError) throw shipmentError;
 }
 
 /**

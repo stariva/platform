@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { eq, orders } from "@stariva/db";
+import { eq, orders, robokassaInvoices } from "@stariva/db";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
@@ -25,6 +25,20 @@ export const removeOrder = adminProcedure
         .for("update");
       if (!order)
         throw new ORPCError("NOT_FOUND", { message: "Запись не найдена" });
+
+      // Счёт Robokassa — история оплат, внешний ключ не даст его удалить.
+      // Отказываем до DELETE, чтобы мастер увидел причину, а не ошибку БД.
+      const [invoice] = await tx
+        .select({ invoiceId: robokassaInvoices.id })
+        .from(robokassaInvoices)
+        .where(eq(robokassaInvoices.workshopOrderId, input.id))
+        .limit(1);
+      if (invoice) {
+        throw new ORPCError("CONFLICT", {
+          message:
+            "У записи есть счёт Robokassa — он хранит историю оплат, поэтому запись нельзя удалить",
+        });
+      }
 
       const deletable = order.status === "canceled" && !order.paidAt;
       if (!deletable && !input.force) {

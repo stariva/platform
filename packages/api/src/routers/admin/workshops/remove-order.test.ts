@@ -12,13 +12,16 @@ interface FakeOrder {
   paidAt: Date | null;
 }
 
-function request(order: FakeOrder | undefined, force = false) {
+function request(order: FakeOrder | undefined, force = false, invoice = false) {
   const deleteWhere = mock(async () => undefined);
   const del = mock(() => ({ where: deleteWhere }));
   const tx = {
-    select: () => ({
+    select: (fields: Record<string, unknown>) => ({
       from: () => ({
-        where: () => ({ for: async () => (order ? [order] : []) }),
+        where: () =>
+          "invoiceId" in fields
+            ? { limit: async () => (invoice ? [{ invoiceId: 1 }] : []) }
+            : { for: async () => (order ? [order] : []) },
       }),
     }),
     delete: del,
@@ -82,4 +85,14 @@ test("removeOrder deletes an order awaiting payment when forced", async () => {
   const { result, del } = request({ status: "pending", paidAt: null }, true);
   await expect(result).resolves.toEqual({ ok: true });
   expect(del).toHaveBeenCalled();
+});
+
+test("removeOrder refuses an order with a Robokassa invoice even when forced", async () => {
+  const { result, del } = request(
+    { status: "canceled", paidAt: null },
+    true,
+    true,
+  );
+  await expect(result).rejects.toMatchObject({ code: "CONFLICT" });
+  expect(del).not.toHaveBeenCalled();
 });

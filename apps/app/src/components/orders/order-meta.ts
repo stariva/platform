@@ -51,6 +51,8 @@ export interface AdminOrderView {
   masterNotes: string | null;
   trackingNumber: string | null;
   paymentId: string | null;
+  /** Заказ оплачивался через счёт Robokassa — такой заказ нельзя удалить. */
+  hasRobokassaInvoice: boolean;
   ozonOrderId: string | null;
   ozonPostingNumbers: string[];
   ozonShipmentStatus: "pending" | "creating" | "failed" | "created";

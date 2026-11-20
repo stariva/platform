@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { db } from "@stariva/db";
 import { robokassaInvoices } from "@stariva/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
 import { env } from "@/env";
 import { kopecksToValue, type Payment } from "./payment";
 
@@ -192,6 +193,27 @@ export function verifyResultSignature(params: URLSearchParams): boolean {
   return sameSignature(expected, received);
 }
 
+/**
+ * Параметры уведомления на Result URL. Проверяем структуру до проверки
+ * подписи: номер счёта обязан помещаться в integer колонки, а подпись — быть
+ * hex нужной длины. Остальные поля (Shp_*, PaymentMethod) проходят как есть:
+ * подпись покрывает их все.
+ */
+export const resultNotificationSchema = z
+  .object({
+    OutSum: z.string().regex(/^\d+(?:\.\d+)?$/),
+    InvId: z.coerce.number().int().min(1).max(2_147_483_647),
+    SignatureValue: z.string().regex(/^[0-9a-f]{16,128}$/i),
+    PaymentMethod: z.string().trim().min(1).max(64).optional(),
+    IncCurrLabel: z.string().trim().min(1).max(64).optional(),
+  })
+  .passthrough();
+
+/** Разбирает уведомление Result URL по схеме; невалидные поля — ошибка. */
+export function parseResultNotification(params: URLSearchParams) {
+  return resultNotificationSchema.safeParse(Object.fromEntries(params));
+}
+
 /** OutSum Robokassa («1490.000000») → копейки. */
 export function outSumToKopecks(outSum: string): number | null {
   const value = Number(outSum);
@@ -222,12 +244,34 @@ export function invoicePayment(
   };
 }
 
-/** Первое значение тега в XML-ответе Robokassa внутри родителя. */
-function xmlCode(xml: string, parent: string): number | null {
-  const match = new RegExp(`<${parent}>[\\s\\S]*?<Code>(-?\\d+)</Code>`).exec(
+/** Содержимое тега ответа Robokassa: ищем именно секцию, не весь документ. */
+function xmlSection(xml: string, tag: string): string | null {
+  const match = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`).exec(
     xml,
   );
+  return match?.[1] ?? null;
+}
+
+/** Числовое значение тега внутри секции. */
+function xmlCode(section: string | null): number | null {
+  const match = section ? /<Code>(-?\d+)<\/Code>/.exec(section) : null;
   return match?.[1] ? Number(match[1]) : null;
+}
+
+/**
+ * Ответ OpStateExt: Result обязателен, State приходит только у существующей
+ * операции. Схема не даёт принять пустой или нечисловой XML за оплату.
+ */
+export const operationStateSchema = z.object({
+  result: z.number().int().min(0).max(1000),
+  state: z.number().int().min(0).max(1000).nullable(),
+});
+
+export function parseOperationState(xml: string) {
+  return operationStateSchema.safeParse({
+    result: xmlCode(xmlSection(xml, "Result")),
+    state: xmlCode(xmlSection(xml, "State")),
+  });
 }
 
 /**
@@ -265,13 +309,18 @@ export async function getRobokassaPayment(
     throw new Error(`robokassa_state_failed_${res.status}`);
   }
   const xml = await res.text();
-  const result = xmlCode(xml, "Result");
+  const parsed = parseOperationState(xml);
+  if (!parsed.success) {
+    throw new Error(
+      `robokassa_state_invalid:${parsed.error.issues[0]?.message}`,
+    );
+  }
+  const { result, state } = parsed.data;
   // 3 — операции ещё нет: покупатель не дошёл до оплаты
   if (result === 3) return invoicePayment(invoice, "pending");
   if (result !== 0) {
-    throw new Error(`robokassa_state_result_${result ?? "unknown"}`);
+    throw new Error(`robokassa_state_result_${result}`);
   }
-  const state = xmlCode(xml, "State");
   if (state === null) throw new Error("robokassa_state_without_code");
   const status = stateToStatus(state);
   if (status !== "succeeded") return invoicePayment(invoice, status);

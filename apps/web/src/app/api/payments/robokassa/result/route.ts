@@ -8,6 +8,7 @@ import {
   isRobokassaConfigured,
   markInvoicePaid,
   outSumToKopecks,
+  parseResultNotification,
   verifyResultSignature,
 } from "@/lib/payments/robokassa";
 import { applyWorkshopPayment } from "@/lib/workshops/order-payment";
@@ -37,14 +38,21 @@ async function readParams(request: NextRequest): Promise<URLSearchParams> {
 async function handle(request: NextRequest) {
   if (!isRobokassaConfigured()) return text("not configured", 503);
   const params = await readParams(request);
+  const parsed = parseResultNotification(params);
+  if (!parsed.success) {
+    console.warn(
+      `[payments/robokassa] Некорректное уведомление по счёту ${params.get("InvId")}`,
+    );
+    return text("bad request", 400);
+  }
   if (!verifyResultSignature(params)) {
     console.warn(
-      `[payments/robokassa] Неверная подпись уведомления по счёту ${params.get("InvId")}`,
+      `[payments/robokassa] Неверная подпись уведомления по счёту ${parsed.data.InvId}`,
     );
     return text("bad sign", 400);
   }
 
-  const invoiceId = Number(params.get("InvId"));
+  const invoiceId = parsed.data.InvId;
   try {
     const invoice = await getInvoice(invoiceId);
     if (!invoice) {
@@ -61,7 +69,7 @@ async function handle(request: NextRequest) {
 
     const paid = await markInvoicePaid(
       invoiceId,
-      params.get("PaymentMethod") ?? params.get("IncCurrLabel"),
+      parsed.data.PaymentMethod ?? parsed.data.IncCurrLabel ?? null,
     );
     const payment = invoicePayment(paid ?? invoice, "succeeded");
     const target = invoiceTarget(invoice);
