@@ -1,1 +1,2 @@
-ALTER TABLE "video_renditions" ADD COLUMN "mirror_synced_at" timestamp with time zone;
+-- idempotent: column already exists in target DB (added outside the migration flow); keep re-runs working
+ALTER TABLE "video_renditions" ADD COLUMN IF NOT EXISTS "mirror_synced_at" timestamp with time zone;
