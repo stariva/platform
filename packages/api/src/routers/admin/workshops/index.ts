@@ -7,6 +7,7 @@ import {
 } from "./access-codes";
 import { sendBrief, sendMissingBriefs } from "./brief";
 import { byId, videos } from "./by-id";
+import { confirmBoosty } from "./confirm-boosty";
 import { sendKitAccess } from "./kit-access";
 import { list } from "./list";
 import { livemasterPdf } from "./livemaster-pdf";
@@ -26,6 +27,7 @@ export const adminWorkshopsRouter = {
   byId,
   videos,
   orders: ordersList,
+  confirmBoosty,
   views: viewsList,
   save,
   remove,

@@ -13,7 +13,16 @@ import {
   sendEmail,
   workshopUnpaidEmailSubject,
 } from "@stariva/emails";
-import { and, eq, gte, inArray, isNotNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  notLike,
+  or,
+  sql,
+} from "drizzle-orm";
 import { WORKSHOP_PATH, WORKSHOP_SLUG } from "@/lib/elka/data";
 import {
   claimOrderNotification,
@@ -93,6 +102,10 @@ async function loadCandidates(now: Date): Promise<Candidate[]> {
         inArray(orders.status, ["pending", "canceled"]),
         gte(orders.createdAt, new Date(now.getTime() - UNPAID_MAX_AGE_MS)),
         eq(workshops.status, "published"),
+        or(
+          sql`${orders.paymentId} is null`,
+          notLike(orders.paymentId, "boosty:%"),
+        ),
       ),
     );
   return rows.filter((row) => row.workshop.price > 0);

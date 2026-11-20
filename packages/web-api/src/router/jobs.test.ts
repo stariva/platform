@@ -27,7 +27,9 @@ mock.module("../services/video-renditions", () => ({
 }));
 
 const storageSweeps: { dryRun?: boolean }[] = [];
+const workshopStorage = await import("../services/workshop-storage");
 mock.module("../services/workshop-storage", () => ({
+  ...workshopStorage,
   sweepWorkshopStorage: async (options: { dryRun?: boolean }) => {
     storageSweeps.push(options);
     return {

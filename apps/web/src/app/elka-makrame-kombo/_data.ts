@@ -34,6 +34,7 @@ export interface KomboChoice {
   note: string;
   /** Курс, на который оформляется заказ; у комбо — основной. */
   slug: string;
+  boostyUrl?: string;
   bundle?: string;
   price: number;
   /** Зачёркнутая цена: у комбо — по отдельности, у предзаказа — обычная. */
@@ -71,6 +72,7 @@ export function komboChoices(
       name,
       note: size,
       slug: workshop.slug,
+      boostyUrl: workshop.boostyUrl,
       price: workshop.price,
       oldPrice:
         releaseLabel && (workshop.regularPrice ?? 0) > workshop.price

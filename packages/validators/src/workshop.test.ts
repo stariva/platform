@@ -36,6 +36,7 @@ const valid: WorkshopFormValues = {
   materialFiles: [],
   brief: { howTo: "", shops: [], outro: "", image: "" },
   ozonUrl: "",
+  boostyUrl: "",
   supportChatUrl: "",
   featured: false,
   sortOrder: 0,
@@ -50,6 +51,17 @@ const errorPaths = (value: WorkshopFormValues) => {
 };
 
 describe("workshopFormSchema", () => {
+  test("Boosty checkout requires a paid post URL", () => {
+    expect(
+      errorPaths({
+        ...valid,
+        boostyUrl: "https://boosty.to/stariva/posts/1234abcd",
+      }),
+    ).toEqual([]);
+    expect(
+      errorPaths({ ...valid, boostyUrl: "https://example.com/posts/1234abcd" }),
+    ).toContain("boostyUrl");
+  });
   test("accepts a valid published workshop", () => {
     expect(errorPaths(valid)).toEqual([]);
   });

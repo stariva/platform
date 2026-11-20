@@ -132,6 +132,18 @@ export const workshopFormSchema = z
         (value) => value === "" || z.url().safeParse(value).success,
         "Нужна ссылка",
       ),
+    boostyUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(
+        (value) =>
+          value === "" ||
+          /^https:\/\/boosty\.to\/[a-zA-Z0-9_.-]+\/posts\/[a-zA-Z0-9-]+(?:\?.*)?$/.test(
+            value,
+          ),
+        "Укажите ссылку на платный пост boosty.to",
+      ),
     // Закрытый чат для купивших, например https://t.me/+AbCd… Пусто — чата нет.
     supportChatUrl: z
       .string()

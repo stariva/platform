@@ -20,6 +20,7 @@ import { formatPrice } from "@/lib/workshops-data";
 
 interface WorkshopPurchaseProps {
   slug: string;
+  boostyUrl?: string;
   /** Комбо: slug — его основной курс, цена и подпись — комбо. */
   bundle?: string;
   price: number;
@@ -57,7 +58,7 @@ function saveEmailDraft(email: string) {
 }
 
 type Notice = { tone: "error" | "info"; text: string } | null;
-type PaymentProvider = "yookassa" | "robokassa";
+type PaymentProvider = "yookassa" | "robokassa" | "boosty";
 
 /**
  * Покупка мастер-класса. Гостю не нужна регистрация: достаточно email — на
@@ -65,6 +66,7 @@ type PaymentProvider = "yookassa" | "robokassa";
  */
 export function WorkshopPurchase({
   slug,
+  boostyUrl,
   bundle,
   price,
   title,
@@ -154,7 +156,11 @@ export function WorkshopPurchase({
     if (!validate()) return;
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const chosen: PaymentProvider =
-      submitter?.dataset.provider === "robokassa" ? "robokassa" : "yookassa";
+      submitter?.dataset.provider === "boosty"
+        ? "boosty"
+        : submitter?.dataset.provider === "robokassa"
+          ? "robokassa"
+          : "yookassa";
     setProvider(chosen);
 
     const goalSent = buyGoal
@@ -377,6 +383,24 @@ export function WorkshopPurchase({
           </Button>
           <p className="mt-1.5 text-center text-[12px] text-taupe">
             Выберите способ на странице Robokassa
+          </p>
+        </div>
+      )}
+
+      {boostyUrl && price > 0 && !bundle && (
+        <div className="mt-2">
+          <Button
+            type="submit"
+            data-provider="boosty"
+            disabled={buying}
+            className="w-full min-h-12 whitespace-normal rounded-2xl border border-espresso/20 bg-transparent px-4 py-3 text-base text-espresso hover:bg-sand"
+          >
+            {buying && provider === "boosty"
+              ? "Переходим на Boosty…"
+              : "Купить через Boosty"}
+          </Button>
+          <p className="mt-1.5 text-center text-xs text-taupe">
+            После оплаты откройте ссылку активации в закрытом посте.
           </p>
         </div>
       )}

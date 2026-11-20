@@ -288,6 +288,7 @@ export function ElkaWorkshop({
             {workshop ? (
               <WorkshopPreorderButton
                 slug={workshop.slug}
+                boostyUrl={workshop.boostyUrl}
                 price={workshop.price}
                 title={workshop.title}
                 preorder={preorder}
@@ -375,6 +376,7 @@ function BigTreeOffer({ bigTree }: { bigTree: Workshop }) {
       </div>
       <WorkshopPreorderButton
         slug={bigTree.slug}
+        boostyUrl={bigTree.boostyUrl}
         price={bigTree.price}
         title={bigTree.title}
         preorder={Boolean(preorder)}

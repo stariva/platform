@@ -3,6 +3,14 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { RequestLimitHandlerPlugin } from "@orpc/server/plugins";
 import { corsPreflight, withCors } from "@stariva/auth/cors";
 import { logger } from "@stariva/config";
+import {
+  and,
+  db,
+  eq,
+  isNotNull,
+  orders,
+  workshopOrderNotifications,
+} from "@stariva/db";
 import { syncPostboxEvents } from "@stariva/emails";
 import {
   createWebORPCContext,
@@ -28,7 +36,10 @@ import {
 import { createCustomOrderServices } from "@/lib/custom-order/services";
 import { subscribeToNewsletter } from "@/lib/newsletter";
 import { runNpdIssuingSweep } from "@/lib/npd/issuing-sweep";
-import { runWorkshopReminderSweep } from "@/lib/workshops/notifications";
+import {
+  notifyWorkshopBooked,
+  runWorkshopReminderSweep,
+} from "@/lib/workshops/notifications";
 import { formatWorkshopReviewMessage } from "@/lib/workshops/review-message";
 import { workshopFileServices } from "@/lib/workshops/signed-media";
 import { runUnpaidOrderSweep } from "@/lib/workshops/unpaid-reminder";
@@ -45,6 +56,33 @@ const EMAIL_EVENTS_BUDGET_MS = 40_000;
 // Логика, которая пока живёт в витрине: письма, Telegram, заказы и
 // better-auth тянут за собой половину apps/web
 const services: WebServices = {
+  async notifyBoostyOrder(orderId) {
+    const [order] = await db
+      .select({ status: orders.status, paymentId: orders.paymentId })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+    if (
+      !order ||
+      order.status !== "paid" ||
+      !order.paymentId?.startsWith("boosty:")
+    )
+      throw new Error("boosty_order_not_paid");
+    await notifyWorkshopBooked(orderId);
+    const [notice] = await db
+      .select({ id: workshopOrderNotifications.id })
+      .from(workshopOrderNotifications)
+      .where(
+        and(
+          eq(workshopOrderNotifications.orderId, orderId),
+          eq(workshopOrderNotifications.kind, "booked"),
+          eq(workshopOrderNotifications.channel, "email"),
+          isNotNull(workshopOrderNotifications.sentAt),
+        ),
+      )
+      .limit(1);
+    return Boolean(notice);
+  },
   // Один крон воркера на все письма по мастер-классам: покупка, старт и
   // «оплата не завершилась». Заодно дошлёт рассылки из админки
   async runWorkshopReminderSweep() {

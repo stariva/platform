@@ -10,6 +10,10 @@
     "./contract": {
       "types": "./dist/contract/index.d.ts",
       "default": "./src/contract/index.ts"
+    },
+    "./preorder-bonus": {
+      "types": "./dist/preorder-bonus.d.ts",
+      "default": "./src/preorder-bonus.ts"
     }
   },
   "license": "MIT",

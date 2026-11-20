@@ -95,7 +95,12 @@ export async function applyWorkshopPayment(
 export async function syncPendingWorkshopOrder(
   order: WorkshopOrder,
 ): Promise<boolean> {
-  if (order.status !== "pending" || !order.paymentId) return true;
+  if (
+    order.status !== "pending" ||
+    !order.paymentId ||
+    order.paymentId.startsWith("boosty:")
+  )
+    return true;
   try {
     const payment = await fetchPayment(order.paymentId);
     if (payment) await applyWorkshopPayment(order, payment);

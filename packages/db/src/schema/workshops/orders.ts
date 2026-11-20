@@ -38,6 +38,10 @@ export const orders = pgTable(
     status: orderStatus("status").notNull().default("pending"),
     // Идентификатор платежа в YooKassa
     paymentId: text("payment_id"),
+    // Покупатель вернулся из закрытого поста и попросил проверить оплату.
+    boostyActivationRequestedAt: timestamp("boosty_activation_requested_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),

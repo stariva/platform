@@ -179,6 +179,7 @@ export function BigTreeWorkshop({
             ) : null}
             <WorkshopPurchase
               slug={workshop.slug}
+              boostyUrl={workshop.boostyUrl}
               price={workshop.price}
               title={workshop.title}
               returnPath={`${BIG_TREE_PATH}#${SECTION_ID}`}

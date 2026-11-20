@@ -57,6 +57,7 @@ export function workshopRowToWorkshop(
     materialFiles: row.materialFiles,
     brief: { ...EMPTY_WORKSHOP_BRIEF, ...row.brief },
     ozonUrl: row.ozonUrl ?? undefined,
+    boostyUrl: row.boostyUrl ?? undefined,
     featured: row.featured,
     testimonial:
       row.testimonialText && row.testimonialAuthor
