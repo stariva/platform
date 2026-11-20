@@ -540,6 +540,13 @@
       "when": 1795184612343,
       "tag": "0076_flowery_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1795203362143,
+      "tag": "0077_glossy_eternity",
+      "breakpoints": true
     }
   ]
 }

@@ -178,6 +178,7 @@ export function KomboPurchase({
       <p className="text-sm text-text-grey mb-6">{selected.summary}</p>
       <WorkshopPurchase
         slug={selected.slug}
+        boostyUrl={selected.boostyUrl}
         bundle={selected.bundle}
         price={selected.price}
         title={selected.title}

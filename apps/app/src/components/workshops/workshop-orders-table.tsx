@@ -12,6 +12,7 @@ import {
   type VisitorInfo,
   visitorPlace,
 } from "~/components/visitors/visitor-card";
+import { ConfirmBoostyButton } from "./confirm-boosty-button";
 import { WorkshopBriefButton } from "./workshop-brief-button";
 import { WorkshopOrderRemove } from "./workshop-order-remove";
 import { WorkshopReceiptsButton } from "./workshop-receipts-button";
@@ -46,6 +47,7 @@ export interface WorkshopOrderRow {
   id: string;
   workshopSlug: string;
   workshopTitle: string | null;
+  boostyUrl: string | null;
   userId: string;
   userName: string;
   userEmail: string;
@@ -54,6 +56,8 @@ export interface WorkshopOrderRow {
   status: keyof typeof WORKSHOP_ORDER_STATUS_LABELS;
   createdAt: Date;
   paidAt: Date | null;
+  boosty: boolean;
+  boostyActivationRequestedAt: Date | null;
   telegramLinked: boolean;
   /** У курса есть PDF-бриф. */
   hasBrief: boolean;
@@ -166,7 +170,21 @@ export function WorkshopOrdersTable({
                     {WORKSHOP_ORDER_STATUS_LABELS[row.status]}
                   </Badge>
                   {row.preorder && <Badge variant="secondary">предзаказ</Badge>}
+                  {row.boosty && <Badge variant="outline">Boosty</Badge>}
+                  {row.boostyActivationRequestedAt && (
+                    <Badge variant="secondary">Просит активацию</Badge>
+                  )}
                 </div>
+                {row.boosty && row.boostyUrl && (
+                  <a
+                    className="mt-1 block text-xs underline"
+                    href={row.boostyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Пост на Boosty ↗
+                  </a>
+                )}
               </TableCell>
               <TableCell className="text-right align-top tabular-nums">
                 {rub.format(row.amount)}
@@ -192,6 +210,11 @@ export function WorkshopOrdersTable({
                 )}
               </TableCell>
               <TableCell className="align-top">
+                {row.boosty &&
+                  row.boostyActivationRequestedAt &&
+                  (row.status === "pending" || row.status === "paid") && (
+                    <ConfirmBoostyButton id={row.id} />
+                  )}
                 <WorkshopOrderRemove
                   orderId={row.id}
                   title={`${row.userName} · ${row.workshopTitle ?? row.workshopSlug}`}

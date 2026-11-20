@@ -1,3 +1,4 @@
+import { and, db, eq, orders } from "@stariva/db";
 import { hasAccess } from "@stariva/web-api";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -44,7 +45,7 @@ const bodySchema = z.object({
   name: z.string().trim().max(120).optional(),
   personalDataConsent: z.boolean().optional(),
   // robokassa — иностранная карта, Яндекс Пэй или Сплит; без поля — ЮKassa
-  provider: z.enum(["yookassa", "robokassa"]).default("yookassa"),
+  provider: z.enum(["yookassa", "robokassa", "boosty"]).default("yookassa"),
 });
 
 /**
@@ -137,6 +138,39 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json({ free: true, emailSent: !session });
+  }
+
+  if (input.provider === "boosty") {
+    if (bundle || !workshop.boostyUrl) {
+      return NextResponse.json(
+        { error: "Оплата через Boosty недоступна" },
+        { status: 400 },
+      );
+    }
+    const [existing] = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.userId, buyer.id),
+          eq(orders.workshopSlug, workshop.slug),
+          eq(orders.status, "pending"),
+          eq(orders.paymentId, `boosty:${workshop.slug}`),
+        ),
+      )
+      .limit(1);
+    if (!existing) {
+      const order = await createOrder({
+        userId: buyer.id,
+        workshopSlug: workshop.slug,
+        amountKopecks,
+        contactEmail: buyer.email,
+        attribution: attributionFromRequest(request),
+        visitor: await collectVisitor(request),
+      });
+      await attachPaymentId(order.id, `boosty:${workshop.slug}`);
+    }
+    return NextResponse.json({ confirmationUrl: workshop.boostyUrl });
   }
 
   if (

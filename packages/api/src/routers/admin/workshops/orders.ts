@@ -72,6 +72,7 @@ export const ordersList = adminProcedure
           id: orders.id,
           workshopSlug: orders.workshopSlug,
           workshopTitle: workshops.title,
+          boostyUrl: workshops.boostyUrl,
           releaseAt: workshops.releaseAt,
           userId: user.id,
           userName: user.name,
@@ -80,6 +81,7 @@ export const ordersList = adminProcedure
           amount: orders.amount,
           status: orders.status,
           paymentId: orders.paymentId,
+          boostyActivationRequestedAt: orders.boostyActivationRequestedAt,
           createdAt: orders.createdAt,
           paidAt: orders.paidAt,
           telegramLinked: sql<boolean>`${orders.telegramChatId} is not null`,
@@ -132,6 +134,7 @@ export const ordersList = adminProcedure
           ...row,
           // Счёт Robokassa нельзя удалить вместе с записью: он хранит историю оплат
           hasRobokassaInvoice: paymentId?.startsWith("robokassa:") ?? false,
+          boosty: paymentId?.startsWith("boosty:") ?? false,
           // Чеков должно быть по числу оплат — по записи на курс одна
           receiptsExpected: workshopReceiptsExpected({
             status: row.status,
