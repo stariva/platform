@@ -22,6 +22,7 @@ ENV APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_APP_URL=https://stariva.ru
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=814c36f0-1a32-47af-b51d-8f197d5f2981
 ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_kCRjCvwxBW8Wrfav8gBsxeT6fswrCVFASUsMY5d34Swb
+ENV NEXT_PUBLIC_ROBOKASSA_ENABLED=true
 # Идентификатор выкладки для защиты от рассинхрона версий при rolling update:
 # клиент со старой страницей после выкатки перезагрузится целиком.
 ARG DEPLOYMENT_ID=dev
