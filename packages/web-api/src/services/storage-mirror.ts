@@ -64,7 +64,7 @@ export async function claimMirrorSyncBatch(
 
   // Заодно обновляем отметки «нарезка скопирована целиком»: по ним витрина
   // решает, можно ли зрителям отдавать HLS из второго хранилища
-  const flags = await syncRenditionMirrorFlags(sourceObjects, mirrorObjects);
+  const flags = await syncRenditionMirrorFlags();
   if (flags.marked > 0 || flags.cleared > 0) {
     logger.info("storage.mirror.renditions", { ...flags });
   }

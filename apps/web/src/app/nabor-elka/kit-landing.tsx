@@ -74,10 +74,14 @@ export function KitLanding({
       ? (selected[0]?.oldPrice ?? selected[0]?.price ?? 0)
       : (kitBundleBaseTotal(count, mode) ?? 0) / 100;
   const saving = Math.max(compare - total, 0);
+  const catalogTotalKopecks = selected.reduce(
+    (sum, item) => sum + Math.round((item?.price ?? 0) * 100),
+    0,
+  );
   const complete =
     selected.length === count &&
     selected.every((item) => item && available(item)) &&
-    (count === 1 || compare >= total);
+    (count === 1 || catalogTotalKopecks >= (kitBundleTotal(count, mode) ?? 0));
 
   useEffect(() => {
     const node = orderRef.current;
@@ -420,7 +424,10 @@ export function KitLanding({
                 {[1, 2, 3].map((value) => {
                   const unit =
                     value === 1
-                      ? (first?.price ?? variants[0]?.price ?? 0)
+                      ? (selected[0]?.price ??
+                        first?.price ??
+                        variants[0]?.price ??
+                        0)
                       : (kitBundleUnitPrice(value, mode) ?? 0) / 100;
                   return (
                     <button

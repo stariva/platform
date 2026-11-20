@@ -1,4 +1,3 @@
-import { APP_CONFIG, env } from "@stariva/config";
 import {
   Body,
   Button,
@@ -13,6 +12,7 @@ import {
   Tailwind,
   Text,
 } from "@react-email/components";
+import { APP_CONFIG, env } from "@stariva/config";
 
 import { emailTailwindConfig } from "../tailwind";
 

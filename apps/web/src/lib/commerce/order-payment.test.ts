@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 
 // Моки заказов, ФНС и Ozon не должны влиять на другие наборы тестов.
 for (const scenario of [
+  "kit access is retried before shipment claims",
+  "kit access runs even when shipment is already claimed",
+  "balance fulfillment retries after shipment failure",
   "item loading failures claim the shipment and notify staff before rethrowing",
   "receipt preparation failures use the same shipment fallback",
   "fallback leaves another worker's shipment alone",

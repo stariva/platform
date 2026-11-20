@@ -24,6 +24,7 @@ import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { env } from "@/env";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
 import { cartLineKey, useCart } from "@/lib/cart/cart-context";
 import { useCartValidation } from "@/lib/cart/use-cart-validation";
@@ -101,6 +102,9 @@ export default function CheckoutPage() {
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
   const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentProvider, setPaymentProvider] = useState<
+    "yookassa" | "robokassa"
+  >("yookassa");
   const [redirecting, setRedirecting] = useState(false);
 
   const checkoutTracked = useRef(false);
@@ -221,7 +225,7 @@ export default function CheckoutPage() {
     reachGoal("checkout_delivery_complete");
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(provider: "yookassa" | "robokassa") {
     if (
       !items.length ||
       quoteState.status !== "ready" ||
@@ -241,6 +245,7 @@ export default function CheckoutPage() {
       ),
     } satisfies DeliverySelection & { pointLabel: string };
 
+    setPaymentProvider(provider);
     setSubmitting(true);
     try {
       const created = await webApi.checkout.create({
@@ -264,6 +269,8 @@ export default function CheckoutPage() {
         expectedProductsKopecks: subtotal,
         personalDataConsent: contact.personalDataConsent,
         offerAccepted: true,
+        // Без поля сервер создаёт платёж ЮKassa — как раньше
+        paymentProvider: provider === "robokassa" ? "robokassa" : undefined,
       });
       await trackCreatedOrder(created.analytics);
       // После оплаты ЮKassa вернёт на страницу заказа — откроем его без телефона
@@ -543,16 +550,39 @@ export default function CheckoutPage() {
                   на страницу заказа.
                 </p>
                 <Button
-                  onClick={handleConfirm}
+                  onClick={() => handleConfirm("yookassa")}
                   disabled={submitting || !quote}
                   className="w-full h-14 rounded-full bg-espresso text-parchment hover:bg-espresso/85 text-[15px]"
                 >
-                  {submitting ? (
+                  {submitting && paymentProvider === "yookassa" ? (
                     <Spinner />
                   ) : (
                     `Оплатить ${formatPrice(total / 100)}`
                   )}
                 </Button>
+                {env.NEXT_PUBLIC_ROBOKASSA_ENABLED && total > 0 && (
+                  <div>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleConfirm("robokassa")}
+                      disabled={submitting || !quote}
+                      aria-busy={
+                        (submitting && paymentProvider === "robokassa") ||
+                        undefined
+                      }
+                      className="w-full h-auto min-h-14 whitespace-normal rounded-2xl border-espresso/20 bg-transparent px-5 py-3 text-center text-[15px] text-espresso hover:bg-sand"
+                    >
+                      {submitting && paymentProvider === "robokassa" ? (
+                        <Spinner />
+                      ) : (
+                        "Иностранная карта, Яндекс Пэй или Сплит"
+                      )}
+                    </Button>
+                    <p className="mt-2 text-center text-[12px] text-taupe">
+                      Выберите способ на странице Robokassa
+                    </p>
+                  </div>
+                )}
                 <OfferAcceptanceNote action="Оплатить" />
               </div>
             </CheckoutSection>

@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CommunityNote } from "@/components/stariva/community-invite";
-import { ReviewCard } from "@/components/stariva/review-card";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import {
@@ -11,6 +10,7 @@ import {
   CourseJsonLd,
   FAQJsonLd,
 } from "@/components/stariva/json-ld";
+import { ReviewCard } from "@/components/stariva/review-card";
 import {
   Breadcrumb,
   BreadcrumbItem,

@@ -7,8 +7,8 @@ import { jobsContract } from "./jobs";
 import { ordersContract } from "./orders";
 
 export {
-  type CatalogCourse,
   type AppRelease,
+  type CatalogCourse,
   FilesUnavailableError,
   type LessonDetails,
   LessonNotFoundError,
@@ -57,8 +57,8 @@ export {
   madeToOrderContactChannels,
   normalizeTelegramHandle,
   OptionsUnavailableError,
-  ProductsPriceChangedError,
   type PhoneCheck,
+  ProductsPriceChangedError,
   type QuoteInput,
   TELEGRAM_HANDLE_ERROR,
 } from "./checkout";

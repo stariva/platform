@@ -14,10 +14,13 @@ import {
 } from "@stariva/db";
 import { videoRenditions, workshops } from "@stariva/db/schema";
 import {
+  activeStorageProvider,
   countUnderPrefixes,
   hlsPlaylistFile,
   isMirrorFolderComplete,
+  listObjects,
   objectExists,
+  otherStorageProvider,
   workshopHlsPrefix,
 } from "@stariva/storage";
 
@@ -354,9 +357,12 @@ function viewerFolder(row: {
  * которую проверили: пока шла проверка, нарезку могли перерезать, и новая
  * папка обязана снова дождаться своей синхронизации.
  */
+/** Папка мастер-классов в закрытом бакете: всё, что копирует зеркало. */
+const WORKSHOPS_PREFIX = "workshops/";
+
 export async function syncRenditionMirrorFlags(
-  source: { key: string }[],
-  mirror: { key: string }[],
+  source?: { key: string }[],
+  mirror?: { key: string }[],
 ): Promise<{ marked: number; cleared: number }> {
   const rows = await db
     .select({
@@ -377,8 +383,18 @@ export async function syncRenditionMirrorFlags(
   ];
   if (folders.length === 0) return { marked: 0, cleared: 0 };
 
-  const sourceCounts = countUnderPrefixes(source, folders);
-  const mirrorCounts = countUnderPrefixes(mirror, folders);
+  // Сначала читаем строки, потом — листинги: пока мы смотрели базу, нарезка
+  // могла стать готовой, и её файлы уже должны быть в активном бакете.
+  const [sourceObjects, mirrorObjects] = await Promise.all([
+    source ?? listObjects(WORKSHOPS_PREFIX, activeStorageProvider()),
+    mirror ??
+      listObjects(
+        WORKSHOPS_PREFIX,
+        otherStorageProvider(activeStorageProvider()),
+      ),
+  ]);
+  const sourceCounts = countUnderPrefixes(sourceObjects, folders);
+  const mirrorCounts = countUnderPrefixes(mirrorObjects, folders);
   const now = new Date();
   let marked = 0;
   let cleared = 0;

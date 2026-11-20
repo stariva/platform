@@ -23,8 +23,8 @@ import {
   hasBriefContent,
   isPreorder,
 } from "@/lib/workshops-data";
-import { PreorderNotice } from "./preorder-notice";
 import { ElkaKitOffer } from "../../elka-kit-offer";
+import { PreorderNotice } from "./preorder-notice";
 import { WorkshopBrief } from "./workshop-brief";
 import { WorkshopReview } from "./workshop-review";
 

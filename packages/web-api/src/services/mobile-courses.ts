@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, db, desc, eq, inArray, ne, asc } from "@stariva/db";
+import { and, asc, db, desc, eq, inArray, ne } from "@stariva/db";
 import {
   appReleases,
   courseAccess,

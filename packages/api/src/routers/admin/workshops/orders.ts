@@ -130,6 +130,8 @@ export const ordersList = adminProcedure
       items: rows.map(
         ({ amount, releaseAt, attribution, paymentId, ...row }) => ({
           ...row,
+          // Счёт Robokassa нельзя удалить вместе с записью: он хранит историю оплат
+          hasRobokassaInvoice: paymentId?.startsWith("robokassa:") ?? false,
           // Чеков должно быть по числу оплат — по записи на курс одна
           receiptsExpected: workshopReceiptsExpected({
             status: row.status,

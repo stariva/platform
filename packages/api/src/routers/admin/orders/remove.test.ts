@@ -16,16 +16,24 @@ function request(
   order: FakeOrder | undefined,
   openPayment = false,
   force = false,
+  invoice = false,
 ) {
   const deleteWhere = mock(async () => undefined);
   const del = mock(() => ({ where: deleteWhere }));
   const tx = {
     select: (fields: Record<string, unknown>) => ({
       from: () => ({
-        where: () =>
-          "status" in fields
-            ? { for: async () => (order ? [order] : []) }
-            : { limit: async () => (openPayment ? [{ id: "payment" }] : []) },
+        where: () => {
+          if ("status" in fields) {
+            return { for: async () => (order ? [order] : []) };
+          }
+          if ("invoiceId" in fields) {
+            return { limit: async () => (invoice ? [{ invoiceId: 1 }] : []) };
+          }
+          return {
+            limit: async () => (openPayment ? [{ id: "payment" }] : []),
+          };
+        },
       }),
     }),
     delete: del,
@@ -96,4 +104,15 @@ test("remove deletes an order with an open payment link when forced", async () =
   const { result, del } = request({ status: "pending", ...unpaid }, true, true);
   await expect(result).resolves.toEqual({ ok: true });
   expect(del).toHaveBeenCalled();
+});
+
+test("remove refuses an order with a Robokassa invoice even when forced", async () => {
+  const { result, del } = request(
+    { status: "canceled", ...unpaid },
+    false,
+    true,
+    true,
+  );
+  await expect(result).rejects.toMatchObject({ code: "CONFLICT" });
+  expect(del).not.toHaveBeenCalled();
 });

@@ -1,5 +1,5 @@
 {
-  "id": "ab22dc2b-a238-4bc6-a4e8-0bf666e6e198",
+  "id": "c42daf7c-32ec-49e4-b914-4afe2fc6dd52",
   "prevId": "93b5d4fc-edd3-4345-8be3-3ab61ff71b79",
   "version": "7",
   "dialect": "postgresql",
@@ -2132,6 +2132,128 @@
         "reviews_rating_range": {
           "name": "reviews_rating_range",
           "value": "\"reviews\".\"rating\" BETWEEN 1 AND 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.robokassa_invoices": {
+      "name": "robokassa_invoices",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "robokassa_invoices_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1001",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "product_order_id": {
+          "name": "product_order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "workshop_order_id": {
+          "name": "workshop_order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payment_method": {
+          "name": "payment_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "robokassa_invoices_product_order_idx": {
+          "name": "robokassa_invoices_product_order_idx",
+          "columns": [
+            {
+              "expression": "product_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "robokassa_invoices_workshop_order_idx": {
+          "name": "robokassa_invoices_workshop_order_idx",
+          "columns": [
+            {
+              "expression": "workshop_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "robokassa_invoices_product_order_id_product_orders_id_fk": {
+          "name": "robokassa_invoices_product_order_id_product_orders_id_fk",
+          "tableFrom": "robokassa_invoices",
+          "tableTo": "product_orders",
+          "columnsFrom": ["product_order_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "robokassa_invoices_workshop_order_id_orders_id_fk": {
+          "name": "robokassa_invoices_workshop_order_id_orders_id_fk",
+          "tableFrom": "robokassa_invoices",
+          "tableTo": "orders",
+          "columnsFrom": ["workshop_order_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "robokassa_invoices_one_order": {
+          "name": "robokassa_invoices_one_order",
+          "value": "num_nonnulls(\"robokassa_invoices\".\"product_order_id\", \"robokassa_invoices\".\"workshop_order_id\") = 1"
         }
       },
       "isRLSEnabled": false
@@ -5093,12 +5215,6 @@
         "ready_version": {
           "name": "ready_version",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mirror_synced_at": {
-          "name": "mirror_synced_at",
-          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },

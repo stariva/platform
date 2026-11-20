@@ -108,6 +108,8 @@ export function toAdminOrder(
     masterNotes: order.masterNotes,
     trackingNumber: order.trackingNumber,
     paymentId: order.paymentId,
+    // Счёт Robokassa нельзя удалить вместе с заказом: он хранит историю оплат
+    hasRobokassaInvoice: (order.paymentId ?? "").startsWith("robokassa:"),
     ozonOrderId: order.ozonOrderId,
     ozonPostingNumbers: order.ozonPostingNumbers ?? [],
     ozonShipmentStatus: order.ozonShipmentStatus,

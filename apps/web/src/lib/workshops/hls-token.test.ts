@@ -1,9 +1,22 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { sessionFingerprint, signHlsGrant, verifyHlsGrant } from "./hls-token";
 
 const SECRET = "test-secret-test-secret-test-secret";
 const NOW = 1_800_000_000;
+
+function hmac(key: Buffer, message: string): Buffer {
+  return createHmac("sha256", key).update(message).digest();
+}
+
+function grantKey(secret: string): Buffer {
+  return hmac(Buffer.from(secret), "stariva:video-hls");
+}
+
+function signPayload(payload: string, secret: string): string {
+  return hmac(grantKey(secret), payload).toString("base64url");
+}
 const grant = {
   prefix: "workshops/poyas/hls/lesson-1-0a1b2c3d4e",
   expiresAt: NOW + 3600,
@@ -57,8 +70,7 @@ test("grants issued before the mirror keep reading the active storage", () => {
 });
 
 test("an unknown storage in a grant is refused", () => {
-  const [, sig] = signHlsGrant(grant, SECRET).split(".");
-  const forged = Buffer.from(
+  const payload = Buffer.from(
     JSON.stringify({
       p: grant.prefix,
       e: grant.expiresAt,
@@ -66,7 +78,8 @@ test("an unknown storage in a grant is refused", () => {
       t: "somewhere-else",
     }),
   ).toString("base64url");
-  assert.equal(verifyHlsGrant(`${forged}.${sig}`, SECRET, NOW), null);
+  const token = `${payload}.${signPayload(payload, SECRET)}`;
+  assert.equal(verifyHlsGrant(token, SECRET, NOW), null);
 });
 
 test("session fingerprints hide the cookie and tell browsers apart", () => {

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { env } from "@/env";
 import { reachGoalBeforeLeave } from "@/lib/analytics";
 import { useSession } from "@/lib/auth/client";
 import { suggestEmailFix } from "@/lib/email-typo";
@@ -56,6 +57,7 @@ function saveEmailDraft(email: string) {
 }
 
 type Notice = { tone: "error" | "info"; text: string } | null;
+type PaymentProvider = "yookassa" | "robokassa";
 
 /**
  * Покупка мастер-класса. Гостю не нужна регистрация: достаточно email — на
@@ -76,6 +78,7 @@ export function WorkshopPurchase({
   const { data: session, isPending: sessionPending } = useSession();
   const [owned, setOwned] = useState<boolean | null>(null);
   const [localBuying, setLocalBuying] = useState(false);
+  const [provider, setProvider] = useState<PaymentProvider>("yookassa");
   const buying = controlledBuying ?? localBuying;
   function setBuying(value: boolean) {
     setLocalBuying(value);
@@ -145,10 +148,14 @@ export function WorkshopPurchase({
     return emailOk && consent;
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
     if (!validate()) return;
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const chosen: PaymentProvider =
+      submitter?.dataset.provider === "robokassa" ? "robokassa" : "yookassa";
+    setProvider(chosen);
 
     const goalSent = buyGoal
       ? reachGoalBeforeLeave(buyGoal, {
@@ -166,8 +173,14 @@ export function WorkshopPurchase({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           session
-            ? { slug, bundle }
-            : { slug, bundle, email: guestEmail, personalDataConsent: consent },
+            ? { slug, bundle, provider: chosen }
+            : {
+                slug,
+                bundle,
+                email: guestEmail,
+                personalDataConsent: consent,
+                provider: chosen,
+              },
         ),
       });
       const data = await res.json().catch(() => ({}));
@@ -240,6 +253,7 @@ export function WorkshopPurchase({
     );
   }
 
+  const robokassaAvailable = env.NEXT_PUBLIC_ROBOKASSA_ENABLED && price > 0;
   const submitLabel =
     price === 0
       ? "Смотреть бесплатно"
@@ -332,7 +346,7 @@ export function WorkshopPurchase({
             : `${submitLabel}: мастер-класс «${title}»`
         }
       >
-        {buying ? (
+        {buying && provider === "yookassa" ? (
           <>
             <Spinner className="mr-2" />
             Переходим к оплате…
@@ -341,6 +355,31 @@ export function WorkshopPurchase({
           submitLabel
         )}
       </Button>
+
+      {robokassaAvailable && (
+        <div className="mt-2">
+          <Button
+            type="submit"
+            data-provider="robokassa"
+            disabled={buying}
+            aria-busy={(buying && provider === "robokassa") || undefined}
+            aria-label={`Оплатить иностранной картой, через Яндекс Пэй или Сплит: мастер-класс «${title}»`}
+            className="w-full h-auto min-h-12 whitespace-normal text-center border border-espresso/20 bg-transparent text-espresso hover:bg-sand py-3 rounded-2xl text-base"
+          >
+            {buying && provider === "robokassa" ? (
+              <>
+                <Spinner className="mr-2" />
+                Переходим к оплате…
+              </>
+            ) : (
+              "Иностранная карта, Яндекс Пэй или Сплит"
+            )}
+          </Button>
+          <p className="mt-1.5 text-center text-[12px] text-taupe">
+            Выберите способ на странице Robokassa
+          </p>
+        </div>
+      )}
 
       <div aria-live="polite">
         {notice ? (

@@ -51,6 +51,8 @@ export interface AdminOrderView {
   masterNotes: string | null;
   trackingNumber: string | null;
   paymentId: string | null;
+  /** Заказ оплачивался через счёт Robokassa — такой заказ нельзя удалить. */
+  hasRobokassaInvoice: boolean;
   ozonOrderId: string | null;
   ozonPostingNumbers: string[];
   ozonShipmentStatus: "pending" | "creating" | "failed" | "created";
@@ -150,6 +152,13 @@ export function toOrderView(order: AdminOrderData): AdminOrderView {
       paidAt: iso(payment.paidAt),
     })),
   };
+}
+
+/** Где искать платёж: «robokassa:<номер>» — счёт Robokassa, иначе id ЮKassa. */
+export function paymentLabel(paymentId: string): string {
+  return paymentId.startsWith("robokassa:")
+    ? `Robokassa, счёт №${paymentId.slice("robokassa:".length)}`
+    : `ЮKassa ${paymentId}`;
 }
 
 export const STATUS_LABELS: Record<string, string> = {
