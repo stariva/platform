@@ -77,15 +77,9 @@ export async function applyProductOrderPayment(
   }
 
   // С набором идёт мастер-класс — уроки на почту сразу, не дожидаясь посылки.
-  // Сбой не должен помешать чеку и отправлению: повтор вебхука откроет доступ
-  try {
-    await grantKitWorkshops(orderId);
-  } catch (error) {
-    console.error(
-      `[payments/webhook] Не удалось открыть мастер-класс к набору из заказа ${orderId}:`,
-      error,
-    );
-  }
+  // Сбой выдачи доступа прерывает оплату: вебхук повторит попытку, тогда
+  // уроки выйдут перед отправлением
+  await grantKitWorkshops(orderId);
 
   const manualDelivery = order.deliveryMethod === "manual";
   let attemptId: string | null = null;
