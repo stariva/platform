@@ -36,18 +36,16 @@ export function receiptsExpected(order: {
 }
 
 /**
- * Мастер-класс оплачивают один раз. Заказ без платежа ЮKassa открыт кодом
+ * Мастер-класс оплачивают один раз. Заказ без платежа открыт кодом
  * с маркетплейса: деньги получила площадка, чек на сайте не выписываем.
+ * Boosty — деньги у продавца: чек выписывают вручную в «Мой налог»
+ * и привязывают по ссылке из админки, как для ЮKassa.
  */
 export function workshopReceiptsExpected(order: {
   status: string;
   paymentId: string | null;
 }): number {
-  return order.status === "paid" &&
-    order.paymentId &&
-    !order.paymentId.startsWith("boosty:")
-    ? 1
-    : 0;
+  return order.status === "paid" && order.paymentId ? 1 : 0;
 }
 
 export interface ReceiptStats {
