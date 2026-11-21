@@ -11,8 +11,10 @@ import {
 import { and, count, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { earnsPreorderBonus } from "./preorder-bonus";
 
-/** Неверных кодов с одного IP за час — дальше просим подождать. */
-export const ACCESS_CODE_MAX_FAILURES = 5;
+/** Неудачных попыток активации с одного IP за час — дальше просим подождать. */
+export const ACTIVATION_MAX_FAILURES = 5;
+/** То же для кодов с маркетплейсов: имя оставлено для совместимости. */
+export const ACCESS_CODE_MAX_FAILURES = ACTIVATION_MAX_FAILURES;
 const FAILURE_WINDOW_MS = 60 * 60_000;
 
 export type AccessCode = typeof workshopAccessCodes.$inferSelect;
@@ -26,14 +28,24 @@ export async function findAccessCode(code: string): Promise<AccessCode | null> {
   return row ?? null;
 }
 
-/** Резервирует попытку до проверки кода. null — предел или сбой БД. */
-export async function reserveAccessCodeAttempt(
+/**
+ * Ключ в журнале попыток. scope разделяет лимиты кодов и Boosty: перебор
+ * одного не должен блокировать другой.
+ */
+function attemptKey(ip: string, scope?: string) {
+  return scope ? `${scope}:${ip}` : ip;
+}
+
+/** Резервирует попытку до проверки кода или заказа. null — предел или сбой БД. */
+export async function reserveActivationAttempt(
   ip: string,
+  scope?: string,
 ): Promise<string | null> {
+  const key = attemptKey(ip, scope);
   try {
     return await db.transaction(async (tx) => {
       await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${`access-code:${ip}`}, 0))`,
+        sql`select pg_advisory_xact_lock(hashtextextended(${`activation:${key}`}, 0))`,
       );
       const since = new Date(Date.now() - FAILURE_WINDOW_MS);
       const [row] = await tx
@@ -41,14 +53,14 @@ export async function reserveAccessCodeAttempt(
         .from(accessCodeAttempts)
         .where(
           and(
-            eq(accessCodeAttempts.ip, ip),
+            eq(accessCodeAttempts.ip, key),
             gt(accessCodeAttempts.createdAt, since),
           ),
         );
-      if ((row?.n ?? 0) >= ACCESS_CODE_MAX_FAILURES) return null;
+      if ((row?.n ?? 0) >= ACTIVATION_MAX_FAILURES) return null;
 
       const attemptId = randomUUID();
-      await tx.insert(accessCodeAttempts).values({ id: attemptId, ip });
+      await tx.insert(accessCodeAttempts).values({ id: attemptId, ip: key });
       if (Math.random() < 0.05) {
         const dayAgo = new Date(Date.now() - 24 * 60 * 60_000);
         await tx
@@ -63,8 +75,8 @@ export async function reserveAccessCodeAttempt(
   }
 }
 
-/** Успешная активация не расходует предел неверных кодов. */
-export async function releaseAccessCodeAttempt(
+/** Успешная активация не расходует предел неверных попыток. */
+export async function releaseActivationAttempt(
   attemptId: string,
 ): Promise<void> {
   try {
@@ -74,6 +86,15 @@ export async function releaseAccessCodeAttempt(
   } catch (error) {
     console.error("[access-codes] Не удалось удалить успешную попытку:", error);
   }
+}
+
+/** Коды с маркетплейсов: прежний общий лимит без отдельного scope. */
+export function reserveAccessCodeAttempt(ip: string) {
+  return reserveActivationAttempt(ip);
+}
+
+export function releaseAccessCodeAttempt(attemptId: string) {
+  return releaseActivationAttempt(attemptId);
 }
 
 /**
