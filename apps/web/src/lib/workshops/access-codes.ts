@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { db } from "@stariva/db";
+import { type Database, db } from "@stariva/db";
+import { createDatabase } from "@stariva/db/client";
 import {
   accessCodeAttempts,
   type CampaignAttribution,
@@ -16,6 +17,17 @@ export const ACTIVATION_MAX_FAILURES = 5;
 /** То же для кодов с маркетплейсов: имя оставлено для совместимости. */
 export const ACCESS_CODE_MAX_FAILURES = ACTIVATION_MAX_FAILURES;
 const FAILURE_WINDOW_MS = 60 * 60_000;
+
+/**
+ * Neon HTTP не поддерживает интерактивные транзакции, а лимитер и активация
+ * кодов без них не атомарны. Для этих операций явно берём TCP-драйвер; на
+ * обычном node-postgres он и так используется по умолчанию.
+ */
+let transactionalDb: Database | undefined;
+function transactionDb(): Database {
+  transactionalDb ??= createDatabase("node");
+  return transactionalDb;
+}
 
 export type AccessCode = typeof workshopAccessCodes.$inferSelect;
 
@@ -36,43 +48,41 @@ function attemptKey(ip: string, scope?: string) {
   return scope ? `${scope}:${ip}` : ip;
 }
 
-/** Резервирует попытку до проверки кода или заказа. null — предел или сбой БД. */
+/**
+ * Резервирует попытку до проверки кода или заказа. null — предел попыток;
+ * ошибка хранилища пробрасывается, чтобы вызывающий не выдал её за лимит.
+ */
 export async function reserveActivationAttempt(
   ip: string,
   scope?: string,
 ): Promise<string | null> {
   const key = attemptKey(ip, scope);
-  try {
-    return await db.transaction(async (tx) => {
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${`activation:${key}`}, 0))`,
+  return transactionDb().transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`activation:${key}`}, 0))`,
+    );
+    const since = new Date(Date.now() - FAILURE_WINDOW_MS);
+    const [row] = await tx
+      .select({ n: count() })
+      .from(accessCodeAttempts)
+      .where(
+        and(
+          eq(accessCodeAttempts.ip, key),
+          gt(accessCodeAttempts.createdAt, since),
+        ),
       );
-      const since = new Date(Date.now() - FAILURE_WINDOW_MS);
-      const [row] = await tx
-        .select({ n: count() })
-        .from(accessCodeAttempts)
-        .where(
-          and(
-            eq(accessCodeAttempts.ip, key),
-            gt(accessCodeAttempts.createdAt, since),
-          ),
-        );
-      if ((row?.n ?? 0) >= ACTIVATION_MAX_FAILURES) return null;
+    if ((row?.n ?? 0) >= ACTIVATION_MAX_FAILURES) return null;
 
-      const attemptId = randomUUID();
-      await tx.insert(accessCodeAttempts).values({ id: attemptId, ip: key });
-      if (Math.random() < 0.05) {
-        const dayAgo = new Date(Date.now() - 24 * 60 * 60_000);
-        await tx
-          .delete(accessCodeAttempts)
-          .where(lt(accessCodeAttempts.createdAt, dayAgo));
-      }
-      return attemptId;
-    });
-  } catch (error) {
-    console.error("[access-codes] Не удалось зарезервировать попытку:", error);
-    return null;
-  }
+    const attemptId = randomUUID();
+    await tx.insert(accessCodeAttempts).values({ id: attemptId, ip: key });
+    if (Math.random() < 0.05) {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60_000);
+      await tx
+        .delete(accessCodeAttempts)
+        .where(lt(accessCodeAttempts.createdAt, dayAgo));
+    }
+    return attemptId;
+  });
 }
 
 /** Успешная активация не расходует предел неверных попыток. */
@@ -130,7 +140,7 @@ export async function redeemAccessCode(input: {
   visitor: VisitorInfo | null;
 }) {
   const { code } = input;
-  return db.transaction(async (tx) => {
+  return transactionDb().transaction(async (tx) => {
     const now = new Date();
     const [claimed] = await tx
       .update(workshopAccessCodes)

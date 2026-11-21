@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 type Status = "idle" | "success" | "info" | "error";
 
 interface ActivationResponse {
-  activated?: number;
-  alreadyActive?: boolean;
   queued?: boolean;
   error?: string;
 }
@@ -48,23 +46,9 @@ export function BoostyActivationForm() {
         );
         return;
       }
-      if (data?.activated) {
-        setStatus("success");
-        setMessage(
-          `Готово! Доступ открыт. На ${address} отправлено письмо со ссылкой для входа.`,
-        );
-        return;
-      }
-      if (data?.alreadyActive) {
-        setStatus("info");
-        setMessage(
-          "Этот email уже активирован. Доступ открыт — войдите по ссылке из письма.",
-        );
-        return;
-      }
-      setStatus("info");
+      setStatus("success");
       setMessage(
-        "Заказ с таким email не найден. Укажите адрес, который вы ввели перед оплатой на Boosty.",
+        `Если заказ на ${address} найден, доступ открыт. Мы отправили на этот адрес ссылку для входа — проверьте почту, включая «Спам». Если письма нет, напишите Ольге в чат заказа.`,
       );
     } catch {
       setStatus("error");
@@ -117,7 +101,7 @@ export function BoostyActivationForm() {
           href="/account"
           className="inline-block text-sm font-medium text-terracotta underline underline-offset-4 hover:text-terracotta-dark"
         >
-          Перейти в кабинет
+          Войти в кабинет
         </a>
       )}
     </form>

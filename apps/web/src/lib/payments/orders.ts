@@ -206,10 +206,14 @@ export async function markOrderNotificationSent(
     });
 }
 
-/** Ошибка отправки — освобождаем только свою аренду для следующей попытки. */
+/**
+ * Ошибка отправки — освобождаем аренду, но оставляем строку неотправленной:
+ * её подхватит следующий прогон, даже если окно напоминаний уже прошло.
+ */
 export async function releaseOrderNotification(claimId: string): Promise<void> {
   await db
-    .delete(workshopOrderNotifications)
+    .update(workshopOrderNotifications)
+    .set({ leaseUntil: sql`now()` })
     .where(
       and(
         eq(workshopOrderNotifications.id, claimId),

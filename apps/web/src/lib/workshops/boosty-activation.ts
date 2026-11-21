@@ -11,13 +11,25 @@ import {
   sql,
   workshops,
 } from "@stariva/db";
+import { createDatabase } from "@stariva/db/client";
 import { earnsPreorderBonus } from "./preorder-bonus";
 
 export interface BoostyActivationResult {
   /** Заказы, которые открыли доступ прямо сейчас. */
-  orderIds: string[];
-  /** На этот email уже есть оплаченный заказ Boosty. */
-  alreadyActive: boolean;
+  activatedOrderIds: string[];
+  /** Оплаченные заказы Boosty на этот email — доступ уже открыт. */
+  paidOrderIds: string[];
+}
+
+/**
+ * Neon HTTP не умеет интерактивные транзакции, а подтверждение заказа и выдача
+ * доступа должны быть атомарными. Явно берём TCP-драйвер, как и для остальных
+ * транзакционных операций.
+ */
+let transactionalDb: ReturnType<typeof createDatabase> | undefined;
+function transactionDb(): ReturnType<typeof createDatabase> {
+  transactionalDb ??= createDatabase("node");
+  return transactionalDb;
 }
 
 /**
@@ -29,7 +41,7 @@ export interface BoostyActivationResult {
 export async function activateBoostyOrders(
   email: string,
 ): Promise<BoostyActivationResult> {
-  const orderIds = await db.transaction(async (tx) => {
+  const activatedOrderIds = await transactionDb().transaction(async (tx) => {
     const rows = await tx
       .select()
       .from(orders)
@@ -104,9 +116,11 @@ export async function activateBoostyOrders(
     return activated;
   });
 
-  if (orderIds.length > 0) return { orderIds, alreadyActive: false };
+  if (activatedOrderIds.length > 0) {
+    return { activatedOrderIds, paidOrderIds: [] };
+  }
 
-  const [paid] = await db
+  const paid = await db
     .select({ id: orders.id })
     .from(orders)
     .where(
@@ -116,8 +130,11 @@ export async function activateBoostyOrders(
         like(orders.paymentId, "boosty:%"),
       ),
     )
-    .limit(1);
-  return { orderIds, alreadyActive: Boolean(paid) };
+    .limit(5);
+  return {
+    activatedOrderIds: [],
+    paidOrderIds: paid.map((row) => row.id),
+  };
 }
 
 /**

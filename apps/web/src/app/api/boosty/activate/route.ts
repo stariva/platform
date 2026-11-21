@@ -9,6 +9,7 @@ import {
   activateBoostyOrders,
   requestBoostyActivation,
 } from "@/lib/workshops/boosty-activation";
+import { sendLoginEmail } from "@/lib/workshops/buyer";
 import { notifyWorkshopBooked } from "@/lib/workshops/notifications";
 
 export const runtime = "nodejs";
@@ -17,14 +18,22 @@ const inputSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
 });
 
+const unavailable = () =>
+  NextResponse.json(
+    {
+      error: "Сервис временно недоступен. Попробуйте ещё раз через пару минут.",
+    },
+    { status: 503 },
+  );
+
 /**
  * Покупатель вернулся из закрытого поста Boosty и ввёл email, на который
  * оформлял заказ. Если pending-заказ с таким email есть, сразу открываем
  * доступ и отправляем письмо со ссылкой входа — без ручной сверки.
  *
- * Лимит попыток по IP не даёт перебирать чужие адреса; сами заказы
- * подтверждает только точное совпадение email, поэтому доступ получает
- * владелец почты, а не автор запроса.
+ * Лимит попыток по IP не даёт перебирать чужие адреса. Ответ одинаков для
+ * найденного, уже активированного и неизвестного email: публичный маршрут не
+ * должен раскрывать, есть ли заказ на этот адрес.
  */
 export async function POST(request: Request) {
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
@@ -36,7 +45,15 @@ export async function POST(request: Request) {
   }
 
   const ip = clientIp(request.headers) ?? "unknown";
-  const attemptId = await reserveActivationAttempt(ip, "boosty");
+  let attemptId: string | null;
+  try {
+    attemptId = await reserveActivationAttempt(ip, "boosty");
+  } catch (error) {
+    // Сбой хранилища нельзя выдавать за исчерпанный лимит: иначе покупатель
+    // будет час ждать, хотя повторить запрос можно сразу.
+    console.error("[boosty/activate] Не удалось проверить лимит:", error);
+    return unavailable();
+  }
   if (!attemptId) {
     return NextResponse.json(
       {
@@ -53,38 +70,34 @@ export async function POST(request: Request) {
   } catch (error) {
     // Ручной резерв: админ увидит заявку и сверит оплату в Boosty
     console.error("[boosty/activate] Автоактивация не удалась:", error);
-    await requestBoostyActivation(parsed.data.email).catch((cause) =>
-      console.error("[boosty/activate] Не удалось создать заявку:", cause),
+    try {
+      await requestBoostyActivation(parsed.data.email);
+    } catch (cause) {
+      console.error("[boosty/activate] Не удалось создать заявку:", cause);
+      return unavailable();
+    }
+    return NextResponse.json({ ok: true, queued: true });
+  }
+
+  if (result.activatedOrderIds.length > 0) {
+    // Успешная активация не расходует лимит неудачных попыток
+    await releaseActivationAttempt(attemptId);
+    await Promise.all(
+      result.activatedOrderIds.map((orderId) => notifyWorkshopBooked(orderId)),
     );
-    return NextResponse.json({
-      ok: true,
-      activated: 0,
-      alreadyActive: false,
-      queued: true,
+    console.info("[boosty/activate] Автоактивация по email", {
+      orders: result.activatedOrderIds,
+      ip,
     });
+  } else if (result.paidOrderIds.length > 0) {
+    // Доступ уже открыт: высылаем свежую ссылку входа, чтобы письмо можно было
+    // получить повторно, даже если первое не дошло.
+    await sendLoginEmail(parsed.data.email, "/account", request.headers).catch(
+      (error) =>
+        console.error("[boosty/activate] Не удалось отправить вход:", error),
+    );
+    console.info("[boosty/activate] Повторная ссылка входа", { ip });
   }
 
-  if (result.orderIds.length === 0) {
-    return NextResponse.json({
-      ok: true,
-      activated: 0,
-      alreadyActive: result.alreadyActive,
-    });
-  }
-
-  // Успешная активация не расходует лимит неудачных попыток
-  await releaseActivationAttempt(attemptId);
-  await Promise.all(
-    result.orderIds.map((orderId) => notifyWorkshopBooked(orderId)),
-  );
-  console.info("[boosty/activate] Автоактивация по email", {
-    orders: result.orderIds,
-    ip,
-  });
-
-  return NextResponse.json({
-    ok: true,
-    activated: result.orderIds.length,
-    alreadyActive: false,
-  });
+  return NextResponse.json({ ok: true });
 }

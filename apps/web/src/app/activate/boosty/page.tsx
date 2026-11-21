@@ -21,7 +21,7 @@ export default function BoostyActivationPage() {
           <p className="mt-5 text-base leading-relaxed text-text-grey">
             Укажите email, который вы ввели перед переходом на Boosty. Если
             оплата прошла, доступ откроется сразу, а на почту придёт ссылка для
-            входа.
+            входа. Если заказ не найдётся, напишите Ольге в чат заказа.
           </p>
           <BoostyActivationForm />
         </div>
