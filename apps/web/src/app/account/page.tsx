@@ -6,12 +6,9 @@ import {
   listGiftedSlugs,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getProductBySlug } from "@/lib/catalog/service";
 import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
-import {
-  ELKA_KIT_SLUG,
-  ELKA_WORKSHOP_SLUG,
-} from "@/lib/commerce/elka-kit-price";
+import { ELKA_WORKSHOP_SLUG } from "@/lib/commerce/elka-kit-price";
+import { getElkaKitVariants } from "@/lib/commerce/elka-kit-variants";
 import { getWorkshopsBySlugs } from "@/lib/workshops/workshops-db";
 import {
   categoryLabels,
@@ -83,17 +80,17 @@ export default async function AccountCoursesPage() {
   const summaries = await Promise.all(
     workshops.map((w) => getCourseProgressSummary(session.user.id, w)),
   );
-  const kit =
+  const kitVariants =
     slugs.includes(ELKA_WORKSHOP_SLUG) &&
     (await hasPurchasedElkaWorkshop(session.user.id))
-      ? await getProductBySlug(ELKA_KIT_SLUG)
-      : undefined;
+      ? await getElkaKitVariants()
+      : [];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      {kit ? (
+      {kitVariants.length > 0 ? (
         <div className="sm:col-span-2 lg:col-span-3">
-          <ElkaKitOffer product={kit} />
+          <ElkaKitOffer variants={kitVariants} />
         </div>
       ) : null}
       {workshops.map((workshop, i) => {

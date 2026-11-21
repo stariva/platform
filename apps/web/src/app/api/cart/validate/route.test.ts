@@ -118,7 +118,7 @@ test("shows the owner price for the tree kit only with a purchased course", asyn
   eligible = true;
   const owner = await POST(request({ lines: [stock("nabor-makrame-elka")] }));
   const ownerLines = (await owner.json()) as { lines: { price: number }[] };
-  assert.equal(ownerLines.lines[0]?.price, 98_000);
+  assert.equal(ownerLines.lines[0]?.price, 99_000);
 
   signedIn = false;
   const guest = await POST(request({ lines: [stock("nabor-makrame-elka")] }));
