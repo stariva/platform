@@ -28,6 +28,11 @@ const idleServices: WebServices = {
     delivered: 0,
     failed: 0,
   }),
+  runWorkshopStorageSweep: async () => ({
+    deleted: 0,
+    bytes: 0,
+    renditions: 0,
+  }),
   runNpdIssuingSweep: async () => ({ checked: 0 }),
   syncEmailEvents: async () => ({
     configured: false,

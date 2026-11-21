@@ -34,6 +34,10 @@ export {
 } from "./services/video-renditions";
 export { getWorkshopReview } from "./services/workshop-reviews";
 export {
+  type WorkshopStorageSweepResult,
+  sweepWorkshopStorage,
+} from "./services/workshop-storage/sweep";
+export {
   type DirectExpensesScope,
   syncDirectExpenses,
 } from "./services/yandex/direct-expenses";

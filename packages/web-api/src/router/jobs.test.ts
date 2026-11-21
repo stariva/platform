@@ -27,19 +27,6 @@ mock.module("../services/video-renditions", () => ({
 }));
 
 const storageSweeps: { dryRun?: boolean }[] = [];
-const workshopStorage = await import("../services/workshop-storage");
-mock.module("../services/workshop-storage", () => ({
-  ...workshopStorage,
-  sweepWorkshopStorage: async (options: { dryRun?: boolean }) => {
-    storageSweeps.push(options);
-    return {
-      deleted: 2,
-      bytes: 30,
-      renditions: 1,
-      deleteKeys: ["workshops/a/x.mp4", "workshops/a/y.mp4"],
-    };
-  },
-}));
 
 const mirrorBatches: { maxFiles?: number; maxBytes?: number }[] = [];
 let mirrorConfigured = true;
@@ -139,6 +126,10 @@ const services = {
   runWorkshopReminderSweep: async () => {
     sweeps++;
     return sweep;
+  },
+  runWorkshopStorageSweep: async (options?: { dryRun?: boolean }) => {
+    storageSweeps.push(options ?? {});
+    return { deleted: 2, bytes: 30, renditions: 1 };
   },
 };
 

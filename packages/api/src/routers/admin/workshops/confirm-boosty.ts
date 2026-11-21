@@ -21,8 +21,7 @@ export async function confirmBoostyAccess(db: Database, id: string) {
       .where(eq(orders.id, id))
       .for("update");
     if (
-      !row ||
-      !row.paymentId?.startsWith("boosty:") ||
+      !row?.paymentId?.startsWith("boosty:") ||
       !row.boostyActivationRequestedAt
     ) {
       throw new ORPCError("NOT_FOUND", {

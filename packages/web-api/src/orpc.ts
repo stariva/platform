@@ -19,6 +19,7 @@ import {
   type WorkshopReview,
   webContract,
 } from "./contract";
+import type { WorkshopStorageSweepResult } from "./services/workshop-storage/sweep";
 
 /**
  * Логика, которая пока живёт в витрине и тянет за собой её модули (письма,
@@ -28,6 +29,10 @@ export interface WebServices {
   notifyBoostyOrder: (orderId: string) => Promise<boolean>;
   /** Рассылка о мастер-классах: apps/web/src/lib/workshops/notifications.ts */
   runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
+  /** Чистка витрины: удаление мусора в памяти от заменённых видео и нарезок. */
+  runWorkshopStorageSweep: (options?: {
+    dryRun?: boolean;
+  }) => Promise<WorkshopStorageSweepResult>;
   /** Проверка зависших заявок НПД без повторного запроса в ФНС. */
   runNpdIssuingSweep: () => Promise<{ checked: number }>;
   /** События доставки Postbox из Data Streams: @stariva/emails (postbox-sync). */

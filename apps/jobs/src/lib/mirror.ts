@@ -45,48 +45,6 @@ function sendRequest(url: string, method: "GET" | "PUT") {
   return factory(url, { method });
 }
 
-/** Сколько байт тела ошибочного ответа читаем для лога. */
-const ERROR_BODY_LIMIT = 512;
-/** Дольше этого тело ошибки не ждём: сокет может не закрыться. */
-const ERROR_BODY_TIMEOUT_MS = 5_000;
-
-/**
- * Отказ хранилища с обрывком тела: S3 объясняет причину кодом (`BadDigest`,
- * `SignatureDoesNotMatch`) и текстом, а голый HTTP 400 в логе ничего не даёт.
- */
-function failResponse(
-  method: "GET" | "PUT",
-  response: IncomingMessage,
-  fail: (error: Error) => void,
-): void {
-  const status = response.statusCode;
-  const chunks: Buffer[] = [];
-  let size = 0;
-  let settled = false;
-  const done = () => {
-    if (settled) return;
-    settled = true;
-    clearTimeout(timer);
-    const body = Buffer.concat(chunks)
-      .toString("utf-8")
-      .replace(/\s+/g, " ")
-      .trim();
-    fail(new Error(`${method}: HTTP ${status}${body ? `: ${body}` : ""}`));
-  };
-  const timer = setTimeout(() => {
-    response.destroy();
-    done();
-  }, ERROR_BODY_TIMEOUT_MS);
-  response.on("data", (chunk: Buffer) => {
-    if (size >= ERROR_BODY_LIMIT) return;
-    chunks.push(chunk);
-    size += chunk.length;
-  });
-  response.once("end", done);
-  response.once("close", done);
-  response.once("error", done);
-}
-
 /**
  * Читает файл из активного бакета потоком и льёт его в зеркало. Content-Length
  * обязателен — S3 не принимает заливку кусками без длины, поэтому в память и

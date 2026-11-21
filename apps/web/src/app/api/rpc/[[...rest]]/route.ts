@@ -14,6 +14,7 @@ import {
 import { syncPostboxEvents } from "@stariva/emails";
 import {
   createWebORPCContext,
+  sweepWorkshopStorage,
   WEB_RPC_PATH,
   type WebServices,
   webErrorStatus,
@@ -62,11 +63,7 @@ const services: WebServices = {
       .from(orders)
       .where(eq(orders.id, orderId))
       .limit(1);
-    if (
-      !order ||
-      order.status !== "paid" ||
-      !order.paymentId?.startsWith("boosty:")
-    )
+    if (order?.status !== "paid" || !order.paymentId?.startsWith("boosty:"))
       throw new Error("boosty_order_not_paid");
     await notifyWorkshopBooked(orderId);
     const [notice] = await db
@@ -105,6 +102,7 @@ const services: WebServices = {
       failed: results.reduce((sum, r) => sum + r.failed, 0),
     };
   },
+  runWorkshopStorageSweep: sweepWorkshopStorage,
   runNpdIssuingSweep,
   // Крон раз в минуту: читаем не дольше, чтобы прогоны не наезжали друг на друга
   syncEmailEvents: () =>
