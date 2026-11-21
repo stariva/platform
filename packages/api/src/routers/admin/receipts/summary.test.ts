@@ -18,10 +18,10 @@ test("an unpaid order needs no receipt", () => {
   );
 });
 
-test("Boosty takes the payment and does not create a Stariva receipt", () => {
+test("a Boosty purchase needs a receipt like any paid order", () => {
   expect(
     workshopReceiptsExpected({ status: "paid", paymentId: "boosty:elka" }),
-  ).toBe(0);
+  ).toBe(1);
 });
 
 test("made-to-order needs a receipt for the deposit and another for the balance", () => {
