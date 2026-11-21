@@ -12,6 +12,7 @@ import {
   type VisitorInfo,
   visitorPlace,
 } from "~/components/visitors/visitor-card";
+import { BoostyReceiptButton } from "./boosty-receipt-button";
 import { ConfirmBoostyButton } from "./confirm-boosty-button";
 import { WorkshopBriefButton } from "./workshop-brief-button";
 import { WorkshopOrderRemove } from "./workshop-order-remove";
@@ -190,15 +191,22 @@ export function WorkshopOrdersTable({
                 {rub.format(row.amount)}
               </TableCell>
               <TableCell className="align-top">
-                {(row.receiptCount > 0 || row.receiptsExpected > 0) && (
-                  <WorkshopReceiptsButton
-                    orderId={row.id}
-                    title={`${row.userName} · ${row.workshopTitle ?? row.workshopSlug}`}
-                    count={row.receiptCount}
-                    needed={row.receiptCount < row.receiptsExpected}
-                    unsent={row.receiptsUnsent > 0}
-                  />
-                )}
+                <div className="flex flex-col items-start gap-1">
+                  {(row.receiptCount > 0 || row.receiptsExpected > 0) && (
+                    <WorkshopReceiptsButton
+                      orderId={row.id}
+                      title={`${row.userName} · ${row.workshopTitle ?? row.workshopSlug}`}
+                      count={row.receiptCount}
+                      needed={row.receiptCount < row.receiptsExpected}
+                      unsent={row.receiptsUnsent > 0}
+                    />
+                  )}
+                  {row.boosty &&
+                    row.status === "paid" &&
+                    row.receiptCount < row.receiptsExpected && (
+                      <BoostyReceiptButton orderId={row.id} />
+                    )}
+                </div>
               </TableCell>
               <TableCell className="align-top">
                 {row.status === "paid" && row.hasBrief && (

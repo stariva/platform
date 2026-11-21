@@ -8,6 +8,7 @@ import {
 import { sendBrief, sendMissingBriefs } from "./brief";
 import { byId, videos } from "./by-id";
 import { confirmBoosty } from "./confirm-boosty";
+import { issueBoostyReceipt } from "./issue-boosty-receipt";
 import { sendKitAccess } from "./kit-access";
 import { list } from "./list";
 import { livemasterPdf } from "./livemaster-pdf";
@@ -28,6 +29,7 @@ export const adminWorkshopsRouter = {
   videos,
   orders: ordersList,
   confirmBoosty,
+  issueBoostyReceipt,
   views: viewsList,
   save,
   remove,
