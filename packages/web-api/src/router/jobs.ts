@@ -20,7 +20,6 @@ import {
   failRendition,
   getAttemptHlsPrefix,
 } from "../services/video-renditions";
-import { sweepWorkshopStorage } from "../services/workshop-storage";
 import { recentRange } from "../services/yandex/common";
 import {
   DirectReportPendingError,
@@ -101,13 +100,16 @@ const sweep = jobs.reminders.sweep.handler(async ({ context, errors }) => {
   return result;
 });
 
-const storageSweep = jobs.storage.sweep.handler(async ({ input, errors }) => {
-  if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
-  const { deleted, bytes, renditions } = await sweepWorkshopStorage({
-    dryRun: input?.dryRun ?? false,
-  });
-  return { deleted, bytes, renditions };
-});
+const storageSweep = jobs.storage.sweep.handler(
+  async ({ input, errors, context }) => {
+    if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
+    const { deleted, bytes, renditions } =
+      await context.services.runWorkshopStorageSweep({
+        dryRun: input?.dryRun ?? false,
+      });
+    return { deleted, bytes, renditions };
+  },
+);
 
 const storageMirrorSync = jobs.storage.mirrorSync.handler(
   async ({ input, errors }) => {
