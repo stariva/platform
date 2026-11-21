@@ -96,7 +96,10 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
 
       email.mockRejectedValueOnce(new Error("provider failure"));
       await notifyWorkshopBooked(id);
-      expect(await read()).toHaveLength(0);
+      // Сбой не удаляет строку: её должен подхватить следующий прогон.
+      const failed = await read();
+      expect(failed).toHaveLength(1);
+      expect(failed[0]?.sentAt).toBeNull();
       await notifyWorkshopBooked(id);
       expect(
         email.mock.calls.map(([message]) => message.idempotencyKey),

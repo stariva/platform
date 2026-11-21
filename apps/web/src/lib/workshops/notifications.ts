@@ -24,6 +24,7 @@ import {
   gte,
   inArray,
   isNotNull,
+  isNull,
   or,
   sql,
 } from "drizzle-orm";
@@ -429,7 +430,7 @@ export async function notifyWorkshopBooked(orderId: string): Promise<void> {
  * Telegram при восстановлении может получить повторное сообщение.
  */
 export async function runWorkshopReminderSweep(now = new Date()) {
-  const targets = await loadTargets(
+  const recentTargets = await loadTargets(
     or(
       gte(orders.paidAt, new Date(now.getTime() - REMINDER_LOOKBEHIND_MS)),
       between(
@@ -439,6 +440,27 @@ export async function runWorkshopReminderSweep(now = new Date()) {
       ),
     ),
   );
+
+  // Письмо о покупке могло не уйти раньше: строка остаётся неотправленной и
+  // должна повторяться независимо от окна напоминаний.
+  const pendingBookedRows = await db
+    .select({ orderId: workshopOrderNotifications.orderId })
+    .from(workshopOrderNotifications)
+    .where(
+      and(
+        eq(workshopOrderNotifications.kind, "booked"),
+        eq(workshopOrderNotifications.channel, "email"),
+        isNull(workshopOrderNotifications.sentAt),
+      ),
+    );
+  const pendingBooked = new Set(pendingBookedRows.map((row) => row.orderId));
+  const recentIds = new Set(recentTargets.map((target) => target.order.id));
+  const pendingIds = [...pendingBooked].filter((id) => !recentIds.has(id));
+  const pendingTargets =
+    pendingIds.length === 0
+      ? []
+      : await loadTargets(inArray(orders.id, pendingIds));
+  const targets = [...recentTargets, ...pendingTargets];
 
   const sentRows =
     targets.length === 0
@@ -468,7 +490,8 @@ export async function runWorkshopReminderSweep(now = new Date()) {
 
     const recentlyPaid =
       order.paidAt.getTime() >= now.getTime() - REMINDER_LOOKBEHIND_MS;
-    if (recentlyPaid && !isSent(target, "booked", "email")) {
+    const needsBooked = pendingBooked.has(order.id);
+    if ((recentlyPaid || needsBooked) && !isSent(target, "booked", "email")) {
       jobs.push(() => deliverEmail(target, "booked"));
     }
     // Бриф не приложился к письму о покупке — шлём отдельно. Ждём, пока уйдёт
