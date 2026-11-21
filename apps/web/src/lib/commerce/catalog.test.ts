@@ -74,7 +74,7 @@ test("resolves in-stock items with kopeck prices", async () => {
   ]);
 });
 
-test("charges 980 ₽ for the tree kit only to a buyer of its workshop", async () => {
+test("charges 990 ₽ for every tree kit color only to a buyer of its workshop", async () => {
   const kit: Product = {
     ...bag,
     id: "elka-kit",
@@ -83,9 +83,15 @@ test("charges 980 ₽ for the tree kit only to a buyer of its workshop", async (
     subcategory: "kits",
     price: 1980,
   };
-  catalog = { products: [kit, bag], status: "available" };
+  const beigeKit: Product = {
+    ...kit,
+    id: "elka-kit-beige",
+    slug: "nabor-makrame-elka-bezhevyy",
+  };
+  catalog = { products: [kit, beigeKit, bag], status: "available" };
   const requested = [
     { productSlug: kit.slug, quantity: 1 },
+    { productSlug: beigeKit.slug, quantity: 1 },
     { productSlug: bag.slug, quantity: 1 },
   ];
 
@@ -94,11 +100,11 @@ test("charges 980 ₽ for the tree kit only to a buyer of its workshop", async (
 
   assert.deepEqual(
     regular.map((item) => item.price),
-    [198_000, 350_000],
+    [198_000, 198_000, 350_000],
   );
   assert.deepEqual(
     owner.map((item) => item.price),
-    [98_000, 350_000],
+    [99_000, 99_000, 350_000],
   );
 });
 
