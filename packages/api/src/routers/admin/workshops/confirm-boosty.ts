@@ -11,7 +11,7 @@ import {
 import { earnsPreorderBonus } from "@stariva/web-api/preorder-bonus";
 import { z } from "zod";
 import { adminProcedure } from "../../../orpc";
-import { notifyBoostyOrder } from "../../../storefront";
+import { issueBoostyReceipt, notifyBoostyOrder } from "../../../storefront";
 
 export async function confirmBoostyAccess(db: Database, id: string) {
   return db.transaction(async (tx) => {
@@ -80,5 +80,11 @@ export const confirmBoosty = adminProcedure
   .input(z.object({ id: z.string().uuid() }))
   .handler(async ({ context, input }) => {
     const order = await confirmBoostyAccess(context.db, input.id);
-    return { ok: true as const, notified: await notifyBoostyOrder(order.id) };
+    const notified = await notifyBoostyOrder(order.id);
+    return {
+      ok: true as const,
+      notified,
+      // Чек выписывается после письма: сбой связи не мешает доступу
+      receiptIssued: await issueBoostyReceipt(order.id),
+    };
   });

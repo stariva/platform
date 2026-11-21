@@ -37,6 +37,7 @@ import {
 import { createCustomOrderServices } from "@/lib/custom-order/services";
 import { subscribeToNewsletter } from "@/lib/newsletter";
 import { runNpdIssuingSweep } from "@/lib/npd/issuing-sweep";
+import { issueBoostyOrderReceipt } from "@/lib/workshops/boosty-receipt";
 import {
   notifyWorkshopBooked,
   runWorkshopReminderSweep,
@@ -80,6 +81,7 @@ const services: WebServices = {
       .limit(1);
     return Boolean(notice);
   },
+  issueBoostyReceipt: issueBoostyOrderReceipt,
   // Один крон воркера на все письма по мастер-классам: покупка, старт и
   // «оплата не завершилась». Заодно дошлёт рассылки из админки
   async runWorkshopReminderSweep() {

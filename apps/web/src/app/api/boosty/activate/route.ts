@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { clientIp } from "@/lib/visitor";
 import {
@@ -9,6 +9,7 @@ import {
   activateBoostyOrders,
   requestBoostyActivation,
 } from "@/lib/workshops/boosty-activation";
+import { issueBoostyOrderReceipt } from "@/lib/workshops/boosty-receipt";
 import { sendLoginEmail } from "@/lib/workshops/buyer";
 import { notifyWorkshopBooked } from "@/lib/workshops/notifications";
 
@@ -85,6 +86,15 @@ export async function POST(request: Request) {
     await Promise.all(
       result.activatedOrderIds.map((orderId) => notifyWorkshopBooked(orderId)),
     );
+    // Чек Boosty-покупки — после ответа: запрос в «Мой налог» может занять
+    // десяток секунд, покупателю он в этот момент не нужен
+    after(async () => {
+      await Promise.all(
+        result.activatedOrderIds.map((orderId) =>
+          issueBoostyOrderReceipt(orderId),
+        ),
+      );
+    });
     console.info("[boosty/activate] Автоактивация по email", {
       orders: result.activatedOrderIds,
       ip,

@@ -23,6 +23,7 @@ const handler = new RPCHandler(webRouter, {
 // Сервисы витрины по умолчанию: ничего не делают. Тест подменяет нужные
 const idleServices: WebServices = {
   notifyBoostyOrder: async () => true,
+  issueBoostyReceipt: async () => true,
   runWorkshopReminderSweep: async () => ({
     checked: 0,
     delivered: 0,

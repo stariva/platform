@@ -128,6 +128,26 @@ test("Boosty purchase notification needs the admin secret", async () => {
   expect(notifyBoostyOrder).toHaveBeenCalledWith(orderId);
 });
 
+test("a Boosty receipt is issued for the admin after manual confirmation", async () => {
+  const issueBoostyReceipt = mock(async (_orderId: string) => true);
+  const orderId = "ca3c92e8-1de4-4b88-8f73-249719e87b80";
+  const [error] = await safe(
+    wireClient({
+      authorization: `Bearer ${JOBS_SECRET}`,
+      services: { issueBoostyReceipt },
+    }).admin.issueBoostyReceipt({ orderId }),
+  );
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(issueBoostyReceipt).not.toHaveBeenCalled();
+
+  const result = await wireClient({
+    authorization: `Bearer ${secret}`,
+    services: { issueBoostyReceipt },
+  }).admin.issueBoostyReceipt({ orderId });
+  expect(result).toEqual({ issued: true });
+  expect(issueBoostyReceipt).toHaveBeenCalledWith(orderId);
+});
+
 test("revalidate refuses anything that is not a page path", async () => {
   const revalidatePaths = mock((_paths: string[]) => {});
   for (const paths of [[], ["https://evil.example/"], ["/a?b=1"]]) {

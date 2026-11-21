@@ -27,6 +27,8 @@ import type { WorkshopStorageSweepResult } from "./services/workshop-storage/swe
  */
 export interface WebServices {
   notifyBoostyOrder: (orderId: string) => Promise<boolean>;
+  /** Чек Boosty-покупки: apps/web/src/lib/workshops/boosty-receipt.ts */
+  issueBoostyReceipt: (orderId: string) => Promise<boolean>;
   /** Рассылка о мастер-классах: apps/web/src/lib/workshops/notifications.ts */
   runWorkshopReminderSweep: () => Promise<ReminderSweepResult>;
   /** Чистка витрины: удаление мусора в памяти от заменённых видео и нарезок. */

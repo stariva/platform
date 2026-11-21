@@ -20,6 +20,16 @@ const notifyWorkshopBooked = mock(async (_orderId: string) => {});
 const sendLoginEmail = mock(
   async (_email: string, _callbackURL: string, _headers: Headers) => {},
 );
+const issueBoostyOrderReceipt = mock(async (_orderId: string) => true);
+const afterCallbacks: (() => unknown)[] = [];
+const after = mock((callback: () => unknown) => {
+  afterCallbacks.push(callback);
+});
+
+/** Запускает отложенное после ответа (after): выписка чеков. */
+async function runAfter() {
+  for (const callback of afterCallbacks.splice(0)) await callback();
+}
 
 mock.module("@/lib/workshops/activation-attempts", () => ({
   reserveActivationAttempt,
@@ -28,6 +38,21 @@ mock.module("@/lib/workshops/activation-attempts", () => ({
 mock.module("@/lib/workshops/boosty-activation", () => ({
   activateBoostyOrders,
   requestBoostyActivation,
+}));
+mock.module("@/lib/workshops/boosty-receipt", () => ({
+  issueBoostyOrderReceipt,
+}));
+// Импорт настоящего next/server в моке зависает bun: достаточно своего
+// NextResponse.json и after. Маршрут больше ничего из next/server не берёт.
+mock.module("next/server", () => ({
+  after,
+  NextResponse: {
+    json: (body: unknown, init?: ResponseInit) =>
+      new Response(JSON.stringify(body), {
+        ...init,
+        headers: { "content-type": "application/json", ...init?.headers },
+      }),
+  },
 }));
 mock.module("@/lib/workshops/buyer", () => ({
   findOrCreateBuyer: async () => ({ id: "buyer", email: "buyer@example.test" }),
@@ -55,9 +80,12 @@ beforeEach(() => {
     requestBoostyActivation,
     notifyWorkshopBooked,
     sendLoginEmail,
+    issueBoostyOrderReceipt,
+    after,
   ]) {
     fn.mockClear();
   }
+  afterCallbacks.length = 0;
 });
 
 function activate(body: Record<string, unknown>, ip = "10.0.0.7") {
@@ -81,6 +109,11 @@ test("a matching email opens access and sends the login email", async () => {
   expect(releaseActivationAttempt).toHaveBeenCalledWith("attempt");
   expect(notifyWorkshopBooked).toHaveBeenCalledWith("order-1");
   expect(sendLoginEmail).not.toHaveBeenCalled();
+  // Чек Boosty-покупки выписывается после ответа покупателю
+  expect(issueBoostyOrderReceipt).not.toHaveBeenCalled();
+  await runAfter();
+  expect(issueBoostyOrderReceipt).toHaveBeenCalledTimes(1);
+  expect(issueBoostyOrderReceipt).toHaveBeenCalledWith("order-1");
 });
 
 test("an unknown email keeps the failed attempt and gets the same response", async () => {

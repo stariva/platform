@@ -44,6 +44,25 @@ export async function notifyBoostyOrder(orderId: string): Promise<boolean> {
 }
 
 /**
+ * После сверки Boosty выписывает чек НПД, как при оплате ЮKassa: чек уходит
+ * в «Мой налог» и ждёт отправки из карточки заказа. false — сбой связи:
+ * мастер привяжет чек ссылкой вручную.
+ */
+export async function issueBoostyReceipt(orderId: string): Promise<boolean> {
+  try {
+    const api = storefrontApi(20_000);
+    if (!api) return false;
+    return (await api.admin.issueBoostyReceipt({ orderId })).issued;
+  } catch (error) {
+    logger.warn("storefront.boosty_receipt.failed", {
+      orderId,
+      error: String(error),
+    });
+    return false;
+  }
+}
+
+/**
  * Просит витрину продублировать остаток товаров на FBS-склад Ozon (и скрыть
  * готовые изделия с витрины Ozon либо показать те, что продаются и там): без
  * остатка на Ozon Ozon Доставка их не отправит. Ключи Seller API есть только у витрины, поэтому идём через неё.

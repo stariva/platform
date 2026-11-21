@@ -29,8 +29,15 @@ const notifyBoostyOrder = admin.notifyBoostyOrder.handler(
   },
 );
 
+const issueBoostyReceipt = admin.issueBoostyReceipt.handler(
+  async ({ input, context }) => {
+    return { issued: await context.services.issueBoostyReceipt(input.orderId) };
+  },
+);
+
 export const adminRouter = {
   ozon: { pushStock },
   revalidate,
   notifyBoostyOrder,
+  issueBoostyReceipt,
 };
