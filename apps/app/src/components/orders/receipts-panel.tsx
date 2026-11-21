@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Checkbox, Input, Label, toast } from "@stariva/ui";
+import { Alert, AlertDescription } from "@stariva/ui/reui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
@@ -91,18 +92,22 @@ export function ReceiptsPanel({ target }: { target: Target }) {
   return (
     <div className="space-y-4">
       {receipts.length < expected && (
-        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-          Оплат: {expected}, чеков: {receipts.length}. Добавьте чек на
-          оставшуюся оплату.
-        </p>
+        <Alert variant="warning">
+          <AlertDescription>
+            Оплат: {expected}, чеков: {receipts.length}. Добавьте чек на
+            оставшуюся оплату.
+          </AlertDescription>
+        </Alert>
       )}
       {unsent > 0 && to && (
-        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-          {unsent === 1
-            ? "Чек привязан, но покупателю не отправлен."
-            : `Чеков не отправлено покупателю: ${unsent}.`}{" "}
-          Проверьте чек и нажмите «Отправить».
-        </p>
+        <Alert variant="warning">
+          <AlertDescription>
+            {unsent === 1
+              ? "Чек привязан, но покупателю не отправлен."
+              : `Чеков не отправлено покупателю: ${unsent}.`}{" "}
+            Проверьте чек и нажмите «Отправить».
+          </AlertDescription>
+        </Alert>
       )}
       {receipts.length > 0 && (
         <ul className="space-y-2">
