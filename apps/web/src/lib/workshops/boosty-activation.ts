@@ -9,6 +9,7 @@ import {
   like,
   orders,
   sql,
+  user,
   workshops,
 } from "@stariva/db";
 import { createDatabase } from "@stariva/db/client";
@@ -33,6 +34,14 @@ function transactionDb(): ReturnType<typeof createDatabase> {
 }
 
 /**
+ * Совпадение по текущему email аккаунта (он мог меняться), а не только по
+ * email на момент покупки.
+ */
+function matchesEmail(email: string) {
+  return eq(sql`lower(coalesce(${user.email}, ${orders.contactEmail}))`, email);
+}
+
+/**
  * Автоматически подтверждает pending-заказы Boosty по email покупателя:
  * оплата прошла на Boosty, а вебхука оттуда нет. Доступ выдаём одной
  * транзакцией, письмо со ссылкой входа отправляет вызывающий код после
@@ -42,14 +51,31 @@ export async function activateBoostyOrders(
   email: string,
 ): Promise<BoostyActivationResult> {
   const activatedOrderIds = await transactionDb().transaction(async (tx) => {
+    // Сначала найдём подходящие заказы, зато заблокируем их при обновлении:
+    // FOR UPDATE не работает с LEFT JOIN, но список уже известен.
+    const matched = await tx
+      .select({ id: orders.id })
+      .from(orders)
+      .leftJoin(user, eq(user.id, orders.userId))
+      .where(
+        and(
+          matchesEmail(email),
+          eq(orders.status, "pending"),
+          like(orders.paymentId, "boosty:%"),
+        ),
+      );
+    if (matched.length === 0) return [] as string[];
+
     const rows = await tx
       .select()
       .from(orders)
       .where(
         and(
-          eq(sql`lower(${orders.contactEmail})`, email),
+          inArray(
+            orders.id,
+            matched.map((row) => row.id),
+          ),
           eq(orders.status, "pending"),
-          like(orders.paymentId, "boosty:%"),
         ),
       )
       .for("update");
@@ -123,9 +149,10 @@ export async function activateBoostyOrders(
   const paid = await db
     .select({ id: orders.id })
     .from(orders)
+    .leftJoin(user, eq(user.id, orders.userId))
     .where(
       and(
-        eq(sql`lower(${orders.contactEmail})`, email),
+        matchesEmail(email),
         eq(orders.status, "paid"),
         like(orders.paymentId, "boosty:%"),
       ),
@@ -147,7 +174,7 @@ export async function requestBoostyActivation(email: string): Promise<void> {
     .set({ boostyActivationRequestedAt: new Date() })
     .where(
       and(
-        eq(sql`lower(${orders.contactEmail})`, email),
+        matchesEmail(email),
         eq(orders.status, "pending"),
         like(orders.paymentId, "boosty:%"),
         isNull(orders.boostyActivationRequestedAt),
