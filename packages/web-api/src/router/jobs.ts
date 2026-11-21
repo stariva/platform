@@ -101,7 +101,7 @@ const sweep = jobs.reminders.sweep.handler(async ({ context, errors }) => {
 });
 
 const storageSweep = jobs.storage.sweep.handler(
-  async ({ input, context, errors }) => {
+  async ({ input, errors, context }) => {
     if (!isStorageConfigured()) throw errors.STORAGE_NOT_CONFIGURED();
     const { deleted, bytes, renditions } =
       await context.services.runWorkshopStorageSweep({

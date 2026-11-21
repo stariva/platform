@@ -33,6 +33,7 @@ export {
   MAX_RENDITION_ATTEMPTS,
 } from "./services/video-renditions";
 export { getWorkshopReview } from "./services/workshop-reviews";
+export { sweepWorkshopStorage } from "./services/workshop-storage";
 export {
   type WorkshopStorageSweepResult,
   sweepWorkshopStorage,
