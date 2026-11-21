@@ -10,12 +10,9 @@ import {
   getCourseProgressSummary,
 } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getProductBySlug } from "@/lib/catalog/service";
 import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
-import {
-  ELKA_KIT_SLUG,
-  ELKA_WORKSHOP_SLUG,
-} from "@/lib/commerce/elka-kit-price";
+import { ELKA_WORKSHOP_SLUG } from "@/lib/commerce/elka-kit-price";
+import { getElkaKitVariants } from "@/lib/commerce/elka-kit-variants";
 import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import {
@@ -93,11 +90,11 @@ export default async function AccountCoursePage({
     redirect(`/workshops/${slug}`);
   }
 
-  const kit =
+  const kitVariants =
     slug === ELKA_WORKSHOP_SLUG &&
     (await hasPurchasedElkaWorkshop(session.user.id))
-      ? await getProductBySlug(ELKA_KIT_SLUG)
-      : undefined;
+      ? await getElkaKitVariants()
+      : [];
 
   const supportChat = await getSupportChatUrl(slug);
 
@@ -117,9 +114,9 @@ export default async function AccountCoursePage({
           <p className="text-taupe text-sm">{workshop.subtitle}</p>
         </div>
         <PreorderNotice workshop={workshop} releaseAt={workshop.releaseAt} />
-        {kit ? (
+        {kitVariants.length > 0 ? (
           <div className="mt-6">
-            <ElkaKitOffer product={kit} />
+            <ElkaKitOffer variants={kitVariants} />
           </div>
         ) : null}
         {/* Материалы лучше купить заранее — до старта уроков */}
@@ -207,9 +204,9 @@ export default async function AccountCoursePage({
         )}
       </div>
 
-      {kit ? (
+      {kitVariants.length > 0 ? (
         <div className="mb-6">
-          <ElkaKitOffer product={kit} />
+          <ElkaKitOffer variants={kitVariants} />
         </div>
       ) : null}
 

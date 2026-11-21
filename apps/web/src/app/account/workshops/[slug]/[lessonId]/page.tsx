@@ -5,12 +5,9 @@ import { notFound, redirect } from "next/navigation";
 import { CommunityLinks } from "@/components/stariva/community-invite";
 import { getCourseProgressMap } from "@/lib/account/access";
 import { getSession } from "@/lib/auth/session";
-import { getProductBySlug } from "@/lib/catalog/service";
 import { hasPurchasedElkaWorkshop } from "@/lib/commerce/elka-kit-offer";
-import {
-  ELKA_KIT_SLUG,
-  ELKA_WORKSHOP_SLUG,
-} from "@/lib/commerce/elka-kit-price";
+import { ELKA_WORKSHOP_SLUG } from "@/lib/commerce/elka-kit-price";
+import { getElkaKitVariants } from "@/lib/commerce/elka-kit-variants";
 import { COMMUNITY_LINKS } from "@/lib/community";
 import { getSupportChatUrl } from "@/lib/workshops/support-chat";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
@@ -40,11 +37,11 @@ export default async function LessonPlayerPage({
   // Предзаказ: до старта уроки закрыты, в кабинете — дата и подготовка
   if (!admin && isPreorder(workshop)) redirect(`/account/workshops/${slug}`);
 
-  const kit =
+  const kitVariants =
     slug === ELKA_WORKSHOP_SLUG &&
     (await hasPurchasedElkaWorkshop(session.user.id))
-      ? await getProductBySlug(ELKA_KIT_SLUG)
-      : undefined;
+      ? await getElkaKitVariants()
+      : [];
 
   const supportChat = await getSupportChatUrl(slug);
   const lessons = getWorkshopLessons(workshop);
@@ -92,9 +89,9 @@ export default async function LessonPlayerPage({
             </h1>
           </div>
 
-          {kit ? (
+          {kitVariants.length > 0 ? (
             <div className="mt-6">
-              <ElkaKitOffer product={kit} compact />
+              <ElkaKitOffer variants={kitVariants} compact />
             </div>
           ) : null}
 
