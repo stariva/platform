@@ -57,7 +57,6 @@ const EMAIL_EVENTS_BUDGET_MS = 40_000;
 // Логика, которая пока живёт в витрине: письма, Telegram, заказы и
 // better-auth тянут за собой половину apps/web
 const services: WebServices = {
-  runWorkshopStorageSweep: sweepWorkshopStorage,
   async notifyBoostyOrder(orderId) {
     const [order] = await db
       .select({ status: orders.status, paymentId: orders.paymentId })
