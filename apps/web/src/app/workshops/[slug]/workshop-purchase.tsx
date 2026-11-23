@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { env } from "@/env";
 import { reachGoalBeforeLeave } from "@/lib/analytics";
 import { useSession } from "@/lib/auth/client";
 import { suggestEmailFix } from "@/lib/email-typo";
@@ -58,7 +57,12 @@ function saveEmailDraft(email: string) {
 }
 
 type Notice = { tone: "error" | "info"; text: string } | null;
-type PaymentProvider = "yookassa" | "robokassa" | "boosty";
+/**
+ * Провайдер оплаты мастер-класса: ЮKassa — основной (карта или СБП), Boosty —
+ * способ для иностранных карт. Robokassa из интерфейса убрана: она осталась
+ * в API резервным провайдером (fallback), кнопки для неё больше нет.
+ */
+type PaymentProvider = "yookassa" | "boosty";
 
 /**
  * Покупка мастер-класса. Гостю не нужна регистрация: достаточно email — на
@@ -156,11 +160,7 @@ export function WorkshopPurchase({
     if (!validate()) return;
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const chosen: PaymentProvider =
-      submitter?.dataset.provider === "boosty"
-        ? "boosty"
-        : submitter?.dataset.provider === "robokassa"
-          ? "robokassa"
-          : "yookassa";
+      submitter?.dataset.provider === "boosty" ? "boosty" : "yookassa";
     setProvider(chosen);
 
     const goalSent = buyGoal
@@ -259,7 +259,6 @@ export function WorkshopPurchase({
     );
   }
 
-  const robokassaAvailable = env.NEXT_PUBLIC_ROBOKASSA_ENABLED && price > 0;
   const submitLabel =
     price === 0
       ? "Смотреть бесплатно"
@@ -362,45 +361,22 @@ export function WorkshopPurchase({
         )}
       </Button>
 
-      {robokassaAvailable && (
-        <div className="mt-2">
-          <Button
-            type="submit"
-            data-provider="robokassa"
-            disabled={buying}
-            aria-busy={(buying && provider === "robokassa") || undefined}
-            aria-label={`Оплатить иностранной картой, через Яндекс Пэй или Сплит: мастер-класс «${title}»`}
-            className="w-full h-auto min-h-12 whitespace-normal text-center border border-espresso/20 bg-transparent text-espresso hover:bg-sand py-3 rounded-2xl text-base"
-          >
-            {buying && provider === "robokassa" ? (
-              <>
-                <Spinner className="mr-2" />
-                Переходим к оплате…
-              </>
-            ) : (
-              "Иностранная карта, Яндекс Пэй или Сплит"
-            )}
-          </Button>
-          <p className="mt-1.5 text-center text-[12px] text-taupe">
-            Выберите способ на странице Robokassa
-          </p>
-        </div>
-      )}
-
       {boostyUrl && price > 0 && !bundle && (
         <div className="mt-2">
           <Button
             type="submit"
             data-provider="boosty"
             disabled={buying}
+            aria-label={`Оплатить иностранной картой через Boosty: мастер-класс «${title}»`}
             className="w-full min-h-12 whitespace-normal rounded-2xl border border-espresso/20 bg-transparent px-4 py-3 text-base text-espresso hover:bg-sand"
           >
             {buying && provider === "boosty"
               ? "Переходим на Boosty…"
-              : "Купить через Boosty"}
+              : "Иностранная карта — через Boosty"}
           </Button>
           <p className="mt-1.5 text-center text-xs text-taupe">
-            После оплаты откройте ссылку активации в закрытом посте.
+            Для карт, выпущенных за рубежом. После оплаты откройте ссылку
+            активации в закрытом посте.
           </p>
         </div>
       )}

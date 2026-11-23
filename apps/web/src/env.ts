@@ -107,8 +107,10 @@ export const env = createEnv({
     // проекта: Project settings → Project token. Без него PostHog выключен.
     NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: z.string().startsWith("phc_").optional(),
 
-    // "true" — показывать кнопку «Яндекс Пэй или Сплит». Значение попадает
-    // в сборку, поэтому отдельно от ключей ROBOKASSA_*: включать вместе с ними.
+    // "true" — показывать кнопку «Яндекс Пэй или Сплит» в чекауте товаров
+    // (для мастер-классов Robokassa — резервный провайдер, без кнопки).
+    // Значение попадает в сборку, поэтому отдельно от ключей ROBOKASSA_*:
+    // включать вместе с ними.
     NEXT_PUBLIC_ROBOKASSA_ENABLED: z.boolean().default(false),
   },
 

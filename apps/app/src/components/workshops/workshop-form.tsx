@@ -462,7 +462,7 @@ export function WorkshopForm({
             <FieldRow
               label="Платный пост Boosty"
               htmlFor="boostyUrl"
-              hint="Если указать ссылку, покупатели этого мастер-класса смогут выбрать оплату через Boosty."
+              hint="Покупатели увидят кнопку «Иностранная карта — через Boosty» — это способ оплаты для карт зарубежных банков."
               error={errors.boostyUrl?.message}
             >
               <Input id="boostyUrl" {...register("boostyUrl")} />
