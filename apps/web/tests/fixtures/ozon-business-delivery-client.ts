@@ -15,6 +15,7 @@ const {
 const {
   isOzonBusinessAccessError,
   isOzonBusinessRejection,
+  isOzonBusinessTokenRejected,
   OzonBusinessAccessError,
   OzonBusinessDeliveryError,
   ParcelNotApprovedError,
@@ -220,6 +221,28 @@ test("a revoked token is replaced once", async () => {
   await quoteParcel(request);
 
   expect(headersOf(3).Authorization).toBe("Bearer tok2");
+});
+
+test("a token Ozon issued but the API rejects twice is not broken keys", async () => {
+  fetchSpy
+    .mockResolvedValueOnce(tokenResponse())
+    .mockResolvedValueOnce(
+      json({ error: { message: "401 Unauthorized" } }, 401),
+    )
+    .mockResolvedValueOnce(json({ access_token: "tok2", expires_in: 3600 }))
+    .mockResolvedValueOnce(
+      json({ error: { message: "401 Unauthorized" } }, 401),
+    );
+
+  const error = await quoteParcel(request).catch((e: unknown) => e);
+
+  // OAuth выдал токен по нашим ключам дважды — значит, ключи приняты
+  expect(error).toBeInstanceOf(OzonBusinessDeliveryError);
+  expect(isOzonBusinessAccessError(error)).toBe(false);
+  expect(isOzonBusinessTokenRejected(error)).toBe(true);
+  const failure = error as InstanceType<typeof OzonBusinessDeliveryError>;
+  expect(failure.tokenRefreshed).toBe(true);
+  expect(failure.message).toContain("after a fresh token");
 });
 
 const created = {

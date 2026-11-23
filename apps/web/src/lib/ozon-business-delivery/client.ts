@@ -209,7 +209,15 @@ async function call<T>(
     }
     const text = await res.text();
     if (!res.ok)
-      throw OzonBusinessDeliveryError.fromResponse(path, res.status, text);
+      throw OzonBusinessDeliveryError.fromResponse(
+        path,
+        res.status,
+        text,
+        // До этой ошибки дошли со свежим токеном: OAuth наши ключи принял,
+        // значит 401 — не про ключи. Помечаем, чтобы это было видно в логе
+        // и отличалось от отказа OAuth (isOzonBusinessAccessError).
+        res.status === 401 && attempt > 0,
+      );
     return schema.parse(text ? JSON.parse(text) : {});
   }
 }
