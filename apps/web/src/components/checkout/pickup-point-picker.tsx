@@ -238,13 +238,20 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
 
   const selectedLocation = visibleLocations.find((p) => p.id === selectedId);
   // Сбой загрузки адресов не должен мешать выбору: для заказа нужен только
-  // id пункта, а адрес подтянется, когда Ozon оживёт
-  const selectedPoint = selectedId
-    ? (details.get(selectedId) ??
-      (detailsFailed && selectedLocation
-        ? pointWithoutDetails(selectedLocation)
-        : undefined))
-    : undefined;
+  // id пункта, а адрес подтянется, когда Ozon оживёт. Мемоизируем: без неё
+  // заглушка пересоздаётся на каждой перерисовке, и эффект с onChange
+  // гоняет родителя по кругу. Реальные детали приедут — сменится ссылка,
+  // и родитель получит пункт с адресом
+  const selectedPoint = useMemo(
+    () =>
+      selectedId
+        ? (details.get(selectedId) ??
+          (detailsFailed && selectedLocation
+            ? pointWithoutDetails(selectedLocation)
+            : undefined))
+        : undefined,
+    [selectedId, details, detailsFailed, selectedLocation],
+  );
   useEffect(() => {
     onChangeRef.current(selectedPoint ?? null);
   }, [selectedPoint]);

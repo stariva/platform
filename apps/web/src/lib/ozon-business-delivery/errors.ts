@@ -65,6 +65,8 @@ export class OzonBusinessDeliveryError extends Error {
 /**
  * Ozon не принял ключи (неверные или отозванные) или не выдал токен с нужными
  * доступами. Само это не пройдёт, в отличие от сбоя связи: нужен человек.
+ * Временные ответы токен-сервера (408/429/5xx) — не здесь, см.
+ * OzonBusinessTokenOutageError.
  */
 export class OzonBusinessAccessError extends Error {
   constructor(
@@ -73,6 +75,21 @@ export class OzonBusinessAccessError extends Error {
   ) {
     super(`ozon_business_delivery_oauth_failed_${status}: ${detail}`);
     this.name = "OzonBusinessAccessError";
+  }
+}
+
+/**
+ * Токен-сервер Ozon не выдал токен по временной причине (408, 429, 5xx):
+ * ключи не виноваты, повтор позже обычно проходит. Формат сообщения тот же,
+ * что и раньше, чтобы логи оставались сопоставимыми.
+ */
+export class OzonBusinessTokenOutageError extends Error {
+  constructor(
+    readonly status: number,
+    detail: string,
+  ) {
+    super(`ozon_business_delivery_oauth_failed_${status}: ${detail}`);
+    this.name = "OzonBusinessTokenOutageError";
   }
 }
 
@@ -111,6 +128,9 @@ export function isOzonBusinessTokenRejected(
  */
 export function isOzonBusinessOutage(error: unknown): boolean {
   if (isOzonBusinessAccessError(error)) return true;
+  // Токен-сервер перегружен или лежит (408/429/5xx) — временный сбой,
+  // не внутренняя ошибка: покупателю нужна заглушка, а прогону — повтор
+  if (error instanceof OzonBusinessTokenOutageError) return true;
   if (error instanceof OzonBusinessDeliveryError) {
     return [401, 408, 429].includes(error.status) || error.status >= 500;
   }

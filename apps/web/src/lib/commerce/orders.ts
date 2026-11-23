@@ -675,9 +675,15 @@ export async function saveMadeToOrderDeliveryPrice(
  * меняет только цену в заказе, пункт и адрес не трогает — их выбрал
  * покупатель. Тоже только до оплаты: с уже оплаченной доплатой разницу
  * решает мастер, а не фоновое задание.
+ *
+ * Запись связана с прочитанным состоянием: правится только строка с тем же
+ * пунктом, что был перед запросом к Ozon, и только пока она ещё держит
+ * заглушку. Сменил покупатель пункт или расчёт уже не заглушка — запись
+ * молча пропускается, чтобы чужой результат не затёр свежую цену.
  */
 export async function replaceMadeToOrderDeliveryPrice(
   orderId: string,
+  expectedPointId: string,
   priceKopecks: number,
   priceFallback: boolean,
 ): Promise<boolean> {
@@ -693,7 +699,11 @@ export async function replaceMadeToOrderDeliveryPrice(
         eq(productOrders.id, orderId),
         eq(productOrders.kind, "made_to_order"),
         eq(productOrders.status, "awaiting_balance"),
+        // Цену считали для этого пункта; сменил покупатель — не трогаем
+        eq(productOrders.deliveryPointId, expectedPointId),
         sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+        // Только заглушки: реальную цену покупателя не перезаписываем
+        sql`${productOrders.checkoutSnapshot} -> 'priceFallback' = to_jsonb(true)`,
       ),
     )
     .returning({ id: productOrders.id });

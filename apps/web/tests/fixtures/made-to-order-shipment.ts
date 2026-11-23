@@ -46,9 +46,11 @@ mock.module("../../src/lib/commerce/orders", () => ({
   listMadeToOrderStuckShipments: async () => stuckShipments,
   listOrderPayments: async () => orderPayments,
 }));
+const notifyMadeToOrderPayment = mock(async () => {});
 const notifyOzonOrderFailed = mock(async () => {});
 const notifyStaffAlert = mock(async () => {});
 mock.module("../../src/lib/commerce/order-notifications", () => ({
+  notifyMadeToOrderPayment,
   notifyOzonOrderFailed,
   notifyStaffAlert,
 }));
@@ -80,6 +82,7 @@ const {
 const {
   OzonBusinessAccessError,
   OzonBusinessDeliveryError,
+  OzonBusinessTokenOutageError,
   ParcelNotApprovedError,
 } = await import("../../src/lib/ozon-business-delivery/errors");
 
@@ -257,8 +260,11 @@ await test("the sweep replaces a placeholder with the real price before payment"
   }));
   const result = await sweepMadeToOrderDeliveries();
   expect(result).toEqual({ checked: 1, repriced: 1, shipped: 0, failed: 0 });
+  // Цена пишется для того пункта, что прочитали перед запросом к Ozon:
+  // сменил покупатель пункт — запись молча пропустится
   expect(replaceMadeToOrderDeliveryPrice).toHaveBeenCalledWith(
     order.id,
+    "77",
     45000,
     false,
   );
@@ -269,6 +275,19 @@ await test("the sweep keeps the placeholder while Ozon is still down", async () 
   fallbackOrders = [fallbackOrderRow()];
   quoteParcel.mockImplementationOnce(async () => {
     throw new Error("timeout");
+  });
+  const result = await sweepMadeToOrderDeliveries();
+  expect(result).toEqual({ checked: 1, repriced: 0, shipped: 0, failed: 1 });
+  expect(replaceMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
+});
+
+await test("the sweep keeps the placeholder when the token endpoint is down", async () => {
+  fallbackOrders = [fallbackOrderRow()];
+  // Токен-сервер ответил 503: временный сбой, заглушка не снимается
+  // с контроля — следующий прогон повторит расчёт
+  quoteParcel.mockImplementationOnce(async () => {
+    throw new OzonBusinessTokenOutageError(503, "busy");
   });
   const result = await sweepMadeToOrderDeliveries();
   expect(result).toEqual({ checked: 1, repriced: 0, shipped: 0, failed: 1 });
@@ -287,6 +306,7 @@ await test("the sweep stops chasing a placeholder Ozon refuses and tells the mas
   // Заглушка снята с контроля, но цена покупателя не тронута
   expect(replaceMadeToOrderDeliveryPrice).toHaveBeenCalledWith(
     order.id,
+    "77",
     15_000,
     false,
   );
@@ -318,7 +338,42 @@ await test("the sweep creates the shipment of a paid order the webhook could not
     "ozon-1",
     ["posting-1"],
   );
+  // Уведомление об оплате дедупится по оплате: мастеру дубль не уйдёт,
+  // а вот неподтверждённый заказ без вебхука доносится именно отсюда
+  expect(notifyMadeToOrderPayment).toHaveBeenCalledWith("payment-1");
   expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
+});
+
+await test("the sweep tells the master about a parcel created but unapproved", async () => {
+  paidInFull();
+  stuckShipments = [{ id: order.id }];
+  orderPayments = [
+    {
+      id: "payment-1",
+      type: "balance",
+      status: "succeeded",
+      paidAt: new Date(),
+    },
+  ];
+  // Заказ создался в Ozon, но не подтвердился (например, нет баланса):
+  // повторы вебхука YooKassa к этому моменту закончились, поэтому
+  // сказать мастеру должен прогон воркера
+  createParcelShipment.mockImplementationOnce(async () => {
+    throw new ParcelNotApprovedError(
+      { orderId: "ozon-1", postingNumbers: ["posting-1"] },
+      new Error("NotEnoughBalance"),
+    );
+  });
+  const result = await sweepMadeToOrderDeliveries();
+  expect(result).toEqual({ checked: 1, repriced: 0, shipped: 1, failed: 0 });
+  expect(markMadeToOrderShipmentUnapproved).toHaveBeenCalledWith(
+    order.id,
+    "attempt-1",
+    "ozon-1",
+    ["posting-1"],
+    "payment-1",
+  );
+  expect(notifyMadeToOrderPayment).toHaveBeenCalledWith("payment-1");
 });
 
 await test("a quiet sweep retry does not wake the master again", async () => {
@@ -344,6 +399,7 @@ await test("a quiet sweep retry does not wake the master again", async () => {
   // Вебхук об этой неудаче уже сказал громко: повтор из воркера тихий
   expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
   expect(notifyStaffAlert).not.toHaveBeenCalled();
+  expect(notifyMadeToOrderPayment).not.toHaveBeenCalled();
 });
 
 await test("a request Ozon rejects alerts the master with its reason", async () => {

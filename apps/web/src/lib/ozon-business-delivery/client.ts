@@ -5,6 +5,7 @@ import { normalizePhoneDigits } from "@/lib/phone";
 import {
   OzonBusinessAccessError,
   OzonBusinessDeliveryError,
+  OzonBusinessTokenOutageError,
   ParcelNotApprovedError,
 } from "./errors";
 
@@ -167,9 +168,8 @@ async function fetchToken(): Promise<string> {
     if (res.status === 400 || res.status === 401 || res.status === 403) {
       throw new OzonBusinessAccessError(res.status, detail);
     }
-    throw new Error(
-      `ozon_business_delivery_oauth_failed_${res.status}: ${detail}`,
-    );
+    // Токен-сервер занят или лежит: ключи не виноваты, повтор позже пройдёт
+    throw new OzonBusinessTokenOutageError(res.status, detail);
   }
   const data = tokenSchema.parse(await res.json());
   // Обновляем чуть раньше срока, чтобы не поймать 401 посреди запроса

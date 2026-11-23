@@ -11,7 +11,11 @@ import {
 } from "@/lib/ozon-business-delivery/errors";
 import type { PickupPoint } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
-import { notifyOzonOrderFailed, notifyStaffAlert } from "./order-notifications";
+import {
+  notifyMadeToOrderPayment,
+  notifyOzonOrderFailed,
+  notifyStaffAlert,
+} from "./order-notifications";
 import {
   attachMadeToOrderShipment,
   claimMadeToOrderShipment,
@@ -291,15 +295,20 @@ export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliveryS
   for (const order of await listMadeToOrderFallbackPrices()) {
     result.checked++;
     const snapshot = order.checkoutSnapshot as MadeToOrderDeliverySnapshot;
-    if (!snapshot?.parcel || !order.deliveryPointId) continue;
+    // Локальная копия: сужение типа не живёт в замыкании stopChasing
+    const pointId = order.deliveryPointId;
+    if (!snapshot?.parcel || !pointId) continue;
 
     /** Ozon ожил, но пересчитать заглушку не вышло: снимаем с контроля. */
     const stopChasing = async (reason: string): Promise<void> => {
       // Цена остаётся прежней: покупатель видел её и мог уже начать оплату.
       // Если оплатит, а отправление не выйдет — вебхук откажет громко, и
-      // мастер решит по обстоятельствам (другой пункт, возврат, вручную)
+      // мастер решит по обстоятельствам (другой пункт, возврат, вручную).
+      // Запись связана с пунктом и признаком заглушки: сменил покупатель
+      // пункт или расчёт уже не заглушка — ничего не трогаем
       await replaceMadeToOrderDeliveryPrice(
         order.id,
+        pointId,
         order.amountDelivery,
         false,
       );
@@ -317,7 +326,7 @@ export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliveryS
     try {
       quote = await quoteParcel({
         recipientPhone: order.contactPhone,
-        pointId: order.deliveryPointId,
+        pointId,
         parcel: snapshot.parcel,
         declaredValueKopecks: order.amountProducts,
       });
@@ -337,6 +346,7 @@ export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliveryS
     if (quote.available) {
       const saved = await replaceMadeToOrderDeliveryPrice(
         order.id,
+        pointId,
         quote.priceKopecks,
         false,
       );
@@ -372,12 +382,23 @@ export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliveryS
       await createMadeToOrderShipment(id, balance.id, {
         alertOnFailure: false,
       });
-      result.shipped++;
     } catch {
       // Ждём следующего прогона: Ozon ещё не ожил или отказал по-деловому,
       // в обоих случаях мастер уже в курсе
       result.failed++;
+      continue;
     }
+    // Отправление создано или сохранено как неподтверждённое: уведомление
+    // об оплате само различит эти случаи (дедуп по оплате в базе).
+    // Неподтверждённое мастер должна узнать и без вебхука YooKassa —
+    // его повторы к этому моменту уже закончились
+    await notifyMadeToOrderPayment(balance.id).catch((error: unknown) => {
+      console.error(
+        `[made-to-order] Не удалось повторно уведомить мастера об оплате ${balance.id}:`,
+        error,
+      );
+    });
+    result.shipped++;
   }
 
   return result;
