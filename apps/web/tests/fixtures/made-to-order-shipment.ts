@@ -22,20 +22,29 @@ const items = [
 const quote = { available: true as const, priceKopecks: 45000 };
 
 const saveMadeToOrderDeliveryPrice = mock(async () => true);
+const replaceMadeToOrderDeliveryPrice = mock(async () => true);
 const claimMadeToOrderShipment = mock(
   async (): Promise<string | null> => "attempt-1",
 );
 const attachMadeToOrderShipment = mock(async () => {});
 const markProductOrderOzonFailed = mock(async () => {});
 const markMadeToOrderShipmentUnapproved = mock(async () => {});
+// Что догонялка находит в базе: у каждого сценария свои списки
+let fallbackOrders: unknown[] = [];
+let stuckShipments: unknown[] = [];
+let orderPayments: unknown[] = [];
 mock.module("../../src/lib/commerce/orders", () => ({
   getProductOrderById: async () => order,
   getProductOrderItems: async () => items,
   saveMadeToOrderDeliveryPrice,
+  replaceMadeToOrderDeliveryPrice,
   claimMadeToOrderShipment,
   attachMadeToOrderShipment,
   markProductOrderOzonFailed,
   markMadeToOrderShipmentUnapproved,
+  listMadeToOrderFallbackPrices: async () => fallbackOrders,
+  listMadeToOrderStuckShipments: async () => stuckShipments,
+  listOrderPayments: async () => orderPayments,
 }));
 const notifyOzonOrderFailed = mock(async () => {});
 const notifyStaffAlert = mock(async () => {});
@@ -63,9 +72,11 @@ mock.module("@/lib/products", () => ({
   formatPrice: (rubles: number) => `${rubles} ₽`,
 }));
 
-const { createMadeToOrderShipment, priceMadeToOrderDelivery } = await import(
-  "../../src/lib/commerce/made-to-order-shipment"
-);
+const {
+  createMadeToOrderShipment,
+  priceMadeToOrderDelivery,
+  sweepMadeToOrderDeliveries,
+} = await import("../../src/lib/commerce/made-to-order-shipment");
 const {
   OzonBusinessAccessError,
   OzonBusinessDeliveryError,
@@ -83,6 +94,22 @@ const pointInfo = {
   title: "ул. Баумана, 1",
   address: "Казань, ул. Баумана, 1",
 } as never;
+
+/**
+ * Заказ с ценой-заглушкой, каким его видит догонялка
+ * (listMadeToOrderFallbackPrices).
+ */
+function fallbackOrderRow() {
+  return {
+    id: order.id,
+    number: order.number,
+    contactPhone: order.contactPhone,
+    deliveryPointId: order.deliveryPointId ?? "77",
+    amountProducts: order.amountProducts,
+    amountDelivery: 15_000,
+    checkoutSnapshot: { parcel, priceKopecks: 15_000, priceFallback: true },
+  };
+}
 
 /** Доплата с доставкой оплачена: пункт выбран, цена Ozon сохранена. */
 function paidInFull() {
@@ -143,9 +170,9 @@ await test("a refusal that is not about the point alerts the master to bill by h
   expect(message.message).toContain("вручную");
 });
 
-await test("an Ozon outage asks the buyer to retry and does not alert the master", async () => {
+await test("an internal error still asks the buyer to retry rather than masking with a placeholder", async () => {
   quoteParcel.mockImplementationOnce(async () => {
-    throw new Error("timeout");
+    throw new Error("ozon_business_delivery_checkout_without_result");
   });
   expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
     "quote_failed",
@@ -154,21 +181,169 @@ await test("an Ozon outage asks the buyer to retry and does not alert the master
   expect(notifyStaffAlert).not.toHaveBeenCalled();
 });
 
-await test("keys Ozon no longer accepts alert the master instead of asking the buyer to retry", async () => {
+await test("broken keys still let the buyer pay a placeholder price", async () => {
   quoteParcel.mockImplementationOnce(async () => {
     throw new OzonBusinessAccessError(401, "invalid_client");
   });
-  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
-    "quote_unavailable",
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe("ok");
+  expect(saveMadeToOrderDeliveryPrice).toHaveBeenCalledWith(
+    order.id,
+    "77",
+    pointInfo,
+    15_000,
+    true,
   );
-  expect(saveMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
   expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
-  const [, message] = notifyStaffAlert.mock.calls[0] as unknown as [
+  const [, alert] = notifyStaffAlert.mock.calls[0] as unknown as [
     string,
     { title: string; message: string },
   ];
-  expect(message.message).toContain("ключи");
-  expect(message.message).toContain("вручную");
+  expect(alert.title).toContain("заглушка");
+  expect(alert.message).toContain("150 ₽");
+  expect(alert.message).toContain("Ozon Доставки");
+});
+
+await test("a token Ozon rejects still lets the buyer pay a placeholder price", async () => {
+  quoteParcel.mockImplementationOnce(async () => {
+    throw new OzonBusinessDeliveryError(
+      "/v1/delivery/check-client",
+      401,
+      undefined,
+      "401 Unauthorized",
+      true,
+    );
+  });
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe("ok");
+  expect(saveMadeToOrderDeliveryPrice).toHaveBeenCalledWith(
+    order.id,
+    "77",
+    pointInfo,
+    15_000,
+    true,
+  );
+  const [, alert] = notifyStaffAlert.mock.calls[0] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  // В алерте видна причина сбоя — она же попадает в лог продакшена
+  expect(alert.message).toContain("401 Unauthorized");
+});
+
+await test("an Ozon outage lets the buyer pay a placeholder price and wakes the master once per half hour", async () => {
+  const down = async () => {
+    throw new Error("timeout");
+  };
+  quoteParcel.mockImplementationOnce(down);
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe("ok");
+  expect(saveMadeToOrderDeliveryPrice).toHaveBeenCalledTimes(1);
+
+  // Повторная попытка покупателя в тот же получас мастера не будит
+  quoteParcel.mockImplementationOnce(down);
+  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe("ok");
+  expect(saveMadeToOrderDeliveryPrice).toHaveBeenCalledTimes(2);
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+  const [, alert] = notifyStaffAlert.mock.calls[0] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(alert.message).toContain("timeout");
+});
+
+await test("the sweep replaces a placeholder with the real price before payment", async () => {
+  fallbackOrders = [fallbackOrderRow()];
+  quoteParcel.mockImplementationOnce(async () => ({
+    available: true,
+    priceKopecks: 45000,
+  }));
+  const result = await sweepMadeToOrderDeliveries();
+  expect(result).toEqual({ checked: 1, repriced: 1, shipped: 0, failed: 0 });
+  expect(replaceMadeToOrderDeliveryPrice).toHaveBeenCalledWith(
+    order.id,
+    45000,
+    false,
+  );
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
+});
+
+await test("the sweep keeps the placeholder while Ozon is still down", async () => {
+  fallbackOrders = [fallbackOrderRow()];
+  quoteParcel.mockImplementationOnce(async () => {
+    throw new Error("timeout");
+  });
+  const result = await sweepMadeToOrderDeliveries();
+  expect(result).toEqual({ checked: 1, repriced: 0, shipped: 0, failed: 1 });
+  expect(replaceMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
+});
+
+await test("the sweep stops chasing a placeholder Ozon refuses and tells the master once", async () => {
+  fallbackOrders = [fallbackOrderRow()];
+  quoteParcel.mockImplementationOnce(async () => ({
+    available: false,
+    reason: "Пункт выдачи закрылся",
+  }));
+  const result = await sweepMadeToOrderDeliveries();
+  expect(result).toEqual({ checked: 1, repriced: 0, shipped: 0, failed: 1 });
+  // Заглушка снята с контроля, но цена покупателя не тронута
+  expect(replaceMadeToOrderDeliveryPrice).toHaveBeenCalledWith(
+    order.id,
+    15_000,
+    false,
+  );
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+  const [, alert] = notifyStaffAlert.mock.calls[0] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(alert.message).toContain("Пункт выдачи закрылся");
+});
+
+await test("the sweep creates the shipment of a paid order the webhook could not", async () => {
+  paidInFull();
+  stuckShipments = [{ id: order.id }];
+  orderPayments = [
+    {
+      id: "payment-1",
+      type: "balance",
+      status: "succeeded",
+      paidAt: new Date(),
+    },
+  ];
+  const result = await sweepMadeToOrderDeliveries();
+  expect(result).toEqual({ checked: 1, repriced: 0, shipped: 1, failed: 0 });
+  expect(createParcelShipment).toHaveBeenCalledTimes(1);
+  expect(attachMadeToOrderShipment).toHaveBeenCalledWith(
+    order.id,
+    "attempt-1",
+    "ozon-1",
+    ["posting-1"],
+  );
+  expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
+});
+
+await test("a quiet sweep retry does not wake the master again", async () => {
+  paidInFull();
+  stuckShipments = [{ id: order.id }];
+  orderPayments = [
+    {
+      id: "payment-1",
+      type: "balance",
+      status: "succeeded",
+      paidAt: new Date(),
+    },
+  ];
+  createParcelShipment.mockImplementationOnce(async () => {
+    throw new Error("Ozon unavailable");
+  });
+  const result = await sweepMadeToOrderDeliveries();
+  expect(result).toEqual({ checked: 1, repriced: 0, shipped: 0, failed: 1 });
+  expect(markProductOrderOzonFailed).toHaveBeenCalledWith(
+    order.id,
+    "attempt-1",
+  );
+  // Вебхук об этой неудаче уже сказал громко: повтор из воркера тихий
+  expect(notifyOzonOrderFailed).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
 });
 
 await test("a request Ozon rejects alerts the master with its reason", async () => {
@@ -192,21 +367,6 @@ await test("a request Ozon rejects alerts the master with its reason", async () 
   expect(message.message).toContain("HTTP 400");
   expect(message.message).toContain("Недопустимые габариты");
   expect(message.message).toContain("вес и размеры");
-});
-
-await test("a temporary Ozon error is for the buyer to retry, the master is not bothered", async () => {
-  quoteParcel.mockImplementationOnce(async () => {
-    throw new OzonBusinessDeliveryError(
-      "/v1/order/checkout",
-      503,
-      undefined,
-      "busy",
-    );
-  });
-  expect(await priceMadeToOrderDelivery(order.id, "77", pointInfo)).toBe(
-    "quote_failed",
-  );
-  expect(notifyStaffAlert).not.toHaveBeenCalled();
 });
 
 await test("until the Delivery API is connected the master is told to bill by hand", async () => {

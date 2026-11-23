@@ -1,4 +1,5 @@
 import { emailEventsWorkflow } from "./email-events";
+import { madeToOrderDeliveryWorkflow } from "./made-to-order-delivery";
 import { npdIssuingWatchWorkflow } from "./npd-issuing-watch";
 import { ozonStockSyncWorkflow } from "./ozon-stock-sync";
 import { workshopRemindersWorkflow } from "./workshop-reminders";
@@ -18,4 +19,5 @@ export const workflows = [
   yandexAnalyticsSyncWorkflow,
   emailEventsWorkflow,
   ozonStockSyncWorkflow,
+  madeToOrderDeliveryWorkflow,
 ];

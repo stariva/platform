@@ -27,6 +27,7 @@ import { issueFormToken } from "@/lib/auth/antispam";
 import { auth } from "@/lib/auth/server";
 import { runCampaignSweep } from "@/lib/campaigns/sweep";
 import { checkoutServices } from "@/lib/commerce/checkout-services";
+import { sweepMadeToOrderDeliveries } from "@/lib/commerce/made-to-order-shipment";
 import { notifyStaffAlert } from "@/lib/commerce/order-notifications";
 import { orderServices } from "@/lib/commerce/order-services";
 import {
@@ -106,6 +107,9 @@ const services: WebServices = {
   },
   runWorkshopStorageSweep: sweepWorkshopStorage,
   runNpdIssuingSweep,
+  // Каждые 10 минут: догоняет заказы под заказ, которым помешал сбой Ozon
+  // Доставки, — заменяет цены-заглушки и создаёт зависшие отправления
+  sweepMadeToOrderDeliveries,
   // Крон раз в минуту: читаем не дольше, чтобы прогоны не наезжали друг на друга
   syncEmailEvents: () =>
     syncPostboxEvents({ deadline: Date.now() + EMAIL_EVENTS_BUDGET_MS }),

@@ -77,6 +77,7 @@ export {
   AttemptLostError,
   type EmailEventsSyncResult,
   JobsNotConfiguredError,
+  type MadeToOrderDeliverySweepResult,
   PlaylistMissingError,
   type ReminderSweepResult,
   RemindersFailedError,

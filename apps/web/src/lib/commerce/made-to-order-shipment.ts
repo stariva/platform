@@ -1,10 +1,11 @@
 import {
   createParcelShipment,
   isOzonBusinessDeliveryConfigured,
+  type ParcelQuote,
   quoteParcel,
 } from "@/lib/ozon-business-delivery/client";
 import {
-  isOzonBusinessAccessError,
+  isOzonBusinessOutage,
   isOzonBusinessRejection,
   ParcelNotApprovedError,
 } from "@/lib/ozon-business-delivery/errors";
@@ -16,11 +17,30 @@ import {
   claimMadeToOrderShipment,
   getProductOrderById,
   getProductOrderItems,
+  listMadeToOrderFallbackPrices,
+  listMadeToOrderStuckShipments,
+  listOrderPayments,
   type MadeToOrderDeliverySnapshot,
   markMadeToOrderShipmentUnapproved,
   markProductOrderOzonFailed,
+  replaceMadeToOrderDeliveryPrice,
   saveMadeToOrderDeliveryPrice,
 } from "./orders";
+
+/**
+ * Цена-заглушка на время сбоя Ozon Доставки: покупатель не должен ждать,
+ * пока чинится интеграция, поэтому доплата открывается с этой стоимостью.
+ * До оплаты воркер заменит её реальной (sweepMadeToOrderDeliveries), после
+ * оплаты разницу с реальной ценой сообщит уведомление мастеру.
+ */
+const FALLBACK_DELIVERY_PRICE_KOPECKS = 15_000;
+
+/**
+ * Не чаще раза в полчаса: разовый сбой Ozon не должен будить мастера на
+ * каждой повторной попытке покупателя, а начавший повторяться — должен.
+ */
+const FALLBACK_ALERT_INTERVAL_MS = 30 * 60_000;
+let lastFallbackAlertAt = 0;
 
 /** Чем кончился расчёт доставки: см. priceMadeToOrderDelivery. */
 export type DeliveryPricingResult =
@@ -36,10 +56,13 @@ export type DeliveryPricingResult =
  * входит в доплату, а после оплаты отправление создаётся в Ozon.
  *
  * `unavailable` — пункт не подходит, покупатель выберет другой.
- * `quote_unavailable` — расчёт не выйдет и повтор не поможет (Ozon не подключён,
- * не принял ключи или запрос, не доставляет этому покупателю): мастер получает
- * алерт и может выставить доплату с ручной доставкой. `quote_failed` — временный
- * сбой, покупатель попробует ещё раз. `locked` — заказ уже не ждёт доплату.
+ * `quote_unavailable` — расчёт не выйдет и повтор не поможет (Ozon не
+ * подключён, отклонил запрос или не доставляет этому покупателю): мастер
+ * получает алерт и может выставить доплату с ручной доставкой. Сбой самого
+ * Ozon (сеть, токен, ключи, их шлюз) покупателя не стопорит: сохраняется
+ * цена-заглушка и возвращается `ok`, а воркер догонит реальную цену.
+ * `quote_failed` — внутренняя ошибка, покупатель попробует ещё раз.
+ * `locked` — заказ уже не ждёт доплаты.
  */
 export async function priceMadeToOrderDelivery(
   orderId: string,
@@ -97,12 +120,33 @@ export async function priceMadeToOrderDelivery(
       `[made-to-order] Не удалось посчитать доставку заказа ${orderId}:`,
       error,
     );
-    // Ключи или права приложения сами не починятся: повторы покупателя не
-    // помогут, мастер должна знать и выставить доплату с ручной доставкой
-    if (isOzonBusinessAccessError(error)) {
-      return failed(
-        "Ozon не принял ключи Ozon Доставки для бизнеса: они неверны или отозваны, либо у приложения нет нужных доступов.",
+    // Ozon недоступен: сети нет, токен не приняли, ключи отозвали или
+    // споткнулся их шлюз. Покупателю не отказываем — выставляем цену-заглушку:
+    // он платит доплату сейчас, а воркер, когда Ozon оживёт, заменит цену
+    // реальной до оплаты или создаст отправление после неё
+    if (isOzonBusinessOutage(error)) {
+      const saved = await saveMadeToOrderDeliveryPrice(
+        orderId,
+        pointId,
+        point,
+        FALLBACK_DELIVERY_PRICE_KOPECKS,
+        true,
       );
+      if (!saved) return "locked";
+      // Единичный сбой не должен будить мастера на каждой повторной попытке
+      // покупателя, а начавший повторяться — должен дойти
+      if (Date.now() - lastFallbackAlertAt >= FALLBACK_ALERT_INTERVAL_MS) {
+        lastFallbackAlertAt = Date.now();
+        await notifyStaffAlert(
+          `${orderId}/delivery-fallback`,
+          {
+            title: `Заказ №${order.number}: доставка ${formatPrice(FALLBACK_DELIVERY_PRICE_KOPECKS / 100)} как заглушка`,
+            message: `Ozon не ответил при расчёте доставки: ${error instanceof Error ? error.message : String(error)}. Покупателю выставлена временная цена ${formatPrice(FALLBACK_DELIVERY_PRICE_KOPECKS / 100)}, он может оплатить доплату сейчас. Когда Ozon оживёт, задание воркера заменит цену до оплаты, а после оплаты разница придёт отдельным уведомлением. Если такие сообщения приходят регулярно — проверьте ключи и доступы приложения в кабинете Ozon Доставки.`,
+          },
+          "order-delivery-fallback",
+        );
+      }
+      return "ok";
     }
     // Ozon отклонил сам запрос (например, неподходящие вес и размеры): тот же
     // запрос даст тот же ответ, и мастер должна это увидеть
@@ -129,6 +173,7 @@ export async function priceMadeToOrderDelivery(
 export async function createMadeToOrderShipment(
   orderId: string,
   balancePaymentId: string,
+  options: { alertOnFailure?: boolean } = {},
 ): Promise<void> {
   const attemptId = await claimMadeToOrderShipment(orderId);
   if (!attemptId) return;
@@ -202,7 +247,138 @@ export async function createMadeToOrderShipment(
       error,
     );
     await markProductOrderOzonFailed(orderId, attemptId);
-    await notifyOzonOrderFailed(orderId);
+    // Каждая неудачная попытка вебхука — отдельное напоминание мастеру.
+    // Повтор из воркера тихий: вебхук уже сообщил, а крон иначе молотил бы
+    // мастеру, пока Ozon чинят
+    if (options.alertOnFailure !== false) {
+      await notifyOzonOrderFailed(orderId);
+    }
     throw error;
   }
+}
+
+/** Чем кончился прогон догонялки: см. sweepMadeToOrderDeliveries. */
+export interface MadeToOrderDeliverySweepResult {
+  /** Заказов просмотрено. */
+  checked: number;
+  /** Заглушки заменены реальной ценой Ozon до оплаты. */
+  repriced: number;
+  /** Отправления созданы после того, как вебхук не смог. */
+  shipped: number;
+  /** Не вышло: Ozon ещё не ожил или отказал по бизнес-причине. */
+  failed: number;
+}
+
+/**
+ * Догоняет заказы под заказ, которым помешал сбой Ozon Доставки. Зовёт
+ * воркер Hatchet каждые 10 минут (jobs.madeToOrder.sweep):
+ *
+ * — заменяет цену-заглушку реальной, пока покупатель не оплатил доплату;
+ * — создаёт отправления оплаченных заказов, если вебхук не смог.
+ *
+ * Прогон идемпотентен и безопасен повтором. Бизнес-отказы Ozon (пункт,
+ * получатель, габариты) задание не чинит: оно снимает заглушку с контроля,
+ * говорит мастеру один раз, а повтор запроса дал бы тот же отказ.
+ */
+export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliverySweepResult> {
+  const result: MadeToOrderDeliverySweepResult = {
+    checked: 0,
+    repriced: 0,
+    shipped: 0,
+    failed: 0,
+  };
+
+  for (const order of await listMadeToOrderFallbackPrices()) {
+    result.checked++;
+    const snapshot = order.checkoutSnapshot as MadeToOrderDeliverySnapshot;
+    if (!snapshot?.parcel || !order.deliveryPointId) continue;
+
+    /** Ozon ожил, но пересчитать заглушку не вышло: снимаем с контроля. */
+    const stopChasing = async (reason: string): Promise<void> => {
+      // Цена остаётся прежней: покупатель видел её и мог уже начать оплату.
+      // Если оплатит, а отправление не выйдет — вебхук откажет громко, и
+      // мастер решит по обстоятельствам (другой пункт, возврат, вручную)
+      await replaceMadeToOrderDeliveryPrice(
+        order.id,
+        order.amountDelivery,
+        false,
+      );
+      await notifyStaffAlert(
+        `${order.id}/delivery-recheck`,
+        {
+          title: `Заказ №${order.number}: доставка-заглушка не пересчитывается`,
+          message: `${reason}. Покупатель ещё не оплатил доплату — проверьте заказ в админке: возможно, нужен другой пункт или ручная доставка.`,
+        },
+        "order-delivery-recheck",
+      );
+    };
+
+    let quote: ParcelQuote;
+    try {
+      quote = await quoteParcel({
+        recipientPhone: order.contactPhone,
+        pointId: order.deliveryPointId,
+        parcel: snapshot.parcel,
+        declaredValueKopecks: order.amountProducts,
+      });
+    } catch (error) {
+      // Ozon ещё не ожил: заглушка остаётся, следующий прогон повторит
+      if (isOzonBusinessOutage(error)) {
+        result.failed++;
+        continue;
+      }
+      await stopChasing(
+        `Расчёт доставки упал: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      result.failed++;
+      continue;
+    }
+
+    if (quote.available) {
+      const saved = await replaceMadeToOrderDeliveryPrice(
+        order.id,
+        quote.priceKopecks,
+        false,
+      );
+      if (saved) result.repriced++;
+      continue;
+    }
+    await stopChasing(quote.reason ?? "Ozon отказал в расчёте доставки");
+    result.failed++;
+  }
+
+  for (const { id } of await listMadeToOrderStuckShipments()) {
+    result.checked++;
+    // Оплата нужна для повторного уведомления о неподтверждённом заказе
+    // (markMadeToOrderShipmentUnapproved): берём последнюю успешную доплату
+    const payments = await listOrderPayments(id);
+    const balance = payments
+      .filter(
+        (payment) =>
+          payment.type === "balance" && payment.status === "succeeded",
+      )
+      .sort(
+        (a, b) => (b.paidAt?.getTime() ?? 0) - (a.paidAt?.getTime() ?? 0),
+      )[0];
+    if (!balance) {
+      console.error(
+        `[made-to-order] У заказа ${id} нет оплаченной доплаты, повторить отправление не получится`,
+      );
+      result.failed++;
+      continue;
+    }
+    try {
+      // Вебхук об этой неудаче уже сообщил громко: повтор тихий
+      await createMadeToOrderShipment(id, balance.id, {
+        alertOnFailure: false,
+      });
+      result.shipped++;
+    } catch {
+      // Ждём следующего прогона: Ozon ещё не ожил или отказал по-деловому,
+      // в обоих случаях мастер уже в курсе
+      result.failed++;
+    }
+  }
+
+  return result;
 }
