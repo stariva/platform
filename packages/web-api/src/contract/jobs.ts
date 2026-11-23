@@ -269,12 +269,38 @@ export const emailsContract = {
   syncEvents: jobProcedure.output(emailEventsSyncResult),
 };
 
+const madeToOrderSweepResult = z.object({
+  /** Заказов просмотрено. */
+  checked: z.number().int().nonnegative(),
+  /** Заглушки заменены реальной ценой Ozon до оплаты. */
+  repriced: z.number().int().nonnegative(),
+  /** Отправления созданы после того, как вебхук не смог. */
+  shipped: z.number().int().nonnegative(),
+  /** Не вышло: Ozon ещё не ожил или отказал по бизнес-причине. */
+  failed: z.number().int().nonnegative(),
+});
+
+export type MadeToOrderDeliverySweepResult = z.infer<
+  typeof madeToOrderSweepResult
+>;
+
+export const madeToOrderContract = {
+  /**
+   * Догоняет заказы под заказ, которым помешал сбой Ozon Доставки: заменяет
+   * цену-заглушку реальной до оплаты покупателем и создаёт отправления
+   * оплаченных заказов, если вебхук не смог. Прогон идемпотентен, поэтому
+   * повтор безвреден — как кроном, так и руками, когда Ozon починят.
+   */
+  sweep: jobProcedure.output(madeToOrderSweepResult),
+};
+
 export const jobsContract = {
   videos: videosContract,
   emails: emailsContract,
   reminders: remindersContract,
   storage: storageContract,
   analytics: analyticsContract,
+  madeToOrder: madeToOrderContract,
   ozon: {
     /**
      * Сверяет остаток товаров, которые продаются и на маркетплейсе Ozon:

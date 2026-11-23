@@ -14,9 +14,12 @@ const {
 } = await import("../../src/lib/ozon-business-delivery/client");
 const {
   isOzonBusinessAccessError,
+  isOzonBusinessOutage,
   isOzonBusinessRejection,
+  isOzonBusinessTokenRejected,
   OzonBusinessAccessError,
   OzonBusinessDeliveryError,
+  OzonBusinessTokenOutageError,
   ParcelNotApprovedError,
 } = await import("../../src/lib/ozon-business-delivery/errors");
 
@@ -222,6 +225,28 @@ test("a revoked token is replaced once", async () => {
   expect(headersOf(3).Authorization).toBe("Bearer tok2");
 });
 
+test("a token Ozon issued but the API rejects twice is not broken keys", async () => {
+  fetchSpy
+    .mockResolvedValueOnce(tokenResponse())
+    .mockResolvedValueOnce(
+      json({ error: { message: "401 Unauthorized" } }, 401),
+    )
+    .mockResolvedValueOnce(json({ access_token: "tok2", expires_in: 3600 }))
+    .mockResolvedValueOnce(
+      json({ error: { message: "401 Unauthorized" } }, 401),
+    );
+
+  const error = await quoteParcel(request).catch((e: unknown) => e);
+
+  // OAuth выдал токен по нашим ключам дважды — значит, ключи приняты
+  expect(error).toBeInstanceOf(OzonBusinessDeliveryError);
+  expect(isOzonBusinessAccessError(error)).toBe(false);
+  expect(isOzonBusinessTokenRejected(error)).toBe(true);
+  const failure = error as InstanceType<typeof OzonBusinessDeliveryError>;
+  expect(failure.tokenRefreshed).toBe(true);
+  expect(failure.message).toContain("after a fresh token");
+});
+
 const created = {
   order_number: "YY-123-90YY",
   postings: [{ request_id: 1, posting_number: "123-90YY-1" }],
@@ -338,6 +363,22 @@ test("keys Ozon refuses are an access error, an outage of Ozon is not", async ()
   const outage = await quoteParcel(request).catch((e: unknown) => e);
   expect(outage).not.toBeInstanceOf(OzonBusinessAccessError);
   expect(isOzonBusinessAccessError(outage)).toBe(false);
+});
+
+test("a token endpoint that is down is an outage, not broken keys", async () => {
+  // Токен-сервер ответил 503: ключи не виноваты, повтор позже пройдёт —
+  // покупателю нужна заглушка, а прогону воркера — повтор, не остановка
+  fetchSpy.mockResolvedValueOnce(json({ error: "busy" }, 503));
+
+  const error = await quoteParcel(request).catch((e: unknown) => e);
+
+  expect(error).toBeInstanceOf(OzonBusinessTokenOutageError);
+  expect(isOzonBusinessAccessError(error)).toBe(false);
+  expect(isOzonBusinessRejection(error)).toBe(false);
+  expect(isOzonBusinessOutage(error)).toBe(true);
+  expect((error as Error).message).toContain(
+    "ozon_business_delivery_oauth_failed_503",
+  );
 });
 
 test("an app without the needed scope is an access error too", async () => {

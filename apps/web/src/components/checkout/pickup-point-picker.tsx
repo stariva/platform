@@ -69,8 +69,26 @@ function MapPlaceholder() {
   );
 }
 
+/**
+ * Пункт без адреса и режима работы: Ozon не отдал детали, но выбор возможен —
+ * для заказа достаточно id, адрес подтянется, когда Ozon оживёт, а мастер на
+ * случай ручной отправки увидит хотя бы номер пункта.
+ */
+function pointWithoutDetails(location: PickupPointLocation): PickupPoint {
+  return {
+    id: location.id,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    kind: "pvz",
+    title: `Пункт выдачи Ozon №${location.id}`,
+    address: "Адрес уточняется",
+    schedule: [],
+    holidays: [],
+  };
+}
+
 interface PickupPointPickerProps {
-  /** Вызывается, когда покупатель выбрал пункт и его адрес загружен */
+  /** Вызывается, когда покупатель выбрал пункт; без адреса — если Ozon не отдал его */
   onChange: (point: PickupPoint | null) => void;
 }
 
@@ -100,10 +118,6 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
 
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  const selectedPoint = selectedId ? details.get(selectedId) : undefined;
-  useEffect(() => {
-    onChangeRef.current(selectedPoint ?? null);
-  }, [selectedPoint]);
 
   // --- Поиск адреса ---------------------------------------------------
   useEffect(() => {
@@ -222,6 +236,26 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
     [locations, hidden],
   );
 
+  const selectedLocation = visibleLocations.find((p) => p.id === selectedId);
+  // Сбой загрузки адресов не должен мешать выбору: для заказа нужен только
+  // id пункта, а адрес подтянется, когда Ozon оживёт. Мемоизируем: без неё
+  // заглушка пересоздаётся на каждой перерисовке, и эффект с onChange
+  // гоняет родителя по кругу. Реальные детали приедут — сменится ссылка,
+  // и родитель получит пункт с адресом
+  const selectedPoint = useMemo(
+    () =>
+      selectedId
+        ? (details.get(selectedId) ??
+          (detailsFailed && selectedLocation
+            ? pointWithoutDetails(selectedLocation)
+            : undefined))
+        : undefined,
+    [selectedId, details, detailsFailed, selectedLocation],
+  );
+  useEffect(() => {
+    onChangeRef.current(selectedPoint ?? null);
+  }, [selectedPoint]);
+
   const centerLat = viewCenter?.[0] ?? anchor?.lat;
   const centerLon = viewCenter?.[1] ?? anchor?.lon;
   const movedAway =
@@ -296,8 +330,6 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
     for (const [id, point] of details) map.set(id, point.title);
     return map;
   }, [details]);
-
-  const selectedLocation = visibleLocations.find((p) => p.id === selectedId);
 
   return (
     <div className="space-y-4">
@@ -439,12 +471,19 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
               <ul className="divide-y divide-espresso/8 overflow-hidden rounded-xl border border-espresso/10">
                 {listed.map((id) => {
                   const point = details.get(id);
+                  // Сбой загрузки адресов: пункт выбираем по позиции, адрес
+                  // подтянется, когда Ozon оживёт
                   const location = visibleLocations.find((p) => p.id === id);
+                  const row =
+                    point ??
+                    (detailsFailed && location
+                      ? pointWithoutDetails(location)
+                      : undefined);
                   return (
                     <li key={id}>
-                      {point ? (
+                      {row ? (
                         <PointRow
-                          point={point}
+                          point={row}
                           distanceKm={
                             location ? distanceFromAnchor(location) : undefined
                           }
@@ -460,7 +499,8 @@ export function PickupPointPicker({ onChange }: PickupPointPickerProps) {
               </ul>
               {detailsFailed && (
                 <p className="mt-2 text-xs text-taupe">
-                  Не удалось загрузить адреса части пунктов.{" "}
+                  Не удалось загрузить адреса части пунктов — выбрать пункт
+                  можно и без адреса, он уточнится.{" "}
                   <button
                     type="button"
                     onClick={retryDetails}

@@ -6,6 +6,7 @@ import {
   getCachedPickupPointsInfo,
 } from "@/lib/ozon-delivery/pickup-points-cache";
 import type {
+  PickupPoint,
   PickupPointLocation,
   PickupPointsNearbyResponse,
 } from "@/lib/ozon-delivery/types";
@@ -74,9 +75,21 @@ export async function GET(request: Request) {
       .slice(0, radiusKm === undefined ? FALLBACK_LIMIT : MAX_LOCATIONS)
       .map((i) => points[i] as PickupPointLocation);
 
-    const { points: nearest, unavailable } = await getCachedPickupPointsInfo(
-      selected.slice(0, NEAREST_WITH_DETAILS).map((p) => p.id),
-    );
+    // Адреса ближайших — косметика для списка: если point/info лежит,
+    // отдаём карту с координатами без адресов, и пикер покажет пункты с
+    // «адрес уточняется», а не пустой экран
+    let nearest: PickupPoint[] = [];
+    let unavailable: string[] = [];
+    try {
+      ({ points: nearest, unavailable } = await getCachedPickupPointsInfo(
+        selected.slice(0, NEAREST_WITH_DETAILS).map((p) => p.id),
+      ));
+    } catch (error) {
+      console.warn(
+        "[checkout/pickup-points] Ozon не отдал адреса ближайших пунктов:",
+        error,
+      );
+    }
     const hidden = new Set(unavailable);
 
     const body: PickupPointsNearbyResponse = {

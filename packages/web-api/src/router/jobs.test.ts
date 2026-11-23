@@ -107,10 +107,16 @@ let sweep: ReminderSweepResult = { checked: 0, delivered: 0, failed: 0 };
 let sweeps = 0;
 let npdSweeps = 0;
 let emailSyncs = 0;
+let madeToOrderSweeps = 0;
+let madeToOrderSweep = { checked: 0, repriced: 0, shipped: 0, failed: 0 };
 const services = {
   runNpdIssuingSweep: async () => {
     npdSweeps++;
     return { checked: 2 };
+  },
+  sweepMadeToOrderDeliveries: async () => {
+    madeToOrderSweeps++;
+    return madeToOrderSweep;
   },
   syncEmailEvents: async () => {
     emailSyncs++;
@@ -213,6 +219,20 @@ test("reminder sweep fails so Hatchet retries undelivered messages", async () =>
   expect(definedError?.code).toBe("REMINDERS_FAILED");
   expect(definedError?.data).toEqual(sweep);
   expect(lastStatus()).toBe(500);
+});
+
+test("made-to-order sweep requires the jobs secret and returns its counts", async () => {
+  madeToOrderSweeps = 0;
+  const [error] = await safe(client("Bearer wrong").jobs.madeToOrder.sweep());
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(madeToOrderSweeps).toBe(0);
+
+  madeToOrderSweep = { checked: 3, repriced: 2, shipped: 1, failed: 0 };
+  expect(await client(`Bearer ${secret}`).jobs.madeToOrder.sweep()).toEqual(
+    madeToOrderSweep,
+  );
+  expect(madeToOrderSweeps).toBe(1);
+  expect(lastStatus()).toBe(200);
 });
 
 test("NPD sweep requires the jobs secret and calls only its own service", async () => {

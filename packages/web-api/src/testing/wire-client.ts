@@ -35,6 +35,12 @@ const idleServices: WebServices = {
     renditions: 0,
   }),
   runNpdIssuingSweep: async () => ({ checked: 0 }),
+  sweepMadeToOrderDeliveries: async () => ({
+    checked: 0,
+    repriced: 0,
+    shipped: 0,
+    failed: 0,
+  }),
   syncEmailEvents: async () => ({
     configured: false,
     read: 0,

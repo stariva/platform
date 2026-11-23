@@ -601,6 +601,12 @@ export interface MadeToOrderDeliverySnapshot {
   parcel: MadeToOrderParcel;
   /** Доставка со страховкой, копейки; null — покупатель ещё не выбрал пункт. */
   priceKopecks: number | null;
+  /**
+   * Цена — заглушка на время сбоя Ozon. Пока покупатель не оплатил, воркер
+   * заменит её реальной (jobs.madeToOrder.sweep); после оплаты разницу с
+   * реальной ценой сообщит уведомление мастеру.
+   */
+  priceFallback?: boolean;
 }
 
 /**
@@ -627,13 +633,15 @@ export function isDeliveryPointEditable(
  * Покупатель выбрал пункт, и Ozon посчитал доставку до него: пункт и цена
  * ложатся в заказ вместе, и доставка входит в доплату. Пишет, только пока заказ
  * ждёт доплату по той же посылке: если он уже оплачен или изменился, возвращает
- * false и ничего не меняет.
+ * false и ничего не меняет. `priceFallback` — цена не от Ozon, а заглушка на
+ * время сбоя: воркер заменит её реальной.
  */
 export async function saveMadeToOrderDeliveryPrice(
   orderId: string,
   pointId: string,
   point: PickupPoint | null,
   priceKopecks: number,
+  priceFallback = false,
 ): Promise<boolean> {
   // Одна запись без предварительного чтения: между чтением и записью мастер
   // успела бы перейти на ручную доставку (она стирает снимок), а чужое
@@ -647,7 +655,7 @@ export async function saveMadeToOrderDeliveryPrice(
       deliveryAddress: pickupPointAddress(point),
       amountDelivery: priceKopecks,
       amountTotal: sql`${productOrders.amountProducts} + ${priceKopecks}::int`,
-      checkoutSnapshot: sql`jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${priceKopecks}::int))`,
+      checkoutSnapshot: sql`jsonb_set(jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${priceKopecks}::int)), '{priceFallback}', to_jsonb(${priceFallback}::boolean))`,
     })
     .where(
       and(
@@ -660,6 +668,91 @@ export async function saveMadeToOrderDeliveryPrice(
     )
     .returning({ id: productOrders.id });
   return saved.length > 0;
+}
+
+/**
+ * Воркер заменил цену-заглушку реальной (или снял заглушку с контроля):
+ * меняет только цену в заказе, пункт и адрес не трогает — их выбрал
+ * покупатель. Тоже только до оплаты: с уже оплаченной доплатой разницу
+ * решает мастер, а не фоновое задание.
+ *
+ * Запись связана с прочитанным состоянием: правится только строка с тем же
+ * пунктом, что был перед запросом к Ozon, и только пока она ещё держит
+ * заглушку. Сменил покупатель пункт или расчёт уже не заглушка — запись
+ * молча пропускается, чтобы чужой результат не затёр свежую цену.
+ */
+export async function replaceMadeToOrderDeliveryPrice(
+  orderId: string,
+  expectedPointId: string,
+  priceKopecks: number,
+  priceFallback: boolean,
+): Promise<boolean> {
+  const saved = await db
+    .update(productOrders)
+    .set({
+      amountDelivery: priceKopecks,
+      amountTotal: sql`${productOrders.amountProducts} + ${priceKopecks}::int`,
+      checkoutSnapshot: sql`jsonb_set(jsonb_set(${productOrders.checkoutSnapshot}, '{priceKopecks}', to_jsonb(${priceKopecks}::int)), '{priceFallback}', to_jsonb(${priceFallback}::boolean))`,
+    })
+    .where(
+      and(
+        eq(productOrders.id, orderId),
+        eq(productOrders.kind, "made_to_order"),
+        eq(productOrders.status, "awaiting_balance"),
+        // Цену считали для этого пункта; сменил покупатель — не трогаем
+        eq(productOrders.deliveryPointId, expectedPointId),
+        sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+        // Только заглушки: реальную цену покупателя не перезаписываем
+        sql`${productOrders.checkoutSnapshot} -> 'priceFallback' = to_jsonb(true)`,
+      ),
+    )
+    .returning({ id: productOrders.id });
+  return saved.length > 0;
+}
+
+/** Заказы под заказ с ценой-заглушкой: воркер заменит её реальной, пока доплата не оплачена. */
+export async function listMadeToOrderFallbackPrices() {
+  return db
+    .select({
+      id: productOrders.id,
+      number: productOrders.number,
+      contactPhone: productOrders.contactPhone,
+      deliveryPointId: productOrders.deliveryPointId,
+      amountProducts: productOrders.amountProducts,
+      amountDelivery: productOrders.amountDelivery,
+      checkoutSnapshot: productOrders.checkoutSnapshot,
+    })
+    .from(productOrders)
+    .where(
+      and(
+        eq(productOrders.kind, "made_to_order"),
+        eq(productOrders.status, "awaiting_balance"),
+        isNotNull(productOrders.deliveryPointId),
+        sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+        sql`${productOrders.checkoutSnapshot} -> 'priceFallback' = to_jsonb(true)`,
+      ),
+    );
+}
+
+/**
+ * Оплаченные заказы под заказ, чьё отправление в Ozon создать не удалось:
+ * вебхук не смог — воркер повторит, когда Ozon оживёт. Отправление с
+ * номерами (создано, но не подтверждено) сюда не попадает: его подтверждает
+ * мастер в кабинете Ozon.
+ */
+export async function listMadeToOrderStuckShipments() {
+  return db
+    .select({ id: productOrders.id })
+    .from(productOrders)
+    .where(
+      and(
+        eq(productOrders.kind, "made_to_order"),
+        inArray(productOrders.status, ["ready_to_ship", "ozon_order_failed"]),
+        isNull(productOrders.ozonOrderId),
+        isNotNull(productOrders.deliveryPointId),
+        sql`${productOrders.checkoutSnapshot} -> 'parcel' is not null`,
+      ),
+    );
 }
 
 export interface MadeToOrderDetailsInput {

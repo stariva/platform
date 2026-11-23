@@ -203,6 +203,11 @@ export const jobsRouter = {
   reminders: { sweep },
   storage: { sweep: storageSweep, mirrorSync: storageMirrorSync },
   analytics: { metrikaGoals, metrikaLogs, directReport },
+  madeToOrder: {
+    sweep: jobs.madeToOrder.sweep.handler(({ context }) =>
+      context.services.sweepMadeToOrderDeliveries(),
+    ),
+  },
   ozon: { syncStock: ozonSyncStock },
   npd: {
     sweep: jobs.npd.sweep.handler(({ context }) =>
