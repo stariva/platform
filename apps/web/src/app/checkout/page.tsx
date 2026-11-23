@@ -575,7 +575,7 @@ export default function CheckoutPage() {
                       {submitting && paymentProvider === "robokassa" ? (
                         <Spinner />
                       ) : (
-                        "Иностранная карта, Яндекс Пэй или Сплит"
+                        "Яндекс Пэй или Сплит"
                       )}
                     </Button>
                     <p className="mt-2 text-center text-[12px] text-taupe">

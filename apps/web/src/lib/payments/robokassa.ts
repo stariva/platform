@@ -12,8 +12,10 @@ const STATE_URL =
 const PAYMENT_ID_PREFIX = "robokassa:";
 
 /**
- * BankCard принимает в том числе иностранные карты, если способ включён
- * для магазина Robokassa. Российские карты и СБП также есть через ЮKassa.
+ * Способы на странице Robokassa: BankCard (в том числе иностранные карты,
+ * если способ включён для магазина), Яндекс Пэй и Сплит. Российские карты
+ * и СБП также есть через ЮKassa; для мастер-классов Robokassa — резервный
+ * провайдер (fallback), кнопка осталась только в чекауте товаров.
  */
 const PAYMENT_METHODS = ["BankCard", "YandexPay", "YandexPaySplit"];
 

@@ -44,7 +44,8 @@ const bodySchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254).optional(),
   name: z.string().trim().max(120).optional(),
   personalDataConsent: z.boolean().optional(),
-  // robokassa — иностранная карта, Яндекс Пэй или Сплит; без поля — ЮKassa
+  // robokassa — резервный провайдер (fallback): из интерфейса покупки убрана,
+  // значение оставлено для будущих сценариев; без поля — ЮKassa
   provider: z.enum(["yookassa", "robokassa", "boosty"]).default("yookassa"),
 });
 
