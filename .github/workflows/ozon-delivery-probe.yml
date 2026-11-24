@@ -114,6 +114,32 @@ jobs:
               token = data.access_token ?? null;
               if (token && data.expires_in) {
                 console.log(`  токен выдан: длина ${token.length}, expires_in ${data.expires_in} с`);
+                // Разбор клеймов JWT: сам токен не печатаем, только метки.
+                // exp против текущего времени покажет, жив ли токен вообще
+                const parts = token.split(".");
+                if (parts.length !== 3) {
+                  console.log(`  токен не JWT (сегментов ${parts.length})`);
+                } else {
+                  try {
+                    const claims = JSON.parse(
+                      Buffer.from(parts[1], "base64url").toString("utf8"),
+                    );
+                    const shown = {};
+                    for (const key of ["exp", "iat", "nbf", "aud", "iss", "scope", "sub"]) {
+                      if (claims[key] !== undefined) shown[key] = claims[key];
+                    }
+                    console.log(`  клеймы токена: ${JSON.stringify(shown)}`);
+                    if (typeof claims.exp === "number") {
+                      const nowSec = Math.floor(Date.now() / 1000);
+                      console.log(`  exp = ${new Date(claims.exp * 1000).toISOString()}, сейчас ${new Date().toISOString()}, разница ${claims.exp - nowSec} с`);
+                      if (claims.exp <= nowSec) {
+                        console.log("  ТОКЕН ВЫДАН УЖЕ ПРОСРОЧЕННЫМ — отсюда и 401 invalid_token у API");
+                      }
+                    }
+                  } catch (error) {
+                    console.log(`  не удалось разобрать клеймы: ${error.message}`);
+                  }
+                }
               } else {
                 console.log(`  тело ответа: ${body.slice(0, 300)}`);
               }
