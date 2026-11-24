@@ -1,0 +1,166 @@
+name: Ozon Delivery probe
+
+# Разовая диагностика ключей Ozon Доставки для бизнеса — изнутри прод-пода.
+# Запускается пушем этой ветки (workflow_dispatch требует файл на main) и
+# вручную по кнопке, если файл когда-нибудь попадёт на main. Ничего не
+# деплоит и в код приложения не пишет: скрипт читает переменные окружения
+# пода и делает два обмена ключей + дешёвый запрос API. Печатает только
+# коды ответов, тайминги и заголовки — секреты, токены и их фрагменты
+# в вывод не попадают.
+on:
+  push:
+    branches: [chore/ozon-delivery-probe]
+  workflow_dispatch:
+
+concurrency:
+  group: ozon-delivery-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          # KUBE_CONFIG may be either the raw kubeconfig YAML or its base64 encoding
+          if echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config 2>/dev/null && grep -q "apiVersion" ~/.kube/config; then
+            echo "KUBE_CONFIG decoded from base64"
+          else
+            echo "$KUBE_CONFIG" > ~/.kube/config
+          fi
+          chmod 600 ~/.kube/config
+
+      - name: Pod list
+        run: kubectl get pods -n stariva -l app=stariva
+
+      - name: Write probe script
+        run: |
+          cat > ozon-probe.ts <<'EOF'
+          const clientId = process.env.OZON_BUSINESS_DELIVERY_CLIENT_ID;
+          const clientSecret = process.env.OZON_BUSINESS_DELIVERY_CLIENT_SECRET;
+          if (!clientId || !clientSecret) {
+            console.log("KEYS: OZON_BUSINESS_DELIVERY_CLIENT_ID/SECRET не заданы в поде — проверять нечего");
+            process.exit(0);
+          }
+          console.log(`KEYS: заданы (client_id длина ${clientId.length}, префикс ${clientId.slice(0, 4)}…)`);
+
+          const SCOPES = [
+            "delivery-api.delivery",
+            "delivery-api.delivery-point",
+            "delivery-api.order",
+            "delivery-api.posting",
+          ];
+          const TOKEN_URL = "https://xapi.ozon.ru/oauth/token";
+          const API = "https://api-delivery.ozon.ru/v1/delivery/check-client";
+
+          async function post(url, headers, body) {
+            let target = url;
+            let current = headers;
+            for (let hop = 0; hop < 3; hop++) {
+              const res = await fetch(target, {
+                method: "POST",
+                headers: current,
+                body,
+                redirect: "manual",
+                signal: AbortSignal.timeout(15_000),
+              });
+              if (![301, 302, 303, 307, 308].includes(res.status)) return res;
+              const cookie = res.headers
+                .getSetCookie()
+                .map((line) => line.split(";")[0])
+                .join("; ");
+              const location = res.headers.get("location");
+              if (!location) return res;
+              target = new URL(location, target).toString();
+              if (cookie) current = { ...current, Cookie: cookie };
+              await res.body?.cancel().catch(() => {});
+            }
+            throw new Error("слишком много редиректов");
+          }
+
+          function showHeaders(res) {
+            const picked = {};
+            for (const [name, value] of res.headers) {
+              if (name.startsWith("x-") || name === "www-authenticate" || name === "server") {
+                picked[name] = value.slice(0, 200);
+              }
+            }
+            return picked;
+          }
+
+          async function fetchToken(label) {
+            const startedAt = Date.now();
+            const res = await post(
+              TOKEN_URL,
+              { "Content-Type": "application/json" },
+              JSON.stringify({
+                client_id: clientId,
+                client_secret: clientSecret,
+                grant_type: "client_credentials",
+                scope: SCOPES,
+              }),
+            );
+            const body = await res.text();
+            console.log(`\n[OAuth ${label}] HTTP ${res.status} за ${Date.now() - startedAt} мс`);
+            let token = null;
+            try {
+              const data = JSON.parse(body);
+              token = data.access_token ?? null;
+              if (token && data.expires_in) {
+                console.log(`  токен выдан: длина ${token.length}, expires_in ${data.expires_in} с`);
+              } else {
+                console.log(`  тело ответа: ${body.slice(0, 300)}`);
+              }
+            } catch {
+              console.log(`  тело ответа (не JSON): ${body.slice(0, 300)}`);
+            }
+            return token;
+          }
+
+          async function checkClient(label, token) {
+            const startedAt = Date.now();
+            const res = await post(
+              API,
+              { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              JSON.stringify({ phone_number: "+79000000000" }),
+            );
+            const body = await res.text();
+            console.log(`\n[check-client ${label}] HTTP ${res.status} за ${Date.now() - startedAt} мс`);
+            console.log(`  заголовки: ${JSON.stringify(showHeaders(res))}`);
+            console.log(`  тело: ${body.slice(0, 200)}`);
+            return res.status;
+          }
+
+          const statuses = {};
+          const first = await fetchToken("T1 — как делает сайт");
+          if (!first) process.exit(0);
+          statuses["T1 первый вызов"] = await checkClient("T1, сразу после выдачи", first);
+
+          const second = await fetchToken("T2 — повторная выдача теми же ключами");
+          if (second) {
+            // Тест ротации: если выдача T2 отозвала T1, у Ozon один живой токен
+            // на client_id — и два процесса с этими ключами выбивают токены друг друга
+            statuses["T1 после выдачи T2 (тест ротации)"] = await checkClient("T1 после выдачи T2", first);
+            statuses["T2 первый вызов"] = await checkClient("T2, сразу после выдачи", second);
+          }
+
+          console.log("\n=== Вердикт ===");
+          if (statuses["T1 первый вызов"] === 200 && statuses["T1 после выдачи T2 (тест ротации)"] === 200) {
+            console.log("Ключи рабочие, сервис отвечает, ротации нет: токены живут одновременно.");
+          } else if (statuses["T1 первый вызов"] === 200 && statuses["T1 после выдачи T2 (тест ротации)"] === 401) {
+            console.log("РОТАЦИЯ ПОДТВЕРЖДЕНА: каждая новая выдача отзывает предыдущий токен. Любой второй процесс с этими ключами (второй под, консоль кабинета) выбивает токен из памяти прод-пода.");
+          } else if (statuses["T1 первый вызов"] === 401) {
+            console.log("ВОСПРОИЗВЕЛСЯ ИНЦИДЕНТ: свежевыданный токен API отвергает. OAuth ключи принял — сбой на стороне API/шлюза Ozon, ключи менять не нужно.");
+          }
+          console.log(JSON.stringify(statuses));
+          EOF
+
+      - name: Run probe inside the prod pod
+        run: |
+          kubectl exec -i deployment/stariva -n stariva -- sh -c 'cat > /tmp/ozon-probe.ts && bun /tmp/ozon-probe.ts' < ozon-probe.ts
