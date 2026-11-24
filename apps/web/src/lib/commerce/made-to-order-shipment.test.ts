@@ -13,6 +13,7 @@ for (const scenario of [
   "a token Ozon rejects still lets the buyer pay a placeholder price",
   "an internal error still asks the buyer to retry rather than masking with a placeholder",
   "the health probe tells the master before buyers meet a broken Ozon",
+  "the cron sweep can run only its pulse without touching orders",
   "the sweep replaces a placeholder with the real price before payment",
   "the sweep keeps the placeholder while Ozon is still down",
   "the sweep keeps the placeholder when the token endpoint is down",

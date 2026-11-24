@@ -350,8 +350,10 @@ async function reportOzonDeliveryHealth(): Promise<void> {
 }
 
 /**
- * Догоняет заказы под заказ, которым помешал сбой Ozon Доставки. Зовёт
- * воркер Hatchet каждые 10 минут (jobs.madeToOrder.sweep):
+ * Догоняет заказы под заказ, которым помешал сбой Ozon Доставки. Кнопка
+ * «Создать отправления Ozon» в админке зовёт полный прогон; крон воркера
+ * (jobs.madeToOrder.sweep с orders: false) — только пульс интеграции:
+ * заказами теперь управляет мастер, а не расписание.
  *
  * — щупает пульс интеграции и говорит мастеру о переходах до покупателей;
  * — заменяет цену-заглушку реальной, пока покупатель не оплатил доплату;
@@ -361,7 +363,9 @@ async function reportOzonDeliveryHealth(): Promise<void> {
  * получатель, габариты) задание не чинит: оно снимает заглушку с контроля,
  * говорит мастеру один раз, а повтор запроса дал бы тот же отказ.
  */
-export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliverySweepResult> {
+export async function sweepMadeToOrderDeliveries(
+  options: { orders?: boolean } = {},
+): Promise<MadeToOrderDeliverySweepResult> {
   const result: MadeToOrderDeliverySweepResult = {
     checked: 0,
     repriced: 0,
@@ -371,6 +375,7 @@ export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliveryS
 
   // Пульс сначала: заодно прогревает токен для расчётов ниже
   await reportOzonDeliveryHealth();
+  if (options.orders === false) return result;
 
   for (const order of await listMadeToOrderFallbackPrices()) {
     result.checked++;

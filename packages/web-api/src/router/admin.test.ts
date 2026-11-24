@@ -162,3 +162,27 @@ test("revalidate refuses anything that is not a page path", async () => {
   }
   expect(revalidatePaths).not.toHaveBeenCalled();
 });
+
+test("made-to-order sweep requires the admin secret and returns its counts", async () => {
+  const sweepMadeToOrderDeliveries = mock(async () => ({
+    checked: 1,
+    repriced: 1,
+    shipped: 0,
+    failed: 0,
+  }));
+  const [error] = await safe(
+    wireClient({
+      authorization: `Bearer ${JOBS_SECRET}`,
+      services: { sweepMadeToOrderDeliveries },
+    }).admin.madeToOrder.sweep(),
+  );
+  expect(error).toMatchObject({ code: "UNAUTHORIZED" });
+  expect(sweepMadeToOrderDeliveries).not.toHaveBeenCalled();
+
+  const result = await wireClient({
+    authorization: `Bearer ${secret}`,
+    services: { sweepMadeToOrderDeliveries },
+  }).admin.madeToOrder.sweep();
+  expect(result).toEqual({ checked: 1, repriced: 1, shipped: 0, failed: 0 });
+  expect(sweepMadeToOrderDeliveries).toHaveBeenCalledWith();
+});
