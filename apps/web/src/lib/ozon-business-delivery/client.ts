@@ -270,6 +270,21 @@ function ozonPhone(phone: string): string | null {
   return /^7\d{10}$/.test(digits) ? `+${digits}` : null;
 }
 
+/**
+ * Пульс интеграции для воркера: обмен ключей на токен и самый дешёвый запрос
+ * API. Заказ не создаёт и ни на кого не ссылается: телефон заведомо
+ * фейковый, check-client отвечает лишь кодом, а не результатом. Сбой виден
+ * прогону раньше, чем его встретит первый покупатель, — а заодно прогревает
+ * кэш токена для остальных запросов.
+ */
+export async function probeOzonBusinessDelivery(): Promise<void> {
+  await call(
+    "/v1/delivery/check-client",
+    { phone_number: "+79000000000" },
+    checkClientSchema,
+  );
+}
+
 function pointNumber(pointId: string): number | null {
   const id = Number(pointId);
   return Number.isSafeInteger(id) && id > 0 ? id : null;

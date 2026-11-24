@@ -9,6 +9,7 @@ mock.module("@/env", () => ({ env }));
 const {
   createParcelShipment,
   isOzonBusinessDeliveryConfigured,
+  probeOzonBusinessDelivery,
   quoteParcel,
   resetOzonBusinessSession,
 } = await import("../../src/lib/ozon-business-delivery/client");
@@ -245,6 +246,20 @@ test("a token Ozon issued but the API rejects twice is not broken keys", async (
   const failure = error as InstanceType<typeof OzonBusinessDeliveryError>;
   expect(failure.tokenRefreshed).toBe(true);
   expect(failure.message).toContain("after a fresh token");
+});
+
+test("the health probe pings the cheapest endpoint without side effects", async () => {
+  fetchSpy
+    .mockResolvedValueOnce(tokenResponse())
+    .mockResolvedValueOnce(json({ can_be_delivered: false }));
+
+  await probeOzonBusinessDelivery();
+
+  // Пробный телефон заведомо фейковый: важен код ответа, а не результат
+  expect(urlOf(1)).toBe(
+    "https://api-delivery.ozon.ru/v1/delivery/check-client",
+  );
+  expect(bodyOf(1)).toEqual({ phone_number: "+79000000000" });
 });
 
 const created = {
