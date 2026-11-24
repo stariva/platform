@@ -197,12 +197,12 @@ const ozonSyncStock = jobs.ozon.syncStock.handler(
   },
 );
 
-const ozonPvzSync = jobs.pvz.sync.handler(async ({ errors }) => {
+const ozonPvzSync = jobs.pvz.sync.handler(async ({ errors, signal }) => {
   if (!isOzonDeliveryConfigured()) {
     return { configured: false, upserted: 0, deactivated: 0 };
   }
   try {
-    return await syncOzonPickupPoints();
+    return await syncOzonPickupPoints(signal);
   } catch (error) {
     logger.error("ozon.pvz.sync_error", error);
     throw errors.OZON_REQUEST_FAILED({ cause: error });

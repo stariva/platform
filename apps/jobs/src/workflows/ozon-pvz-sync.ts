@@ -1,3 +1,4 @@
+import { OZON_PVZ_SYNC_TIMEOUTS } from "@stariva/web-api/contract";
 import { hatchet } from "../client";
 import { webApi } from "../lib/web-api";
 
@@ -13,6 +14,10 @@ export const ozonPvzSyncWorkflow = hatchet.workflow({
 ozonPvzSyncWorkflow.task({
   name: "sync-ozon-pvz",
   retries: 2,
-  executionTimeout: "120s",
-  fn: () => webApi.jobs.pvz.sync(undefined, { context: { timeout: 100_000 } }),
+  executionTimeout: OZON_PVZ_SYNC_TIMEOUTS.execution,
+  fn: (_input, ctx) =>
+    webApi.jobs.pvz.sync(undefined, {
+      signal: ctx.abortController.signal,
+      context: { timeout: OZON_PVZ_SYNC_TIMEOUTS.clientMs },
+    }),
 });

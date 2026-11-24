@@ -1,11 +1,19 @@
 import { logger } from "@stariva/config";
-import { and, db, eq, notInArray, sql } from "@stariva/db";
+import { and, type Database, db, eq, sql } from "@stariva/db";
+import { createDatabase } from "@stariva/db/client";
 import { ozonDeliveryToken, ozonPickupPoints } from "@stariva/db/schema";
 import { z } from "zod";
+import { OZON_PVZ_SYNC_TIMEOUTS } from "../contract/jobs";
 import { env } from "../env";
 
+const OZON_DELIVERY_OAUTH_URL = "https://xapi.ozon.ru";
 const OZON_DELIVERY_API_URL = "https://api.ozon.ru";
 const PVZ_PAGE_SIZE = 1000;
+const DB_TIMEOUT_MS = 5_000;
+// Интерактивная транзакция держит блокировку между HTTP-запросами к Ozon.
+const syncDb = createDatabase("node", {
+  connectionTimeoutMillis: DB_TIMEOUT_MS,
+});
 
 export interface OzonPvzSyncResult {
   configured: boolean;
@@ -68,18 +76,22 @@ export function isOzonDeliveryConfigured(): boolean {
 }
 
 /** Получает access_token через refresh_token из БД; при ротации — сохраняет новый. */
-async function getDeliveryAccessToken(): Promise<string> {
+async function getDeliveryAccessToken(
+  tx: Database,
+  signal: AbortSignal,
+): Promise<string> {
   const clientId = env.OZON_DELIVERY_CLIENT_ID;
   const clientSecret = env.OZON_DELIVERY_CLIENT_SECRET;
   if (!clientId || !clientSecret)
     throw new Error("ozon_delivery_not_configured");
 
-  const row = await db
+  const row = await tx
     .select({ refreshToken: ozonDeliveryToken.refreshToken })
     .from(ozonDeliveryToken)
     .where(eq(ozonDeliveryToken.id, "current"))
     .then((rows) => rows[0] ?? null);
 
+  signal.throwIfAborted();
   if (!row) throw new Error("ozon_delivery_refresh_token_missing");
 
   const params = new URLSearchParams({
@@ -89,11 +101,11 @@ async function getDeliveryAccessToken(): Promise<string> {
     refresh_token: row.refreshToken,
   });
 
-  const res = await fetch(`${OZON_DELIVERY_API_URL}/oauth/token`, {
+  const res = await fetch(`${OZON_DELIVERY_OAUTH_URL}/oauth/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
   });
 
   if (!res.ok) {
@@ -105,7 +117,7 @@ async function getDeliveryAccessToken(): Promise<string> {
 
   // Сохраняем новый refresh_token если Ozon ротировал его
   if (data.refresh_token && data.refresh_token !== row.refreshToken) {
-    await db
+    await tx
       .update(ozonDeliveryToken)
       .set({
         refreshToken: data.refresh_token,
@@ -121,12 +133,14 @@ async function getDeliveryAccessToken(): Promise<string> {
 /** Загружает все страницы ПВЗ из Ozon Доставки. */
 async function fetchAllPickupPoints(
   accessToken: string,
+  signal: AbortSignal,
 ): Promise<z.infer<typeof pvzItemSchema>[]> {
   const all: z.infer<typeof pvzItemSchema>[] = [];
   let page = 1;
   let cursor: string | undefined;
 
   while (true) {
+    signal.throwIfAborted();
     const body: Record<string, unknown> = {
       per_page: PVZ_PAGE_SIZE,
     };
@@ -143,7 +157,7 @@ async function fetchAllPickupPoints(
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
     });
 
     if (!res.ok) {
@@ -180,6 +194,7 @@ async function fetchAllPickupPoints(
 /** Маппинг сырого ответа Ozon в строку БД. */
 function mapToInsert(
   item: z.infer<typeof pvzItemSchema>,
+  id: string,
   now: Date,
 ): {
   id: string;
@@ -193,9 +208,6 @@ function mapToInsert(
   isActive: boolean;
   syncedAt: Date;
 } | null {
-  const id = item.delivery_point_id ?? item.id;
-  if (!id) return null;
-
   const coords = item.coordinates ?? item.location;
   const lat = coords?.lat ?? coords?.latitude;
   const lon = coords?.lon ?? coords?.longitude;
@@ -246,31 +258,79 @@ function mapToInsert(
   };
 }
 
-/**
- * Синхронизирует список ПВЗ Ozon Доставки в локальную БД.
- * Возвращает `configured: false` если не задан env или нет токена.
- */
-export async function syncOzonPickupPoints(): Promise<OzonPvzSyncResult> {
-  const accessToken = await getDeliveryAccessToken();
-  const rawItems = await fetchAllPickupPoints(accessToken);
+/** Синхронизирует список ПВЗ Ozon Доставки в локальную БД. */
+export async function syncOzonPickupPoints(
+  requestSignal?: AbortSignal,
+): Promise<OzonPvzSyncResult> {
+  const deadline = AbortSignal.timeout(OZON_PVZ_SYNC_TIMEOUTS.serverMs);
+  const signal = requestSignal
+    ? AbortSignal.any([requestSignal, deadline])
+    : deadline;
+  signal.throwIfAborted();
 
-  const now = new Date();
-  const toUpsert = rawItems.flatMap((item) => {
-    const mapped = mapToInsert(item, now);
-    return mapped ? [mapped] : [];
+  const result = await syncDb.transaction(async (tx) => {
+    signal.throwIfAborted();
+    // Лимит для каждого SQL-запроса, включая ожидание блокировок при записи.
+    await tx.execute(sql`select
+      set_config('statement_timeout', ${String(DB_TIMEOUT_MS)}, true),
+      set_config('idle_in_transaction_session_timeout', ${String(OZON_PVZ_SYNC_TIMEOUTS.clientMs)}, true)`);
+    const lock = await tx.execute<{ acquired: boolean }>(
+      sql`select pg_try_advisory_xact_lock(hashtextextended('ozon-pvz-sync', 0)) as acquired`,
+    );
+    signal.throwIfAborted();
+    if (!lock.rows[0]?.acquired) throw new Error("ozon_pvz_sync_in_progress");
+
+    // Ротация токена должна сохраниться даже при сбое загрузки страниц.
+    const accessToken = await syncDb.transaction(async (tokenTx) => {
+      signal.throwIfAborted();
+      await tokenTx.execute(sql`select
+        set_config('statement_timeout', ${String(DB_TIMEOUT_MS)}, true),
+        set_config('idle_in_transaction_session_timeout', '15000', true)`);
+      signal.throwIfAborted();
+      return getDeliveryAccessToken(tokenTx, signal);
+    });
+
+    const rawItems = await fetchAllPickupPoints(accessToken, signal);
+    const now = new Date();
+    const freshIds = new Set<string>();
+    const toUpsert = rawItems.flatMap((item) => {
+      const id = item.delivery_point_id ?? item.id;
+      if (!id) return [];
+      freshIds.add(id);
+      const mapped = mapToInsert(item, id, now);
+      return mapped ? [mapped] : [];
+    });
+
+    signal.throwIfAborted();
+    // Не деактивируем кэш, если ответ не содержит ни одной пригодной записи.
+    if (toUpsert.length === 0) {
+      logger.warn("ozon.pvz.sync_empty", { raw: rawItems.length });
+      return { configured: true, upserted: 0, deactivated: 0 };
+    }
+
+    return updatePickupPoints(tx, signal, toUpsert, [...freshIds]);
   });
 
-  if (toUpsert.length === 0) {
-    logger.warn("ozon.pvz.sync_empty", { raw: rawItems.length });
-    return { configured: true, upserted: 0, deactivated: 0 };
-  }
+  logger.info("ozon.pvz.synced", {
+    upserted: result.upserted,
+    deactivated: result.deactivated,
+  });
+  return result;
+}
 
+async function updatePickupPoints(
+  tx: Database,
+  signal: AbortSignal,
+  toUpsert: NonNullable<ReturnType<typeof mapToInsert>>[],
+  freshIds: string[],
+): Promise<OzonPvzSyncResult> {
   // Upsert батчами по 500 (Neon имеет ограничения параметров)
   const BATCH = 500;
   let upserted = 0;
   for (let i = 0; i < toUpsert.length; i += BATCH) {
+    signal.throwIfAborted();
     const batch = toUpsert.slice(i, i + BATCH);
-    await db
+    await tx
       .insert(ozonPickupPoints)
       .values(batch)
       .onConflictDoUpdate({
@@ -291,19 +351,19 @@ export async function syncOzonPickupPoints(): Promise<OzonPvzSyncResult> {
   }
 
   // Пометить закрытыми те ПВЗ, которых нет в свежем ответе Ozon
-  const freshIds = toUpsert.map((r) => r.id);
-  const deactivated = await db
+  signal.throwIfAborted();
+  const deactivated = await tx
     .update(ozonPickupPoints)
     .set({ isActive: false })
     .where(
       and(
         eq(ozonPickupPoints.isActive, true),
-        notInArray(ozonPickupPoints.id, freshIds),
+        sql`${ozonPickupPoints.id} <> ALL(${sql.param(freshIds)}::text[])`,
       ),
     )
     .returning({ id: ozonPickupPoints.id });
 
-  logger.info("ozon.pvz.synced", { upserted, deactivated: deactivated.length });
+  signal.throwIfAborted();
   return { configured: true, upserted, deactivated: deactivated.length };
 }
 

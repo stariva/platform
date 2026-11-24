@@ -7,6 +7,13 @@ import { OzonRequestFailedError, ozonStockPullResultSchema } from "./admin";
  * общему JOBS_SECRET в `Authorization: Bearer …`.
  */
 
+// Резерв на завершение SQL и HTTP-ответ: сервер < RPC-клиент < Hatchet.
+export const OZON_PVZ_SYNC_TIMEOUTS = {
+  serverMs: 85_000,
+  clientMs: 100_000,
+  execution: "120s",
+} as const;
+
 /** На сайте не задан JOBS_SECRET: воркеру тут делать нечего. */
 export const JobsNotConfiguredError = error("JOBS_NOT_CONFIGURED", {
   message: "jobs_not_configured",

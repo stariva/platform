@@ -31,7 +31,7 @@ export const ozonPickupPoints = pgTable(
     meta: jsonb("meta"),
     isActive: boolean("is_active").notNull().default(true),
     /** Когда последний раз получили из Ozon. */
-    syncedAt: timestamp("synced_at")
+    syncedAt: timestamp("synced_at", { withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),
   },
