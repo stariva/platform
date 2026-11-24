@@ -9,6 +9,16 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
     expect(url.hostname).toBe("127.0.0.1");
     expect(url.pathname).toBe("/stariva_notification_test");
     process.env.POSTGRES_URL = url.href;
+    // Раннер наследует локальный .env: без этого тест зависит от настроенных
+    // там каналов мастера и получает лишние строки уведомлений.
+    for (const key of [
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID",
+      "ORDER_EMAIL_FROM",
+      "ORDER_EMAIL_TO",
+    ]) {
+      delete process.env[key];
+    }
     const email = mock(
       async (_message: { idempotencyKey: string; to: string[] }) => {},
     );
@@ -33,7 +43,7 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
       workshops,
       workshopOrderNotifications: notices,
     } = await import("@stariva/db/schema");
-    const { eq, sql } = await import("drizzle-orm");
+    const { and, eq, sql } = await import("drizzle-orm");
     const {
       claimOrderNotification: claim,
       completeOrderNotification: complete,
@@ -66,8 +76,21 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
         contactEmail: `contact-${id}@example.test`,
         telegramChatId: "synthetic-chat",
       });
-      const read = async () =>
+      const readAll = () =>
         db.select().from(notices).where(eq(notices.orderId, id));
+      // Письмо о покупке — не единственное уведомление заказа: у мастера могут
+      // быть свои каналы, и их строки не должны мешать проверкам аренды.
+      const read = () =>
+        db
+          .select()
+          .from(notices)
+          .where(
+            and(
+              eq(notices.orderId, id),
+              eq(notices.kind, "booked"),
+              eq(notices.channel, "email"),
+            ),
+          );
       const expire = async () =>
         db
           .update(notices)
@@ -128,7 +151,7 @@ test.skipIf(!process.env.NOTIFICATION_TEST_DATABASE_URL)(
       expect(email.mock.calls.at(-1)?.[0].idempotencyKey).toBe(
         `workshop:${id}:release:email`,
       );
-      expect((await read()).every((row) => row.sentAt !== null)).toBe(true);
+      expect((await readAll()).every((row) => row.sentAt !== null)).toBe(true);
       expect(await runWorkshopReminderSweep(now)).toEqual({
         checked: 1,
         delivered: 0,

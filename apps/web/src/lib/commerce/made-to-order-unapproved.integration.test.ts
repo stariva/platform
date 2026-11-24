@@ -268,7 +268,11 @@ test.skipIf(!DATABASE_URL)(
     expect(priced.deliveryPointId).toBe("77");
     expect(priced.amountDelivery).toBe(45_000);
     expect(priced.amountTotal).toBe(435_000);
-    expect(priced.checkoutSnapshot).toEqual({ parcel, priceKopecks: 45_000 });
+    expect(priced.checkoutSnapshot).toEqual({
+      parcel,
+      priceKopecks: 45_000,
+      priceFallback: false,
+    });
 
     // Другой пункт: итог считается от изделий, а не наращивается поверх прежнего
     expect(
@@ -277,7 +281,11 @@ test.skipIf(!DATABASE_URL)(
     const changed = await orderOf(id);
     expect(changed.deliveryPointId).toBe("88");
     expect(changed.amountTotal).toBe(440_000);
-    expect(changed.checkoutSnapshot).toEqual({ parcel, priceKopecks: 50_000 });
+    expect(changed.checkoutSnapshot).toEqual({
+      parcel,
+      priceKopecks: 50_000,
+      priceFallback: false,
+    });
   },
 );
 
@@ -333,7 +341,11 @@ test.skipIf(!DATABASE_URL)(
     // Доставка — то, что оплачено; Ozon пересчитает при отправлении и скажет о разнице
     expect(paid.amountDelivery).toBe(45_000);
     expect(paid.amountTotal).toBe(435_000);
-    expect(paid.checkoutSnapshot).toEqual({ parcel, priceKopecks: 45_000 });
+    expect(paid.checkoutSnapshot).toEqual({
+      parcel,
+      priceKopecks: 45_000,
+      priceFallback: false,
+    });
   },
 );
 
@@ -414,7 +426,11 @@ test.skipIf(!DATABASE_URL)(
       expect(order.paidAt).not.toBeNull();
       expect(order.amountDelivery).toBe(45_000);
       expect(order.amountTotal).toBe(435_000);
-      expect(order.checkoutSnapshot).toEqual({ parcel, priceKopecks: 45_000 });
+      expect(order.checkoutSnapshot).toEqual({
+        parcel,
+        priceKopecks: 45_000,
+        priceFallback: false,
+      });
     }
   },
 );

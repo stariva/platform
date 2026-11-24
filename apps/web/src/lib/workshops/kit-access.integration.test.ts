@@ -239,6 +239,8 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
         .where(eq(orders.workshopSlug, workshopSlug)),
     ).toHaveLength(2);
   },
+  // Первый прогон компилирует модули и прогрев пула занимает больше 5 с.
+  30_000,
 );
 
 test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
@@ -353,4 +355,5 @@ test.skipIf(!process.env.KIT_ACCESS_TEST_DATABASE_URL)(
     expect(codes.filter(({ slug }) => slug === firstWorkshop)).toHaveLength(2);
     expect(codes.filter(({ slug }) => slug === secondWorkshop)).toHaveLength(1);
   },
+  30_000,
 );

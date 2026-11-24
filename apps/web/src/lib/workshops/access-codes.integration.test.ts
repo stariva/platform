@@ -47,12 +47,13 @@ test.skipIf(!process.env.ACCESS_CODE_TEST_DATABASE_URL)(
       .where(eq(accessCodeAttempts.ip, ip));
     expect(await reserveAccessCodeAttempt(ip)).toBeString();
 
-    // A journal failure must refuse the request instead of bypassing the limit.
+    // A journal failure must surface as an error, not as an exhausted limit:
+    // callers distinguish a rate limit (429) from storage being unavailable.
     await db.execute(
       sql`alter table access_code_attempts rename to unavailable_attempts`,
     );
     try {
-      expect(await reserveAccessCodeAttempt(ip)).toBeNull();
+      await expect(reserveAccessCodeAttempt(ip)).rejects.toThrow();
     } finally {
       await db.execute(
         sql`alter table unavailable_attempts rename to access_code_attempts`,
