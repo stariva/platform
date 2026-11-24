@@ -66,7 +66,7 @@ export const list = adminProcedure
         .select(columns)
         .from(metrikaHits)
         .where(where)
-        .orderBy(desc(metrikaHits.at))
+        .orderBy(desc(metrikaHits.at), desc(metrikaHits.watchId))
         .limit(input.limit)
         .offset(input.offset),
       context.db.select({ total: count() }).from(metrikaHits).where(where),

@@ -208,6 +208,10 @@ export default async function MetrikaPage({
           range={range}
           today={today}
           fallback="30d"
+          retainedParams={{
+            tab: filters.tab,
+            ...(filters.query ? { q: filters.query } : {}),
+          }}
         />
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -223,7 +227,7 @@ export default async function MetrikaPage({
           />
           <Stat label="Отказов" value={bounceRate} />
           <Stat label="Новых посетителей" value={summary.visits.newUsers} />
-          <Stat label="Достигнуто целей" value={summary.visits.withGoals} />
+          <Stat label="Визитов с целями" value={summary.visits.withGoals} />
           <Stat
             label="Всего страниц"
             value={summary.visits.pageViews.toLocaleString("ru-RU")}

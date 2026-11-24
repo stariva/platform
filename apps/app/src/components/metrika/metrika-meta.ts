@@ -10,6 +10,10 @@ export function formatDuration(seconds: number | null | undefined) {
 export function deviceLabel(device: string | null | undefined) {
   if (!device) return "—";
   const map: Record<string, string> = {
+    "1": "Компьютер",
+    "2": "Телефон",
+    "3": "Планшет",
+    "4": "ТВ",
     desktop: "Компьютер",
     mobile: "Телефон",
     tablet: "Планшет",
