@@ -114,7 +114,7 @@ const learning: NavItem[] = [
     today: "workshopViews",
   },
   {
-    title: "Коды с Ярмарки",
+    title: "Коды доступа",
     url: "/access-codes",
     icon: IconKey,
     today: "accessCodes",
