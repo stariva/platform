@@ -109,13 +109,15 @@ let npdSweeps = 0;
 let emailSyncs = 0;
 let madeToOrderSweeps = 0;
 let madeToOrderSweep = { checked: 0, repriced: 0, shipped: 0, failed: 0 };
+let sweepOptions: { orders?: boolean } | null = null;
 const services = {
   runNpdIssuingSweep: async () => {
     npdSweeps++;
     return { checked: 2 };
   },
-  sweepMadeToOrderDeliveries: async () => {
+  sweepMadeToOrderDeliveries: async (options?: { orders?: boolean }) => {
     madeToOrderSweeps++;
+    sweepOptions = options ?? null;
     return madeToOrderSweep;
   },
   syncEmailEvents: async () => {
@@ -233,6 +235,17 @@ test("made-to-order sweep requires the jobs secret and returns its counts", asyn
   );
   expect(madeToOrderSweeps).toBe(1);
   expect(lastStatus()).toBe(200);
+});
+
+test("the cron asks for the pulse only, the button gets the full sweep", async () => {
+  madeToOrderSweeps = 0;
+  const api = client(`Bearer ${secret}`).jobs.madeToOrder;
+
+  await api.sweep();
+  expect(sweepOptions).toEqual({ orders: true });
+
+  await api.sweep({ orders: false });
+  expect(sweepOptions).toEqual({ orders: false });
 });
 
 test("NPD sweep requires the jobs secret and calls only its own service", async () => {

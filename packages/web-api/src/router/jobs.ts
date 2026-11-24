@@ -220,8 +220,11 @@ export const jobsRouter = {
   storage: { sweep: storageSweep, mirrorSync: storageMirrorSync },
   analytics: { metrikaGoals, metrikaLogs, directReport },
   madeToOrder: {
-    sweep: jobs.madeToOrder.sweep.handler(({ context }) =>
-      context.services.sweepMadeToOrderDeliveries(),
+    sweep: jobs.madeToOrder.sweep.handler(({ context, input }) =>
+      // Крон зовёт только пульс (orders: false); кнопка в админке — всё
+      context.services.sweepMadeToOrderDeliveries({
+        orders: input?.orders !== false,
+      }),
     ),
   },
   ozon: { syncStock: ozonSyncStock },

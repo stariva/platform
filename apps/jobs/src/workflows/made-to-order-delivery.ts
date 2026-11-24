@@ -2,11 +2,10 @@ import { hatchet } from "../client";
 import { webApi } from "../lib/web-api";
 
 /**
- * Догонялка заказов под заказ, которым помешал сбой Ozon Доставки, — каждые
- * 10 минут. Сбой Ozon не стопорит покупателя: расчёт сохраняется с ценой-
- * заглушкой. Здесь она заменяется реальной, пока доплата не оплачена, а
- * оплаченным заказам создаются отправления, если вебхук не смог. Прогон
- * идемпотентен: повторы безопасны, тихие неудачи ждут следующего прогона.
+ * Пульс Ozon Доставки — каждые 10 минут: сбой (отозванные ключи, лежащий
+ * сервис) виден мастеру раньше, чем его встретит покупатель. Заказами крон
+ * больше не управляет: пересчёт заглушек и создание зависших отправлений
+ * запускает мастер кнопкой «Создать отправления Ozon» в админке.
  */
 export const madeToOrderDeliveryWorkflow = hatchet.workflow({
   name: "made-to-order-delivery",
@@ -16,11 +15,12 @@ export const madeToOrderDeliveryWorkflow = hatchet.workflow({
 });
 
 madeToOrderDeliveryWorkflow.task({
-  name: "sweep",
+  name: "pulse",
   retries: 2,
-  executionTimeout: "4m",
+  executionTimeout: "60s",
   fn: () =>
-    webApi.jobs.madeToOrder.sweep(undefined, {
-      context: { timeout: 230_000 },
-    }),
+    webApi.jobs.madeToOrder.sweep(
+      { orders: false },
+      { context: { timeout: 50_000 } },
+    ),
 });

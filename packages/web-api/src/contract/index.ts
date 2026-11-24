@@ -77,13 +77,13 @@ export {
   AttemptLostError,
   type EmailEventsSyncResult,
   JobsNotConfiguredError,
-  type MadeToOrderDeliverySweepResult,
   OZON_PVZ_SYNC_TIMEOUTS,
   PlaylistMissingError,
   type ReminderSweepResult,
   RemindersFailedError,
   StorageNotConfiguredError,
 } from "./jobs";
+export type { MadeToOrderDeliverySweepResult } from "./made-to-order";
 export {
   DeliveryPointRequiredError,
   DeliveryPointUnavailableError,

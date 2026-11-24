@@ -35,8 +35,13 @@ const issueBoostyReceipt = admin.issueBoostyReceipt.handler(
   },
 );
 
+const sweepMadeToOrder = admin.madeToOrder.sweep.handler(({ context }) =>
+  context.services.sweepMadeToOrderDeliveries(),
+);
+
 export const adminRouter = {
   ozon: { pushStock },
+  madeToOrder: { sweep: sweepMadeToOrder },
   revalidate,
   notifyBoostyOrder,
   issueBoostyReceipt,
