@@ -24,6 +24,10 @@ export const env = createEnv({
       .positive()
       .default(1020005006898070),
 
+    // OAuth Ozon Доставки для синхронизации ПВЗ
+    OZON_DELIVERY_CLIENT_ID: z.string().min(1).optional(),
+    OZON_DELIVERY_CLIENT_SECRET: z.string().min(1).optional(),
+
     // Выгрузка Метрики и Директа (jobs.analytics.*). OAuth-токены из
     // приложения на oauth.yandex.ru: metrika:read и direct:api.
     YANDEX_METRIKA_TOKEN: z.string().min(1).optional(),
@@ -47,6 +51,8 @@ export const env = createEnv({
     OZON_API_KEY: process.env.OZON_API_KEY,
     OZON_CLIENT_ID: process.env.OZON_CLIENT_ID,
     OZON_FBS_WAREHOUSE_ID: process.env.OZON_FBS_WAREHOUSE_ID,
+    OZON_DELIVERY_CLIENT_ID: process.env.OZON_DELIVERY_CLIENT_ID,
+    OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
     YANDEX_METRIKA_TOKEN: process.env.YANDEX_METRIKA_TOKEN,
     YANDEX_METRIKA_COUNTER_ID: process.env.YANDEX_METRIKA_COUNTER_ID,
     YANDEX_DIRECT_TOKEN: process.env.YANDEX_DIRECT_TOKEN,

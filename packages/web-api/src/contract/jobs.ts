@@ -303,13 +303,28 @@ export const jobsContract = {
   madeToOrder: madeToOrderContract,
   ozon: {
     /**
-     * Сверяет остаток товаров, которые продаются и на маркетплейсе Ozon:
+     * Сверяет остаток товаров, которые продаются и на маркетплейсе Ozon:\
      * покупки на Ozon уменьшают остаток на сайте. Без ключей Seller API
      * ничего не делает и отвечает configured: false.
      */
     syncStock: jobProcedure
       .errors({ [OzonRequestFailedError.code]: OzonRequestFailedError })
       .output(ozonStockPullResultSchema),
+  },
+  pvz: {
+    /**
+     * Синхронизирует список ПВЗ Ozon Доставки в локальную БД. Без конфига
+     * ничего не делает. Запускается воркером раз в час.
+     */
+    sync: jobProcedure
+      .errors({ [OzonRequestFailedError.code]: OzonRequestFailedError })
+      .output(
+        z.object({
+          configured: z.boolean(),
+          upserted: z.number().int().nonnegative(),
+          deactivated: z.number().int().nonnegative(),
+        }),
+      ),
   },
   npd: {
     /** Только алерт о зависших чеках; повторная регистрация дохода запрещена. */

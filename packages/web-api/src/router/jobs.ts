@@ -9,6 +9,10 @@ import {
 } from "@stariva/storage";
 import { jobs } from "../procedures";
 import {
+  isOzonDeliveryConfigured,
+  syncOzonPickupPoints,
+} from "../services/ozon-pvz";
+import {
   isOzonSellerConfigured,
   pullStockFromOzon,
 } from "../services/ozon-stock";
@@ -193,6 +197,18 @@ const ozonSyncStock = jobs.ozon.syncStock.handler(
   },
 );
 
+const ozonPvzSync = jobs.pvz.sync.handler(async ({ errors }) => {
+  if (!isOzonDeliveryConfigured()) {
+    return { configured: false, upserted: 0, deactivated: 0 };
+  }
+  try {
+    return await syncOzonPickupPoints();
+  } catch (error) {
+    logger.error("ozon.pvz.sync_error", error);
+    throw errors.OZON_REQUEST_FAILED({ cause: error });
+  }
+});
+
 export const jobsRouter = {
   videos: { claim, heartbeat, uploadUrls, complete, fail },
   emails: {
@@ -209,6 +225,7 @@ export const jobsRouter = {
     ),
   },
   ozon: { syncStock: ozonSyncStock },
+  pvz: { sync: ozonPvzSync },
   npd: {
     sweep: jobs.npd.sweep.handler(({ context }) =>
       context.services.runNpdIssuingSweep(),
