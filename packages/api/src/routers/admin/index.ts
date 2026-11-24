@@ -3,6 +3,7 @@ import { adminCartsRouter } from "./carts";
 import { adminContactClicksRouter } from "./contact-clicks";
 import { adminCrmRouter } from "./crm";
 import { adminEmailLogRouter } from "./email-log";
+import { adminMetrikaRouter } from "./metrika";
 import { adminOrdersRouter } from "./orders";
 import { adminProductsRouter } from "./products";
 import { adminPurchaseMapRouter } from "./purchase-map";
@@ -28,4 +29,5 @@ export const adminRouter = {
   users: adminUsersRouter,
   stats: adminStatsRouter,
   crm: adminCrmRouter,
+  metrika: adminMetrikaRouter,
 };
