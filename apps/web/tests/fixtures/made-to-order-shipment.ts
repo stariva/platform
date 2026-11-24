@@ -297,6 +297,26 @@ await test("the health probe tells the master before buyers meet a broken Ozon",
   expect(outage.message).toContain("стороне Ozon");
 });
 
+await test("the cron sweep can run only its pulse without touching orders", async () => {
+  // Крон следит за доступностью, заказами управляет кнопка в админке
+  fallbackOrders = [fallbackOrderRow()];
+  stuckShipments = [{ id: order.id }];
+  orderPayments = [
+    {
+      id: "payment-1",
+      type: "balance",
+      status: "succeeded",
+      paidAt: new Date(),
+    },
+  ];
+  const result = await sweepMadeToOrderDeliveries({ orders: false });
+  expect(result).toEqual({ checked: 0, repriced: 0, shipped: 0, failed: 0 });
+  expect(quoteParcel).not.toHaveBeenCalled();
+  expect(replaceMadeToOrderDeliveryPrice).not.toHaveBeenCalled();
+  expect(createParcelShipment).not.toHaveBeenCalled();
+  expect(notifyStaffAlert).not.toHaveBeenCalled();
+});
+
 await test("the sweep replaces a placeholder with the real price before payment", async () => {
   fallbackOrders = [fallbackOrderRow()];
   quoteParcel.mockImplementationOnce(async () => ({

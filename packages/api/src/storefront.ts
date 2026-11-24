@@ -2,7 +2,11 @@ import { createORPCClient, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { TimeoutLinkPlugin } from "@orpc/client/plugins";
 import { env, logger } from "@stariva/config";
-import { WEB_RPC_PATH, type WebClient } from "@stariva/web-api/contract";
+import type {
+  MadeToOrderDeliverySweepResult,
+  WebClient,
+} from "@stariva/web-api/contract";
+import { WEB_RPC_PATH } from "@stariva/web-api/contract";
 
 /** Адрес витрины и общий секрет; null без настроек или не по HTTPS. */
 function storefrontTarget() {
@@ -102,6 +106,28 @@ export async function pushStorefrontStockToOzon(
       error: String(error),
     });
     return false;
+  }
+}
+
+/**
+ * Кнопка «Создать отправления Ozon» в админке: просит витрину догнать заказы
+ * под заказ после сбоя Ozon Доставки — заменить цены-заглушки до оплаты и
+ * создать зависшие отправления. null — витрина не настроена или не
+ * ответила: мастер увидит предупреждение и попробует ещё раз.
+ */
+export async function sweepStorefrontOzonDeliveries(): Promise<MadeToOrderDeliverySweepResult | null> {
+  try {
+    // Каждая зависшая посылка может ждать ответа Ozon до минуты: прогон
+    // бывает долгим, таймаут щедрый
+    const api = storefrontApi(240_000);
+    if (!api) {
+      logger.warn("storefront.ozon_sweep.not_configured");
+      return null;
+    }
+    return await api.admin.madeToOrder.sweep();
+  } catch (error) {
+    logger.warn("storefront.ozon_sweep.failed", { error: String(error) });
+    return null;
   }
 }
 

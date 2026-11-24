@@ -1,5 +1,6 @@
 import { error, oc } from "@orpc/contract";
 import { z } from "zod";
+import { madeToOrderSweepResult } from "./made-to-order";
 
 /**
  * Процедуры, которые вызывает админка (app.stariva.ru, @stariva/api).
@@ -99,6 +100,16 @@ export const ozonContract = {
 
 export const adminContract = {
   ozon: ozonContract,
+  madeToOrder: {
+    /**
+     * Кнопка «Создать отправления Ozon» в админке: полный прогон догонялки —
+     * замена цен-заглушек до оплаты и создание зависших отправлений, если
+     * вебхук не смог. Мастер зовёт её после починки ключей Ozon; крон
+     * воркера при этом щупает только пульс интеграции, заказами управляет
+     * мастер. Прогон идемпотентен, повтор безвреден.
+     */
+    sweep: base.output(madeToOrderSweepResult),
+  },
   notifyBoostyOrder: base
     .input(z.object({ orderId: z.string().uuid() }))
     .output(z.object({ sent: z.boolean() })),

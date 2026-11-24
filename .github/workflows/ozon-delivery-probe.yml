@@ -2,11 +2,10 @@ name: Ozon Delivery probe
 
 # Разовая диагностика ключей Ozon Доставки для бизнеса — изнутри прод-пода.
 # Запускается пушем этой ветки (workflow_dispatch требует файл на main) и
-# вручную по кнопке, если файл когда-нибудь попадёт на main. Ничего не
-# деплоит и в код приложения не пишет: скрипт читает переменные окружения
-# пода и делает два обмена ключей + дешёвый запрос API. Печатает только
-# коды ответов, тайминги и заголовки — секреты, токены и их фрагменты
-# в вывод не попадают.
+# вручную по кнопке. Ничего не деплоит и в код приложения не пишет: скрипт
+# читает переменные окружения пода и делает несколько обменов ключей +
+# дешёвые запросы API. Печатает только коды ответов, тайминги, заголовки и
+# клеймы токена (scope, exp) — секреты и сами токены в вывод не попадают.
 on:
   push:
     branches: [chore/ozon-delivery-probe]
@@ -94,17 +93,33 @@ jobs:
             return picked;
           }
 
-          async function fetchToken(label) {
+          // Разбираем клеймы JWT: печатаем только scope/exp/aud — сам токен нет
+          function describeToken(token) {
+            const parts = token.split(".");
+            if (parts.length !== 3) return "не JWT";
+            try {
+              const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+              const nowSec = Math.floor(Date.now() / 1000);
+              const scope = Array.isArray(claims.scope) ? claims.scope.join(" ") : claims.scope;
+              const life = typeof claims.exp === "number" ? `exp через ${claims.exp - nowSec} с` : "exp нет";
+              return `scope=[${scope}], ${life}`;
+            } catch (error) {
+              return `клеймы не разбираются: ${error.message}`;
+            }
+          }
+
+          async function fetchToken(label, scopeValue) {
+            const payload = {
+              client_id: clientId,
+              client_secret: clientSecret,
+              grant_type: "client_credentials",
+            };
+            if (scopeValue !== null) payload.scope = scopeValue;
             const startedAt = Date.now();
             const res = await post(
               TOKEN_URL,
               { "Content-Type": "application/json" },
-              JSON.stringify({
-                client_id: clientId,
-                client_secret: clientSecret,
-                grant_type: "client_credentials",
-                scope: SCOPES,
-              }),
+              JSON.stringify(payload),
             );
             const body = await res.text();
             console.log(`\n[OAuth ${label}] HTTP ${res.status} за ${Date.now() - startedAt} мс`);
@@ -112,34 +127,8 @@ jobs:
             try {
               const data = JSON.parse(body);
               token = data.access_token ?? null;
-              if (token && data.expires_in) {
-                console.log(`  токен выдан: длина ${token.length}, expires_in ${data.expires_in} с`);
-                // Разбор клеймов JWT: сам токен не печатаем, только метки.
-                // exp против текущего времени покажет, жив ли токен вообще
-                const parts = token.split(".");
-                if (parts.length !== 3) {
-                  console.log(`  токен не JWT (сегментов ${parts.length})`);
-                } else {
-                  try {
-                    const claims = JSON.parse(
-                      Buffer.from(parts[1], "base64url").toString("utf8"),
-                    );
-                    const shown = {};
-                    for (const key of ["exp", "iat", "nbf", "aud", "iss", "scope", "sub"]) {
-                      if (claims[key] !== undefined) shown[key] = claims[key];
-                    }
-                    console.log(`  клеймы токена: ${JSON.stringify(shown)}`);
-                    if (typeof claims.exp === "number") {
-                      const nowSec = Math.floor(Date.now() / 1000);
-                      console.log(`  exp = ${new Date(claims.exp * 1000).toISOString()}, сейчас ${new Date().toISOString()}, разница ${claims.exp - nowSec} с`);
-                      if (claims.exp <= nowSec) {
-                        console.log("  ТОКЕН ВЫДАН УЖЕ ПРОСРОЧЕННЫМ — отсюда и 401 invalid_token у API");
-                      }
-                    }
-                  } catch (error) {
-                    console.log(`  не удалось разобрать клеймы: ${error.message}`);
-                  }
-                }
+              if (token) {
+                console.log(`  ${describeToken(token)}`);
               } else {
                 console.log(`  тело ответа: ${body.slice(0, 300)}`);
               }
@@ -157,32 +146,34 @@ jobs:
               JSON.stringify({ phone_number: "+79000000000" }),
             );
             const body = await res.text();
-            console.log(`\n[check-client ${label}] HTTP ${res.status} за ${Date.now() - startedAt} мс`);
-            console.log(`  заголовки: ${JSON.stringify(showHeaders(res))}`);
-            console.log(`  тело: ${body.slice(0, 200)}`);
+            console.log(`[check-client ${label}] HTTP ${res.status} за ${Date.now() - startedAt} мс`);
+            if (res.status !== 200) {
+              console.log(`  заголовки: ${JSON.stringify(showHeaders(res))}`);
+              console.log(`  тело: ${body.slice(0, 200)}`);
+            }
             return res.status;
           }
 
           const statuses = {};
-          const first = await fetchToken("T1 — как делает сайт");
-          if (!first) process.exit(0);
-          statuses["T1 первый вызов"] = await checkClient("T1, сразу после выдачи", first);
-
-          const second = await fetchToken("T2 — повторная выдача теми же ключами");
-          if (second) {
-            // Тест ротации: если выдача T2 отозвала T1, у Ozon один живой токен
-            // на client_id — и два процесса с этими ключами выбивают токены друг друга
-            statuses["T1 после выдачи T2 (тест ротации)"] = await checkClient("T1 после выдачи T2", first);
-            statuses["T2 первый вызов"] = await checkClient("T2, сразу после выдачи", second);
+          const runs = [
+            ["массивом, как шлёт код сейчас", SCOPES],
+            ["строкой через пробел, как требует OAuth", SCOPES.join(" ")],
+            ["без scope вовсе, что выдаёт по умолчанию", null],
+          ];
+          for (const [label, scopeValue] of runs) {
+            const token = await fetchToken(label, scopeValue);
+            if (token) statuses[label] = await checkClient(label, token);
           }
 
           console.log("\n=== Вердикт ===");
-          if (statuses["T1 первый вызов"] === 200 && statuses["T1 после выдачи T2 (тест ротации)"] === 200) {
-            console.log("Ключи рабочие, сервис отвечает, ротации нет: токены живут одновременно.");
-          } else if (statuses["T1 первый вызов"] === 200 && statuses["T1 после выдачи T2 (тест ротации)"] === 401) {
-            console.log("РОТАЦИЯ ПОДТВЕРЖДЕНА: каждая новая выдача отзывает предыдущий токен. Любой второй процесс с этими ключами (второй под, консоль кабинета) выбивает токен из памяти прод-пода.");
-          } else if (statuses["T1 первый вызов"] === 401) {
-            console.log("ВОСПРОИЗВЕЛСЯ ИНЦИДЕНТ: свежевыданный токен API отвергает. OAuth ключи принял — сбой на стороне API/шлюза Ozon, ключи менять не нужно.");
+          const asString = statuses["строкой через пробел, как требует OAuth"];
+          const asArray = statuses["массивом, как шлёт код сейчас"];
+          if (asString === 200) {
+            console.log("КОД ВИНОВАТ: scope строкой через пробел работает, массив Ozon игнорирует. Нужно поправить клиент: SCOPES.join(\" \").");
+          } else if (asString === 401 && asArray === 401) {
+            console.log("НЕ В КОДЕ: даже строковый scope не даёт доступ к Delivery API — у приложения в кабинете нет действующих delivery-скоупов, несмотря на галочки.");
+          } else {
+            console.log("Смесь результатов — смотрите статусы выше.");
           }
           console.log(JSON.stringify(statuses));
           EOF

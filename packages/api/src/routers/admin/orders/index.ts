@@ -11,6 +11,7 @@ import {
   requestBalanceWithOzon,
   terms,
 } from "./stages";
+import { sweepOzonDeliveries } from "./sweep-ozon";
 import { update } from "./update";
 
 export const adminOrdersRouter = {
@@ -26,4 +27,5 @@ export const adminOrdersRouter = {
   extendPayment,
   cancel,
   remove,
+  sweepOzonDeliveries,
 };

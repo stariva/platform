@@ -40,9 +40,12 @@ export interface WebServices {
   runNpdIssuingSweep: () => Promise<{ checked: number }>;
   /**
    * Догонялка сбоев Ozon Доставки: цена-заглушка до оплаты и отправления
-   * оплаченных заказов. apps/web/src/lib/commerce/made-to-order-shipment.ts
+   * оплаченных заказов. apps/web/src/lib/commerce/made-to-order-shipment.ts.
+   * Кнопка в админке зовёт полный прогон, крон воркера — только пульс.
    */
-  sweepMadeToOrderDeliveries: () => Promise<MadeToOrderDeliverySweepResult>;
+  sweepMadeToOrderDeliveries: (options?: {
+    orders?: boolean;
+  }) => Promise<MadeToOrderDeliverySweepResult>;
   /** События доставки Postbox из Data Streams: @stariva/emails (postbox-sync). */
   syncEmailEvents: () => Promise<EmailEventsSyncResult>;
   /** Токен антиспама для форм входа: секрет better-auth живёт в витрине. */
