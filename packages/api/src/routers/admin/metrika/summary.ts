@@ -8,6 +8,14 @@ import { daySchema } from "./shape";
 
 const DAY = 24 * 60 * 60 * 1000;
 
+function toSafeInteger(value: unknown) {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number)) {
+    throw new RangeError("Metrika aggregate exceeds the safe integer range");
+  }
+  return number;
+}
+
 /**
  * Сводная аналитика по Метрике за период: визиты, просмотры, топ-источники,
  * города, устройства и самые посещаемые страницы.
@@ -60,13 +68,30 @@ export const summary = adminProcedure
       context.db
         .select({
           total: count(),
-          uniqueClients: sql<number>`(count(distinct ${metrikaVisits.clientId}))::int`,
-          newUsers: sql<number>`coalesce(sum(case when ${metrikaVisits.isNewUser} = true then 1 else 0 end), 0)::int`,
-          bounces: sql<number>`coalesce(sum(case when ${metrikaVisits.bounce} = true then 1 else 0 end), 0)::int`,
-          pageViews: sql<number>`coalesce(sum(${metrikaVisits.pageViews}), 0)::int`,
-          durationSeconds: sql<number>`coalesce(sum(${metrikaVisits.duration}), 0)::int`,
+          uniqueClients:
+            sql`(count(distinct ${metrikaVisits.clientId}))`.mapWith(
+              toSafeInteger,
+            ),
+          newUsers:
+            sql`coalesce(sum(case when ${metrikaVisits.isNewUser} = true then 1 else 0 end), 0)`.mapWith(
+              toSafeInteger,
+            ),
+          bounces:
+            sql`coalesce(sum(case when ${metrikaVisits.bounce} = true then 1 else 0 end), 0)`.mapWith(
+              toSafeInteger,
+            ),
+          pageViews: sql`coalesce(sum(${metrikaVisits.pageViews}), 0)`.mapWith(
+            toSafeInteger,
+          ),
+          durationSeconds:
+            sql`coalesce(sum(${metrikaVisits.duration}), 0)`.mapWith(
+              toSafeInteger,
+            ),
           avgDurationSeconds: sql<number>`round(coalesce(avg(${metrikaVisits.duration}), 0))::int`,
-          withGoals: sql<number>`(count(*) filter (where array_length(${metrikaVisits.goalIds}, 1) > 0))::int`,
+          withGoals:
+            sql`(count(*) filter (where array_length(${metrikaVisits.goalIds}, 1) > 0))`.mapWith(
+              toSafeInteger,
+            ),
         })
         .from(metrikaVisits)
         .where(visitWhere),
@@ -74,8 +99,14 @@ export const summary = adminProcedure
       context.db
         .select({
           total: count(),
-          pageViews: sql<number>`coalesce(sum(case when ${metrikaHits.isPageView} = true then 1 else 0 end), 0)::int`,
-          events: sql<number>`coalesce(sum(case when ${metrikaHits.isPageView} is distinct from true then 1 else 0 end), 0)::int`,
+          pageViews:
+            sql`coalesce(sum(case when ${metrikaHits.isPageView} = true then 1 else 0 end), 0)`.mapWith(
+              toSafeInteger,
+            ),
+          events:
+            sql`coalesce(sum(case when ${metrikaHits.isPageView} is distinct from true then 1 else 0 end), 0)`.mapWith(
+              toSafeInteger,
+            ),
         })
         .from(metrikaHits)
         .where(hitWhere),

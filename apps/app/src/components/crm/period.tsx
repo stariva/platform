@@ -88,6 +88,7 @@ export function PeriodPicker({
   range,
   today,
   fallback = "month",
+  retainedParams = {},
 }: {
   basePath: string;
   preset: Preset | null;
@@ -95,14 +96,22 @@ export function PeriodPicker({
   today: string;
   /** Период страницы без параметров в адресе: для него ссылка без ?period=. */
   fallback?: Preset;
+  retainedParams?: Record<string, string>;
 }) {
+  function presetHref(key: Preset) {
+    const params = new URLSearchParams(retainedParams);
+    if (key !== fallback) params.set("period", key);
+    const search = params.toString();
+    return search ? `${basePath}?${search}` : basePath;
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {(Object.keys(PRESETS) as Preset[]).map((key) => (
           <Link
             key={key}
-            href={key === fallback ? basePath : `${basePath}?period=${key}`}
+            href={presetHref(key)}
             aria-current={preset === key ? "page" : undefined}
             className={buttonVariants({
               variant: preset === key ? "default" : "outline",
@@ -114,6 +123,9 @@ export function PeriodPicker({
         ))}
       </div>
       <form action={basePath} className="flex flex-wrap items-center gap-2">
+        {Object.entries(retainedParams).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
         <span className="text-muted-foreground text-sm">Свой период:</span>
         <Input
           type="date"
