@@ -78,6 +78,7 @@ export {
   type EmailEventsSyncResult,
   JobsNotConfiguredError,
   type MadeToOrderDeliverySweepResult,
+  OZON_PVZ_SYNC_TIMEOUTS,
   PlaylistMissingError,
   type ReminderSweepResult,
   RemindersFailedError,

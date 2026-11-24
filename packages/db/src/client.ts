@@ -1,8 +1,11 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeonHttp } from "drizzle-orm/neon-http";
-import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
+import {
+  drizzle as drizzlePg,
+  type NodePgDatabase,
+} from "drizzle-orm/node-postgres";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { Pool } from "pg";
+import { Pool, type PoolConfig } from "pg";
 import { type DbDriver, selectDbDriver } from "./driver";
 import * as schema from "./schema";
 
@@ -37,7 +40,17 @@ class UnconfiguredPool extends Pool {
 }
 
 /** An explicit driver allows callers that need interactive transactions to use TCP. */
-export function createDatabase(driver?: DbDriver): Database {
+type ConnectionOptions = Pick<PoolConfig, "connectionTimeoutMillis">;
+
+export function createDatabase(
+  driver: "node",
+  options?: ConnectionOptions,
+): NodePgDatabase<typeof schema>;
+export function createDatabase(driver?: DbDriver): Database;
+export function createDatabase(
+  driver?: DbDriver,
+  options?: ConnectionOptions,
+): Database {
   const connectionString = process.env.POSTGRES_URL;
   if (!connectionString) {
     console.warn(
@@ -58,7 +71,7 @@ export function createDatabase(driver?: DbDriver): Database {
     });
   }
 
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({ connectionString, ...options });
   return drizzlePg({ client: pool, schema, casing: "snake_case" });
 }
 

@@ -547,6 +547,20 @@
       "when": 1795203362143,
       "tag": "0077_glossy_eternity",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795465047226,
+      "tag": "0078_mushy_electro",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795502293987,
+      "tag": "0079_optimal_typhoid_mary",
+      "breakpoints": true
     }
   ]
 }
