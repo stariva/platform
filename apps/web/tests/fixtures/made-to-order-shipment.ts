@@ -65,10 +65,12 @@ const createParcelShipment = mock(async () => ({
   orderId: "ozon-1",
   postingNumbers: ["posting-1"],
 }));
+const probeOzonBusinessDelivery = mock(async () => {});
 mock.module("@/lib/ozon-business-delivery/client", () => ({
   isOzonBusinessDeliveryConfigured: () => configured,
   quoteParcel,
   createParcelShipment,
+  probeOzonBusinessDelivery,
 }));
 mock.module("@/lib/products", () => ({
   formatPrice: (rubles: number) => `${rubles} ₽`,
@@ -250,6 +252,49 @@ await test("an Ozon outage lets the buyer pay a placeholder price and wakes the 
     { title: string; message: string },
   ];
   expect(alert.message).toContain("timeout");
+});
+
+await test("the health probe tells the master before buyers meet a broken Ozon", async () => {
+  // Ключи отозвали: покупатели ещё спят, мастер уже знает
+  probeOzonBusinessDelivery.mockImplementationOnce(async () => {
+    throw new OzonBusinessAccessError(401, "invalid_client");
+  });
+  await sweepMadeToOrderDeliveries();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+  const [, down] = notifyStaffAlert.mock.calls[0] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(down.title).toContain("ключи");
+  expect(down.message).toContain("Ozon Доставки");
+
+  // Пока состояние не меняется, прогоны молчат
+  probeOzonBusinessDelivery.mockImplementationOnce(async () => {
+    throw new OzonBusinessAccessError(401, "invalid_client");
+  });
+  await sweepMadeToOrderDeliveries();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(1);
+
+  // Ozon ожил — мастер узнаёт, что проверять нечего
+  await sweepMadeToOrderDeliveries();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(2);
+  const [, recovered] = notifyStaffAlert.mock.calls[1] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(recovered.title).toContain("ожила");
+
+  // Сбой на стороне Ozon — другой тон: спешить некуда, покупатели не стопорятся
+  probeOzonBusinessDelivery.mockImplementationOnce(async () => {
+    throw new Error("timeout");
+  });
+  await sweepMadeToOrderDeliveries();
+  expect(notifyStaffAlert).toHaveBeenCalledTimes(3);
+  const [, outage] = notifyStaffAlert.mock.calls[2] as unknown as [
+    string,
+    { title: string; message: string },
+  ];
+  expect(outage.message).toContain("стороне Ozon");
 });
 
 await test("the sweep replaces a placeholder with the real price before payment", async () => {

@@ -2,11 +2,14 @@ import {
   createParcelShipment,
   isOzonBusinessDeliveryConfigured,
   type ParcelQuote,
+  probeOzonBusinessDelivery,
   quoteParcel,
 } from "@/lib/ozon-business-delivery/client";
 import {
+  isOzonBusinessAccessError,
   isOzonBusinessOutage,
   isOzonBusinessRejection,
+  OzonBusinessDeliveryError,
   ParcelNotApprovedError,
 } from "@/lib/ozon-business-delivery/errors";
 import type { PickupPoint } from "@/lib/ozon-delivery/types";
@@ -274,9 +277,83 @@ export interface MadeToOrderDeliverySweepResult {
 }
 
 /**
+ * Последнее известное состояние Ozon Доставки. Пульс гоняет воркер, алертим
+ * только переходы: постоянная поломка не должна будить мастера каждые
+ * 10 минут, а напомнить о себе — может, раз в шесть часов.
+ */
+let ozonDeliveryHealthy: boolean | null = null;
+let ozonDeliveryAlertedAt = 0;
+const HEALTH_REMINDER_MS = 6 * 60 * 60_000;
+
+/**
+ * Пульс Ozon Доставки: до покупателей. Прогон каждые 10 минут щупает обмен
+ * ключей и самый дешёвый запрос API и говорит мастеру о переходах — сбой
+ * (отозванные ключи, лежащий Ozon) виден раньше, чем покупатель откроет
+ * страницу расчёта. Ответ 4xx считает здоровым: запрос дошёл до API и
+ * авторизация прошла — это не про доступность (например, их проверка не
+ * приняла пробный телефон).
+ */
+async function reportOzonDeliveryHealth(): Promise<void> {
+  // Не подключена — пульс нечего щупать: об этом скажет сам расчёт
+  if (!isOzonBusinessDeliveryConfigured()) return;
+
+  let failure: unknown = null;
+  try {
+    await probeOzonBusinessDelivery();
+  } catch (error) {
+    const refusedPayload =
+      error instanceof OzonBusinessDeliveryError &&
+      error.status < 500 &&
+      ![401, 403, 408, 429].includes(error.status);
+    if (!refusedPayload) failure = error;
+  }
+
+  if (!failure) {
+    if (ozonDeliveryHealthy === false) {
+      ozonDeliveryHealthy = true;
+      await notifyStaffAlert(
+        `ozon-health/recovered/${Date.now()}`,
+        {
+          title: "Ozon Доставка ожила",
+          message:
+            "Расчёт и отправления работают штатно. Заглушки в заказах воркер заменит реальными ценами сам, зависшие отправления создаст.",
+        },
+        "ozon-health",
+      );
+    } else {
+      ozonDeliveryHealthy = true;
+    }
+    return;
+  }
+
+  const remind =
+    ozonDeliveryHealthy !== false ||
+    Date.now() - ozonDeliveryAlertedAt >= HEALTH_REMINDER_MS;
+  ozonDeliveryHealthy = false;
+  if (!remind) return;
+  ozonDeliveryAlertedAt = Date.now();
+
+  const detail = failure instanceof Error ? failure.message : String(failure);
+  const brokenKeys = isOzonBusinessAccessError(failure);
+  await notifyStaffAlert(
+    `ozon-health/down/${Date.now()}`,
+    {
+      title: brokenKeys
+        ? "Ozon не принял ключи Доставки"
+        : "Ozon Доставка не отвечает",
+      message: brokenKeys
+        ? `${detail}. Срочно проверьте ключи и доступы приложения в кабинете Ozon Доставки: покупатели пока платят с ценой-заглушкой, но отправления создадутся только после починки. Напишу, когда оживёт.`
+        : `${detail}. Похоже, сбой на стороне Ozon. Покупатели не стопорятся: расчёт идёт с ценой-заглушкой, зависшие отправления воркер создаст сам. Напишу, когда оживёт; если сообщение повторится — проверьте кабинет Ozon Доставки.`,
+    },
+    "ozon-health",
+  );
+}
+
+/**
  * Догоняет заказы под заказ, которым помешал сбой Ozon Доставки. Зовёт
  * воркер Hatchet каждые 10 минут (jobs.madeToOrder.sweep):
  *
+ * — щупает пульс интеграции и говорит мастеру о переходах до покупателей;
  * — заменяет цену-заглушку реальной, пока покупатель не оплатил доплату;
  * — создаёт отправления оплаченных заказов, если вебхук не смог.
  *
@@ -291,6 +368,9 @@ export async function sweepMadeToOrderDeliveries(): Promise<MadeToOrderDeliveryS
     shipped: 0,
     failed: 0,
   };
+
+  // Пульс сначала: заодно прогревает токен для расчётов ниже
+  await reportOzonDeliveryHealth();
 
   for (const order of await listMadeToOrderFallbackPrices()) {
     result.checked++;
