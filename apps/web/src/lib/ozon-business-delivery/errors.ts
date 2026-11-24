@@ -20,12 +20,20 @@ export class OzonBusinessDeliveryError extends Error {
    */
   readonly tokenRefreshed: boolean;
 
+  /**
+   * Заголовки ответа (www-authenticate, x-*, server): по ним видно, чей
+   * отказ — сам API с его OAuth или шлюз перед ним. Логи печатают их
+   * рядом с остальными полями ошибки.
+   */
+  readonly headers: Record<string, string>;
+
   constructor(
     readonly path: string,
     readonly status: number,
     readonly code: string | undefined,
     readonly detail: string,
     tokenRefreshed = false,
+    headers: Record<string, string> = {},
   ) {
     super(
       `ozon_business_delivery_request_failed_${status} ${path}${code ? ` ${code}` : ""}: ${detail}` +
@@ -33,6 +41,7 @@ export class OzonBusinessDeliveryError extends Error {
     );
     this.name = "OzonBusinessDeliveryError";
     this.tokenRefreshed = tokenRefreshed;
+    this.headers = headers;
   }
 
   static fromResponse(
@@ -40,6 +49,7 @@ export class OzonBusinessDeliveryError extends Error {
     status: number,
     body: string,
     tokenRefreshed = false,
+    headers: Record<string, string> = {},
   ): OzonBusinessDeliveryError {
     let code: string | undefined;
     let detail = body.slice(0, 500);
@@ -58,6 +68,7 @@ export class OzonBusinessDeliveryError extends Error {
       code,
       detail,
       tokenRefreshed,
+      headers,
     );
   }
 }
