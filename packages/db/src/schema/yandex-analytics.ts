@@ -39,6 +39,8 @@ export const metrikaGoals = pgTable("metrika_goals", {
     .notNull(),
 });
 
+export type MetrikaGoalRow = typeof metrikaGoals.$inferSelect;
+
 /** Визиты из Logs API Метрики (source=visits). */
 export const metrikaVisits = pgTable(
   "metrika_visits",
@@ -89,6 +91,8 @@ export const metrikaVisits = pgTable(
   ],
 );
 
+export type MetrikaVisitRow = typeof metrikaVisits.$inferSelect;
+
 /** Просмотры страниц и события из Logs API Метрики (source=hits). */
 export const metrikaHits = pgTable(
   "metrika_hits",
@@ -113,6 +117,8 @@ export const metrikaHits = pgTable(
     index("metrika_hits_at_idx").on(t.at),
   ],
 );
+
+export type MetrikaHitRow = typeof metrikaHits.$inferSelect;
 
 /** Конверсии и доход по целям Метрики: { "<id цели>": число }. */
 export type GoalValues = Record<string, number>;

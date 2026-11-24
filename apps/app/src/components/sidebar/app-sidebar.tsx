@@ -17,6 +17,7 @@ import {
 import {
   IconAddressBook,
   IconChartBar,
+  IconChartLine,
   IconChartPie,
   IconCoin,
   IconExternalLink,
@@ -135,6 +136,7 @@ const marketing: NavItem[] = [
     icon: IconMessageForward,
     today: "contactClicks",
   },
+  { title: "Метрика", url: "/metrika", icon: IconChartLine },
 ];
 
 const customers: NavItem[] = [
