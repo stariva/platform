@@ -172,10 +172,15 @@ async function fetchToken(): Promise<string> {
     throw new OzonBusinessTokenOutageError(res.status, detail);
   }
   const data = tokenSchema.parse(await res.json());
-  // Обновляем чуть раньше срока, чтобы не поймать 401 посреди запроса
+  // Освежать чуть раньше срока, чтобы не поймать 401 посреди запроса.
+  // Верхний предел обязателен: в проде Ozon однажды вернул expires_in
+  // 1795507547 — похоже на epoch-таймстамп, а в секундах это 57 лет.
+  // «Вечный» кэш спрятал бы реальный срок жизни, поэтому верим значению
+  // не больше часа: освежиться раньше безопасно, позже — нельзя
   token = {
     value: data.access_token,
-    expiresAt: Date.now() + Math.max(data.expires_in - 60, 30) * 1000,
+    expiresAt:
+      Date.now() + Math.min(Math.max(data.expires_in - 60, 30), 3600) * 1000,
   };
   return data.access_token;
 }
@@ -187,6 +192,32 @@ async function accessToken(): Promise<string> {
     tokenRequest = null;
   });
   return tokenRequest;
+}
+
+/**
+ * Пауза перед повтором со свежим токеном: у Ozon бывает, что выданный токен
+ * ещё «не подействовал» в их API — новый вместо него начал бы ждать заново.
+ */
+let tokenPropagationPauseMs = 5_000;
+
+/** Тестам — ускорить паузу повтора токена. */
+export function setOzonTokenRetryPauseForTests(ms: number) {
+  tokenPropagationPauseMs = ms;
+}
+
+/** Заголовки ответа для диагностики: чей отказ — сам API или шлюз перед ним. */
+function diagnosticHeaders(res: Response): Record<string, string> {
+  const picked: Record<string, string> = {};
+  for (const [name, value] of res.headers) {
+    if (
+      name.startsWith("x-") ||
+      name === "www-authenticate" ||
+      name === "server"
+    ) {
+      picked[name] = value.slice(0, 200);
+    }
+  }
+  return picked;
 }
 
 async function call<T>(
@@ -207,6 +238,16 @@ async function call<T>(
       await res.body?.cancel().catch(() => {});
       continue;
     }
+    // Свежевыданный токен тоже отвергнут: обычно это секундный сбой у Ozon —
+    // токен уже выдан, но у их API ещё не подействовал. Пауза и повтор
+    // с тем же токеном: новый вместо этого начал бы ждать заново
+    if (res.status === 401 && attempt === 1) {
+      await res.body?.cancel().catch(() => {});
+      await new Promise((resolve) =>
+        setTimeout(resolve, tokenPropagationPauseMs),
+      );
+      continue;
+    }
     const text = await res.text();
     if (!res.ok)
       throw OzonBusinessDeliveryError.fromResponse(
@@ -217,6 +258,7 @@ async function call<T>(
         // значит 401 — не про ключи. Помечаем, чтобы это было видно в логе
         // и отличалось от отказа OAuth (isOzonBusinessAccessError).
         res.status === 401 && attempt > 0,
+        diagnosticHeaders(res),
       );
     return schema.parse(text ? JSON.parse(text) : {});
   }

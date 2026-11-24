@@ -12,7 +12,10 @@ const {
   probeOzonBusinessDelivery,
   quoteParcel,
   resetOzonBusinessSession,
+  setOzonTokenRetryPauseForTests,
 } = await import("../../src/lib/ozon-business-delivery/client");
+// Пауза повтора токена — часть продакшен-поведения, тестам она не нужна
+setOzonTokenRetryPauseForTests(0);
 const {
   isOzonBusinessAccessError,
   isOzonBusinessOutage,
@@ -235,17 +238,55 @@ test("a token Ozon issued but the API rejects twice is not broken keys", async (
     .mockResolvedValueOnce(json({ access_token: "tok2", expires_in: 3600 }))
     .mockResolvedValueOnce(
       json({ error: { message: "401 Unauthorized" } }, 401),
+    )
+    // Повтор с тем же токеном после паузы — тоже отказ: вот это уже ошибка
+    .mockResolvedValueOnce(
+      new Response('{"error":{"message":"401 Unauthorized"}}', {
+        status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "x-request-id": "gw-7f3a",
+          "WWW-Authenticate": 'Bearer error="invalid_token"',
+        },
+      }),
     );
 
   const error = await quoteParcel(request).catch((e: unknown) => e);
 
-  // OAuth выдал токен по нашим ключам дважды — значит, ключи приняты
+  // OAuth выдал токен по нашим ключам — значит, ключи приняты; повтор после
+  // паузы не берёт новый токен, чтобы не ждать распространения заново
   expect(error).toBeInstanceOf(OzonBusinessDeliveryError);
   expect(isOzonBusinessAccessError(error)).toBe(false);
   expect(isOzonBusinessTokenRejected(error)).toBe(true);
   const failure = error as InstanceType<typeof OzonBusinessDeliveryError>;
   expect(failure.tokenRefreshed).toBe(true);
   expect(failure.message).toContain("after a fresh token");
+  expect(fetchSpy).toHaveBeenCalledTimes(5);
+  // Третья попытка — тот же свежий токен, не третий обмен ключей
+  expect(headersOf(4).Authorization).toBe("Bearer tok2");
+  // Заголовки ответа прилетают в ошибку: по ним видно, кто отказал
+  expect(failure.headers["x-request-id"]).toBe("gw-7f3a");
+  expect(failure.headers["www-authenticate"]).toContain("invalid_token");
+});
+
+test("a short auth blip is ridden out with the same fresh token", async () => {
+  fetchSpy
+    .mockResolvedValueOnce(tokenResponse())
+    .mockResolvedValueOnce(
+      json({ error: { message: "401 Unauthorized" } }, 401),
+    )
+    .mockResolvedValueOnce(json({ access_token: "tok2", expires_in: 3600 }))
+    .mockResolvedValueOnce(
+      json({ error: { message: "401 Unauthorized" } }, 401),
+    )
+    // После паузы тот же токен подействовал — покупатель ничего не заметил
+    .mockResolvedValueOnce(json({ can_be_delivered: false }));
+
+  const quote = await quoteParcel(request);
+
+  expect(quote.available).toBe(false);
+  expect(fetchSpy).toHaveBeenCalledTimes(5);
+  expect(headersOf(4).Authorization).toBe("Bearer tok2");
 });
 
 test("the health probe pings the cheapest endpoint without side effects", async () => {
