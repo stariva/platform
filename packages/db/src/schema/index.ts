@@ -9,6 +9,7 @@ export * from "./email-campaigns";
 export * from "./email-events";
 export * from "./email-log";
 export * from "./integrations";
+export * from "./pagespeed";
 export * from "./post";
 export * from "./visitor";
 export * from "./workshops";

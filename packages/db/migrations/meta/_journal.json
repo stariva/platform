@@ -561,6 +561,20 @@
       "when": 1795502293987,
       "tag": "0079_optimal_typhoid_mary",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1795635203336,
+      "tag": "0080_eager_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1795636733202,
+      "tag": "0081_daily_gorgon",
+      "breakpoints": true
     }
   ]
 }

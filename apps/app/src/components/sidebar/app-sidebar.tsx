@@ -21,6 +21,7 @@ import {
   IconChartPie,
   IconCoin,
   IconExternalLink,
+  IconGauge,
   IconInbox,
   IconKey,
   IconLayoutKanban,
@@ -137,6 +138,7 @@ const marketing: NavItem[] = [
     today: "contactClicks",
   },
   { title: "Метрика", url: "/metrika", icon: IconChartLine },
+  { title: "Скорость страниц", url: "/pagespeed", icon: IconGauge },
 ];
 
 const customers: NavItem[] = [

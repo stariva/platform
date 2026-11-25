@@ -290,12 +290,47 @@ export const madeToOrderContract = {
     .output(madeToOrderSweepResult),
 };
 
+/** Оценка одной страницы из sitemap в одной стратегии за прогон PSI. */
+const pagespeedResult = z.object({
+  url: z.url().max(2000),
+  strategy: z.enum(["mobile", "desktop"]),
+  /** Момент начала прогона стратегии; день по Москве считает сайт. */
+  scannedAt: z.iso.datetime(),
+  // 0–100 по категориям Lighthouse; null — страница не просканировалась
+  performance: z.number().int().min(0).max(100).nullable(),
+  accessibility: z.number().int().min(0).max(100).nullable(),
+  bestPractices: z.number().int().min(0).max(100).nullable(),
+  seo: z.number().int().min(0).max(100).nullable(),
+  // Лабораторные метрики Lighthouse: времена в мс, CLS без единиц
+  firstContentfulPaint: z.number().nonnegative().nullable(),
+  largestContentfulPaint: z.number().nonnegative().nullable(),
+  totalBlockingTime: z.number().nonnegative().nullable(),
+  cumulativeLayoutShift: z.number().nonnegative().nullable(),
+  speedIndex: z.number().nonnegative().nullable(),
+  /** Причина сбоя сканирования: квота, таймаут, недоступность страницы. */
+  error: z.string().max(1000).nullable(),
+});
+
+export type PagespeedResult = z.infer<typeof pagespeedResult>;
+
+export const pagespeedContract = {
+  /**
+   * Записывает пачку оценок PageSpeed Insights от воркера. Повтор в тот же
+   * день перезаписывает строки (url + strategy + день по Москве), поэтому
+   * повторная отправка пачки безопасна.
+   */
+  report: jobProcedure
+    .input(z.object({ results: z.array(pagespeedResult).min(1).max(200) }))
+    .output(z.object({ saved: z.number().int().nonnegative() })),
+};
+
 export const jobsContract = {
   videos: videosContract,
   emails: emailsContract,
   reminders: remindersContract,
   storage: storageContract,
   analytics: analyticsContract,
+  pagespeed: pagespeedContract,
   madeToOrder: madeToOrderContract,
   ozon: {
     /**

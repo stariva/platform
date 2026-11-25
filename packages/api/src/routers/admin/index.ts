@@ -5,6 +5,7 @@ import { adminCrmRouter } from "./crm";
 import { adminEmailLogRouter } from "./email-log";
 import { adminMetrikaRouter } from "./metrika";
 import { adminOrdersRouter } from "./orders";
+import { adminPagespeedRouter } from "./pagespeed";
 import { adminProductsRouter } from "./products";
 import { adminPurchaseMapRouter } from "./purchase-map";
 import { adminReceiptsRouter } from "./receipts";
@@ -30,4 +31,5 @@ export const adminRouter = {
   stats: adminStatsRouter,
   crm: adminCrmRouter,
   metrika: adminMetrikaRouter,
+  pagespeed: adminPagespeedRouter,
 };

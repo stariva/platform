@@ -84,6 +84,14 @@ mock.module("../services/yandex/direct", () => ({
   },
 }));
 
+const pagespeedBatches: unknown[][] = [];
+mock.module("../services/pagespeed", () => ({
+  savePagespeedResults: async (results: unknown[]) => {
+    pagespeedBatches.push(results);
+    return results.length;
+  },
+}));
+
 let ozonConfigured = true;
 let ozonPull = async (): Promise<OzonStockPullResult> => ({
   configured: true,
@@ -420,4 +428,56 @@ test("ozon stock sync hides Ozon failure details", async () => {
   expect(definedError?.code).toBe("OZON_REQUEST_FAILED");
   expect(String(error)).not.toContain("secret detail");
   expect(lastStatus()).toBe(502);
+});
+
+test("pagespeed report saves a batch of scan results", async () => {
+  pagespeedBatches.length = 0;
+  const api = client(`Bearer ${secret}`).jobs.pagespeed;
+  const result = {
+    url: "https://stariva.ru/catalog",
+    strategy: "mobile" as const,
+    scannedAt: new Date().toISOString(),
+    performance: 92,
+    accessibility: 85,
+    bestPractices: 96,
+    seo: 100,
+    firstContentfulPaint: 1200,
+    largestContentfulPaint: 2100,
+    totalBlockingTime: 150,
+    cumulativeLayoutShift: 0.02,
+    speedIndex: 1800,
+    error: null,
+  };
+
+  expect(await api.report({ results: [result] })).toEqual({ saved: 1 });
+  expect(pagespeedBatches).toHaveLength(1);
+  expect(pagespeedBatches[0]).toHaveLength(1);
+  expect(lastStatus()).toBe(200);
+});
+
+test("pagespeed report rejects an empty batch and a wrong secret", async () => {
+  const [empty] = await safe(
+    client(`Bearer ${secret}`).jobs.pagespeed.report({ results: [] }),
+  );
+  expect(empty).toMatchObject({ code: "BAD_REQUEST" });
+
+  const result = {
+    url: "https://stariva.ru/",
+    strategy: "desktop" as const,
+    scannedAt: new Date().toISOString(),
+    performance: null,
+    accessibility: null,
+    bestPractices: null,
+    seo: null,
+    firstContentfulPaint: null,
+    largestContentfulPaint: null,
+    totalBlockingTime: null,
+    cumulativeLayoutShift: null,
+    speedIndex: null,
+    error: "lighthouse_runtime_error",
+  };
+  const [unauthorized] = await safe(
+    client("Bearer wrong").jobs.pagespeed.report({ results: [result] }),
+  );
+  expect(unauthorized).toMatchObject({ code: "UNAUTHORIZED" });
 });
