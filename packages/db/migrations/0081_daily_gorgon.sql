@@ -1,0 +1,1 @@
+CREATE INDEX "pagespeed_reports_latest_idx" ON "pagespeed_reports" USING btree ("strategy","url","scanned_at" DESC NULLS LAST);

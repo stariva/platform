@@ -8,6 +8,8 @@ const schema = z.object({
   /** ffmpeg и ffprobe для нарезки видео в HLS; в Trigger.dev их ставит расширение. */
   FFMPEG_PATH: z.string().default("ffmpeg"),
   FFPROBE_PATH: z.string().default("ffprobe"),
+  /** Ключ Google PageSpeed Insights API; без него ежедневный прогон скорости страниц просто не работает. */
+  PAGESPEED_API_KEY: z.string().min(1).optional(),
 });
 
 const parsed = schema.safeParse(process.env);

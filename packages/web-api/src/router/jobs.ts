@@ -16,6 +16,7 @@ import {
   isOzonSellerConfigured,
   pullStockFromOzon,
 } from "../services/ozon-stock";
+import { savePagespeedResults } from "../services/pagespeed";
 import { claimMirrorSyncBatch } from "../services/storage-mirror";
 import {
   claimNextVideo,
@@ -219,6 +220,11 @@ export const jobsRouter = {
   reminders: { sweep },
   storage: { sweep: storageSweep, mirrorSync: storageMirrorSync },
   analytics: { metrikaGoals, metrikaLogs, directReport },
+  pagespeed: {
+    report: jobs.pagespeed.report.handler(async ({ input }) => ({
+      saved: await savePagespeedResults(input.results),
+    })),
+  },
   madeToOrder: {
     sweep: jobs.madeToOrder.sweep.handler(({ context, input }) =>
       // Крон зовёт только пульс (orders: false); кнопка в админке — всё

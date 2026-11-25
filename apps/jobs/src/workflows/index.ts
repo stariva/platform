@@ -3,6 +3,7 @@ import { madeToOrderDeliveryWorkflow } from "./made-to-order-delivery";
 import { npdIssuingWatchWorkflow } from "./npd-issuing-watch";
 import { ozonPvzSyncWorkflow } from "./ozon-pvz-sync";
 import { ozonStockSyncWorkflow } from "./ozon-stock-sync";
+import { pagespeedScanWorkflow } from "./pagespeed-scan";
 import { workshopRemindersWorkflow } from "./workshop-reminders";
 import { workshopStorageMirrorWorkflow } from "./workshop-storage-mirror";
 import { workshopStorageSweepWorkflow } from "./workshop-storage-sweep";
@@ -22,4 +23,5 @@ export const workflows = [
   ozonStockSyncWorkflow,
   ozonPvzSyncWorkflow,
   madeToOrderDeliveryWorkflow,
+  pagespeedScanWorkflow,
 ];
