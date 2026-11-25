@@ -43,7 +43,8 @@
       "interactive": true
     },
     "generate": {
-      "cache": false
+      "cache": false,
+      "interactive": true
     },
     "migrate": {
       "cache": false

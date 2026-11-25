@@ -48,7 +48,7 @@ export const list = adminProcedure
     const orderBy = {
       worst: [sql`${latest.performance} asc nulls last`],
       best: [sql`${latest.performance} desc nulls last`],
-      url: [asc(latest.url)],
+      url: [],
       recent: [desc(latest.scannedAt)],
     }[input.sort];
 
@@ -57,7 +57,7 @@ export const list = adminProcedure
         .select()
         .from(latest)
         .where(where)
-        .orderBy(...orderBy)
+        .orderBy(...orderBy, asc(latest.url))
         .limit(input.limit)
         .offset(input.offset),
       context.db.select({ total: count() }).from(latest).where(where),

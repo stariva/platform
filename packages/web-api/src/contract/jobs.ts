@@ -315,9 +315,9 @@ export type PagespeedResult = z.infer<typeof pagespeedResult>;
 
 export const pagespeedContract = {
   /**
-   * Записывает пачку оценок PageSpeed Insights от воркера. Повтор в тот же
-   * день перезаписывает строки (url + strategy + день по Москве), поэтому
-   * повторная отправка пачки безопасна.
+   * Записывает пачку оценок PageSpeed Insights от воркера. Ключ строки —
+   * url + strategy + день по Москве. Повтор с более ранним временем строку
+   * не меняет. Дубликаты ключей внутри пачки отклоняются.
    */
   report: jobProcedure
     .input(z.object({ results: z.array(pagespeedResult).min(1).max(200) }))

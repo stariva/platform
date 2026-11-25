@@ -63,7 +63,10 @@ export const summary = adminProcedure
           sql`(count(*) filter (where ${latest.performance} is null))`.mapWith(
             toSafeInteger,
           ),
-        lastScanAt: sql<Date | null>`max(${latest.scannedAt})`,
+        lastScanAt: sql`max(${latest.scannedAt})`.mapWith(
+          (value: string | Date | null): Date | null =>
+            typeof value === "string" ? new Date(value) : value,
+        ),
       })
       .from(latest);
 

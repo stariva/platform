@@ -230,6 +230,18 @@ export default async function PagespeedPage({
           </p>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          {STRATEGIES.map((strategy) => (
+            <FilterLink
+              key={strategy}
+              href={pageHref({ ...filters, strategy })}
+              active={filters.strategy === strategy}
+            >
+              {STRATEGY_LABELS[strategy]}
+            </FilterLink>
+          ))}
+        </div>
+
         {summary.pages === 0 ? (
           <p className="text-muted-foreground rounded-lg border border-dashed py-10 text-center text-sm">
             Оценок пока нет: прогон идёт каждую ночь и появится после первого
@@ -273,29 +285,16 @@ export default async function PagespeedPage({
             </div>
 
             <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-2">
-                  {STRATEGIES.map((strategy) => (
-                    <FilterLink
-                      key={strategy}
-                      href={pageHref({ ...filters, strategy })}
-                      active={filters.strategy === strategy}
-                    >
-                      {STRATEGY_LABELS[strategy]}
-                    </FilterLink>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {SORTS.map((sort) => (
-                    <FilterLink
-                      key={sort}
-                      href={pageHref({ ...filters, sort })}
-                      active={filters.sort === sort}
-                    >
-                      {SORT_LABELS[sort]}
-                    </FilterLink>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {SORTS.map((sort) => (
+                  <FilterLink
+                    key={sort}
+                    href={pageHref({ ...filters, sort })}
+                    active={filters.sort === sort}
+                  >
+                    {SORT_LABELS[sort]}
+                  </FilterLink>
+                ))}
               </div>
 
               <form action={BASE} className="flex max-w-md gap-2">

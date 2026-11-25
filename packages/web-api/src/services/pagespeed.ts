@@ -25,7 +25,8 @@ function validScannedAt(value: string): Date {
 /**
  * Записывает пачку оценок PageSpeed от воркера. Ключ идемпотентности —
  * страница + стратегия + день по Москве: повторная отправка той же пачки
- * или повторный прогон в тот же день перезаписывают строку, дублей нет.
+ * или повторный прогон в тот же день обновляют строку, если время прогона
+ * не раньше сохранённого.
  */
 export async function savePagespeedResults(
   results: PagespeedResult[],
@@ -33,7 +34,15 @@ export async function savePagespeedResults(
   // День прогона определяет только сервер: ключ идемпотентности нельзя
   // менять со стороны воркера, даже если у него съехали часы
   const date = moscowDate(new Date());
+  const seen = new Set<string>();
   const rows = results.map((r) => {
+    const key = JSON.stringify([r.url, r.strategy, date]);
+    if (seen.has(key)) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "pagespeed_duplicate_report",
+      });
+    }
+    seen.add(key);
     const scannedAt = validScannedAt(r.scannedAt);
     return {
       url: r.url,
@@ -62,6 +71,7 @@ export async function savePagespeedResults(
         pagespeedReports.strategy,
         pagespeedReports.date,
       ],
+      setWhere: sql`${excluded(pagespeedReports.scannedAt)} >= ${pagespeedReports.scannedAt}`,
       set: {
         performance: excluded(pagespeedReports.performance),
         accessibility: excluded(pagespeedReports.accessibility),
