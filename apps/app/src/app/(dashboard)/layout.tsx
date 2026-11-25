@@ -2,7 +2,7 @@ import { isAdminEmail, isAdminUser } from "@stariva/api";
 import { paths } from "@stariva/config";
 import { SidebarInset, SidebarProvider } from "@stariva/ui";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { getSession } from "~/auth/server";
 import { SignOutButton } from "~/components/auth";
 import { AppSidebar } from "~/components/sidebar";
@@ -43,7 +43,14 @@ export default async function DashboardLayout({
     );
   }
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "19rem",
+          "--sidebar-width-icon": "4rem",
+        } as CSSProperties
+      }
+    >
       <AppSidebar
         storefrontUrl={baseEnv.STOREFRONT_URL}
         user={{
