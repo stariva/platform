@@ -17,6 +17,7 @@ import {
   pullStockFromOzon,
 } from "../services/ozon-stock";
 import { savePagespeedResults } from "../services/pagespeed";
+import { saveSiteHealthResults } from "../services/site-health";
 import { claimMirrorSyncBatch } from "../services/storage-mirror";
 import {
   claimNextVideo,
@@ -223,6 +224,11 @@ export const jobsRouter = {
   pagespeed: {
     report: jobs.pagespeed.report.handler(async ({ input }) => ({
       saved: await savePagespeedResults(input.results),
+    })),
+  },
+  siteHealth: {
+    report: jobs.siteHealth.report.handler(async ({ input }) => ({
+      saved: await saveSiteHealthResults(input.results),
     })),
   },
   madeToOrder: {

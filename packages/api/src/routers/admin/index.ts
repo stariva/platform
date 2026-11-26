@@ -11,6 +11,7 @@ import { adminPurchaseMapRouter } from "./purchase-map";
 import { adminReceiptsRouter } from "./receipts";
 import { adminRequestsRouter } from "./requests";
 import { adminReviewsRouter } from "./reviews";
+import { adminSiteHealthRouter } from "./site-health";
 import { adminStatsRouter } from "./stats";
 import { adminUsersRouter } from "./users";
 import { adminWorkshopsRouter } from "./workshops";
@@ -32,4 +33,5 @@ export const adminRouter = {
   crm: adminCrmRouter,
   metrika: adminMetrikaRouter,
   pagespeed: adminPagespeedRouter,
+  siteHealth: adminSiteHealthRouter,
 };

@@ -27,6 +27,7 @@ import {
   IconCoin,
   IconExternalLink,
   IconGauge,
+  IconHeartbeat,
   IconInbox,
   IconKey,
   IconLayoutKanban,
@@ -152,6 +153,7 @@ const marketing: NavItem[] = [
   },
   { title: "Метрика", url: "/metrika", icon: IconChartLine },
   { title: "Скорость страниц", url: "/pagespeed", icon: IconGauge },
+  { title: "Здоровье сайта", url: "/site-health", icon: IconHeartbeat },
 ];
 
 const customers: NavItem[] = [

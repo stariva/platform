@@ -92,6 +92,14 @@ mock.module("../services/pagespeed", () => ({
   },
 }));
 
+const siteHealthBatches: unknown[][] = [];
+mock.module("../services/site-health", () => ({
+  saveSiteHealthResults: async (results: unknown[]) => {
+    siteHealthBatches.push(results);
+    return results.length;
+  },
+}));
+
 let ozonConfigured = true;
 let ozonPull = async (): Promise<OzonStockPullResult> => ({
   configured: true,
@@ -478,6 +486,76 @@ test("pagespeed report rejects an empty batch and a wrong secret", async () => {
   };
   const [unauthorized] = await safe(
     client("Bearer wrong").jobs.pagespeed.report({ results: [result] }),
+  );
+  expect(unauthorized).toMatchObject({ code: "UNAUTHORIZED" });
+});
+
+test("site health report saves a batch of scan results", async () => {
+  siteHealthBatches.length = 0;
+  const api = client(`Bearer ${secret}`).jobs.siteHealth;
+  const result = {
+    url: "https://stariva.ru/catalog/interior/example",
+    scannedAt: new Date().toISOString(),
+    status: 200,
+    finalUrl: "https://stariva.ru/catalog/interior/example",
+    redirectCount: 0,
+    responseTimeMs: 420,
+    title: "Пример",
+    metaDescription: "Описание",
+    canonical: "https://stariva.ru/catalog/interior/example",
+    robots: "index,follow",
+    h1Count: 1,
+    internalLinks: 12,
+    brokenLinks: 1,
+    images: 4,
+    brokenImages: 0,
+    missingAltImages: 1,
+    error: null,
+    findings: [
+      {
+        severity: "critical" as const,
+        code: "broken_internal_link",
+        message: "Внутренняя ссылка возвращает 404",
+        target: "https://stariva.ru/catalog/interior/missing",
+        details: { status: 404, urls: ["https://stariva.ru/a"] },
+      },
+    ],
+  };
+
+  expect(await api.report({ results: [result] })).toEqual({ saved: 1 });
+  expect(siteHealthBatches).toHaveLength(1);
+  expect(siteHealthBatches[0]).toHaveLength(1);
+  expect(lastStatus()).toBe(200);
+});
+
+test("site health report rejects an empty batch and a wrong secret", async () => {
+  const [empty] = await safe(
+    client(`Bearer ${secret}`).jobs.siteHealth.report({ results: [] }),
+  );
+  expect(empty).toMatchObject({ code: "BAD_REQUEST" });
+
+  const result = {
+    url: "https://stariva.ru/",
+    scannedAt: new Date().toISOString(),
+    status: 200,
+    finalUrl: "https://stariva.ru/",
+    redirectCount: 0,
+    responseTimeMs: 300,
+    title: "Stariva",
+    metaDescription: null,
+    canonical: null,
+    robots: null,
+    h1Count: 1,
+    internalLinks: 0,
+    brokenLinks: 0,
+    images: 0,
+    brokenImages: 0,
+    missingAltImages: 0,
+    error: null,
+    findings: [],
+  };
+  const [unauthorized] = await safe(
+    client("Bearer wrong").jobs.siteHealth.report({ results: [result] }),
   );
   expect(unauthorized).toMatchObject({ code: "UNAUTHORIZED" });
 });

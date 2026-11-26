@@ -324,6 +324,44 @@ export const pagespeedContract = {
     .output(z.object({ saved: z.number().int().nonnegative() })),
 };
 
+const siteHealthFinding = z.object({
+  severity: z.enum(["critical", "warning", "notice"]),
+  code: z.string().min(1).max(100),
+  message: z.string().min(1).max(1000),
+  target: z.string().max(2000).nullable(),
+  details: z.record(z.string(), z.json()).nullable(),
+});
+
+const siteHealthPageResult = z.object({
+  url: z.url().max(2000),
+  scannedAt: z.iso.datetime(),
+  status: z.number().int().min(100).max(599).nullable(),
+  finalUrl: z.url().max(2000).nullable(),
+  redirectCount: z.number().int().min(0).max(20).nullable(),
+  responseTimeMs: z.number().int().nonnegative().nullable(),
+  title: z.string().max(500).nullable(),
+  metaDescription: z.string().max(2000).nullable(),
+  canonical: z.string().max(2000).nullable(),
+  robots: z.string().max(500).nullable(),
+  h1Count: z.number().int().nonnegative().nullable(),
+  internalLinks: z.number().int().nonnegative().nullable(),
+  brokenLinks: z.number().int().nonnegative().nullable(),
+  images: z.number().int().nonnegative().nullable(),
+  brokenImages: z.number().int().nonnegative().nullable(),
+  missingAltImages: z.number().int().nonnegative().nullable(),
+  error: z.string().max(1000).nullable(),
+  findings: z.array(siteHealthFinding).max(500),
+});
+
+export type SiteHealthFinding = z.infer<typeof siteHealthFinding>;
+export type SiteHealthPageResult = z.infer<typeof siteHealthPageResult>;
+
+export const siteHealthContract = {
+  report: jobProcedure
+    .input(z.object({ results: z.array(siteHealthPageResult).min(1).max(50) }))
+    .output(z.object({ saved: z.number().int().nonnegative() })),
+};
+
 export const jobsContract = {
   videos: videosContract,
   emails: emailsContract,
@@ -331,6 +369,7 @@ export const jobsContract = {
   storage: storageContract,
   analytics: analyticsContract,
   pagespeed: pagespeedContract,
+  siteHealth: siteHealthContract,
   madeToOrder: madeToOrderContract,
   ozon: {
     /**
