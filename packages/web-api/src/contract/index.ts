@@ -82,6 +82,8 @@ export {
   PlaylistMissingError,
   type ReminderSweepResult,
   RemindersFailedError,
+  type SiteHealthFinding,
+  type SiteHealthPageResult,
   StorageNotConfiguredError,
 } from "./jobs";
 export type { MadeToOrderDeliverySweepResult } from "./made-to-order";

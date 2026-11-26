@@ -11,6 +11,7 @@ export * from "./email-log";
 export * from "./integrations";
 export * from "./pagespeed";
 export * from "./post";
+export * from "./site-health";
 export * from "./visitor";
 export * from "./workshops";
 export * from "./yandex-analytics";
