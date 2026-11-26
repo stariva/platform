@@ -41,6 +41,25 @@ test("Capgo в ручном режиме и без статистики в об�
   expect(updater?.statsUrl).toBe("");
 });
 
+test("Android: minSdk не ниже 26 (требование модерации RuStore — Android 8+)", () => {
+  const minSdk = /minSdkVersion = (\d+)/.exec(
+    read("android/variables.gradle"),
+  )?.[1];
+  expect(Number(minSdk)).toBeGreaterThanOrEqual(26);
+});
+
+test("Android: манифест просит только безопасные разрешения", () => {
+  const manifest = read("android/app/src/main/AndroidManifest.xml");
+  const permissions = [
+    ...manifest.matchAll(
+      /uses-permission android:name="android\.permission\.([A-Z_]+)"/g,
+    ),
+  ].map((m) => m[1]);
+  // VIBRATE нужен хаптике из WebView; всё остальное — повод пересмотреть
+  // декларацию разрешений в RuStore
+  expect([...permissions].sort()).toEqual(["INTERNET", "VIBRATE"]);
+});
+
 test("iOS: privacy-манифест лежит в проекте и подключён к сборке", () => {
   expect(pbxproj).toContain("PrivacyInfo.xcprivacy in Resources");
   expect(read("ios/App/App/PrivacyInfo.xcprivacy")).toContain(

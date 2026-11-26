@@ -26,6 +26,12 @@ export const native = {
     else if (navigator.clipboard) await navigator.clipboard.writeText(url);
   },
   openExternal: async (url: string) => {
+    // mailto/tel внутри браузерного плагина не открываются: их разбирает сам
+    // WebView и запускает системное приложение
+    if (url.startsWith("mailto:") || url.startsWith("tel:")) {
+      window.location.href = url;
+      return;
+    }
     if (Capacitor.isNativePlatform()) await Browser.open({ url });
     else window.open(url, "_blank", "noopener,noreferrer");
   },

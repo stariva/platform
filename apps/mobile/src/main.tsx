@@ -5,7 +5,15 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { Compass, Heart, House, UserRound, Video } from "lucide-react";
+import {
+  ArrowRight,
+  Compass,
+  Heart,
+  House,
+  LoaderCircle,
+  UserRound,
+  Video,
+} from "lucide-react";
 import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { AboutApp } from "@/components/AboutApp";
@@ -15,6 +23,7 @@ import { WorkshopCard } from "@/components/ui/WorkshopCard";
 import { CourseDetailScreen } from "@/features/my-workshops/CourseDetailScreen";
 import { MyWorkshopsScreen } from "@/features/my-workshops/MyWorkshopsScreen";
 import { useMyCourses } from "@/features/my-workshops/queries";
+import { API_URL } from "@/lib/api";
 import type { CatalogWorkshop } from "@/lib/catalog";
 import { useCatalog } from "@/lib/catalog";
 import { native } from "@/lib/native";
@@ -25,6 +34,7 @@ import {
   useSession,
 } from "@/lib/session";
 import { useAppUpdate } from "@/lib/use-app-update";
+import { usePullToRefresh } from "@/lib/use-pull-to-refresh";
 import {
   CatalogScreen,
   DetailScreen,
@@ -83,6 +93,7 @@ function App() {
   );
 
   const update = useAppUpdate();
+  const pullToRefresh = usePullToRefresh(contentRef);
   const session = useSession();
   const catalog = useCatalog();
   const myCourses = useMyCourses(
@@ -340,6 +351,32 @@ function App() {
               <Button onClick={() => setSection("my")}>Войти</Button>
             )}
           </div>
+          <h2 className="section-title mt-9">Помощь и документы</h2>
+          <div className="mt-4 divide-y divide-line rounded-[var(--radius-lg)] bg-surface ring-1 ring-line">
+            {(
+              [
+                ["Написать в поддержку", `mailto:info@stariva.ru`],
+                [
+                  "Политика конфиденциальности",
+                  `${API_URL || "https://stariva.ru"}/privacy-policy`,
+                ],
+                [
+                  "Публичная оферта",
+                  `${API_URL || "https://stariva.ru"}/offer`,
+                ],
+              ] as const
+            ).map(([label, href]) => (
+              <button
+                key={href}
+                type="button"
+                onClick={() => void native.openExternal(href)}
+                className="flex min-h-13 w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium"
+              >
+                {label}
+                <ArrowRight size={17} className="shrink-0 text-muted" />
+              </button>
+            ))}
+          </div>
           <div className="mt-9">
             <AboutApp update={update} />
           </div>
@@ -348,6 +385,31 @@ function App() {
     screen = (
       <div className="app-shell">
         <div ref={contentRef} className="app-content">
+          {(pullToRefresh.pull > 0 || pullToRefresh.refreshing) && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center"
+              style={{
+                transform: `translateY(${pullToRefresh.refreshing ? 28 : pullToRefresh.pull * 0.6}px)`,
+                opacity: Math.min(
+                  1,
+                  pullToRefresh.pull / 40 + (pullToRefresh.refreshing ? 1 : 0),
+                ),
+                transition:
+                  pullToRefresh.pull === 0
+                    ? "transform .2s, opacity .2s"
+                    : "none",
+              }}
+            >
+              <LoaderCircle
+                size={22}
+                className={`text-accent ${pullToRefresh.refreshing ? "animate-spin" : ""}`}
+                style={{
+                  transform: `rotate(${pullToRefresh.pull * 2}deg)`,
+                }}
+              />
+            </div>
+          )}
           {screen}
         </div>
         <nav aria-label="Основная навигация" className="tab-bar">

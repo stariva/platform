@@ -6,7 +6,7 @@ button,a,input{touch-action:manipulation}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .screen{min-height:100dvh;padding:calc(env(safe-area-inset-top) + var(--space-5)) var(--space-5) calc(env(safe-area-inset-bottom) + 100px);animation:screen-in var(--duration-normal) var(--ease)}
 .app-shell{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
-.app-content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior-y:contain}
+.app-content{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior-y:contain}
 .app-shell .screen{min-height:100%;padding-bottom:var(--space-5)}
 .tab-bar{z-index:40;display:flex;flex:none;width:100%;gap:var(--space-1);border-top:1px solid var(--line);background:var(--surface);padding:var(--space-1) var(--space-2) max(var(--space-2),env(safe-area-inset-bottom));box-shadow:0 -4px 18px #35271a12}
 .display{font-family:Cormorant,Georgia,serif;font-weight:600;font-size:clamp(2.65rem,11vw,3.5rem);line-height:.93;letter-spacing:-.025em}
