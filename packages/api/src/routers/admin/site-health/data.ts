@@ -62,7 +62,7 @@ export async function loadSiteHealthLatest(db: Database) {
       warningCount,
       noticeCount,
       findingCount: pageFindings.length,
-      findings: pageFindings.slice(0, 10),
+      findings: pageFindings,
     };
   });
 }

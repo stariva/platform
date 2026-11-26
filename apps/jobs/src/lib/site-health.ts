@@ -1,5 +1,12 @@
 import type { SiteHealthPageResult } from "@stariva/web-api/contract";
 import {
+  boundedText,
+  checkedUrl,
+  follow,
+  type ScanFetch,
+  scanFetch,
+} from "./scan-http";
+import {
   absoluteUrl,
   addFinding,
   auditSiteHealthHtml,
@@ -14,11 +21,13 @@ const MAX_FINDINGS_PER_PAGE = 500;
 
 export interface SiteHealthScanOptions {
   origin: string;
+  scannedAt?: string;
   signal?: AbortSignal;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: ScanFetch;
   concurrency?: number;
   resourceConcurrency?: number;
   maxResourceChecks?: number;
+  resourceDeadline?: number;
 }
 
 interface FetchedPage {
@@ -40,6 +49,8 @@ interface ResourceCheck {
 }
 
 interface ScanOneResult {
+  titleKey?: string;
+  descriptionKey?: string;
   result: SiteHealthPageResult;
   links: string[];
   images: string[];
@@ -53,10 +64,6 @@ function requestSignal(
   return parent ? AbortSignal.any([parent, timeout]) : timeout;
 }
 
-function collapseWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
 function networkError(error: unknown): string {
   if (
     error instanceof Error &&
@@ -67,7 +74,7 @@ function networkError(error: unknown): string {
   return "network_error";
 }
 
-async function cancelBody(response: Response) {
+async function cancelBody(response: Pick<Response, "body">) {
   try {
     await response.body?.cancel();
   } catch {}
@@ -79,8 +86,9 @@ function redirectStatus(status: number): boolean {
 
 async function fetchPage(
   url: string,
+  origin: string,
   signal: AbortSignal | undefined,
-  fetchImpl: typeof fetch,
+  fetchImpl: ScanFetch,
 ): Promise<FetchedPage> {
   const startedAt = Date.now();
   let current = url;
@@ -88,7 +96,7 @@ async function fetchPage(
 
   try {
     for (let redirects = 0; ; ) {
-      const response = await fetchImpl(current, {
+      const response = await fetchImpl(checkedUrl(current, origin), {
         method: "GET",
         redirect: "manual",
         signal: requestSignal(signal, PAGE_TIMEOUT_MS),
@@ -96,7 +104,21 @@ async function fetchPage(
       });
 
       if (!redirectStatus(response.status)) {
-        const html = await response.text();
+        const type = response.headers.get("content-type");
+        let html = null;
+        let error = null;
+        if (
+          response.ok &&
+          (!type || type.toLowerCase().includes("text/html"))
+        ) {
+          try {
+            html = await boundedText(response, 4 * 1024 * 1024);
+          } catch (e) {
+            if (!(e instanceof Error) || e.message !== "body_too_large")
+              throw e;
+            error = e.message;
+          }
+        } else await cancelBody(response);
         return {
           status: response.status,
           finalUrl: response.url || current,
@@ -105,7 +127,7 @@ async function fetchPage(
           contentType: response.headers.get("content-type"),
           xRobotsTag: response.headers.get("x-robots-tag"),
           html,
-          error: null,
+          error,
         };
       }
 
@@ -195,10 +217,10 @@ async function scanOne(
   scannedAt: string,
   origin: string,
   signal: AbortSignal | undefined,
-  fetchImpl: typeof fetch,
+  fetchImpl: ScanFetch,
 ): Promise<ScanOneResult> {
   const result = emptyResult(url, scannedAt);
-  const fetched = await fetchPage(url, signal, fetchImpl);
+  const fetched = await fetchPage(url, origin, signal, fetchImpl);
   result.status = fetched.status;
   result.finalUrl = limitText(fetched.finalUrl, 2000);
   result.redirectCount = fetched.redirectCount;
@@ -223,7 +245,7 @@ async function scanOne(
       "warning",
       "sitemap_url_redirects",
       "Адрес из sitemap отвечает редиректом",
-      fetched.finalUrl,
+      result.finalUrl,
       { redirectCount: fetched.redirectCount },
     );
   }
@@ -283,7 +305,7 @@ async function scanOne(
   result.brokenImages = 0;
   result.missingAltImages = audit.missingAltImages;
   result.findings.push(...audit.findings);
-  if (xRobotsTag?.toLowerCase().includes("noindex")) {
+  if (blocksGenericIndexing(fetched.xRobotsTag)) {
     addFinding(
       result.findings,
       "critical",
@@ -294,36 +316,55 @@ async function scanOne(
     );
   }
 
-  return { result, links: audit.links, images: audit.images };
+  return {
+    result,
+    titleKey: audit.titleKey,
+    descriptionKey: audit.descriptionKey,
+    links: audit.links,
+    images: audit.images,
+  };
 }
 
+// The audit evaluates generic crawlers and our own declared user agent.
+function blocksGenericIndexing(header: string | null) {
+  let applies = true;
+  for (const part of (header ?? "").toLowerCase().split(",")) {
+    const match = /^([\w*-]+)\s*:\s*(.*)$/.exec(part.trim());
+    if (
+      match &&
+      [
+        "unavailable_after",
+        "max-snippet",
+        "max-video-preview",
+        "max-image-preview",
+      ].includes(match[1] ?? "")
+    )
+      continue;
+    if (match)
+      applies = match[1] === "starivasitehealthbot" || match[1] === "*";
+    if (applies && ["noindex", "none"].includes((match?.[2] ?? part).trim()))
+      return true;
+  }
+  return false;
+}
 function metadataGroups(
-  results: SiteHealthPageResult[],
-  pick: (result: SiteHealthPageResult) => string | null,
-): Map<string, string[]> {
+  scans: ScanOneResult[],
+  field: "titleKey" | "descriptionKey",
+) {
   const byValue = new Map<string, string[]>();
-  for (const result of results) {
-    const value = pick(result);
-    if (!value) continue;
-    const key = collapseWhitespace(value).toLowerCase();
+  for (const scan of scans) {
+    const key = scan[field];
+    if (!key) continue;
     const urls = byValue.get(key) ?? [];
-    urls.push(result.url);
+    urls.push(scan.result.url);
     byValue.set(key, urls);
   }
   return new Map([...byValue].filter(([, urls]) => urls.length > 1));
 }
-
-function addDuplicateMetadataFindings(results: SiteHealthPageResult[]) {
-  const duplicateTitles = metadataGroups(results, (result) => result.title);
-  const duplicateDescriptions = metadataGroups(
-    results,
-    (result) => result.metaDescription,
-  );
-
-  for (const result of results) {
-    const titleKey = result.title
-      ? collapseWhitespace(result.title).toLowerCase()
-      : null;
+function addDuplicateMetadataFindings(scans: ScanOneResult[]) {
+  const duplicateTitles = metadataGroups(scans, "titleKey");
+  const duplicateDescriptions = metadataGroups(scans, "descriptionKey");
+  for (const { result, titleKey, descriptionKey } of scans) {
     const titleUrls = titleKey ? duplicateTitles.get(titleKey) : undefined;
     if (titleUrls) {
       addFinding(
@@ -336,9 +377,6 @@ function addDuplicateMetadataFindings(results: SiteHealthPageResult[]) {
       );
     }
 
-    const descriptionKey = result.metaDescription
-      ? collapseWhitespace(result.metaDescription).toLowerCase()
-      : null;
     const descriptionUrls = descriptionKey
       ? duplicateDescriptions.get(descriptionKey)
       : undefined;
@@ -357,17 +395,25 @@ function addDuplicateMetadataFindings(results: SiteHealthPageResult[]) {
 
 async function checkResource(
   url: string,
+  origin: string,
+  allowImages: boolean,
   signal: AbortSignal | undefined,
-  fetchImpl: typeof fetch,
+  fetchImpl: ScanFetch,
 ): Promise<ResourceCheck> {
   for (const method of ["HEAD", "GET"] as const) {
     try {
-      const response = await fetchImpl(url, {
-        method,
-        redirect: "follow",
-        signal: requestSignal(signal, RESOURCE_TIMEOUT_MS),
-        headers: { "user-agent": "StarivaSiteHealthBot/1.0" },
-      });
+      const response = await follow(
+        url,
+        origin,
+        fetchImpl,
+        {
+          method,
+          redirect: "manual",
+          signal: requestSignal(signal, RESOURCE_TIMEOUT_MS),
+          headers: { "user-agent": "StarivaSiteHealthBot/1.0" },
+        },
+        allowImages,
+      );
       if (
         method === "HEAD" &&
         (response.status === 405 || response.status === 501)
@@ -409,18 +455,44 @@ async function checkResource(
 
 async function checkResources(
   urls: string[],
+  origin: string,
+  images: Set<string>,
   signal: AbortSignal | undefined,
-  fetchImpl: typeof fetch,
+  fetchImpl: ScanFetch,
   concurrency: number,
+  deadline: number | undefined,
 ): Promise<Map<string, ResourceCheck>> {
   const checks = new Map<string, ResourceCheck>();
+  if (deadline !== undefined && deadline <= Date.now()) return checks;
+  const budget =
+    deadline === undefined
+      ? undefined
+      : AbortSignal.timeout(Math.max(0, deadline - Date.now()));
+  const resourceSignal =
+    signal && budget ? AbortSignal.any([signal, budget]) : (signal ?? budget);
   let next = 0;
   const worker = async () => {
     while (next < urls.length) {
       signal?.throwIfAborted();
+      if (budget?.aborted) break;
       const url = urls[next++];
       if (!url) break;
-      checks.set(url, await checkResource(url, signal, fetchImpl));
+      try {
+        checks.set(
+          url,
+          await checkResource(
+            url,
+            origin,
+            images.has(url),
+            resourceSignal,
+            fetchImpl,
+          ),
+        );
+      } catch (error) {
+        signal?.throwIfAborted();
+        if (!budget?.aborted) throw error;
+        return;
+      }
     }
   };
   await Promise.all(
@@ -431,7 +503,10 @@ async function checkResources(
 
 function capFindings(result: SiteHealthPageResult) {
   if (result.findings.length > MAX_FINDINGS_PER_PAGE) {
+    const last = result.findings.at(-1);
     result.findings = result.findings.slice(0, MAX_FINDINGS_PER_PAGE);
+    if (last?.code === "resource_checks_capped")
+      result.findings[MAX_FINDINGS_PER_PAGE - 1] = last;
   }
 }
 
@@ -544,8 +619,8 @@ export async function scanSiteHealth(
   urls: string[],
   options: SiteHealthScanOptions,
 ): Promise<SiteHealthPageResult[]> {
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const scannedAt = new Date().toISOString();
+  const fetchImpl = options.fetchImpl ?? scanFetch;
+  const scannedAt = options.scannedAt ?? new Date().toISOString();
   const scans: (ScanOneResult | undefined)[] = Array.from({
     length: urls.length,
   });
@@ -590,17 +665,20 @@ export async function scanSiteHealth(
     (scan): scan is ScanOneResult => scan !== undefined,
   );
   const results = completed.map((scan) => scan.result);
-  addDuplicateMetadataFindings(results);
+  addDuplicateMetadataFindings(completed);
 
   const resources = collectResources(completed);
   const checkedUrls = resources.slice(0, options.maxResourceChecks ?? 2000);
   const checks = await checkResources(
     checkedUrls,
+    options.origin,
+    new Set(completed.flatMap((scan) => scan.images)),
     options.signal,
     fetchImpl,
     Math.max(1, options.resourceConcurrency ?? 5),
+    options.resourceDeadline,
   );
-  applyResourceChecks(completed, checks, resources.length, checkedUrls.length);
+  applyResourceChecks(completed, checks, resources.length, checks.size);
 
   return results;
 }

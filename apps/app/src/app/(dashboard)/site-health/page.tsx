@@ -139,7 +139,6 @@ function Count({ value, tone }: { value: number; tone: string }) {
 }
 
 function ReportRow({ row }: { row: SiteHealthItem }) {
-  const shownFindings = row.findings.slice(0, 2);
   return (
     <TableRow>
       <TableCell className="max-w-0 min-w-72">
@@ -158,25 +157,27 @@ function ReportRow({ row }: { row: SiteHealthItem }) {
               {row.error}
             </span>
           )}
-          {shownFindings.map((finding) => (
-            <div
-              key={finding.id}
-              className="truncate text-xs"
-              title={`${finding.message}${finding.target ? `: ${finding.target}` : ""}`}
-            >
-              <span className={severityClass(finding.severity)}>
-                {severityLabel(finding.severity)}
-              </span>{" "}
-              <span className="text-muted-foreground">
-                {finding.message}
-                {finding.target && ` · ${pathOf(finding.target)}`}
-              </span>
-            </div>
-          ))}
-          {row.findingCount > shownFindings.length && (
-            <span className="text-muted-foreground text-xs">
-              ещё {row.findingCount - shownFindings.length}
-            </span>
+          {row.findingCount > 0 && (
+            <details>
+              <summary className="min-h-11 cursor-pointer py-3 text-xs">
+                Замечания: {row.findingCount}
+              </summary>
+              {row.findings.map((finding) => (
+                <div
+                  key={finding.id}
+                  className="whitespace-normal break-all text-xs"
+                  title={`${finding.message}${finding.target ? `: ${finding.target}` : ""}`}
+                >
+                  <span className={severityClass(finding.severity)}>
+                    {severityLabel(finding.severity)}
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    {finding.message}
+                    {finding.target && ` · ${finding.target}`}
+                  </span>
+                </div>
+              ))}
+            </details>
           )}
         </div>
       </TableCell>

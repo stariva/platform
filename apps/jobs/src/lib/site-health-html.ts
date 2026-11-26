@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { SiteHealthFinding } from "@stariva/web-api/contract";
 import { DomUtils, parseDocument } from "htmlparser2";
 
@@ -21,6 +22,8 @@ export interface ParsedSiteHealthHtml {
 }
 
 export interface HtmlAudit {
+  titleKey?: string;
+  descriptionKey?: string;
   title: string | null;
   metaDescription: string | null;
   canonical: string | null;
@@ -36,6 +39,13 @@ function collapseWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function metadataKey(value: string | null) {
+  return value
+    ? createHash("sha256")
+        .update(collapseWhitespace(value).toLowerCase())
+        .digest("hex")
+    : undefined;
+}
 export function limitText(value: string | null, max: number): string | null {
   const cleaned = value?.replace(/\0/g, "") ?? null;
   return cleaned && cleaned.length > max ? cleaned.slice(0, max) : cleaned;
@@ -104,6 +114,10 @@ export function parseSiteHealthHtml(
   let ogImage: string | null = null;
   let h1Count = 0;
 
+  const base = elements.find(
+    (el) => el.name === "base" && el.attribs.href !== undefined,
+  );
+  const resourceBase = absoluteUrl(base?.attribs.href, pageUrl) ?? pageUrl;
   for (const element of elements) {
     if (element.name === "title" && title == null) {
       title = textOf(element) || null;
@@ -123,7 +137,7 @@ export function parseSiteHealthHtml(
       if (!content) continue;
       if (key === "description" && metaDescription == null)
         metaDescription = content;
-      if (key === "robots" && robots == null) robots = content;
+      if (key === "robots") robots = robots ? `${robots}, ${content}` : content;
       if (key === "og:title" && ogTitle == null) ogTitle = content;
       if (key === "og:description" && ogDescription == null)
         ogDescription = content;
@@ -138,12 +152,12 @@ export function parseSiteHealthHtml(
       continue;
     }
     if (element.name === "a") {
-      const href = absoluteUrl(element.attribs.href, pageUrl);
+      const href = absoluteUrl(element.attribs.href, resourceBase);
       if (href) links.push(href);
       continue;
     }
     if (element.name === "img") {
-      const src = absoluteUrl(element.attribs.src, pageUrl);
+      const src = absoluteUrl(element.attribs.src, resourceBase);
       if (src) {
         images.push({
           url: src,
@@ -411,14 +425,19 @@ export function auditSiteHealthHtml(
     }
   }
 
-  if (parsed.robots?.toLowerCase().includes("noindex")) {
+  if (
+    parsed.robots
+      ?.toLowerCase()
+      .split(/[\s,]+/)
+      .some((token) => token === "noindex" || token === "none")
+  ) {
     addFinding(
       findings,
       "critical",
       "noindex",
       "Страница из sitemap закрыта от индексации через noindex",
       null,
-      { robots: parsed.robots },
+      { robots: limitText(parsed.robots, 500) },
     );
   }
 
@@ -468,6 +487,8 @@ export function auditSiteHealthHtml(
   }
 
   return {
+    titleKey: metadataKey(parsed.title),
+    descriptionKey: metadataKey(parsed.metaDescription),
     title: limitText(parsed.title, 500),
     metaDescription: limitText(parsed.metaDescription, 2000),
     canonical: limitText(parsed.canonical, 2000),

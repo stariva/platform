@@ -1,5 +1,9 @@
+import { DomUtils, parseDocument } from "htmlparser2";
+import { boundedText, follow, type ScanFetch, scanFetch } from "./scan-http";
+
 const SITEMAP_TIMEOUT_MS = 30_000;
 const MAX_SITEMAP_DEPTH = 2;
+// Maximum number of immediate child files read from each index.
 const MAX_SITEMAPS = 100;
 
 function requestSignal(
@@ -10,51 +14,49 @@ function requestSignal(
   return parent ? AbortSignal.any([parent, timeout]) : timeout;
 }
 
-function decodeXmlEntities(value: string): string {
-  return value.replace(
-    /&(#x?[0-9a-fA-F]+|amp|lt|gt|quot|apos);/g,
-    (entity, code: string) => {
-      if (code === "amp") return "&";
-      if (code === "lt") return "<";
-      if (code === "gt") return ">";
-      if (code === "quot") return '"';
-      if (code === "apos") return "'";
-      if (!code.startsWith("#")) return entity;
-
-      const hex = code[1]?.toLowerCase() === "x";
-      const parsed = Number.parseInt(code.slice(hex ? 2 : 1), hex ? 16 : 10);
-      return Number.isInteger(parsed) && parsed >= 0 && parsed <= 0x10ffff
-        ? String.fromCodePoint(parsed)
-        : entity;
-    },
-  );
-}
-
-function xmlText(value: string): string {
-  const cdata = /^<!\[CDATA\[([\s\S]*)\]\]>$/.exec(value.trim());
-  return decodeXmlEntities(cdata?.[1] ?? value).trim();
-}
-
-function locsInside(xml: string, element: "url" | "sitemap"): string[] {
-  const values: string[] = [];
-  const blocks = xml.matchAll(
-    new RegExp(
-      `<(?:[\\w.-]+:)?${element}\\b[\\s\\S]*?<\\/(?:[\\w.-]+:)?${element}>`,
-      "gi",
-    ),
-  );
-  for (const block of blocks) {
-    const loc =
-      /<(?!(?:image|video|news):)(?:[\w.-]+:)?loc>([\s\S]*?)<\/(?!(?:image|video|news):)(?:[\w.-]+:)?loc>/i.exec(
-        block[0],
-      )?.[1];
-    if (!loc) continue;
-    const value = xmlText(loc);
-    if (value) values.push(value);
+type XmlElement = ReturnType<typeof DomUtils.findAll>[number];
+const NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9";
+function namespace(el: XmlElement) {
+  const parts = el.name.split(":");
+  if (parts.length > 2) return null;
+  const declaration = parts.length === 2 ? `xmlns:${parts[0]}` : "xmlns";
+  for (let node: XmlElement | null = el; node; ) {
+    const uri = node.attribs[declaration];
+    if (uri !== undefined) return uri;
+    const parent: XmlElement["parent"] = node.parent;
+    node = parent && "attribs" in parent ? parent : null;
   }
-  return values;
+  return parts.length === 1 ? "" : null;
 }
-
+function parseSitemap(xml: string) {
+  const root = parseDocument(xml, { xmlMode: true }).children.find(
+    (node): node is XmlElement => node.type === "tag",
+  );
+  const ns = root && namespace(root);
+  const sitemapElement = (el: XmlElement, name: string) =>
+    (ns === NAMESPACE || ns === "") &&
+    namespace(el) === ns &&
+    el.name.split(":").at(-1) === name;
+  const index = !!root && sitemapElement(root, "sitemapindex");
+  const urls: string[] = [];
+  if (root && (index || sitemapElement(root, "urlset"))) {
+    for (const child of root.children) {
+      if (
+        child.type !== "tag" ||
+        !sitemapElement(child, index ? "sitemap" : "url")
+      )
+        continue;
+      const loc = child.children.find(
+        (el) => el.type === "tag" && sitemapElement(el, "loc"),
+      );
+      if (loc) {
+        const value = DomUtils.textContent(loc).trim();
+        if (value) urls.push(value);
+      }
+    }
+  }
+  return { index, urls };
+}
 function normalizeUrl(raw: string): string | null {
   try {
     const url = new URL(raw);
@@ -86,31 +88,31 @@ function normalizeUrls(rawUrls: string[]): string[] {
   return urls;
 }
 
-async function fetchXml(
-  url: string,
-  parentSignal: AbortSignal | undefined,
-): Promise<string> {
-  const res = await fetch(url, {
-    signal: requestSignal(parentSignal, SITEMAP_TIMEOUT_MS),
-  });
-  if (!res.ok) throw new Error(`sitemap: HTTP ${res.status}`);
-  return res.text();
-}
-
 async function readSitemapUrls(
   url: string,
   parentSignal: AbortSignal | undefined,
   depth: number,
+  origin: string,
+  fetchImpl: ScanFetch,
 ): Promise<string[]> {
-  const xml = await fetchXml(url, parentSignal);
-  if (!/<(?:[\w.-]+:)?sitemapindex[\s>]/i.test(xml)) {
-    return locsInside(xml, "url");
+  const res = await follow(url, origin, fetchImpl, {
+    method: "GET",
+    redirect: "manual",
+    headers: {},
+    signal: requestSignal(parentSignal, SITEMAP_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    await res.body?.cancel();
+    throw new Error(`sitemap: HTTP ${res.status}`);
   }
-
+  const { index, urls } = parseSitemap(
+    await boundedText(res, 50 * 1024 * 1024),
+  );
+  if (!index) return urls;
   if (depth >= MAX_SITEMAP_DEPTH) {
     throw new Error("sitemap: слишком глубокая вложенность индекса");
   }
-  const sitemapUrls = normalizeUrls(locsInside(xml, "sitemap"));
+  const sitemapUrls = normalizeUrls(urls);
   if (sitemapUrls.length === 0) {
     throw new Error("sitemap: индекс без корректных ссылок");
   }
@@ -123,7 +125,7 @@ async function readSitemapUrls(
     sitemapUrls
       .slice(0, MAX_SITEMAPS)
       .map((sitemapUrl) =>
-        readSitemapUrls(sitemapUrl, parentSignal, depth + 1),
+        readSitemapUrls(sitemapUrl, parentSignal, depth + 1, origin, fetchImpl),
       ),
   );
   return groups.flat();
@@ -132,11 +134,14 @@ async function readSitemapUrls(
 export async function fetchSitemapUrls(
   storefrontUrl: string,
   parentSignal: AbortSignal | undefined,
+  fetchImpl: ScanFetch = scanFetch,
 ): Promise<string[]> {
   const rawUrls = await readSitemapUrls(
     `${storefrontUrl}/sitemap.xml`,
     parentSignal,
     0,
+    storefrontUrl,
+    fetchImpl,
   );
   const urls = normalizeUrls(rawUrls);
   if (urls.length === 0) {

@@ -4,6 +4,7 @@ import { siteHealthFindings, siteHealthPages } from "@stariva/db/schema";
 import type { SiteHealthPageResult } from "../contract/jobs";
 import { moscowDate } from "./yandex/common";
 
+const FINDING_INSERT_CHUNK_SIZE = 1000;
 const SCAN_TIME_TOLERANCE_MS = 24 * 60 * 60 * 1000;
 
 function excluded(column: { name: string }) {
@@ -24,7 +25,6 @@ function validScannedAt(value: string): Date {
 export async function saveSiteHealthResults(
   results: SiteHealthPageResult[],
 ): Promise<number> {
-  const date = moscowDate(new Date());
   const seen = new Set<string>();
   const rows = results.map((r) => {
     if (seen.has(r.url)) {
@@ -36,7 +36,7 @@ export async function saveSiteHealthResults(
     const scannedAt = validScannedAt(r.scannedAt);
     return {
       url: r.url,
-      date,
+      date: moscowDate(scannedAt),
       status: r.status,
       finalUrl: r.finalUrl,
       redirectCount: r.redirectCount,
@@ -103,7 +103,7 @@ export async function saveSiteHealthResults(
         findings.set(key, {
           pageId,
           url: result.url,
-          date,
+          date: moscowDate(scannedAt),
           severity: finding.severity,
           code: finding.code,
           message: finding.message,
@@ -115,10 +115,10 @@ export async function saveSiteHealthResults(
     }
 
     const findingRows = [...findings.values()];
-    if (findingRows.length > 0) {
+    for (let i = 0; i < findingRows.length; i += FINDING_INSERT_CHUNK_SIZE) {
       await tx
         .insert(siteHealthFindings)
-        .values(findingRows)
+        .values(findingRows.slice(i, i + FINDING_INSERT_CHUNK_SIZE))
         .onConflictDoNothing({
           target: [
             siteHealthFindings.date,
