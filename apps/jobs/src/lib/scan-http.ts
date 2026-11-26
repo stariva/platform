@@ -42,6 +42,25 @@ const dispatcher = new Agent({
 const imageCdn =
   /^(?:cdn[123]\.ozon(?:e)?\.ru|(?:ir|s3)\.ozone\.ru|cdn\.stariva\.ru|(?:[\w-]+\.)?storage\.yandexcloud\.net)$/;
 
+interface ScanResponseBody {
+  cancel(): Promise<void>;
+  getReader(): {
+    read(): Promise<
+      { done: false; value: Uint8Array } | { done: true; value?: undefined }
+    >;
+    cancel(): Promise<void>;
+    releaseLock(): void;
+  };
+}
+
+export interface ScanResponse {
+  status: number;
+  ok: boolean;
+  url: string;
+  headers: { get(name: string): string | null };
+  body: ScanResponseBody | null;
+}
+
 export type ScanFetch = (
   url: string,
   init: {
@@ -50,7 +69,7 @@ export type ScanFetch = (
     redirect: "manual";
     headers: Record<string, string>;
   },
-) => Promise<Pick<Response, "status" | "ok" | "headers" | "url" | "body">>;
+) => Promise<ScanResponse>;
 export const scanFetch: ScanFetch = (url, init) =>
   publicFetch(url, { ...init, dispatcher });
 
@@ -91,7 +110,7 @@ export async function follow(
 }
 
 export async function boundedText(
-  response: Pick<Response, "body">,
+  response: Pick<ScanResponse, "body">,
   limit: number,
 ) {
   const reader = response.body?.getReader();

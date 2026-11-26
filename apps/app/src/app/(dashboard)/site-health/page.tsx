@@ -121,6 +121,103 @@ function severityLabel(severity: "critical" | "warning" | "notice") {
   return "заметка";
 }
 
+interface AxeNodeDetail {
+  target: string;
+  html: string | null;
+  failureSummary: string | null;
+}
+
+function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function axeDetails(finding: SiteHealthItem["findings"][number]) {
+  if (!finding.code.startsWith("axe_") || !finding.details) return null;
+  const rawNodes = finding.details.nodes;
+  const nodes: AxeNodeDetail[] = Array.isArray(rawNodes)
+    ? rawNodes.flatMap((node) => {
+        if (typeof node !== "object" || node === null) return [];
+        const record = node as Record<string, unknown>;
+        return [
+          {
+            target: typeof record.target === "string" ? record.target : "",
+            html: typeof record.html === "string" ? record.html : null,
+            failureSummary:
+              typeof record.failureSummary === "string"
+                ? record.failureSummary
+                : null,
+          },
+        ];
+      })
+    : [];
+  return {
+    nodes,
+    nodeCount:
+      typeof finding.details.nodeCount === "number"
+        ? finding.details.nodeCount
+        : nodes.length,
+    nodesTruncated: finding.details.nodesTruncated === true,
+    helpUrl: safeHttpUrl(finding.details.helpUrl),
+  };
+}
+
+function AxeDetails({
+  finding,
+}: {
+  finding: SiteHealthItem["findings"][number];
+}) {
+  const details = axeDetails(finding);
+  if (!details || details.nodes.length === 0) return null;
+  const keyCounts = new Map<string, number>();
+  const keyedNodes = details.nodes.map((node) => {
+    const baseKey = JSON.stringify(node);
+    const occurrence = keyCounts.get(baseKey) ?? 0;
+    keyCounts.set(baseKey, occurrence + 1);
+    return { key: `${baseKey}:${occurrence}`, node };
+  });
+  return (
+    <div className="mt-1 space-y-2 border-l pl-2">
+      {keyedNodes.map(({ key, node }) => (
+        <div key={key} className="space-y-0.5">
+          <div>
+            <span className="font-mono">{node.target || "элемент"}</span>
+            {node.html && (
+              <span className="text-muted-foreground"> — {node.html}</span>
+            )}
+          </div>
+          {node.failureSummary && (
+            <div className="whitespace-pre-line text-muted-foreground">
+              {node.failureSummary}
+            </div>
+          )}
+        </div>
+      ))}
+      {(details.nodesTruncated || details.helpUrl) && (
+        <div className="text-muted-foreground">
+          {details.nodesTruncated &&
+            `Показаны первые ${details.nodes.length} из ${details.nodeCount} элементов · `}
+          {details.helpUrl && (
+            <a
+              href={details.helpUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              правило axe
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusBadge({ row }: { row: SiteHealthItem }) {
   if (row.status == null) {
     return <Badge variant="destructive">нет</Badge>;
@@ -173,8 +270,11 @@ function ReportRow({ row }: { row: SiteHealthItem }) {
                   </span>{" "}
                   <span className="text-muted-foreground">
                     {finding.message}
-                    {finding.target && ` · ${finding.target}`}
+                    {finding.target &&
+                      !finding.code.startsWith("axe_") &&
+                      ` · ${finding.target}`}
                   </span>
+                  <AxeDetails finding={finding} />
                 </div>
               ))}
             </details>
@@ -262,8 +362,9 @@ export default async function SiteHealthPage({
           </h1>
           <p className="text-muted-foreground max-w-3xl text-sm">
             Каждую ночь воркер проверяет страницы из sitemap.xml: HTTP-статус,
-            редиректы, метаданные, canonical, schema.org, внутренние ссылки и
-            изображения. Критичные проблемы первыми.
+            редиректы, метаданные, canonical, schema.org, внутренние ссылки,
+            изображения и accessibility-нарушения серверного HTML через
+            axe-core. Критичные проблемы первыми.
           </p>
         </div>
 

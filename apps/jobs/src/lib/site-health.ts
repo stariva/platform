@@ -4,8 +4,10 @@ import {
   checkedUrl,
   follow,
   type ScanFetch,
+  type ScanResponse,
   scanFetch,
 } from "./scan-http";
+import { auditAccessibilityHtml } from "./site-health-a11y";
 import {
   absoluteUrl,
   addFinding,
@@ -74,7 +76,7 @@ function networkError(error: unknown): string {
   return "network_error";
 }
 
-async function cancelBody(response: Pick<Response, "body">) {
+async function cancelBody(response: Pick<ScanResponse, "body">) {
   try {
     await response.body?.cancel();
   } catch {}
@@ -304,7 +306,42 @@ async function scanOne(
   result.images = audit.images.length;
   result.brokenImages = 0;
   result.missingAltImages = audit.missingAltImages;
-  result.findings.push(...audit.findings);
+  let accessibilityFindings: typeof audit.findings | null = null;
+  let accessibilityError: string | null = null;
+  try {
+    accessibilityFindings = await auditAccessibilityHtml(
+      fetched.html,
+      finalUrl,
+      { signal },
+    );
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    console.warn(`[site-health] axe-core не смог проверить ${finalUrl}`, error);
+    accessibilityError = error instanceof Error ? error.message : "unknown";
+  }
+
+  for (const finding of audit.findings) {
+    if (
+      accessibilityFindings &&
+      (finding.code === "image_missing_alt" ||
+        finding.code === "images_missing_alt_count")
+    ) {
+      continue;
+    }
+    result.findings.push(finding);
+  }
+  if (accessibilityFindings) {
+    result.findings.push(...accessibilityFindings);
+  } else {
+    addFinding(
+      result.findings,
+      "notice",
+      "axe_scan_failed",
+      "Детальный accessibility-аудит axe-core не завершился",
+      null,
+      { error: accessibilityError },
+    );
+  }
   if (blocksGenericIndexing(fetched.xRobotsTag)) {
     addFinding(
       result.findings,
