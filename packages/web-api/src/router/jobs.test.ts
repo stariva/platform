@@ -517,7 +517,17 @@ test("site health report saves a batch of scan results", async () => {
         code: "broken_internal_link",
         message: "Внутренняя ссылка возвращает 404",
         target: "https://stariva.ru/catalog/interior/missing",
-        details: { status: 404, urls: ["https://stariva.ru/a"] },
+        details: {
+          status: 404,
+          urls: ["https://stariva.ru/a"],
+          nodes: [
+            {
+              target: "img",
+              html: null,
+              failureSummary: "Исправьте любое из следующего",
+            },
+          ],
+        },
       },
     ],
   };

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { scanSiteHealth } from "./site-health";
+import { auditAccessibilityHtml } from "./site-health-a11y";
 import { auditSiteHealthHtml } from "./site-health-html";
 
 const origin = "https://stariva.ru";
@@ -88,9 +89,12 @@ test("scans metadata and reports broken links and images", async () => {
     expect.arrayContaining([
       "broken_internal_link",
       "broken_image",
-      "image_missing_alt",
+      "axe_image_alt",
       "noindex",
     ]),
+  );
+  expect(result?.findings.map((finding) => finding.code)).not.toContain(
+    "image_missing_alt",
   );
   expect(result?.findings.map((finding) => finding.code)).not.toContain(
     "product_schema_missing",
@@ -306,6 +310,28 @@ test("keeps the incomplete resource notice within a full findings array", async 
   expect(result?.findings.length).toBe(500);
   expect(result?.findings.at(-1)?.code).toBe("resource_checks_capped");
 });
+test("reports concrete axe accessibility violations with target nodes", async () => {
+  const findings = await auditAccessibilityHtml(
+    htmlDocument(
+      '<main><img src="/x.jpg"><button></button></main>',
+      "<title>Пример</title>",
+    ),
+    `${origin}/catalog/interior/example`,
+  );
+
+  const imageAlt = findings.find((finding) => finding.code === "axe_image_alt");
+  const buttonName = findings.find(
+    (finding) => finding.code === "axe_button_name",
+  );
+  expect(imageAlt?.severity).toBe("critical");
+  expect(imageAlt?.target).toContain("img");
+  expect(imageAlt?.details).toMatchObject({
+    helpUrl: expect.stringContaining("image-alt"),
+    nodeCount: 1,
+  });
+  expect(buttonName?.target).toContain("button");
+});
+
 test("returns the page report when the resource time budget expires", async () => {
   const [result] = await scanSiteHealth([origin], {
     origin,
