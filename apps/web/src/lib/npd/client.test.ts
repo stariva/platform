@@ -104,3 +104,15 @@ test("a 5xx or lost connection on income leaves the outcome unknown", async () =
   const lost = await createIncome(input).catch((e: unknown) => e);
   expect((lost as InstanceType<typeof NpdError>).outcome).toBe("unknown");
 });
+
+test("entity.not.found on sign-in is reported as rejected credentials", async () => {
+  fetchSpy.mockResolvedValueOnce(
+    json({ code: "entity.not.found", message: "Не найдено" }, 422),
+  );
+
+  const error = await createIncome(input).catch((e: unknown) => e);
+  expect((error as InstanceType<typeof NpdError>).outcome).toBe("not_created");
+  expect((error as InstanceType<typeof NpdError>).message).toContain(
+    "LKNPD_PASSWORD",
+  );
+});

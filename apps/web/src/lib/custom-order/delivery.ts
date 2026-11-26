@@ -50,7 +50,12 @@ export async function deliverNotification(
   const channels: { name: string; promise: Promise<void> }[] = [];
   const title = notification.title ?? `Заявка ${notification.id}`;
   const message = `${title}\n${notification.message}`;
-  const missingEmail = missingEmailSettings(config);
+  // Варнинг только когда почтовый конвейер подключён (emailSend задан), а
+  // адресов нет: telegram-only вызовы (уведомления мастеру о покупках идут
+  // отдельным staff-email каналом) иначе спамят ложной тревогой на каждую
+  // заявку. Полностью ненастроенную почту покрывает warnIfOrderEmailMissing
+  // при старте сервера.
+  const missingEmail = config.emailSend ? missingEmailSettings(config) : [];
   if (missingEmail.length > 0) {
     console.warn(
       `[notifications] ${title}: на почту не отправлено — не заданы ${missingEmail.join(", ")}`,

@@ -96,7 +96,19 @@ async function login(): Promise<string> {
     method: "POST",
     body: { username: SELLER_INN, password, deviceInfo: deviceInfo() },
   });
-  if (!res.ok) throw await failure(res, "вход в «Мой налог»");
+  if (!res.ok) {
+    const error = await failure(res, "вход в «Мой налог»");
+    // ФНС отвечает entity.not.found на любую неверную пару ИНН/пароль, не
+    // различая их: подсказываем, что проверять, иначе по «Не найдено»
+    // непонятно, что речь о кредах личного кабинета.
+    if (error.message.includes("entity.not.found")) {
+      throw new NpdError(
+        error.outcome,
+        `вход в «Мой налог»: ФНС не пустила по ИНН/паролю — проверьте LKNPD_PASSWORD и вход на lknpd.nalog.ru вручную (${res.status} entity.not.found)`,
+      );
+    }
+    throw error;
+  }
   const data = (await res.json()) as {
     token: string;
     tokenExpireIn?: string;
