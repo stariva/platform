@@ -207,3 +207,33 @@ test("the log names the Telegram status and description", async () => {
   }
   assert.match(String(errors[0]?.[1]), /HTTP 400 Bad Request: chat not found/);
 });
+test("telegram-only delivery does not warn about missing email settings", async () => {
+  const warnings: unknown[][] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    await deliverNotification(
+      notification,
+      { telegramToken: "test", telegramChatId: "test" },
+      fakeFetch(() => Response.json({ ok: true })),
+    );
+  } finally {
+    console.warn = original;
+  }
+  assert.equal(warnings.length, 0);
+});
+test("a wired email pipeline without recipient still warns", async () => {
+  const warnings: unknown[][] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    await deliverNotification(notification, {
+      emailFrom: "from@example.test",
+      emailSend: async () => {},
+    });
+  } finally {
+    console.warn = original;
+  }
+  assert.equal(warnings.length, 1);
+  assert.match(String(warnings[0]?.[0]), /ORDER_EMAIL_TO/);
+});
