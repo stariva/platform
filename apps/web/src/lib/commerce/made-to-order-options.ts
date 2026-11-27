@@ -14,6 +14,16 @@ export const madeToOrderOptionsSchema = z.object({
   color: z.string().trim().min(1).max(60),
   measurements: z.array(measurementEntrySchema).max(10).default([]),
   comment: z.string().trim().max(1500).optional(),
+  /** Снимок состава готового набора на момент заказа. */
+  contents: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(120),
+        quantity: z.number().int().positive().max(99),
+      }),
+    )
+    .max(30)
+    .optional(),
 });
 
 export type MadeToOrderOptions = z.infer<typeof madeToOrderOptionsSchema>;
@@ -25,6 +35,15 @@ export function describeMadeToOrderOptions(
   return [
     `Размер: ${options.size}`,
     `Цвет: ${options.color}`,
+    ...(options.contents?.length
+      ? [
+          `Состав одного набора: ${options.contents
+            .map((item) =>
+              item.quantity > 1 ? `${item.name} × ${item.quantity}` : item.name,
+            )
+            .join(", ")}`,
+        ]
+      : []),
     ...options.measurements.map((m) => `${m.label}: ${m.value} см`),
     options.comment ? `Комментарий: ${options.comment}` : null,
   ]

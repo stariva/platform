@@ -124,8 +124,16 @@ export const ornaments = [
 export type Ornament = (typeof ornaments)[number];
 export const ornamentSlug = (id: Ornament["id"]) =>
   `novogodnee-ukrashenie-${id}`;
+
+const ornamentImageFile: Partial<Record<Ornament["id"], string>> = {
+  house: "house.svg",
+  samovar: "samovar.svg",
+  matryoshka: "ornament.svg",
+  loshadka: "ornament.svg",
+};
+
 export const ornamentImage = (id: Ornament["id"]) =>
-  `/images/new-year/${id}.png`;
+  `/images/new-year/${ornamentImageFile[id] ?? `${id}.png`}`;
 
 export const ornamentSets = [
   {
@@ -201,7 +209,7 @@ export interface NewYearConfiguratorProduct {
   inStock: boolean;
   stockAvailable: number;
   madeToOrder: boolean;
-  material: string;
+  material?: string;
   dimensions?: string;
   color?: string;
 }
@@ -299,6 +307,29 @@ export function ornamentIdForSlug(slug: string): Ornament["id"] | undefined {
 export function ornamentDetailForSlug(slug: string): string | undefined {
   const id = ornamentIdForSlug(slug);
   return id ? ornaments.find((item) => item.id === id)?.detail : undefined;
+}
+
+/** Состав готового набора в заказе: имена и количество фигурок в порядке коллекции. */
+export function newYearSetContents(
+  slug: string,
+): { name: string; quantity: number }[] {
+  const definition = ornamentSets.find((set) => set.slug === slug);
+  if (!definition) return [];
+  const quantities = new Map<Ornament["id"], number>();
+  for (const id of definition.ids) {
+    quantities.set(id, (quantities.get(id) ?? 0) + 1);
+  }
+  return definition.ids.flatMap((id) => {
+    const quantity = quantities.get(id);
+    if (quantity === undefined) return [];
+    quantities.delete(id);
+    return [
+      {
+        name: ornaments.find((item) => item.id === id)?.name ?? id,
+        quantity,
+      },
+    ];
+  });
 }
 
 /** Сколько физических фигурок в одной единице товара: одна отдельная или состав набора. */

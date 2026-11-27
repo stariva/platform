@@ -11,6 +11,7 @@ import {
 import {
   MIN_NEW_YEAR_ORNAMENT_QUANTITY,
   newYearFigurinesPerItem,
+  newYearSetContents,
   newYearSubcategoryFor,
 } from "@/lib/new-year";
 import { applyBundlePricing } from "./bundles";
@@ -223,6 +224,8 @@ export async function resolveInstantMadeToOrderItems(
     } else if (subcategory === "ornament_sets") {
       figurineQuantity += quantity * newYearFigurinesPerItem(productSlug);
     }
+    const contents =
+      subcategory === "ornament_sets" ? newYearSetContents(productSlug) : [];
     resolved.push({
       productSlug,
       quantity,
@@ -232,6 +235,7 @@ export async function resolveInstantMadeToOrderItems(
         size: PHOTO_SIZE,
         color: PHOTO_COLOR,
         measurements: [],
+        ...(contents.length > 0 ? { contents } : {}),
       },
     });
   }

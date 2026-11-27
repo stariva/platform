@@ -68,7 +68,7 @@ function Delivery({ row }: { row: RecipientWithDelivery }) {
     <div className="mt-2">
       <Badge variant={state.variant}>{state.label}</Badge>
       {state.detail && (
-        <div className="text-muted-foreground mt-1 text-xs break-words">
+        <div className="text-muted-foreground mt-1 text-xs wrap-break-word">
           {state.detail}
         </div>
       )}
@@ -103,7 +103,7 @@ export function RecipientsTable({ rows }: { rows: RecipientWithDelivery[] }) {
           )}
           {rows.map((row) => (
             <TableRow key={row.id}>
-              <TableCell className="max-w-[260px] text-sm break-words whitespace-normal">
+              <TableCell className="max-w-[260px] text-sm wrap-break-word whitespace-normal">
                 {row.email}
                 {row.source === "manual" && (
                   <div className="mt-1">
@@ -123,7 +123,7 @@ export function RecipientsTable({ rows }: { rows: RecipientWithDelivery[] }) {
                       : null}
                 </div>
                 {row.status === "failed" && row.error && (
-                  <div className="text-muted-foreground mt-1 text-xs break-words">
+                  <div className="text-muted-foreground mt-1 text-xs wrap-break-word">
                     {row.error}
                   </div>
                 )}

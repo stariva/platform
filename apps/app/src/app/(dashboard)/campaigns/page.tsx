@@ -84,7 +84,7 @@ export default async function CampaignsPage() {
                     >
                       {campaign.name}
                     </Link>
-                    <div className="text-muted-foreground text-xs break-words">
+                    <div className="text-muted-foreground text-xs wrap-break-word">
                       {campaign.subject}
                     </div>
                   </TableCell>

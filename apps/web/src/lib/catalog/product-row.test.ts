@@ -87,3 +87,26 @@ test("passes the showcase texts through", () => {
   assert.equal(product.bestFor, "Гостиная, лобби отеля");
   assert.deepEqual(product.highlights, ["Заметна с порога", "Без сверления"]);
 });
+
+test("does not invent cotton for printed New Year subcategories", () => {
+  for (const subcategory of [
+    "ornaments",
+    "ornament_sets",
+    "gift_boxes",
+  ] as const) {
+    const product = productRowToProduct({ ...row, subcategory });
+    assert.equal(product.material, undefined);
+  }
+  // Явно заданный в базе материал показываем и для новогодних товаров
+  const explicit = productRowToProduct({
+    ...row,
+    subcategory: "ornaments",
+    material: "Фотополимер",
+  });
+  assert.equal(explicit.material, "Фотополимер");
+  // Для плетёных изделий фолбэк остаётся
+  assert.equal(
+    productRowToProduct({ ...row, subcategory: "lampshades" }).material,
+    "100% хлопок",
+  );
+});
