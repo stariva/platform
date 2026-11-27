@@ -139,6 +139,7 @@ const learning: NavItem[] = [
 
 const marketing: NavItem[] = [
   { title: "Сводка", url: "/crm", icon: IconChartBar },
+  { title: "Промокоды", url: "/promo-codes", icon: IconTicket },
   {
     title: "Кампании и расходы",
     url: "/crm/campaigns",

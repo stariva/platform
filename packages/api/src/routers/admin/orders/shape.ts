@@ -102,6 +102,8 @@ export function toAdminOrder(
     contactMessenger: order.contactMessenger,
     amountTotal: rubles(order.amountTotal),
     amountProducts: rubles(order.amountProducts),
+    amountDiscount: rubles(order.amountDiscount),
+    promoCode: order.promoCode,
     amountDelivery: rubles(order.amountDelivery),
     depositAmount:
       order.depositAmount === null ? null : rubles(order.depositAmount),

@@ -37,6 +37,8 @@ const cartItemSchema = z.object({
   options: madeToOrderOptionsSchema.optional(),
   /** Новогодние изделия с фиксированным образцом: оплачиваются сразу, а не через заявку мастеру. */
   instantMadeToOrder: z.boolean().optional(),
+  /** Сколько физических новогодних фигурок в одной единице этой позиции. */
+  newYearFigurines: z.number().int().positive().max(99).optional(),
   /** Набор для плетения: к нему можно оформить подарок с кодом доступа. */
   kit: z.boolean().optional(),
 });

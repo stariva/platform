@@ -15,6 +15,7 @@ const {
   PaymentCreateFailedError,
   PaymentsUnavailableError,
   ProductsPriceChangedError,
+  PromoCodeInvalidError,
   TELEGRAM_HANDLE_ERROR,
 } = await import("../contract");
 const { lastStatus, wireClient } = await import("../testing/wire-client");
@@ -73,6 +74,18 @@ function checkout(overrides: Partial<CheckoutServices> = {}): CheckoutServices {
     quoteInstantMadeToOrder: async () => ({
       status: "ok",
       quote: { available: true, deliveryPriceKopecks: 25000 },
+    }),
+    validateInstantMadeToOrderPromo: async () => ({
+      status: "ok",
+      validation: {
+        valid: true,
+        reason: null,
+        code: "NEWYEAR",
+        discountType: "percent" as const,
+        discountValue: 10,
+        discountKopecks: 10_000,
+        productsKopecks: 100_000,
+      },
     }),
     createInstantMadeToOrder: async () => ({
       status: "ok",
@@ -609,4 +622,116 @@ test("instant made-to-order maps the minimum-order rejection", async () => {
     client.checkout.createInstantMadeToOrder(createInput),
   );
   expect(createError).toBeInstanceOf(MinimumOrderNotMetError);
+});
+
+test("validates an instant-order promo and hands the cart to the service", async () => {
+  const seen: unknown[] = [];
+  const validation = {
+    valid: true,
+    reason: null,
+    code: "NEWYEAR",
+    discountType: "percent" as const,
+    discountValue: 10,
+    discountKopecks: 10_000,
+    productsKopecks: 100_000,
+  };
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        validateInstantMadeToOrderPromo: async (input) => {
+          seen.push(input);
+          return { status: "ok", validation };
+        },
+      }),
+    },
+  });
+
+  const input = {
+    code: "newyear",
+    items: [{ productSlug: "shar", quantity: 2 }],
+  };
+  expect(await client.checkout.validateInstantMadeToOrderPromo(input)).toEqual(
+    validation,
+  );
+  expect(seen).toEqual([input]);
+});
+
+test("instant promo validation maps catalog and service failures", async () => {
+  const unavailable = wireClient({
+    services: {
+      checkout: checkout({
+        validateInstantMadeToOrderPromo: async () => ({
+          status: "items_unavailable",
+          unavailableProductSlugs: ["shar"],
+        }),
+      }),
+    },
+  });
+  const [itemsError] = await safe(
+    unavailable.checkout.validateInstantMadeToOrderPromo({
+      code: "NEWYEAR",
+      items: [{ productSlug: "shar", quantity: 2 }],
+    }),
+  );
+  expect(itemsError).toBeInstanceOf(ItemsUnavailableError);
+  expect(lastStatus()).toBe(409);
+
+  const failing = wireClient({
+    services: {
+      checkout: checkout({
+        validateInstantMadeToOrderPromo: async () => ({
+          status: "check_failed",
+        }),
+      }),
+    },
+  });
+  const [checkError] = await safe(
+    failing.checkout.validateInstantMadeToOrderPromo({
+      code: "NEWYEAR",
+      items: [{ productSlug: "shar", quantity: 2 }],
+    }),
+  );
+  expect(checkError).toBeInstanceOf(CheckoutCheckFailedError);
+  expect((checkError as Error).message).toBe("Не удалось проверить промокод");
+});
+
+test("instant create passes the promo code and maps its rejection", async () => {
+  const seen: Array<string | undefined> = [];
+  const ok = wireClient({
+    services: {
+      checkout: checkout({
+        createInstantMadeToOrder: async (input) => {
+          seen.push(input.promoCode);
+          return { status: "ok", order: createdOrder };
+        },
+      }),
+    },
+  });
+  await ok.checkout.createInstantMadeToOrder({
+    ...createInput,
+    promoCode: "NEWYEAR",
+  });
+  expect(seen).toEqual(["NEWYEAR"]);
+
+  const invalid = wireClient({
+    services: {
+      checkout: checkout({
+        createInstantMadeToOrder: async () => ({
+          status: "promo_code_invalid",
+          reason: "Лимит использования промокода исчерпан",
+        }),
+      }),
+    },
+  });
+  const [error] = await safe(
+    invalid.checkout.createInstantMadeToOrder({
+      ...createInput,
+      promoCode: "NEWYEAR",
+    }),
+  );
+  expect(error).toBeInstanceOf(PromoCodeInvalidError);
+  expect((error as PromoCodeInvalidError).data).toEqual({
+    reason: "Лимит использования промокода исчерпан",
+  });
+  expect(lastStatus()).toBe(400);
 });

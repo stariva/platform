@@ -19,9 +19,10 @@ import { PHOTO_COLOR, PHOTO_SIZE } from "@/lib/made-to-order";
 import {
   MIN_NEW_YEAR_ORNAMENT_QUANTITY,
   type NewYearConfiguratorProduct,
+  newYearFigurinesPerItem,
   newYearProductImage,
   newYearSetMerchandising,
-  newYearFigurinesPerItem,
+  newYearSubcategoryFor,
   ornamentDetailForSlug,
   ornamentImage,
   pluralFigurines,
@@ -49,6 +50,13 @@ function purchasable(product: NewYearConfiguratorProduct): boolean {
 function cartLine(
   product: NewYearConfiguratorProduct,
 ): Omit<CartItem, "quantity"> {
+  const subcategory = newYearSubcategoryFor(product);
+  const figurines =
+    subcategory === "ornaments"
+      ? 1
+      : subcategory === "ornament_sets"
+        ? newYearFigurinesPerItem(product.slug)
+        : 0;
   return {
     productId: product.id,
     productSlug: product.slug,
@@ -58,6 +66,7 @@ function cartLine(
     name: product.name,
     image: newYearProductImage(product),
     price: Math.round(product.price * 100),
+    ...(figurines > 0 ? { newYearFigurines: figurines } : {}),
   };
 }
 
@@ -558,7 +567,9 @@ export function NewYearConfigurator({
     (sum, item) =>
       item.fulfillmentType === "made_to_order" &&
       item.instantMadeToOrder === true
-        ? sum + item.quantity * newYearFigurinesPerItem(item.productSlug)
+        ? sum +
+          item.quantity *
+            (item.newYearFigurines ?? newYearFigurinesPerItem(item.productSlug))
         : sum,
     0,
   );
@@ -796,7 +807,7 @@ export function NewYearConfigurator({
             {mode === "custom" && !customMinimumMet && (
               <p className="mt-3 text-sm leading-relaxed text-(--ny-accent)">
                 Добавьте ещё {customMissing} {pluralFigurines(customMissing)} —
-                минимальный заказ фигурок поштучно:{" "}
+                минимальный заказ новогодних фигурок:{" "}
                 {MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт.
               </p>
             )}

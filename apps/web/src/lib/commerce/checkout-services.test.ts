@@ -21,6 +21,9 @@ for (const scenario of [
   "instant quote uses the fixed New Year parcel and its real delivery price",
   "instant create stores a fully prepaid order without Seller SKU",
   "instant create refuses a higher delivery price than the buyer saw",
+  "instant promo validation uses server catalog prices",
+  "instant create passes the promo code into the order",
+  "instant create reports an invalid promo without creating payment",
 ]) {
   test(scenario, () => {
     const result = spawnSync(

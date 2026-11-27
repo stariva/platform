@@ -59,6 +59,25 @@ mock.module("../../src/lib/commerce/orders", () => ({
   createOrderPayment: async () => "order-payment-1",
   createProductOrder,
 }));
+class PromoCodeInvalidError extends Error {
+  constructor(readonly reason: string) {
+    super(`promo_code_invalid:${reason}`);
+  }
+}
+const validateStoredPromoCode = mock(
+  async (_code: string, _amount: number) => ({
+    valid: true,
+    reason: null,
+    code: "NEWYEAR",
+    discountType: "percent" as const,
+    discountValue: 10,
+    discountKopecks: 1000,
+  }),
+);
+mock.module("../../src/lib/commerce/promo-codes", () => ({
+  PromoCodeInvalidError,
+  validateStoredPromoCode,
+}));
 mock.module("../../src/lib/commerce/order-notifications", () => ({
   notifyCustomer: async () => {},
   notifyMadeToOrderRequested: async () => {},
@@ -356,4 +375,59 @@ await test("instant create refuses a higher delivery price than the buyer saw", 
   });
   expect(result).toEqual({ status: "delivery_price_changed" });
   expect(createInstantMadeToOrderOrder).not.toHaveBeenCalled();
+});
+
+await test("instant promo validation uses server catalog prices", async () => {
+  validateStoredPromoCode.mockClear();
+  const result = await checkoutServices.validateInstantMadeToOrderPromo({
+    code: "newyear",
+    items: [{ productSlug: "shar", quantity: 1 }],
+  });
+  expect(result).toEqual({
+    status: "ok",
+    validation: {
+      valid: true,
+      reason: null,
+      code: "NEWYEAR",
+      discountType: "percent",
+      discountValue: 10,
+      discountKopecks: 1000,
+      productsKopecks: 10_000,
+    },
+  });
+  expect(validateStoredPromoCode).toHaveBeenCalledWith("newyear", 10_000);
+});
+
+await test("instant create passes the promo code into the order", async () => {
+  createInstantMadeToOrderOrder.mockClear();
+  const result = await checkoutServices.createInstantMadeToOrder({
+    ...createInput,
+    promoCode: "NEWYEAR",
+    items: [{ productSlug: "shar", quantity: 1 }],
+    expectedDeliveryKopecks: 15_000,
+    expectedProductsKopecks: 10_000,
+  });
+  expect(result.status).toBe("ok");
+  const [order] = createInstantMadeToOrderOrder.mock.calls[0] as [
+    { promoCode?: string },
+  ];
+  expect(order.promoCode).toBe("NEWYEAR");
+});
+
+await test("instant create reports an invalid promo without creating payment", async () => {
+  createInstantMadeToOrderOrder.mockClear();
+  createPayment.mockClear();
+  createInstantMadeToOrderOrder.mockImplementationOnce(async () => {
+    throw new PromoCodeInvalidError("Лимит использования промокода исчерпан");
+  });
+  const result = await checkoutServices.createInstantMadeToOrder({
+    ...createInput,
+    promoCode: "NEWYEAR",
+    items: [{ productSlug: "shar", quantity: 1 }],
+  });
+  expect(result).toEqual({
+    status: "promo_code_invalid",
+    reason: "Лимит использования промокода исчерпан",
+  });
+  expect(createPayment).not.toHaveBeenCalled();
 });

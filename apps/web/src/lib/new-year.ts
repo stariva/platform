@@ -304,9 +304,7 @@ export function ornamentDetailForSlug(slug: string): string | undefined {
 /** Сколько физических фигурок в одной единице товара: одна отдельная или состав набора. */
 export function newYearFigurinesPerItem(slug: string): number {
   if (ornamentIdForSlug(slug)) return 1;
-  return (
-    ornamentSets.find((set) => set.slug === slug)?.ids.length ?? 0
-  );
+  return ornamentSets.find((set) => set.slug === slug)?.ids.length ?? 0;
 }
 
 /** Фото товара из базы; локальный эскиз — только если фото ещё не загружено. */

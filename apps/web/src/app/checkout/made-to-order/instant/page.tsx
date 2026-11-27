@@ -110,6 +110,7 @@ export default function InstantMadeToOrderCheckoutPage() {
   );
 
   // Скидка зависит от состава заказа: при его изменении промокод проверяем заново.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: quoteItemsKey намеренно сбрасывает промокод при изменении состава заказа
   useEffect(() => {
     setPromoState({ status: "idle" });
   }, [quoteItemsKey]);
@@ -227,15 +228,14 @@ export default function InstantMadeToOrderCheckoutPage() {
 
     setPromoState({ status: "checking" });
     try {
-      const validation =
-        await webApi.checkout.validateInstantMadeToOrderPromo({
-          code,
-          items: items.map((item) => ({
-            productId: item.productId,
-            productSlug: item.productSlug,
-            quantity: item.quantity,
-          })),
-        });
+      const validation = await webApi.checkout.validateInstantMadeToOrderPromo({
+        code,
+        items: items.map((item) => ({
+          productId: item.productId,
+          productSlug: item.productSlug,
+          quantity: item.quantity,
+        })),
+      });
       if (!validation.valid) {
         setPromoState({
           status: "invalid",

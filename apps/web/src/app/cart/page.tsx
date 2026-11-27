@@ -117,7 +117,10 @@ export default function CartPage() {
       kind === "instant_made_to_order"
         ? buyable.reduce(
             (sum, item) =>
-              sum + item.quantity * newYearFigurinesPerItem(item.productSlug),
+              sum +
+              item.quantity *
+                (item.newYearFigurines ??
+                  newYearFigurinesPerItem(item.productSlug)),
             0,
           )
         : 0;
@@ -131,7 +134,7 @@ export default function CartPage() {
       items: sectionItems,
       minimumOrderMessage:
         minimumMissing > 0
-          ? `Минимальный заказ фигурок поштучно — ${MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт. Добавьте ещё ${minimumMissing} ${pluralFigurines(minimumMissing)}.`
+          ? `Минимальный заказ новогодних фигурок — ${MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт. Добавьте ещё ${minimumMissing} ${pluralFigurines(minimumMissing)}.`
           : undefined,
       minimumOrderShortMessage:
         minimumMissing > 0

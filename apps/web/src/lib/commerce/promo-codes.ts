@@ -128,7 +128,13 @@ export async function reservePromoCode(
     );
   }
 
-  const evaluation = evaluatePromoCode(reserved, productsKopecks, now);
+  // В строке уже учтён этот резерв, а лимит проверяется по состоянию до него:
+  // иначе последнее разрешённое использование ошибочно считалось бы исчерпанным.
+  const evaluation = evaluatePromoCode(
+    { ...reserved, usedCount: reserved.usedCount - 1 },
+    productsKopecks,
+    now,
+  );
   if (!evaluation.valid || evaluation.discountKopecks === null) {
     throw new PromoCodeInvalidError(
       evaluation.reason ?? "Промокод больше не действует",
