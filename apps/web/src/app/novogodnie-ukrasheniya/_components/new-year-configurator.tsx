@@ -136,7 +136,7 @@ function ProductImage({
       width={360}
       height={360}
       sizes={sizes}
-      className={cn("object-contain", className)}
+      className={cn("h-auto w-auto max-w-full object-contain", className)}
     />
   );
 }
@@ -293,7 +293,7 @@ function SetCard({
                 {visibleComposition.map((item) => (
                   <span
                     key={item.id}
-                    className="-ml-2 grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-espresso/10 bg-white shadow-sm first:ml-0"
+                    className="relative -ml-2 grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-espresso/10 bg-white shadow-sm first:ml-0"
                   >
                     <Image
                       src={
@@ -302,10 +302,9 @@ function SetCard({
                           : ornamentImage(item.id)
                       }
                       alt=""
-                      width={44}
-                      height={44}
+                      fill
                       sizes="44px"
-                      className="max-h-9 object-contain"
+                      className="object-contain p-1.5"
                     />
                   </span>
                 ))}
