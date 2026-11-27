@@ -187,6 +187,9 @@ const GOOGLE_CATEGORY_BY_SUBCATEGORY: Record<string, string> = {
   lampshades: "Home & Garden > Lighting Accessories > Lamp Shades",
   placemats: "Home & Garden > Linens & Bedding > Table Linens > Placemats",
   trees: "Home & Garden > Decor > Seasonal & Holiday Decorations",
+  ornaments: "Home & Garden > Decor > Seasonal & Holiday Decorations",
+  ornament_sets: "Home & Garden > Decor > Seasonal & Holiday Decorations",
+  gift_boxes: "Home & Garden > Decor",
   kits: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Craft Kits",
 };
 

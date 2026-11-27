@@ -12,21 +12,22 @@ import { getProductsResult } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
 import { isCatalogProductBuyable } from "@/lib/commerce/catalog";
 import {
+  groupNewYearProducts,
   NEW_YEAR_IMAGE,
   NEW_YEAR_PATH,
-  ornamentImage,
-  ornamentSets,
-  ornamentSlug,
-  ornaments,
+  newYearProductImage,
+  ornamentDetailForSlug,
+  toNewYearConfiguratorProduct,
 } from "@/lib/new-year";
 import { formatPrice } from "@/lib/products";
 import { SITE_URL } from "@/lib/site-url";
+import { NewYearConfigurator } from "./_components/new-year-configurator";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Новогодние украшения — коллекция «Русская сказка»",
   description:
-    "Ёлочные украшения с народными орнаментами: домик, самовар, снежинка и другие фигурки. Выберите набор или отдельные украшения Stariva.",
+    "Ёлочные украшения с народными орнаментами: соберите свою коробку фигурок или выберите готовый набор Stariva с праздничной упаковкой.",
   alternates: { canonical: `${SITE_URL}${NEW_YEAR_PATH}` },
   openGraph: {
     title: "Русская сказка — новогодние украшения Stariva",
@@ -111,120 +112,70 @@ function Purchase({
 
 async function Collection() {
   const result = await getProductsResult();
-  const bySlug = new Map(
-    result.products.map((product) => [product.slug, product]),
-  );
+  const groups = groupNewYearProducts(result.products);
   const unavailable = result.status === "unavailable";
+
   return (
     <>
-      <section
-        id="sets"
-        className="ny-section scroll-mt-24"
-        aria-labelledby="sets-title"
-      >
-        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="ny-eyebrow">Вместе красивее</p>
-            <h2 id="sets-title" className="ny-heading">
-              Праздник в наборе
-            </h2>
-          </div>
-          <p className="max-w-sm text-taupe">
-            Два сочетания для вашей ёлки.
-            <br />
-            Выберите настроение — мы собрали детали.
+      <NewYearConfigurator
+        ornaments={groups.ornaments.map(toNewYearConfiguratorProduct)}
+        sets={groups.sets.map(toNewYearConfiguratorProduct)}
+        boxes={groups.boxes.map(toNewYearConfiguratorProduct)}
+        catalogUnavailable={unavailable}
+      />
+      {groups.ornaments.length > 0 && (
+        <section
+          id="ornaments"
+          className="ny-section scroll-mt-24"
+          aria-labelledby="ornaments-title"
+        >
+          <p className="ny-eyebrow">Каждая — со своим характером</p>
+          <h2 id="ornaments-title" className="ny-heading">
+            Фигурки коллекции
+          </h2>
+          <p className="mt-5 max-w-2xl text-taupe">
+            Все карточки, цены и остатки загружаются из каталога. Фигурку можно
+            добавить в корзину отдельно или вернуться к конфигуратору и собрать
+            свою коробку.
           </p>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          {ornamentSets.map((set) => (
-            <article
-              key={set.slug}
-              id={set.slug}
-              className="flex scroll-mt-24 flex-col overflow-hidden rounded-2xl border border-espresso/10"
-            >
-              <div
-                className="ny-set-art"
-                role="group"
-                aria-label={`Состав набора ${set.name}`}
+          <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {groups.ornaments.map((product, index) => (
+              <article
+                key={product.slug}
+                id={product.slug}
+                className="flex scroll-mt-24 flex-col"
               >
-                {set.ids.map((id) => (
+                <div className="ny-ornament-art">
+                  <span
+                    className="absolute left-5 top-4 text-xs text-taupe"
+                    aria-hidden="true"
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                   <Image
-                    key={id}
-                    src={ornamentImage(id)}
-                    alt={ornaments.find((item) => item.id === id)?.name ?? id}
-                    width={100}
-                    height={125}
-                    className="h-24 w-full object-contain sm:h-32"
+                    src={newYearProductImage(product)}
+                    alt={`Новогоднее украшение «${product.name}»`}
+                    width={240}
+                    height={260}
+                    className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
                   />
-                ))}
-              </div>
-              <div className="flex flex-1 flex-col p-6 lg:p-8">
-                <p className="ny-eyebrow">{set.ids.length} украшений</p>
-                <h3 className="font-serif text-3xl">{set.name}</h3>
-                <p className="mt-3 text-taupe">{set.description}</p>
-                <p className="mt-4 text-sm leading-relaxed text-taupe">
-                  {set.ids
-                    .map((id) => ornaments.find((item) => item.id === id)?.name)
-                    .join(" · ")}
+                </div>
+                <h3 className="mt-5 font-serif text-2xl">{product.name}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-taupe">
+                  {product.shortDescription ||
+                    ornamentDetailForSlug(product.slug) ||
+                    "Новогоднее украшение из коллекции «Русская сказка»."}
                 </p>
                 <Purchase
-                  product={bySlug.get(set.slug)}
-                  name={set.name}
+                  product={product}
+                  name={product.name}
                   unavailable={unavailable}
                 />
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-      <section
-        id="ornaments"
-        className="ny-section scroll-mt-24"
-        aria-labelledby="ornaments-title"
-      >
-        <p className="ny-eyebrow">Каждая — со своим характером</p>
-        <h2 id="ornaments-title" className="ny-heading">
-          Девять маленьких историй
-        </h2>
-        <p className="mt-5 max-w-2xl text-taupe">
-          Выберите любимую фигурку или дополните набор. Здесь показаны эскизы
-          моделей: фактура и оттенок напечатанного изделия могут отличаться.
-        </p>
-        <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          {ornaments.map((item, index) => (
-            <article
-              key={item.id}
-              id={ornamentSlug(item.id)}
-              className="flex scroll-mt-24 flex-col"
-            >
-              <div className="ny-ornament-art">
-                <span
-                  className="absolute left-5 top-4 text-xs text-taupe"
-                  aria-hidden="true"
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <Image
-                  src={ornamentImage(item.id)}
-                  alt={`Эскиз украшения «${item.name}»`}
-                  width={240}
-                  height={260}
-                  className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
-                />
-              </div>
-              <h3 className="mt-5 font-serif text-2xl">{item.name}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-taupe">
-                {item.detail}
-              </p>
-              <Purchase
-                product={bySlug.get(ornamentSlug(item.id))}
-                name={item.name}
-                unavailable={unavailable}
-              />
-            </article>
-          ))}
-        </div>
-      </section>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }
@@ -263,15 +214,15 @@ export default function NewYearPage() {
               <span>сказка</span>
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-taupe">
-              Маленькие истории для вашей ёлки. Народные узоры, знакомые силуэты
-              и тепло домашнего праздника.
+              Маленькие истории для вашей ёлки. Соберите свою коробку фигурок
+              или выберите готовый набор с праздничной упаковкой.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="min-h-12">
-                <a href="#sets">Выбрать набор</a>
+                <a href="#configurator">Собрать коробку</a>
               </Button>
               <Button asChild variant="outline" size="lg" className="min-h-12">
-                <a href="#ornaments">Все украшения</a>
+                <a href="#ornaments">Все фигурки</a>
               </Button>
             </div>
             <p className="mt-6 text-xs tracking-wide text-taupe">
@@ -346,8 +297,8 @@ export default function NewYearPage() {
           <ol className="mt-10 grid gap-8 md:grid-cols-3">
             {[
               [
-                "Выберите украшения",
-                "Готовые товары с ценой и наличием можно добавить в корзину. Если продажи ещё не открыты, напишите нам через «Уточнить заказ».",
+                "Соберите коробку",
+                "Выберите свои фигурки или готовый набор и добавьте напечатанную коробку. Если продажи ещё не открыты, напишите нам через «Уточнить заказ».",
               ],
               [
                 "Оформите на сайте",

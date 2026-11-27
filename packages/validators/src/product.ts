@@ -28,6 +28,9 @@ export const PRODUCT_CATEGORIES = {
       planters: "Декор и прочее",
       trees: "Ёлки",
       kits: "Наборы для творчества",
+      ornaments: "Новогодние фигурки",
+      ornament_sets: "Новогодние наборы",
+      gift_boxes: "Подарочные коробки",
     },
   },
 } as const;
@@ -55,6 +58,9 @@ const subcategoryIds = [
   "planters",
   "trees",
   "kits",
+  "ornaments",
+  "ornament_sets",
+  "gift_boxes",
 ] as const;
 
 /** Максимум для integer в PostgreSQL, цена хранится в копейках. */
