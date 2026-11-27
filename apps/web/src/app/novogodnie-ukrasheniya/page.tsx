@@ -325,10 +325,10 @@ export default function NewYearPage() {
                 key={example.src}
                 className={
                   index === 0
-                    ? "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-7"
+                    ? "group relative aspect-4/3 overflow-hidden rounded-3xl bg-sand md:col-span-7"
                     : index === 1
-                      ? "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-5"
-                      : "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-4"
+                      ? "group relative aspect-4/3 overflow-hidden rounded-3xl bg-sand md:col-span-5"
+                      : "group relative aspect-4/3 overflow-hidden rounded-3xl bg-sand md:col-span-4"
                 }
               >
                 <Image
