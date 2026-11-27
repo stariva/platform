@@ -161,7 +161,7 @@ export default async function CatalogPage() {
         <section className="pb-20 px-4">
           <div className="max-w-6xl mx-auto">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {catalogSections.map((section) => (
+              {catalogSections.map((section, index) => (
                 <Link
                   key={section.href}
                   href={section.href}
@@ -171,6 +171,7 @@ export default async function CatalogPage() {
                     src={section.image}
                     alt={section.label}
                     fill
+                    loading={index === 0 ? "eager" : "lazy"}
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   />
