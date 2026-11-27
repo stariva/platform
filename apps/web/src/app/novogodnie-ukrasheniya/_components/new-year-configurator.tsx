@@ -17,6 +17,7 @@ import { flyToCart } from "@/lib/cart/fly-to-cart";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
 import { PHOTO_COLOR, PHOTO_SIZE } from "@/lib/made-to-order";
 import {
+  accusativeFigurines,
   MIN_NEW_YEAR_ORNAMENT_QUANTITY,
   type NewYearConfiguratorProduct,
   newYearFigurinesPerItem,
@@ -806,9 +807,9 @@ export function NewYearConfigurator({
             </div>
             {mode === "custom" && !customMinimumMet && (
               <p className="mt-3 text-sm leading-relaxed text-(--ny-accent)">
-                Добавьте ещё {customMissing} {pluralFigurines(customMissing)} —
-                минимальный заказ новогодних фигурок:{" "}
-                {MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт.
+                Добавьте ещё {customMissing}{" "}
+                {accusativeFigurines(customMissing)} — минимальный заказ
+                новогодних фигурок: {MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт.
               </p>
             )}
             {blockedByCart && hasSelection && (

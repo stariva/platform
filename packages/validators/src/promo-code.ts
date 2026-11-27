@@ -14,7 +14,7 @@ const MAX_RUBLES = 21_474_836;
 
 const nullableRubles = z
   .number()
-  .positive("Сумма должна быть больше нуля")
+  .min(0.01, "Сумма должна быть не меньше 0,01 рубля")
   .max(MAX_RUBLES)
   .refine(
     (price) => Math.abs(price * 100 - Math.round(price * 100)) < 1e-6,
@@ -70,6 +70,12 @@ export const promoCodeFormSchema = z
           message: "Процент не может быть больше 100",
         });
       }
+    } else if (value.discountValue < 0.01) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["discountValue"],
+        message: "Скидка должна быть не меньше 0,01 рубля",
+      });
     } else if (
       Math.abs(
         value.discountValue * 100 - Math.round(value.discountValue * 100),

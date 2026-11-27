@@ -51,7 +51,9 @@ const createInstantMadeToOrderOrder = mock(async (_input: unknown) => ({
   number: 1002,
   amountTotal: 25_000,
 }));
+class InstantOrderTotalChangedError extends Error {}
 mock.module("../../src/lib/commerce/orders", () => ({
+  InstantOrderTotalChangedError,
   attachOrderPaymentConfirmation: async () => {},
   attachPaymentId: async () => {},
   createInstantMadeToOrderOrder,
@@ -335,6 +337,7 @@ await test("instant create stores a fully prepaid order without Seller SKU", asy
   createPayment.mockClear();
   const result = await checkoutServices.createInstantMadeToOrder({
     ...createInput,
+    expectedTotalKopecks: 25_000,
     items: [{ productSlug: "shar", quantity: 1 }],
     expectedDeliveryKopecks: 15_000,
     expectedProductsKopecks: 10_000,
@@ -370,6 +373,7 @@ await test("instant create refuses a higher delivery price than the buyer saw", 
   createInstantMadeToOrderOrder.mockClear();
   const result = await checkoutServices.createInstantMadeToOrder({
     ...createInput,
+    expectedTotalKopecks: 25_000,
     items: [{ productSlug: "shar", quantity: 1 }],
     expectedDeliveryKopecks: 14_000,
   });
@@ -402,6 +406,7 @@ await test("instant create passes the promo code into the order", async () => {
   createInstantMadeToOrderOrder.mockClear();
   const result = await checkoutServices.createInstantMadeToOrder({
     ...createInput,
+    expectedTotalKopecks: 24_000,
     promoCode: "NEWYEAR",
     items: [{ productSlug: "shar", quantity: 1 }],
     expectedDeliveryKopecks: 15_000,
@@ -409,9 +414,10 @@ await test("instant create passes the promo code into the order", async () => {
   });
   expect(result.status).toBe("ok");
   const [order] = createInstantMadeToOrderOrder.mock.calls[0] as [
-    { promoCode?: string },
+    { promoCode?: string; expectedTotalKopecks: number },
   ];
   expect(order.promoCode).toBe("NEWYEAR");
+  expect(order.expectedTotalKopecks).toBe(24_000);
 });
 
 await test("instant create reports an invalid promo without creating payment", async () => {
@@ -422,6 +428,7 @@ await test("instant create reports an invalid promo without creating payment", a
   });
   const result = await checkoutServices.createInstantMadeToOrder({
     ...createInput,
+    expectedTotalKopecks: 24_000,
     promoCode: "NEWYEAR",
     items: [{ productSlug: "shar", quantity: 1 }],
   });

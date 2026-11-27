@@ -61,6 +61,7 @@ export {
   madeToOrderContactChannels,
   normalizeTelegramHandle,
   OptionsUnavailableError,
+  OrderTotalChangedError,
   type PhoneCheck,
   ProductsPriceChangedError,
   PromoCodeInvalidError,

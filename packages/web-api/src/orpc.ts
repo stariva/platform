@@ -177,6 +177,7 @@ export type InstantQuoteRejection =
 /** Отказы мгновенного новогоднего оформления. */
 export type InstantCheckoutRejection =
   | InstantQuoteRejection
+  | { status: "order_total_changed" }
   | { status: "promo_code_invalid"; reason: string };
 
 /**

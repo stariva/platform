@@ -25,6 +25,6 @@ ALTER TABLE "product_orders" ADD COLUMN "amount_discount" integer DEFAULT 0 NOT 
 ALTER TABLE "product_orders" ADD COLUMN "promo_code" text;--> statement-breakpoint
 ALTER TABLE "product_orders" ADD COLUMN "promo_code_id" text;--> statement-breakpoint
 CREATE UNIQUE INDEX "promo_codes_code_idx" ON "promo_codes" USING btree ("code");--> statement-breakpoint
-ALTER TABLE "product_orders" ADD CONSTRAINT "product_orders_promo_code_id_promo_codes_id_fk" FOREIGN KEY ("promo_code_id") REFERENCES "public"."promo_codes"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_orders" ADD CONSTRAINT "product_orders_promo_code_id_promo_codes_id_fk" FOREIGN KEY ("promo_code_id") REFERENCES "public"."promo_codes"("id") ON DELETE set null ON UPDATE no action NOT VALID;--> statement-breakpoint
 CREATE INDEX "product_orders_promo_code_idx" ON "product_orders" USING btree ("promo_code_id");--> statement-breakpoint
-ALTER TABLE "product_orders" ADD CONSTRAINT "product_orders_discount_range" CHECK ("product_orders"."amount_discount" >= 0 AND "product_orders"."amount_discount" <= "product_orders"."amount_products");
+ALTER TABLE "product_orders" ADD CONSTRAINT "product_orders_discount_range" CHECK ("product_orders"."amount_discount" >= 0 AND "product_orders"."amount_discount" <= "product_orders"."amount_products") NOT VALID;

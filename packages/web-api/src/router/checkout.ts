@@ -164,6 +164,8 @@ const createInstantMadeToOrder = checkout.createInstantMadeToOrder.handler(
         throw errors.DELIVERY_PRICE_CHANGED();
       case "products_price_changed":
         throw errors.PRODUCTS_PRICE_CHANGED();
+      case "order_total_changed":
+        throw errors.ORDER_TOTAL_CHANGED();
       case "promo_code_invalid":
         throw errors.PROMO_CODE_INVALID({
           data: { reason: result.reason },

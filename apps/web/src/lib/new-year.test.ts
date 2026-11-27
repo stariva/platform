@@ -4,13 +4,13 @@ import { existsSync } from "node:fs";
 import type { Product } from "./catalog/types";
 import {
   groupNewYearProducts,
-  ornaments,
   isNewYearSubcategory,
   newYearProductImage,
   newYearSetMerchandising,
   newYearSubcategoryFor,
   ornamentImage,
   ornamentSlug,
+  ornaments,
 } from "./new-year";
 
 const product = (overrides: Partial<Product>): Product => ({
@@ -112,9 +112,18 @@ test("new year image prefers the database photo and uses collection art only as 
 
 test("ornament fallback art uses files that exist for every collection item", () => {
   for (const ornament of ornaments) {
-    const file = ornamentImage(ornament.id).replace("/images/new-year/", "");
+    const image = ornamentImage(ornament.id);
     assert.equal(
-      existsSync(new URL(`../../public/images/new-year/${file}`, import.meta.url)),
+      newYearProductImage(
+        product({ slug: ornamentSlug(ornament.id), images: [] }),
+      ),
+      image,
+    );
+    const file = image.replace("/images/new-year/", "");
+    assert.equal(
+      existsSync(
+        new URL(`../../public/images/new-year/${file}`, import.meta.url),
+      ),
       true,
       ornament.id,
     );

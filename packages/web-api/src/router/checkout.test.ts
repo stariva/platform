@@ -14,6 +14,7 @@ const {
   OptionsUnavailableError,
   PaymentCreateFailedError,
   PaymentsUnavailableError,
+  OrderTotalChangedError,
   ProductsPriceChangedError,
   PromoCodeInvalidError,
   TELEGRAM_HANDLE_ERROR,
@@ -46,6 +47,8 @@ const createInput = {
   personalDataConsent: true as const,
   offerAccepted: true as const,
 };
+
+const instantCreateInput = { ...createInput, expectedTotalKopecks: 255000 };
 
 const madeToOrderInput = {
   contactName: "Анна",
@@ -526,7 +529,7 @@ test("instant made-to-order checkout uses its own quote and create services", as
         },
         createInstantMadeToOrder: async (input) => {
           seen.push(
-            `create:${input.expectedDeliveryKopecks}:${input.expectedProductsKopecks}`,
+            `create:${input.expectedDeliveryKopecks}:${input.expectedProductsKopecks}:${input.expectedTotalKopecks}`,
           );
           return { status: "ok", order: createdOrder };
         },
@@ -543,13 +546,13 @@ test("instant made-to-order checkout uses its own quote and create services", as
   ).toEqual(instantQuote);
   expect(
     await client.checkout.createInstantMadeToOrder({
-      ...createInput,
+      ...instantCreateInput,
       items: [{ productSlug: "shar", quantity: 2 }],
       expectedDeliveryKopecks: 15000,
       expectedProductsKopecks: 240000,
     }),
   ).toEqual(createdOrder);
-  expect(seen).toEqual(["quote:123", "create:15000:240000"]);
+  expect(seen).toEqual(["quote:123", "create:15000:240000:255000"]);
 });
 
 test("instant made-to-order create maps price changes and unavailable items", async () => {
@@ -563,7 +566,7 @@ test("instant made-to-order create maps price changes and unavailable items", as
     },
   });
   const [priceError] = await safe(
-    priceChanged.checkout.createInstantMadeToOrder(createInput),
+    priceChanged.checkout.createInstantMadeToOrder(instantCreateInput),
   );
   expect(priceError).toBeInstanceOf(DeliveryPriceChangedError);
   expect(lastStatus()).toBe(409);
@@ -579,12 +582,29 @@ test("instant made-to-order create maps price changes and unavailable items", as
     },
   });
   const [itemsError] = await safe(
-    unavailable.checkout.createInstantMadeToOrder(createInput),
+    unavailable.checkout.createInstantMadeToOrder(instantCreateInput),
   );
   expect(itemsError).toBeInstanceOf(ItemsUnavailableError);
   expect((itemsError as ItemsUnavailableError).data).toEqual({
     unavailableProductSlugs: ["shar"],
   });
+});
+
+test("instant create rejects a changed total with a conflict", async () => {
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        createInstantMadeToOrder: async () => ({
+          status: "order_total_changed",
+        }),
+      }),
+    },
+  });
+  const [error] = await safe(
+    client.checkout.createInstantMadeToOrder(instantCreateInput),
+  );
+  expect(error).toBeInstanceOf(OrderTotalChangedError);
+  expect(lastStatus()).toBe(409);
 });
 
 test("instant made-to-order maps the minimum-order rejection", async () => {
@@ -619,7 +639,7 @@ test("instant made-to-order maps the minimum-order rejection", async () => {
   });
 
   const [createError] = await safe(
-    client.checkout.createInstantMadeToOrder(createInput),
+    client.checkout.createInstantMadeToOrder(instantCreateInput),
   );
   expect(createError).toBeInstanceOf(MinimumOrderNotMetError);
 });
@@ -708,7 +728,7 @@ test("instant create passes the promo code and maps its rejection", async () => 
     },
   });
   await ok.checkout.createInstantMadeToOrder({
-    ...createInput,
+    ...instantCreateInput,
     promoCode: "NEWYEAR",
   });
   expect(seen).toEqual(["NEWYEAR"]);
@@ -725,7 +745,7 @@ test("instant create passes the promo code and maps its rejection", async () => 
   });
   const [error] = await safe(
     invalid.checkout.createInstantMadeToOrder({
-      ...createInput,
+      ...instantCreateInput,
       promoCode: "NEWYEAR",
     }),
   );

@@ -38,6 +38,11 @@ export function pluralFigurines(count: number): string {
   return "фигурок";
 }
 
+export function accusativeFigurines(count: number): string {
+  const form = pluralFigurines(count);
+  return form === "фигурка" ? "фигурку" : form;
+}
+
 export const ornaments = [
   {
     id: "shar",

@@ -6,6 +6,7 @@ import {
   type InstantMadeToOrderQuote,
   type InstantPromoValidation,
   ItemsUnavailableError,
+  OrderTotalChangedError,
   ProductsPriceChangedError,
   PromoCodeInvalidError,
 } from "@stariva/web-api/contract";
@@ -16,7 +17,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PickupPointPicker } from "@/components/checkout/pickup-point-picker";
 import { CheckoutProgress } from "@/components/stariva/checkout-progress";
@@ -109,11 +110,22 @@ export default function InstantMadeToOrderCheckoutPage() {
     items.map((item) => [item.productSlug, item.quantity]),
   );
 
-  // Скидка зависит от состава заказа: при его изменении промокод проверяем заново.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: quoteItemsKey намеренно сбрасывает промокод при изменении состава заказа
-  useEffect(() => {
+  const promoItemsKey = JSON.stringify(
+    items.map((item) => [
+      item.productId,
+      item.productSlug,
+      item.quantity,
+      item.price,
+    ]),
+  );
+  const activePromoCart = useRef<{ key: string } | null>(null);
+  useLayoutEffect(() => {
+    activePromoCart.current = { key: promoItemsKey };
     setPromoState({ status: "idle" });
-  }, [quoteItemsKey]);
+    return () => {
+      activePromoCart.current = null;
+    };
+  }, [promoItemsKey]);
 
   // Стоимость доставки считаем сразу после выбора пункта. Ozon Delivery for
   // Business оценивает заранее заданную посылку набора, карточки Seller не нужны.
@@ -220,6 +232,8 @@ export default function InstantMadeToOrderCheckoutPage() {
   }
 
   async function handleApplyPromo() {
+    const requestedCart = activePromoCart.current;
+    if (!requestedCart || promoState.status === "checking") return;
     const code = promoInput.trim();
     if (!code) {
       setPromoState({ status: "invalid", message: "Введите промокод" });
@@ -236,6 +250,7 @@ export default function InstantMadeToOrderCheckoutPage() {
           quantity: item.quantity,
         })),
       });
+      if (activePromoCart.current !== requestedCart) return;
       if (!validation.valid) {
         setPromoState({
           status: "invalid",
@@ -246,6 +261,7 @@ export default function InstantMadeToOrderCheckoutPage() {
       if (validation.code) setPromoInput(validation.code);
       setPromoState({ status: "valid", validation });
     } catch (error) {
+      if (activePromoCart.current !== requestedCart) return;
       if (error instanceof ItemsUnavailableError) {
         dropUnavailableItems(error.data.unavailableProductSlugs);
       }
@@ -259,9 +275,16 @@ export default function InstantMadeToOrderCheckoutPage() {
     }
   }
 
+  const discount =
+    promoState.status === "valid"
+      ? (promoState.validation.discountKopecks ?? 0)
+      : 0;
+
   async function handleConfirm() {
     if (
       !items.length ||
+      submitting ||
+      promoState.status === "checking" ||
       quoteState.status !== "ready" ||
       !selectedPoint ||
       !contact
@@ -297,6 +320,8 @@ export default function InstantMadeToOrderCheckoutPage() {
         },
         expectedDeliveryKopecks: quoteState.quote.deliveryPriceKopecks,
         expectedProductsKopecks: subtotal,
+        expectedTotalKopecks:
+          subtotal - discount + quoteState.quote.deliveryPriceKopecks,
         personalDataConsent: contact.personalDataConsent,
         offerAccepted: true,
       });
@@ -313,6 +338,16 @@ export default function InstantMadeToOrderCheckoutPage() {
         toast.error(error.message);
       } else if (error instanceof ProductsPriceChangedError) {
         refresh();
+        toast.error(error.message);
+      } else if (error instanceof OrderTotalChangedError) {
+        refresh();
+        setQuoteAttempt((n) => n + 1);
+        if (promoState.status === "valid") {
+          setPromoState({
+            status: "invalid",
+            message: "Проверьте промокод ещё раз",
+          });
+        }
         toast.error(error.message);
       } else if (error instanceof PromoCodeInvalidError) {
         setPromoState({
@@ -398,10 +433,6 @@ export default function InstantMadeToOrderCheckoutPage() {
     : quoteState.status === "loading"
       ? { status: "loading" }
       : { status: "unknown" };
-  const discount =
-    promoState.status === "valid"
-      ? (promoState.validation.discountKopecks ?? 0)
-      : 0;
   const total = subtotal - discount + (quote?.deliveryPriceKopecks ?? 0);
 
   const statusOf = (target: Step): SectionStatus => {
@@ -638,7 +669,9 @@ export default function InstantMadeToOrderCheckoutPage() {
                 </p>
                 <Button
                   onClick={handleConfirm}
-                  disabled={submitting || !quote}
+                  disabled={
+                    submitting || !quote || promoState.status === "checking"
+                  }
                   className="w-full h-14 rounded-full bg-espresso text-parchment hover:bg-espresso/85 text-[15px]"
                 >
                   {submitting ? (

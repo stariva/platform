@@ -173,15 +173,27 @@ export function discountedReceiptItems(
     throw new Error("promo_discount_covers_products");
   }
 
-  let distributed = 0;
-  return items.flatMap((item, index) => {
-    const lineTotal = item.price * item.quantity;
-    const lineDiscount =
-      index === items.length - 1
-        ? amountDiscount - distributed
-        : Math.floor((amountDiscount * lineTotal) / productsTotal);
-    distributed += lineDiscount;
-    const netTotal = lineTotal - lineDiscount;
+  const allocated = items.map((item) => {
+    const total = item.price * item.quantity;
+    const discount = Number(
+      (BigInt(amountDiscount) * BigInt(total)) / BigInt(productsTotal),
+    );
+    return { item, netTotal: total - discount };
+  });
+  let remaining =
+    amountDiscount -
+    productsTotal +
+    allocated.reduce((sum, line) => sum + line.netTotal, 0);
+  // Сначала отдаём остаток последней позиции, затем остальным, если её не хватило.
+  for (let index = allocated.length - 1; index >= 0 && remaining > 0; index--) {
+    const line = allocated[index];
+    if (!line) continue;
+    const extra = Math.min(remaining, line.netTotal);
+    line.netTotal -= extra;
+    remaining -= extra;
+  }
+
+  return allocated.flatMap(({ item, netTotal }) => {
     if (netTotal <= 0) return [];
 
     const unit = Math.floor(netTotal / item.quantity);
@@ -189,10 +201,13 @@ export function discountedReceiptItems(
     if (remainder === 0) {
       return [{ name: item.name, amount: unit, quantity: item.quantity }];
     }
-    return Array.from({ length: item.quantity }, (_, unitIndex) => ({
-      name: item.name,
-      amount: unit + (unitIndex < remainder ? 1 : 0),
-      quantity: 1,
-    }));
+    return Array.from(
+      { length: unit === 0 ? remainder : item.quantity },
+      (_, unitIndex) => ({
+        name: item.name,
+        amount: unit + (unitIndex < remainder ? 1 : 0),
+        quantity: 1,
+      }),
+    );
   });
 }

@@ -194,7 +194,10 @@ export async function createMadeToOrderOrder(
   return { id: orderId, number: created.number, amountTotal: amountProducts };
 }
 
+export class InstantOrderTotalChangedError extends Error {}
+
 export interface CreateInstantMadeToOrderOrderInput {
+  expectedTotalKopecks: number;
   userId?: string;
   attribution?: CampaignAttribution | null;
   visitor?: VisitorInfo | null;
@@ -255,6 +258,9 @@ export async function createInstantMadeToOrderOrder(
       promoCodeId = reserved.promo.id;
     }
     const amountTotal = amountProducts - amountDiscount + input.amountDelivery;
+    if (amountTotal !== input.expectedTotalKopecks) {
+      throw new InstantOrderTotalChangedError();
+    }
     assertValidOrderTotal(amountTotal);
 
     const [created] = await tx

@@ -46,6 +46,7 @@ import {
   createMadeToOrderOrder,
   createOrderPayment,
   createProductOrder,
+  InstantOrderTotalChangedError,
 } from "./orders";
 import { PromoCodeInvalidError, validateStoredPromoCode } from "./promo-codes";
 
@@ -526,6 +527,7 @@ export const checkoutServices: CheckoutServices = {
         contactEmail: data.contactEmail,
         comment: data.comment,
         promoCode: data.promoCode,
+        expectedTotalKopecks: data.expectedTotalKopecks,
         items,
         deliveryPointId: data.delivery.pointId,
         pickupPoint,
@@ -538,6 +540,9 @@ export const checkoutServices: CheckoutServices = {
         leadTime: MADE_TO_ORDER_DAYS,
       });
     } catch (error) {
+      if (error instanceof InstantOrderTotalChangedError) {
+        return { status: "order_total_changed" };
+      }
       if (error instanceof PromoCodeInvalidError) {
         return { status: "promo_code_invalid", reason: error.reason };
       }

@@ -42,9 +42,9 @@ import {
 } from "@/lib/in-stock";
 import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import {
+  accusativeFigurines,
   MIN_NEW_YEAR_ORNAMENT_QUANTITY,
   newYearFigurinesPerItem,
-  pluralFigurines,
 } from "@/lib/new-year";
 import { CartItemRow } from "./cart-item-row";
 import {
@@ -134,11 +134,11 @@ export default function CartPage() {
       items: sectionItems,
       minimumOrderMessage:
         minimumMissing > 0
-          ? `Минимальный заказ новогодних фигурок — ${MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт. Добавьте ещё ${minimumMissing} ${pluralFigurines(minimumMissing)}.`
+          ? `Минимальный заказ новогодних фигурок — ${MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт. Добавьте ещё ${minimumMissing} ${accusativeFigurines(minimumMissing)}.`
           : undefined,
       minimumOrderShortMessage:
         minimumMissing > 0
-          ? `Ещё ${minimumMissing} ${pluralFigurines(minimumMissing)} до минимума`
+          ? `Ещё ${minimumMissing} ${accusativeFigurines(minimumMissing)} до минимума`
           : undefined,
       unavailable: sectionItems.filter(
         (item) => stateOf(item).status === "unavailable",

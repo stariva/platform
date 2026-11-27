@@ -98,3 +98,15 @@ test("receipt lines without a discount keep catalog prices", () => {
     [{ name: "Шар", amount: 10_000, quantity: 2 }],
   );
 });
+
+test("receipt redistributes rounding remainder beyond the last line's capacity", () => {
+  const lines = discountedReceiptItems(
+    ["Шар", "Снежинка", "Домик", "Самовар"].map((name) => ({
+      name,
+      price: 1,
+      quantity: 1,
+    })),
+    3,
+  );
+  assert.deepEqual(lines, [{ name: "Шар", amount: 1, quantity: 1 }]);
+});

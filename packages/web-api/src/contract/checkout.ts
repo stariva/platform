@@ -36,6 +36,10 @@ export const ProductsPriceChangedError = error("PRODUCTS_PRICE_CHANGED", {
   message: "Цена товаров изменилась. Проверьте новую сумму и оплатите ещё раз.",
 });
 
+export const OrderTotalChangedError = error("ORDER_TOTAL_CHANGED", {
+  message: "Итог заказа изменился. Проверьте новую сумму перед оплатой.",
+});
+
 /**
  * Промокод нельзя применить к этому заказу. Точная причина — в `data.reason`,
  * её можно показать покупателю.
@@ -343,6 +347,8 @@ export const createInstantMadeToOrderInputSchema = z.object({
   contactPhone: phone,
   contactEmail: z.email("Укажите email").trim(),
   comment: z.string().trim().max(1500).optional(),
+  /** Итог в копейках, который покупатель подтвердил перед оплатой. */
+  expectedTotalKopecks: z.number().int().positive(),
   /** Промокод новогодней коллекции; сервер проверяет его заново. */
   promoCode: z.string().trim().min(3).max(40).optional(),
   items: z.array(stockItemSchema).min(1).max(MAX_MADE_TO_ORDER_LINES),
@@ -441,6 +447,7 @@ export const checkoutContract = {
       [DeliveryNotAvailableError.code]: DeliveryNotAvailableError,
       [DeliveryPriceChangedError.code]: DeliveryPriceChangedError,
       [ProductsPriceChangedError.code]: ProductsPriceChangedError,
+      [OrderTotalChangedError.code]: OrderTotalChangedError,
       [PromoCodeInvalidError.code]: PromoCodeInvalidError,
       [PaymentCreateFailedError.code]: PaymentCreateFailedError,
     })
