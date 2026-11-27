@@ -46,7 +46,7 @@ export function CartSourceBlock({ source }: { source: CartSource }) {
         </Badge>
       )}
       {details && (
-        <div className="text-muted-foreground text-xs break-words">
+        <div className="text-muted-foreground text-xs wrap-break-word">
           {details}
         </div>
       )}
@@ -59,7 +59,7 @@ export function CartSourceBlock({ source }: { source: CartSource }) {
         <div className="text-muted-foreground text-xs">с {entry.referrer}</div>
       )}
       {entry?.landing && (
-        <div className="text-muted-foreground text-xs break-words">
+        <div className="text-muted-foreground text-xs wrap-break-word">
           вход: {entry.landing}
         </div>
       )}

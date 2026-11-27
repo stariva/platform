@@ -88,7 +88,7 @@ export function ClicksTable({ rows }: { rows: ClickTableRow[] }) {
                 </TableCell>
                 <TableCell className="max-w-[240px] text-sm whitespace-normal">
                   <Badge variant="outline">{CHANNEL_LABELS[row.channel]}</Badge>
-                  <div className="text-muted-foreground mt-1 text-xs break-words">
+                  <div className="text-muted-foreground mt-1 text-xs wrap-break-word">
                     {[block, row.page].filter(Boolean).join(" · ")}
                   </div>
                 </TableCell>
@@ -133,7 +133,7 @@ export function ClicksTable({ rows }: { rows: ClickTableRow[] }) {
                     </Badge>
                   )}
                   {details && (
-                    <div className="text-muted-foreground text-xs break-words">
+                    <div className="text-muted-foreground text-xs wrap-break-word">
                       {details}
                     </div>
                   )}
@@ -148,7 +148,7 @@ export function ClicksTable({ rows }: { rows: ClickTableRow[] }) {
                     </div>
                   )}
                   {row.entry?.landing && (
-                    <div className="text-muted-foreground text-xs break-words">
+                    <div className="text-muted-foreground text-xs wrap-break-word">
                       вход: {row.entry.landing}
                     </div>
                   )}
