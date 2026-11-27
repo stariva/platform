@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     description:
       "Маленькие истории для вашей ёлки. Коллекция украшений с народными орнаментами.",
     url: `${SITE_URL}${NEW_YEAR_PATH}`,
-    images: [{ url: NEW_YEAR_IMAGE, width: 1280, height: 853 }],
+    images: [{ url: NEW_YEAR_IMAGE, width: 1280, height: 1067 }],
   },
   twitter: {
     card: "summary_large_image",
@@ -232,14 +232,15 @@ export default function NewYearPage() {
           <figure className="relative min-h-80 lg:min-h-[660px]">
             <Image
               src={NEW_YEAR_IMAGE}
-              alt="Красно-молочные ёлочные украшения с народными узорами среди еловых ветвей"
+              alt="Красно-молочные новогодние фигурки с народными узорами: цветочный шар, резной наличник, балалайка, петушок и венок"
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 55vw"
-              className="object-cover"
+              className="object-contain"
             />
-            <figcaption className="absolute bottom-4 left-4 right-4 rounded-lg bg-parchment/95 px-4 py-3 text-xs text-espresso">
-              Настроение коллекции. Точный состав каждого набора указан ниже.
+            <figcaption className="sr-only">
+              Цветочный шар, резной наличник, балалайка, петушок и венок с
+              бантом.
             </figcaption>
           </figure>
         </section>
@@ -270,9 +271,9 @@ export default function NewYearPage() {
             </div>
             <div className="flex flex-col gap-5 text-taupe leading-relaxed">
               <p>
-                Резные наличники, нарядный самовар, пряничный домик. Мы собрали
-                знакомые образы в коллекцию подвесных украшений с растительными
-                орнаментами.
+                Цветочный шар, нарядный петушок, балалайка и резной наличник. Мы
+                собрали знакомые образы в коллекцию подвесных украшений с
+                растительными орнаментами.
               </p>
               <p>
                 Фигурки напечатаны на 3D-принтере. У этой технологии есть своя
