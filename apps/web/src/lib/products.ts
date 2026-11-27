@@ -1,5 +1,9 @@
 import type { Category, Product } from "./catalog/types";
-import { NEW_YEAR_IMAGE, NEW_YEAR_PATH } from "./new-year";
+import {
+  isNewYearSubcategory,
+  NEW_YEAR_IMAGE,
+  NEW_YEAR_PATH,
+} from "./new-year";
 
 export const categories: Category[] = [
   {
@@ -124,6 +128,9 @@ export const catalogSections = [
 
 /** Раздел каталога для хлебных крошек товара: абажуры ведут на свою страницу. */
 export function getProductSection(category: Category, subcategory: string) {
+  if (isNewYearSubcategory(subcategory)) {
+    return { name: "Новогодние украшения", href: NEW_YEAR_PATH };
+  }
   return subcategory === LAMPSHADE_SUBCATEGORY
     ? { name: "Абажуры", href: LAMPSHADES_HREF }
     : { name: category.name, href: `/catalog/${category.slug}` };

@@ -6,6 +6,7 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { categories, getProductsByCategory } from "@/lib/catalog/service";
+import { newYearSubcategoryFor } from "@/lib/new-year";
 import {
   getCategoryBySlug,
   LAMPSHADE_SUBCATEGORY,
@@ -76,7 +77,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   // Абажуры — отдельный раздел (/abazhury), в «Декоре интерьера» их не дублируем
   const products = (await getProductsByCategory(categorySlug)).filter(
-    (p) => p.subcategory !== LAMPSHADE_SUBCATEGORY,
+    (p) => p.subcategory !== LAMPSHADE_SUBCATEGORY && !newYearSubcategoryFor(p),
   );
   const subcategories = category.subcategories.filter(
     (s) => s.slug !== LAMPSHADE_SUBCATEGORY,

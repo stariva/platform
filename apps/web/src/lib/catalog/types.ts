@@ -34,7 +34,10 @@ export type ProductSubcategory =
   | "totes"
   | "crossbody"
   | "trees"
-  | "kits";
+  | "kits"
+  | "ornaments"
+  | "ornament_sets"
+  | "gift_boxes";
 
 export interface Product {
   id: string;
