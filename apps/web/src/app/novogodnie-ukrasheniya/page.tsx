@@ -209,7 +209,7 @@ export default function NewYearPage() {
           { name: "Новогодние украшения", href: NEW_YEAR_PATH },
         ]}
       />
-      <main className="ny-page bg-parchment pt-[60px] text-espresso lg:pt-[68px]">
+      <main className="ny-page bg-parchment pt-15 text-espresso lg:pt-17">
         <section className="ny-hero">
           <div className="flex flex-col items-start justify-center px-6 py-12 lg:px-16 lg:py-20">
             <nav
@@ -247,7 +247,7 @@ export default function NewYearPage() {
               Созданы на 3D-принтере · вдохновлены народными орнаментами
             </p>
           </div>
-          <figure className="relative min-h-80 lg:min-h-[660px]">
+          <figure className="relative min-h-80 lg:min-h-165">
             <Image
               src={NEW_YEAR_IMAGE}
               alt="Красно-молочные новогодние фигурки с народными узорами: цветочный шар, резной наличник, балалайка, петушок и венок"
