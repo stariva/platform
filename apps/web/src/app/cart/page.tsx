@@ -41,6 +41,11 @@ import {
   shipsFromLabel,
 } from "@/lib/in-stock";
 import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
+import {
+  MIN_NEW_YEAR_ORNAMENT_QUANTITY,
+  newYearFigurinesPerItem,
+  pluralFigurines,
+} from "@/lib/new-year";
 import { CartItemRow } from "./cart-item-row";
 import {
   type CartCheckoutKind,
@@ -108,9 +113,30 @@ export default function CartPage() {
     const buyable = sectionItems.filter(
       (item) => stateOf(item).status !== "unavailable",
     );
+    const figurineQuantity =
+      kind === "instant_made_to_order"
+        ? buyable.reduce(
+            (sum, item) =>
+              sum + item.quantity * newYearFigurinesPerItem(item.productSlug),
+            0,
+          )
+        : 0;
+    const minimumMissing =
+      kind === "instant_made_to_order" &&
+      figurineQuantity < MIN_NEW_YEAR_ORNAMENT_QUANTITY
+        ? MIN_NEW_YEAR_ORNAMENT_QUANTITY - figurineQuantity
+        : 0;
     return {
       kind,
       items: sectionItems,
+      minimumOrderMessage:
+        minimumMissing > 0
+          ? `Минимальный заказ фигурок поштучно — ${MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт. Добавьте ещё ${minimumMissing} ${pluralFigurines(minimumMissing)}.`
+          : undefined,
+      minimumOrderShortMessage:
+        minimumMissing > 0
+          ? `Ещё ${minimumMissing} ${pluralFigurines(minimumMissing)} до минимума`
+          : undefined,
       unavailable: sectionItems.filter(
         (item) => stateOf(item).status === "unavailable",
       ),
@@ -295,6 +321,7 @@ export default function CartPage() {
                       unavailableCount={section.unavailable.length}
                       checking={loading}
                       leadTime={section.leadTime}
+                      minimumOrderMessage={section.minimumOrderMessage}
                       onRemoveUnavailable={() =>
                         removeUnavailable(section.unavailable)
                       }
@@ -313,7 +340,12 @@ export default function CartPage() {
           kind={single.kind}
           subtotal={single.subtotal}
           count={single.count}
-          blocked={single.unavailable.length > 0 || single.count === 0}
+          blocked={
+            single.unavailable.length > 0 ||
+            single.count === 0 ||
+            Boolean(single.minimumOrderMessage)
+          }
+          blockedNote={single.minimumOrderShortMessage}
           visible={!ctaInView}
         />
       )}

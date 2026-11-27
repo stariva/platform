@@ -9,6 +9,7 @@ const {
   DeliveryPriceChangedError,
   DeliveryUnavailableError,
   ItemsUnavailableError,
+  MinimumOrderNotMetError,
   normalizeTelegramHandle,
   OptionsUnavailableError,
   PaymentCreateFailedError,
@@ -571,4 +572,41 @@ test("instant made-to-order create maps price changes and unavailable items", as
   expect((itemsError as ItemsUnavailableError).data).toEqual({
     unavailableProductSlugs: ["shar"],
   });
+});
+
+test("instant made-to-order maps the minimum-order rejection", async () => {
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        quoteInstantMadeToOrder: async () => ({
+          status: "minimum_order_not_met",
+          minimum: 7,
+          quantity: 3,
+        }),
+        createInstantMadeToOrder: async () => ({
+          status: "minimum_order_not_met",
+          minimum: 7,
+          quantity: 3,
+        }),
+      }),
+    },
+  });
+
+  const [quoteError] = await safe(
+    client.checkout.quoteInstantMadeToOrder({
+      contactPhone: "+7 900 123-45-67",
+      items: [{ productSlug: "shar", quantity: 3 }],
+      delivery: { method: "pickup", pointId: "123" },
+    }),
+  );
+  expect(quoteError).toBeInstanceOf(MinimumOrderNotMetError);
+  expect((quoteError as MinimumOrderNotMetError).data).toEqual({
+    minimum: 7,
+    quantity: 3,
+  });
+
+  const [createError] = await safe(
+    client.checkout.createInstantMadeToOrder(createInput),
+  );
+  expect(createError).toBeInstanceOf(MinimumOrderNotMetError);
 });

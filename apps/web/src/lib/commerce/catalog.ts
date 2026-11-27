@@ -8,7 +8,11 @@ import {
   PHOTO_COLOR,
   PHOTO_SIZE,
 } from "@/lib/made-to-order";
-import { newYearSubcategoryFor } from "@/lib/new-year";
+import {
+  MIN_NEW_YEAR_ORNAMENT_QUANTITY,
+  newYearFigurinesPerItem,
+  newYearSubcategoryFor,
+} from "@/lib/new-year";
 import { applyBundlePricing } from "./bundles";
 import { elkaKitPrice } from "./elka-kit-price";
 import {
@@ -43,6 +47,17 @@ export class CatalogItemsUnavailableError extends Error {
   constructor(readonly productSlugs: string[]) {
     super(`catalog_product_unavailable:${productSlugs.join(",")}`);
     this.name = "CatalogItemsUnavailableError";
+  }
+}
+
+/** В мгновенном новогоднем заказе слишком мало отдельных фигурок. */
+export class NewYearMinimumOrderError extends Error {
+  constructor(
+    readonly quantity: number,
+    readonly minimum = MIN_NEW_YEAR_ORNAMENT_QUANTITY,
+  ) {
+    super(`new_year_minimum_order:${quantity}/${minimum}`);
+    this.name = "NewYearMinimumOrderError";
   }
 }
 
@@ -181,6 +196,7 @@ export async function resolveInstantMadeToOrderItems(
   }
   const resolved: ResolvedMadeToOrderItem[] = [];
   const unavailable = new Set<string>();
+  let figurineQuantity = 0;
 
   for (const [productSlug, quantity] of quantities) {
     const product = productsBySlug.get(productSlug);
@@ -201,6 +217,12 @@ export async function resolveInstantMadeToOrderItems(
       unavailable.add(productSlug);
       continue;
     }
+    const subcategory = newYearSubcategoryFor(product);
+    if (subcategory === "ornaments") {
+      figurineQuantity += quantity;
+    } else if (subcategory === "ornament_sets") {
+      figurineQuantity += quantity * newYearFigurinesPerItem(productSlug);
+    }
     resolved.push({
       productSlug,
       quantity,
@@ -216,6 +238,9 @@ export async function resolveInstantMadeToOrderItems(
 
   if (unavailable.size > 0) {
     throw new CatalogItemsUnavailableError([...unavailable]);
+  }
+  if (figurineQuantity < MIN_NEW_YEAR_ORNAMENT_QUANTITY) {
+    throw new NewYearMinimumOrderError(figurineQuantity);
   }
   return resolved;
 }

@@ -5,7 +5,7 @@ import { NEW_YEAR_IMAGE, NEW_YEAR_PATH } from "@/lib/new-year";
 export function NewYearTeaser() {
   return (
     <section
-      className="mx-auto max-w-[1440px] px-5 py-12 lg:px-12"
+      className="mx-auto max-w-360 px-5 py-12 lg:px-12"
       aria-labelledby="new-year-teaser-title"
     >
       <Link

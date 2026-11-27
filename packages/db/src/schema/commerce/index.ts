@@ -3,6 +3,7 @@ export * from "./order-items";
 export * from "./order-payments";
 export * from "./orders";
 export * from "./products";
+export * from "./promo-codes";
 export * from "./receipts";
 export * from "./reviews";
 export * from "./robokassa-invoices";

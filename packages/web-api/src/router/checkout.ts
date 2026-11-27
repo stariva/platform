@@ -96,13 +96,44 @@ const quoteInstantMadeToOrder = checkout.quoteInstantMadeToOrder.handler(
         throw errors.ITEMS_UNAVAILABLE({
           data: { unavailableProductSlugs: result.unavailableProductSlugs },
         });
+      case "minimum_order_not_met":
+        throw errors.MINIMUM_ORDER_NOT_MET({
+          data: { minimum: result.minimum, quantity: result.quantity },
+        });
       case "check_failed":
         throw errors.CHECKOUT_CHECK_FAILED({
           message: "Не удалось рассчитать стоимость доставки",
         });
     }
+    throw errors.CHECKOUT_CHECK_FAILED({
+      message: "Не удалось рассчитать стоимость доставки",
+    });
   },
 );
+
+const validateInstantMadeToOrderPromo =
+  checkout.validateInstantMadeToOrderPromo.handler(
+    async ({ input, context, errors }) => {
+      const result =
+        await context.services.checkout.validateInstantMadeToOrderPromo(input);
+      switch (result.status) {
+        case "ok":
+          return result.validation;
+        case "items_unavailable":
+          throw errors.ITEMS_UNAVAILABLE({
+            data: { unavailableProductSlugs: result.unavailableProductSlugs },
+          });
+        case "minimum_order_not_met":
+          throw errors.MINIMUM_ORDER_NOT_MET({
+            data: { minimum: result.minimum, quantity: result.quantity },
+          });
+        case "check_failed":
+          throw errors.CHECKOUT_CHECK_FAILED({
+            message: "Не удалось проверить промокод",
+          });
+      }
+    },
+  );
 
 const createInstantMadeToOrder = checkout.createInstantMadeToOrder.handler(
   async ({ input, context, errors }) => {
@@ -121,6 +152,10 @@ const createInstantMadeToOrder = checkout.createInstantMadeToOrder.handler(
         throw errors.ITEMS_UNAVAILABLE({
           data: { unavailableProductSlugs: result.unavailableProductSlugs },
         });
+      case "minimum_order_not_met":
+        throw errors.MINIMUM_ORDER_NOT_MET({
+          data: { minimum: result.minimum, quantity: result.quantity },
+        });
       case "check_failed":
         throw errors.CHECKOUT_CHECK_FAILED();
       case "delivery_unavailable":
@@ -129,6 +164,10 @@ const createInstantMadeToOrder = checkout.createInstantMadeToOrder.handler(
         throw errors.DELIVERY_PRICE_CHANGED();
       case "products_price_changed":
         throw errors.PRODUCTS_PRICE_CHANGED();
+      case "promo_code_invalid":
+        throw errors.PROMO_CODE_INVALID({
+          data: { reason: result.reason },
+        });
       case "payment_failed":
         throw errors.PAYMENT_CREATE_FAILED();
     }
@@ -168,6 +207,7 @@ export const checkoutRouter = {
   create,
   checkInstantMadeToOrderPhone,
   quoteInstantMadeToOrder,
+  validateInstantMadeToOrderPromo,
   createInstantMadeToOrder,
   requestMadeToOrder,
 };

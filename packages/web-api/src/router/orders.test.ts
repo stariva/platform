@@ -27,6 +27,8 @@ const view = {
   paid: false,
   amountTotal: 500000,
   amountProducts: 450000,
+  amountDiscount: 0,
+  promoCode: null,
   amountDelivery: 50000,
   depositAmount: 250000,
   depositPaid: false,

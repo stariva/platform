@@ -33,6 +33,10 @@ mock.module("../../src/lib/commerce/catalog", () => ({
     productSlugs: string[] = [];
   },
   MadeToOrderOptionsError: class extends Error {},
+  NewYearMinimumOrderError: class extends Error {
+    minimum = 7;
+    quantity = 0;
+  },
   resolveCatalogItems,
   resolveInstantMadeToOrderItems,
   resolveMadeToOrderItems: async () => [],

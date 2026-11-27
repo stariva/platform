@@ -9,6 +9,7 @@ import {
   type CustomOrderRequest,
   type EmailEventsSyncResult,
   type InstantMadeToOrderQuote,
+  type InstantPromoValidation,
   type LessonVideoResult,
   type MadeToOrderDeliverySweepResult,
   type MadeToOrderRequest,
@@ -19,6 +20,7 @@ import {
   type PhoneCheck,
   type QuoteInput,
   type ReminderSweepResult,
+  type ValidateInstantPromoInput,
   type WorkshopReview,
   webContract,
 } from "./contract";
@@ -161,6 +163,23 @@ export type CheckoutRejection =
   | { status: "check_failed" };
 
 /**
+ * Отказы расчёта и проверки промокода: до создания заказа промокод ещё не
+ * применяется, поэтому `promo_code_invalid` здесь невозможен.
+ */
+export type InstantQuoteRejection =
+  | CheckoutRejection
+  | {
+      status: "minimum_order_not_met";
+      minimum: number;
+      quantity: number;
+    };
+
+/** Отказы мгновенного новогоднего оформления. */
+export type InstantCheckoutRejection =
+  | InstantQuoteRejection
+  | { status: "promo_code_invalid"; reason: string };
+
+/**
  * Оформление заказа: каталог, Ozon Доставка, ЮKassa, атрибуция и уведомления
  * живут в витрине (apps/web/src/lib/commerce/checkout-services.ts). Сервисы
  * сами пишут сбои в лог и возвращают отказ, процедуры превращают его в
@@ -208,7 +227,12 @@ export interface CheckoutServices {
   ) => Promise<
     | { status: "ok"; quote: InstantMadeToOrderQuote }
     | { status: "unconfigured" }
-    | CheckoutRejection
+    | InstantQuoteRejection
+  >;
+  validateInstantMadeToOrderPromo: (
+    input: ValidateInstantPromoInput,
+  ) => Promise<
+    { status: "ok"; validation: InstantPromoValidation } | InstantQuoteRejection
   >;
   createInstantMadeToOrder: (
     input: CreateInstantMadeToOrderInput & {
@@ -222,7 +246,7 @@ export interface CheckoutServices {
     | { status: "delivery_price_changed" }
     | { status: "products_price_changed" }
     | { status: "payment_failed" }
-    | CheckoutRejection
+    | InstantCheckoutRejection
   >;
   requestMadeToOrder: (
     input: MadeToOrderRequest & { userId: string | null; headers: Headers },

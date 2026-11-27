@@ -124,6 +124,10 @@ export const orderViewSchema = z.object({
   paid: z.boolean(),
   amountTotal: z.number().int().nonnegative(),
   amountProducts: z.number().int().nonnegative(),
+  /** Скидка по промокоду на изделия. */
+  amountDiscount: z.number().int().nonnegative(),
+  /** Канонический промокод из заказа; null — без промокода. */
+  promoCode: z.string().nullable(),
   amountDelivery: z.number().int().nonnegative(),
   // Под заказ: условия, согласованные мастером, и что оплачивать сейчас
   depositAmount: z.number().int().nullable(),

@@ -7,6 +7,7 @@ import { adminMetrikaRouter } from "./metrika";
 import { adminOrdersRouter } from "./orders";
 import { adminPagespeedRouter } from "./pagespeed";
 import { adminProductsRouter } from "./products";
+import { adminPromoCodesRouter } from "./promo-codes";
 import { adminPurchaseMapRouter } from "./purchase-map";
 import { adminReceiptsRouter } from "./receipts";
 import { adminRequestsRouter } from "./requests";
@@ -18,6 +19,7 @@ import { adminWorkshopsRouter } from "./workshops";
 
 export const adminRouter = {
   products: adminProductsRouter,
+  promoCodes: adminPromoCodesRouter,
   orders: adminOrdersRouter,
   carts: adminCartsRouter,
   purchaseMap: adminPurchaseMapRouter,

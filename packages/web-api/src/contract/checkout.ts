@@ -37,12 +37,30 @@ export const ProductsPriceChangedError = error("PRODUCTS_PRICE_CHANGED", {
 });
 
 /**
+ * Промокод нельзя применить к этому заказу. Точная причина — в `data.reason`,
+ * её можно показать покупателю.
+ */
+export const PromoCodeInvalidError = error("PROMO_CODE_INVALID", {
+  message: "Промокод больше не действует",
+  data: z.object({ reason: z.string() }),
+});
+
+/**
  * Товары из корзины сняты с продажи или раскуплены. Витрина убирает их из
  * корзины по списку.
  */
 export const ItemsUnavailableError = error("ITEMS_UNAVAILABLE", {
   message: "Некоторых товаров из корзины уже нет в наличии",
   data: z.object({ unavailableProductSlugs: z.array(z.string()).min(1) }),
+});
+
+/** В заказе есть отдельные новогодние фигурки, но их меньше минимальной партии. */
+export const MinimumOrderNotMetError = error("MINIMUM_ORDER_NOT_MET", {
+  message: "Минимальный заказ новогодних фигурок — 7 шт.",
+  data: z.object({
+    minimum: z.number().int().positive(),
+    quantity: z.number().int().nonnegative(),
+  }),
 });
 
 /** Выбранные размер или цвет изделия под заказ больше недоступны. */
@@ -286,6 +304,36 @@ export type InstantMadeToOrderQuote = z.infer<
   typeof instantMadeToOrderQuoteSchema
 >;
 
+/** Проверка промокода новогоднего набора по актуальным ценам каталога. */
+export const validateInstantPromoInputSchema = z.object({
+  code: z.string().trim().min(3, "Введите промокод").max(40),
+  items: z.array(stockItemSchema).min(1).max(MAX_MADE_TO_ORDER_LINES),
+});
+
+export type ValidateInstantPromoInput = z.infer<
+  typeof validateInstantPromoInputSchema
+>;
+
+/** Результат проверки промокода; суммы в копейках. */
+export const instantPromoValidationSchema = z.object({
+  valid: z.boolean(),
+  /** Почему промокод не применяется; null — применён. */
+  reason: z.string().nullable(),
+  /** Канонический код в верхнем регистре. */
+  code: z.string().nullable(),
+  discountType: z.enum(["percent", "fixed"]).nullable(),
+  /** Процент или сумма в копейках — как настроено в админке. */
+  discountValue: z.number().int().positive().nullable(),
+  /** Скидка на текущий состав заказа. */
+  discountKopecks: z.number().int().nonnegative().nullable(),
+  /** Стоимость изделий до скидки. */
+  productsKopecks: z.number().int().nonnegative(),
+});
+
+export type InstantPromoValidation = z.infer<
+  typeof instantPromoValidationSchema
+>;
+
 /**
  * Мгновенное оформление изделий, которые производятся после оплаты: доставка
  * считается сразу по заранее известной посылке, без карточек и SKU Ozon Seller.
@@ -295,6 +343,8 @@ export const createInstantMadeToOrderInputSchema = z.object({
   contactPhone: phone,
   contactEmail: z.email("Укажите email").trim(),
   comment: z.string().trim().max(1500).optional(),
+  /** Промокод новогодней коллекции; сервер проверяет его заново. */
+  promoCode: z.string().trim().min(3).max(40).optional(),
   items: z.array(stockItemSchema).min(1).max(MAX_MADE_TO_ORDER_LINES),
   delivery: pickupDeliverySchema,
   /** Не создаём платёж, если серверная доставка дороже показанной покупателю. */
@@ -360,10 +410,21 @@ export const checkoutContract = {
     .errors({
       [DeliveryUnavailableError.code]: DeliveryUnavailableError,
       [ItemsUnavailableError.code]: ItemsUnavailableError,
+      [MinimumOrderNotMetError.code]: MinimumOrderNotMetError,
       [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
     })
     .input(quoteInputSchema)
     .output(instantMadeToOrderQuoteSchema),
+
+  /** Проверяет промокод новогоднего набора и считает скидку по ценам сервера. */
+  validateInstantMadeToOrderPromo: oc
+    .errors({
+      [ItemsUnavailableError.code]: ItemsUnavailableError,
+      [MinimumOrderNotMetError.code]: MinimumOrderNotMetError,
+      [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
+    })
+    .input(validateInstantPromoInputSchema)
+    .output(instantPromoValidationSchema),
 
   /**
    * Проверяет состав и доставку, сохраняет заказ как полностью оплачиваемый
@@ -375,10 +436,12 @@ export const checkoutContract = {
     .errors({
       [PaymentsUnavailableError.code]: PaymentsUnavailableError,
       [ItemsUnavailableError.code]: ItemsUnavailableError,
+      [MinimumOrderNotMetError.code]: MinimumOrderNotMetError,
       [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
       [DeliveryNotAvailableError.code]: DeliveryNotAvailableError,
       [DeliveryPriceChangedError.code]: DeliveryPriceChangedError,
       [ProductsPriceChangedError.code]: ProductsPriceChangedError,
+      [PromoCodeInvalidError.code]: PromoCodeInvalidError,
       [PaymentCreateFailedError.code]: PaymentCreateFailedError,
     })
     .input(createInstantMadeToOrderInputSchema)

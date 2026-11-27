@@ -26,6 +26,7 @@ import { collectVisitor } from "@/lib/visitor";
 import {
   CatalogItemsUnavailableError,
   MadeToOrderOptionsError,
+  NewYearMinimumOrderError,
   resolveCatalogItems,
   resolveInstantMadeToOrderItems,
   resolveMadeToOrderItems,
@@ -46,6 +47,7 @@ import {
   createOrderPayment,
   createProductOrder,
 } from "./orders";
+import { PromoCodeInvalidError, validateStoredPromoCode } from "./promo-codes";
 
 /**
  * Расчёта нет, потому что Ozon не ответил: покупателю доставка бесплатна, а
@@ -406,7 +408,45 @@ export const checkoutServices: CheckoutServices = {
       if (error instanceof CatalogItemsUnavailableError) {
         return unavailableItems(error);
       }
+      if (error instanceof NewYearMinimumOrderError) {
+        return {
+          status: "minimum_order_not_met",
+          minimum: error.minimum,
+          quantity: error.quantity,
+        };
+      }
       console.error("[checkout/instant-quote] Ошибка:", error);
+      return { status: "check_failed" };
+    }
+  },
+
+  async validateInstantMadeToOrderPromo(input) {
+    try {
+      const items = await resolveInstantMadeToOrderItems(input.items);
+      const productsKopecks = items.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      );
+      const evaluation = await validateStoredPromoCode(
+        input.code,
+        productsKopecks,
+      );
+      return {
+        status: "ok",
+        validation: { ...evaluation, productsKopecks },
+      };
+    } catch (error) {
+      if (error instanceof CatalogItemsUnavailableError) {
+        return unavailableItems(error);
+      }
+      if (error instanceof NewYearMinimumOrderError) {
+        return {
+          status: "minimum_order_not_met",
+          minimum: error.minimum,
+          quantity: error.quantity,
+        };
+      }
+      console.error("[checkout/instant-promo] Ошибка:", error);
       return { status: "check_failed" };
     }
   },
@@ -422,6 +462,13 @@ export const checkoutServices: CheckoutServices = {
     } catch (error) {
       if (error instanceof CatalogItemsUnavailableError) {
         return unavailableItems(error);
+      }
+      if (error instanceof NewYearMinimumOrderError) {
+        return {
+          status: "minimum_order_not_met",
+          minimum: error.minimum,
+          quantity: error.quantity,
+        };
       }
       console.error("[checkout/instant-create] Ошибка проверки заказа:", error);
       return { status: "check_failed" };
@@ -478,6 +525,7 @@ export const checkoutServices: CheckoutServices = {
         contactPhone: data.contactPhone,
         contactEmail: data.contactEmail,
         comment: data.comment,
+        promoCode: data.promoCode,
         items,
         deliveryPointId: data.delivery.pointId,
         pickupPoint,
@@ -490,6 +538,9 @@ export const checkoutServices: CheckoutServices = {
         leadTime: MADE_TO_ORDER_DAYS,
       });
     } catch (error) {
+      if (error instanceof PromoCodeInvalidError) {
+        return { status: "promo_code_invalid", reason: error.reason };
+      }
       console.error(
         "[checkout/instant-create] Ошибка сохранения заказа:",
         error,

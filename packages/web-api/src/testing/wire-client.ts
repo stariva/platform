@@ -80,6 +80,7 @@ const idleServices: WebServices = {
     create: async () => ({ status: "unconfigured" }),
     checkInstantMadeToOrderPhone: async () => ({ status: "unconfigured" }),
     quoteInstantMadeToOrder: async () => ({ status: "unconfigured" }),
+    validateInstantMadeToOrderPromo: async () => ({ status: "check_failed" }),
     createInstantMadeToOrder: async () => ({ status: "unconfigured" }),
     requestMadeToOrder: async () => ({ status: "check_failed" }),
   },

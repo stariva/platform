@@ -31,6 +31,7 @@ import { fetchPayment } from "@/lib/payments/status";
 import { grantKitWorkshops } from "@/lib/workshops/kit-access";
 
 import { createMadeToOrderShipment } from "./made-to-order-shipment";
+import { discountedReceiptItems } from "./promo-codes";
 
 type ProductOrder = NonNullable<
   Awaited<ReturnType<typeof getProductOrderById>>
@@ -275,11 +276,7 @@ async function handleMadeToOrderPayment(
         ? [
             // Мгновенный заказ оплачен целиком одним платежом: в чеке —
             // сами изделия и доставка, а не авансовая «предоплата»
-            ...items.map((item) => ({
-              name: item.name,
-              amount: item.price,
-              quantity: item.quantity,
-            })),
+            ...discountedReceiptItems(items, order.amountDiscount),
             ...(order.amountDelivery > 0
               ? [
                   {
