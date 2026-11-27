@@ -48,6 +48,27 @@ const NEW_YEAR_EXAMPLES = [
   },
 ] as const;
 
+const NEW_YEAR_PACKAGING = [
+  {
+    src: "/images/new-year/gift-box-closed.webp",
+    alt: "Закрытая красная подарочная коробка с молочным растительным орнаментом и надписью «Зимний уют»",
+    title: "Готова к вручению",
+    text: "Закрытая коробка выглядит как самостоятельный подарок — дополнительно упаковывать её не нужно.",
+  },
+  {
+    src: "/images/new-year/gift-box-open.webp",
+    alt: "Красная выдвижная подарочная коробка, приоткрытая вместе с внутренним ложементом для украшений",
+    title: "Выдвижной ящик",
+    text: "Крышка сдвигается в сторону и открывает аккуратный ряд ячеек для каждой фигурки.",
+  },
+  {
+    src: "/images/new-year/gift-box-inside.webp",
+    alt: "Открытая подарочная коробка с новогодними украшениями внутри индивидуальных ячеек",
+    title: "Фигурки на своих местах",
+    text: "Внутри украшения разложены по отдельным углублениям, чтобы не соприкасаться в дороге.",
+  },
+] as const;
+
 export const metadata: Metadata = {
   title: "Новогодние наборы украшений — коллекция «Русская сказка»",
   description:
@@ -312,6 +333,51 @@ export default function NewYearPage() {
         >
           <Collection />
         </Suspense>
+        <section
+          id="packaging"
+          className="ny-section"
+          aria-labelledby="packaging-title"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="ny-eyebrow">Подарочный набор</p>
+              <h2 id="packaging-title" className="ny-heading">
+                Как выглядит праздничная упаковка
+              </h2>
+            </div>
+            <p className="max-w-md leading-relaxed text-taupe">
+              Визуализация показывает формат подарочной коробки: красный
+              выдвижной футляр с молочным орнаментом и отдельными ячейками для
+              фигурок. Оформление зависит от выбранного набора.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {NEW_YEAR_PACKAGING.map((item) => (
+              <figure
+                key={item.src}
+                className="group overflow-hidden rounded-3xl bg-sand"
+              >
+                <span className="relative block aspect-square overflow-hidden">
+                  <Image
+                    src={item.src}
+                    alt={item.alt}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]"
+                  />
+                </span>
+                <figcaption className="p-5">
+                  <h3 className="font-serif text-2xl text-espresso">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-taupe">
+                    {item.text}
+                  </p>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
         <section
           id="examples"
           className="ny-section"
