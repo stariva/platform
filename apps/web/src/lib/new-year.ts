@@ -51,18 +51,21 @@ export const ornamentSets = [
     slug: "novogodniy-nabor-zimniy-uyut",
     name: "Зимний уют",
     description:
-      "Знакомые с детства символы зимы. Для небольшой ёлки или праздничного уголка дома.",
+      "Три уютных символа зимы. Для небольшой ёлки или праздничного уголка дома.",
+    ids: ["shar", "window", "bublik"],
   },
   {
     slug: "novogodniy-nabor-russkaya-skazka",
     name: "Русская сказка",
     description:
       "Вся коллекция: пять разных историй на одной ёлке — от петушка до резного наличника.",
+    ids: ornaments.map((item) => item.id),
   },
 ] satisfies {
   slug: string;
   name: string;
   description: string;
+  ids: Ornament["id"][];
 }[];
 
 export function isNewYearProduct(slug: string): boolean {
