@@ -20,10 +20,12 @@ test("dates follow Moscow time", () => {
   expect(moscowDateTime("bad")).toBeNull();
 });
 
-test("requests every attribution model for visit sources", () => {
-  for (const model of ["first", "last", "lastsign"]) {
+test("requests used attribution models within the Logs API fields limit", () => {
+  for (const model of ["first", "lastsign"]) {
     expect(VISIT_FIELDS).toContain(`ym:s:${model}DirectPhraseOrCond`);
   }
+  expect(VISIT_FIELDS.join(",").length).toBeLessThanOrEqual(3000);
+  expect(HIT_FIELDS.join(",").length).toBeLessThanOrEqual(3000);
   expect(new Set(VISIT_FIELDS).size).toBe(VISIT_FIELDS.length);
   expect(new Set(HIT_FIELDS).size).toBe(HIT_FIELDS.length);
 });

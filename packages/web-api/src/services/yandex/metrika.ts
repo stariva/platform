@@ -29,9 +29,11 @@ export class MetrikaLogsPendingError extends Error {
 
 /**
  * Модели атрибуции, по которым выгружаем источники визита: первый переход
- * браузера, последний и последний значимый (как в отчётах Метрики).
+ * браузера и последний значимый (как в отчётах Метрики). Модель `last`
+ * не используется в колонках и не помещается в лимит Logs API — 3000
+ * символов на весь параметр fields.
  */
-const ATTRIBUTIONS = ["first", "last", "lastsign"] as const;
+const ATTRIBUTIONS = ["first", "lastsign"] as const;
 const ATTRIBUTED_FIELDS = [
   "TrafficSource",
   "AdvEngine",
