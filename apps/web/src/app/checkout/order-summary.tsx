@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import type { PricedCartItem } from "@/lib/cart/cart-context";
+import { describeMadeToOrderContents } from "@/lib/commerce/made-to-order-options";
 import { pluralItems, shipsFromLabel } from "@/lib/in-stock";
+import { newYearSetContents } from "@/lib/new-year";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -152,6 +154,11 @@ function SummaryBody({
                   <span className="sr-only">, {item.quantity} шт.</span>
                 )}
               </p>
+              {setContentsLabel(item) && (
+                <p className="mt-1 text-xs leading-snug text-taupe">
+                  {setContentsLabel(item)}
+                </p>
+              )}
               {shipsFromLabel(item.productSlug) && (
                 <p className="mt-1 inline-block rounded-md bg-terracotta/10 px-2 py-0.5 text-xs font-semibold text-terracotta-dark">
                   Отправим с {shipsFromLabel(item.productSlug)}
@@ -206,4 +213,12 @@ function SummaryBody({
       </div>
     </>
   );
+}
+
+function setContentsLabel(item: PricedCartItem): string | null {
+  const contents =
+    item.options?.contents ?? newYearSetContents(item.productSlug);
+  return contents?.length
+    ? `Состав одного набора: ${describeMadeToOrderContents(contents)}`
+    : null;
 }

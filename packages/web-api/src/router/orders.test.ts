@@ -47,7 +47,25 @@ const view = {
   deliveryDates: null,
   hasEmail: true,
   trackingNumber: null,
-  items: [],
+  items: [
+    {
+      id: "item-1",
+      name: "Новогодний набор «Зимний уют»",
+      quantity: 1,
+      price: 110000,
+      options: {
+        size: "Как на фото",
+        color: "Как на фото",
+        measurements: [],
+        contents: [
+          { name: "Снежинка", quantity: 1 },
+          { name: "Варежка", quantity: 1 },
+        ],
+      },
+      image: null,
+      measurementFields: [],
+    },
+  ],
   postings: [],
 };
 
