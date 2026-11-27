@@ -25,9 +25,12 @@ const order: OrderRow = {
   contactMessenger: null,
   status: "requested",
   amountProducts: 700000,
+  amountDiscount: 0,
   amountDelivery: 0,
   amountTotal: 700000,
   currency: "RUB",
+  promoCode: null,
+  promoCodeId: null,
   paymentId: null,
   deliveryMethod: "manual",
   deliveryPointId: null,
@@ -157,6 +160,7 @@ test("request message includes wishes and delivery when given", () => {
 test("deposit message tells the master to start and then bill the balance", () => {
   const { title, message } = formatMadeToOrderPaymentMessage(
     order,
+    [item],
     { type: "deposit", amount: 350000 },
     "applied",
   );
@@ -175,6 +179,7 @@ test("a full prepayment tells the master to start production, not to bill the ba
       deliveryPointId: "point-1",
       deliveryAddress: { title: "ПВЗ Ozon", address: "Тверская, 1" },
     },
+    [item],
     { type: "deposit", amount: order.amountTotal },
     "applied",
   );
@@ -186,9 +191,43 @@ test("a full prepayment tells the master to start production, not to bill the ba
   assert.ok(!message.includes("предоплат"));
 });
 
+test("payment message lists the exact items and the fixed-set contents", () => {
+  const setItem: ItemRow = {
+    ...item,
+    id: "set-item",
+    productSlug: "novogodniy-nabor-zimniy-uyut",
+    name: "Новогодний набор «Зимний уют»",
+    quantity: 1,
+    options: {
+      size: "Как на фото",
+      color: "Как на фото",
+      measurements: [],
+      contents: [
+        { name: "Снежинка", quantity: 1 },
+        { name: "Варежка", quantity: 1 },
+        { name: "Колокольчик", quantity: 1 },
+      ],
+    },
+  };
+  const { message } = formatMadeToOrderPaymentMessage(
+    { ...order, depositAmount: order.amountTotal },
+    [item, setItem],
+    { type: "deposit", amount: order.amountTotal },
+    "applied",
+  );
+
+  assert.ok(message.includes("Изделия:"));
+  assert.ok(message.includes("1. Туника × 2"));
+  assert.ok(message.includes("2. Новогодний набор «Зимний уют» × 1"));
+  assert.ok(
+    message.includes("Состав одного набора: Снежинка, Варежка, Колокольчик"),
+  );
+});
+
 test("balance message tells the master to ship", () => {
   const { title, message } = formatMadeToOrderPaymentMessage(
     order,
+    [item],
     { type: "balance", amount: 380000 },
     "applied",
   );
@@ -200,6 +239,7 @@ test("balance message tells the master to ship", () => {
 test("a duplicate or unexpected payment is flagged as critical", () => {
   const duplicate = formatMadeToOrderPaymentMessage(
     order,
+    [item],
     { type: "deposit", amount: 350000 },
     "duplicate",
   );
@@ -208,6 +248,7 @@ test("a duplicate or unexpected payment is flagged as critical", () => {
 
   const unexpected = formatMadeToOrderPaymentMessage(
     order,
+    [item],
     { type: "balance", amount: 380000 },
     "unexpected",
   );
@@ -280,6 +321,7 @@ test("the balance message says where to ship and that Ozon takes over", () => {
       deliveryAddress: { title: "ул. Баумана, 1", address: "Казань" },
       checkoutSnapshot: { priceKopecks: 45000 },
     },
+    [item],
     { type: "balance", amount: 240000 },
     "applied",
   );
@@ -291,6 +333,7 @@ test("the balance message says where to ship and that Ozon takes over", () => {
 test("a balance billed by hand still asks for a tracking number", () => {
   const { message } = formatMadeToOrderPaymentMessage(
     order,
+    [item],
     { type: "balance", amount: 240000 },
     "applied",
   );
@@ -353,6 +396,7 @@ test("the balance notice says the parcel is not approved instead of promising it
   };
   const { title, message } = formatMadeToOrderPaymentMessage(
     unapproved,
+    [item],
     { type: "balance", amount: 240000 },
     "applied",
   );
@@ -365,6 +409,7 @@ test("the balance notice says the parcel is not approved instead of promising it
   // Предоплата и обычная доплата не меняются
   const regular = formatMadeToOrderPaymentMessage(
     { ...unapproved, status: "ready_to_ship", ozonOrderId: null },
+    [item],
     { type: "balance", amount: 240000 },
     "applied",
   );

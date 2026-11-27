@@ -19,14 +19,22 @@ interface OrderSummaryProps {
   items: PricedCartItem[];
   subtotal: number;
   delivery: DeliveryCost;
+  discount?: number;
 }
 
-function total(subtotal: number, delivery: DeliveryCost) {
-  return subtotal + (delivery.status === "ready" ? delivery.kopecks : 0);
+function total(subtotal: number, delivery: DeliveryCost, discount = 0) {
+  return (
+    subtotal - discount + (delivery.status === "ready" ? delivery.kopecks : 0)
+  );
 }
 
 /** Состав и сумма заказа — справа от шагов на десктопе. */
-export function OrderSummary({ items, subtotal, delivery }: OrderSummaryProps) {
+export function OrderSummary({
+  items,
+  subtotal,
+  delivery,
+  discount = 0,
+}: OrderSummaryProps) {
   return (
     <aside className="hidden lg:block lg:sticky lg:top-28 rounded-2xl bg-sand p-6">
       <div className="flex items-baseline justify-between gap-4 mb-5">
@@ -38,7 +46,12 @@ export function OrderSummary({ items, subtotal, delivery }: OrderSummaryProps) {
           Изменить
         </Link>
       </div>
-      <SummaryBody items={items} subtotal={subtotal} delivery={delivery} />
+      <SummaryBody
+        items={items}
+        subtotal={subtotal}
+        delivery={delivery}
+        discount={discount}
+      />
     </aside>
   );
 }
@@ -48,6 +61,7 @@ export function MobileOrderSummary({
   items,
   subtotal,
   delivery,
+  discount = 0,
 }: OrderSummaryProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -76,11 +90,16 @@ export function MobileOrderSummary({
           />
         </span>
         <span className="text-espresso font-medium tabular-nums">
-          {formatPrice(total(subtotal, delivery) / 100)}
+          {formatPrice(total(subtotal, delivery, discount) / 100)}
         </span>
       </button>
       <div id={panelId} hidden={!open} className="px-5 pb-5">
-        <SummaryBody items={items} subtotal={subtotal} delivery={delivery} />
+        <SummaryBody
+          items={items}
+          subtotal={subtotal}
+          delivery={delivery}
+          discount={discount}
+        />
         <Link
           href="/cart"
           className="mt-4 inline-block text-[13px] text-espresso underline underline-offset-4"
@@ -92,7 +111,12 @@ export function MobileOrderSummary({
   );
 }
 
-function SummaryBody({ items, subtotal, delivery }: OrderSummaryProps) {
+function SummaryBody({
+  items,
+  subtotal,
+  delivery,
+  discount = 0,
+}: OrderSummaryProps) {
   return (
     <>
       <ul className="space-y-4">
@@ -148,6 +172,14 @@ function SummaryBody({ items, subtotal, delivery }: OrderSummaryProps) {
             {formatPrice(subtotal / 100)}
           </dd>
         </div>
+        {discount > 0 && (
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-taupe">Скидка</dt>
+            <dd className="text-terracotta-dark tabular-nums">
+              −{formatPrice(discount / 100)}
+            </dd>
+          </div>
+        )}
         <div className="flex items-baseline justify-between gap-4">
           <dt className="text-taupe">Доставка</dt>
           <dd className="text-espresso tabular-nums text-right">
@@ -169,7 +201,7 @@ function SummaryBody({ items, subtotal, delivery }: OrderSummaryProps) {
       <div className="mt-5 pt-5 border-t border-espresso/10 flex items-baseline justify-between gap-4">
         <span className="text-espresso">Итого</span>
         <span className="text-2xl font-medium text-espresso tabular-nums">
-          {formatPrice(total(subtotal, delivery) / 100)}
+          {formatPrice(total(subtotal, delivery, discount) / 100)}
         </span>
       </div>
     </>

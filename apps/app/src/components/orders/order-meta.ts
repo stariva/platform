@@ -22,6 +22,8 @@ export interface AdminOrderView {
   contactMessenger: string | null;
   amountTotal: number;
   amountProducts: number;
+  amountDiscount: number;
+  promoCode: string | null;
   amountDelivery: number;
   depositAmount: number | null;
   leadTime: string | null;
@@ -77,6 +79,7 @@ export interface AdminOrderView {
       color: string;
       measurements: { label: string; value: string }[];
       comment?: string;
+      contents?: { name: string; quantity: number }[];
     } | null;
   }[];
   payments: {

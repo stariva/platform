@@ -169,7 +169,7 @@ export function VisitorCard({ visitor }: { visitor: VisitorInfo | null }) {
             .map(([label, value]) => (
               <div key={label} className="contents">
                 <dt className="text-muted-foreground">{label}</dt>
-                <dd className="break-words">{value}</dd>
+                <dd className="wrap-break-word">{value}</dd>
               </div>
             ))}
         </dl>

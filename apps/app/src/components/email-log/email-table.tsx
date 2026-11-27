@@ -52,7 +52,7 @@ function DeliveryCell({ row }: { row: EmailRow }) {
             {dateTime.format(delivery.at)}
           </div>
           {delivery.detail && (
-            <div className="text-muted-foreground text-xs break-words">
+            <div className="text-muted-foreground text-xs wrap-break-word">
               {delivery.detail}
             </div>
           )}
@@ -116,11 +116,11 @@ export function EmailTable({ rows }: { rows: EmailRow[] }) {
                 <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                   {dateTime.format(row.createdAt)}
                 </TableCell>
-                <TableCell className="max-w-[220px] text-sm break-words whitespace-normal">
+                <TableCell className="max-w-[220px] text-sm wrap-break-word whitespace-normal">
                   {row.recipient}
                 </TableCell>
                 <TableCell className="max-w-[320px] text-sm whitespace-normal">
-                  <div className="break-words">{row.subject}</div>
+                  <div className="wrap-break-word">{row.subject}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     {kind && <Badge variant="outline">{kind}</Badge>}
                     {row.attachments > 0 && (
@@ -186,7 +186,7 @@ export function EmailTable({ rows }: { rows: EmailRow[] }) {
                           · {duration(attempt.ms)}
                         </span>
                         {attempt.error && (
-                          <div className="text-muted-foreground break-words">
+                          <div className="text-muted-foreground wrap-break-word">
                             {attempt.error}
                           </div>
                         )}

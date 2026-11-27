@@ -257,7 +257,7 @@ export function ContactOptions({
               {copied === "message" ? "Скопировано" : "Скопировать"}
             </button>
           </div>
-          <p className="mt-1.5 text-[14px] leading-snug text-espresso whitespace-pre-line break-words select-text">
+          <p className="mt-1.5 text-[14px] leading-snug text-espresso whitespace-pre-line wrap-break-word select-text">
             {message}
           </p>
           {copyFailed && (

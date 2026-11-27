@@ -453,6 +453,7 @@ test.skipIf(!DATABASE_URL)(
       deliveryPointId: "1234",
       pickupPoint: null,
       amountDelivery: 2_000,
+      expectedTotalKopecks: 22_000,
       parcel: { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 },
       leadTime: "3 дня",
       comment,
@@ -470,6 +471,44 @@ test.skipIf(!DATABASE_URL)(
         .from(productOrders)
         .where(sql`${productOrders.customerNotes} = ${comment}`),
     ).toEqual([]);
+
+    const { promoCodes } = await import("@stariva/db/schema");
+    const promoId = crypto.randomUUID();
+    const code = `TEST-${promoId.slice(0, 8).toUpperCase()}`;
+    await db.insert(promoCodes).values({
+      id: promoId,
+      code,
+      discountType: "fixed",
+      discountValue: 1_000,
+      usageLimit: 1,
+    });
+    await expect(
+      orders.createInstantMadeToOrderOrder({
+        ...input,
+        items: [item],
+        promoCode: code,
+      }),
+    ).rejects.toBeInstanceOf(orders.InstantOrderTotalChangedError);
+    expect(
+      await db
+        .select({ id: productOrders.id })
+        .from(productOrders)
+        .where(sql`${productOrders.customerNotes} = ${comment}`),
+    ).toEqual([]);
+    expect(
+      await db
+        .select({ usedCount: promoCodes.usedCount })
+        .from(promoCodes)
+        .where(sql`${promoCodes.id} = ${promoId}`),
+    ).toEqual([{ usedCount: 0 }]);
+
+    const discounted = await orders.createInstantMadeToOrderOrder({
+      ...input,
+      items: [item],
+      promoCode: code,
+      expectedTotalKopecks: 21_000,
+    });
+    expect(discounted.amountTotal).toBe(21_000);
 
     const { id, amountTotal } = await orders.createInstantMadeToOrderOrder({
       ...input,

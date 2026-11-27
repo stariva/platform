@@ -103,6 +103,11 @@ export const orderItemSchema = z.object({
       color: z.string(),
       measurements: z.array(z.object({ label: z.string(), value: z.string() })),
       comment: z.string().optional(),
+      contents: z
+        .array(
+          z.object({ name: z.string(), quantity: z.number().int().positive() }),
+        )
+        .optional(),
     })
     .nullable(),
   image: z.string().nullable(),
@@ -124,6 +129,10 @@ export const orderViewSchema = z.object({
   paid: z.boolean(),
   amountTotal: z.number().int().nonnegative(),
   amountProducts: z.number().int().nonnegative(),
+  /** Скидка по промокоду на изделия. */
+  amountDiscount: z.number().int().nonnegative(),
+  /** Канонический промокод из заказа; null — без промокода. */
+  promoCode: z.string().nullable(),
   amountDelivery: z.number().int().nonnegative(),
   // Под заказ: условия, согласованные мастером, и что оплачивать сейчас
   depositAmount: z.number().int().nullable(),

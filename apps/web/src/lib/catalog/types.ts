@@ -69,7 +69,7 @@ export interface Product {
   leadTimeDays?: { min: number; max: number };
   seoTitle?: string;
   seoDescription?: string;
-  material: string;
+  material?: string;
   dimensions?: string;
   careInstructions?: string;
   /** Автор идеи изделия — выводим сноской в карточке. */

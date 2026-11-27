@@ -30,7 +30,9 @@ export function Field({
   return (
     <div className="min-w-0">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="text-sm break-words whitespace-pre-line">{children}</dd>
+      <dd className="text-sm wrap-break-word whitespace-pre-line">
+        {children}
+      </dd>
     </div>
   );
 }
@@ -94,6 +96,19 @@ export function OrderItemsCard({ order }: { order: AdminOrderView }) {
                 <dl className="grid gap-2 sm:grid-cols-2">
                   <Field label="Размер">{item.options.size}</Field>
                   <Field label="Цвет">{item.options.color}</Field>
+                  {item.options.contents?.length ? (
+                    <div className="sm:col-span-2">
+                      <Field label="Состав набора">
+                        {item.options.contents
+                          .map((content) =>
+                            content.quantity > 1
+                              ? `${content.name} × ${content.quantity}`
+                              : content.name,
+                          )
+                          .join(", ")}
+                      </Field>
+                    </div>
+                  ) : null}
                   {item.options.measurements.map((m) => (
                     <Field key={m.label} label={m.label}>
                       {`${m.value} см`}
@@ -116,6 +131,13 @@ export function OrderItemsCard({ order }: { order: AdminOrderView }) {
           <SumLine label="Изделия">
             {rubles.format(order.amountProducts)}
           </SumLine>
+          {order.amountDiscount > 0 && (
+            <SumLine
+              label={order.promoCode ? `Промокод ${order.promoCode}` : "Скидка"}
+            >
+              −{rubles.format(order.amountDiscount)}
+            </SumLine>
+          )}
           <SumLine label="Доставка">
             {order.amountDelivery > 0
               ? rubles.format(order.amountDelivery)

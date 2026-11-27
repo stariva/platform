@@ -112,6 +112,8 @@ interface CartSummaryProps {
   ctaRef?: Ref<HTMLDivElement>;
   /** «18 ноября»: в заказе есть товар, который отправим не сразу */
   shipsFrom?: string | null;
+  /** Почему оформление заблокировано даже при доступных изделиях. */
+  minimumOrderMessage?: string;
 }
 
 export function CartSummary({
@@ -124,8 +126,10 @@ export function CartSummary({
   leadTime = MADE_TO_ORDER_DAYS,
   ctaRef,
   shipsFrom,
+  minimumOrderMessage,
 }: CartSummaryProps) {
-  const blocked = unavailableCount > 0 || count === 0;
+  const blocked =
+    unavailableCount > 0 || count === 0 || Boolean(minimumOrderMessage);
   const copy = COPY[kind];
   // Дату отправки показываем отдельной плашкой над кнопкой, в списке она лишняя
   const allPerks = copy.perks(leadTime);
@@ -186,6 +190,18 @@ export function CartSummary({
             >
               Убрать и продолжить
             </button>
+          </div>
+        )}
+
+        {minimumOrderMessage && (
+          <div className="mt-5 rounded-xl border border-terracotta/30 bg-parchment px-4 py-3 text-sm leading-relaxed text-espresso">
+            {minimumOrderMessage}{" "}
+            <Link
+              href="/novogodnie-ukrasheniya#configurator"
+              className="underline underline-offset-4 hover:text-taupe transition-colors"
+            >
+              Выбрать фигурки
+            </Link>
           </div>
         )}
 
@@ -277,12 +293,14 @@ export function MobileCheckoutBar({
   subtotal,
   count,
   blocked,
+  blockedNote,
   visible,
 }: {
   kind: CartCheckoutKind;
   subtotal: number;
   count: number;
   blocked: boolean;
+  blockedNote?: string;
   visible: boolean;
 }) {
   return (
@@ -294,16 +312,27 @@ export function MobileCheckoutBar({
         visible ? "translate-y-0" : "translate-y-full",
       )}
     >
-      <div className="flex items-center gap-4 max-w-xl mx-auto">
-        <div className="min-w-0">
-          <p className="text-lg font-medium text-espresso tabular-nums leading-tight">
-            {formatPrice(subtotal / 100)}
+      <div className="max-w-xl mx-auto">
+        {blockedNote && (
+          <p className="mb-1.5 text-center text-xs leading-tight text-taupe">
+            {blockedNote}
           </p>
-          <p className="text-xs text-taupe whitespace-nowrap">
-            {count} {pluralItems(count)}
-          </p>
+        )}
+        <div className="flex items-center gap-4">
+          <div className="min-w-0">
+            <p className="text-lg font-medium text-espresso tabular-nums leading-tight">
+              {formatPrice(subtotal / 100)}
+            </p>
+            <p className="text-xs text-taupe whitespace-nowrap leading-tight">
+              {count} {pluralItems(count)}
+            </p>
+          </div>
+          <CheckoutButton
+            kind={kind}
+            blocked={blocked}
+            className="flex-1 h-12"
+          />
         </div>
-        <CheckoutButton kind={kind} blocked={blocked} className="flex-1 h-12" />
       </div>
     </div>
   );

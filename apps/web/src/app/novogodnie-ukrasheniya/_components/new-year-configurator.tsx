@@ -17,11 +17,16 @@ import { flyToCart } from "@/lib/cart/fly-to-cart";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
 import { PHOTO_COLOR, PHOTO_SIZE } from "@/lib/made-to-order";
 import {
+  accusativeFigurines,
+  MIN_NEW_YEAR_ORNAMENT_QUANTITY,
   type NewYearConfiguratorProduct,
+  newYearFigurinesPerItem,
   newYearProductImage,
   newYearSetMerchandising,
+  newYearSubcategoryFor,
   ornamentDetailForSlug,
   ornamentImage,
+  pluralFigurines,
 } from "@/lib/new-year";
 import { formatPrice, productHref } from "@/lib/products";
 import { cn } from "@/lib/utils";
@@ -46,6 +51,13 @@ function purchasable(product: NewYearConfiguratorProduct): boolean {
 function cartLine(
   product: NewYearConfiguratorProduct,
 ): Omit<CartItem, "quantity"> {
+  const subcategory = newYearSubcategoryFor(product);
+  const figurines =
+    subcategory === "ornaments"
+      ? 1
+      : subcategory === "ornament_sets"
+        ? newYearFigurinesPerItem(product.slug)
+        : 0;
   return {
     productId: product.id,
     productSlug: product.slug,
@@ -55,21 +67,12 @@ function cartLine(
     name: product.name,
     image: newYearProductImage(product),
     price: Math.round(product.price * 100),
+    ...(figurines > 0 ? { newYearFigurines: figurines } : {}),
   };
 }
 
 function stockLabel(product: NewYearConfiguratorProduct): string {
   return purchasable(product) ? "Изготовим после заказа" : "Скоро появится";
-}
-
-function pluralFigurines(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return "фигурка";
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return "фигурки";
-  }
-  return "фигурок";
 }
 
 function ModeButton({
@@ -103,7 +106,7 @@ function ModeButton({
       <span className="flex flex-wrap items-center gap-2 font-serif text-xl leading-tight">
         {title}
         {badge && (
-          <span className="rounded-full bg-[var(--ny-accent)] px-2 py-0.5 font-sans text-[11px] font-medium tracking-normal text-white">
+          <span className="rounded-full bg-(--ny-accent) px-2 py-0.5 font-sans text-[11px] font-medium tracking-normal text-white">
             {badge}
           </span>
         )}
@@ -165,7 +168,7 @@ function OrnamentCard({
       className={cn(
         "group relative flex min-h-full flex-col rounded-2xl border p-3 text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso disabled:cursor-not-allowed disabled:opacity-55",
         selected
-          ? "border-[var(--ny-accent)] bg-white shadow-[0_18px_44px_-28px_rgba(165,33,39,0.55)]"
+          ? "border-(--ny-accent) bg-white shadow-[0_18px_44px_-28px_rgba(165,33,39,0.55)]"
           : "border-espresso/10 bg-white/55 hover:border-espresso/30 hover:bg-white",
       )}
     >
@@ -173,7 +176,7 @@ function OrnamentCard({
         className={cn(
           "absolute right-3 top-3 z-10 flex size-7 items-center justify-center rounded-full border transition-colors",
           selected
-            ? "border-[var(--ny-accent)] bg-[var(--ny-accent)] text-white"
+            ? "border-(--ny-accent) bg-(--ny-accent) text-white"
             : "border-espresso/15 bg-white/85 text-transparent group-hover:border-espresso/30",
         )}
         aria-hidden="true"
@@ -204,7 +207,7 @@ function OrnamentCard({
             "text-xs",
             purchasable(product)
               ? "text-taupe"
-              : "font-medium text-[var(--ny-accent)]",
+              : "font-medium text-(--ny-accent)",
           )}
         >
           {stockLabel(product)}
@@ -248,7 +251,7 @@ function SetCard({
         className={cn(
           "group relative flex flex-1 flex-col overflow-hidden rounded-2xl border text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso disabled:cursor-not-allowed disabled:opacity-55",
           selected
-            ? "border-[var(--ny-accent)] bg-white shadow-[0_18px_44px_-28px_rgba(165,33,39,0.55)]"
+            ? "border-(--ny-accent) bg-white shadow-[0_18px_44px_-28px_rgba(165,33,39,0.55)]"
             : "border-espresso/10 bg-white/55 hover:border-espresso/30 hover:bg-white",
         )}
       >
@@ -268,7 +271,7 @@ function SetCard({
             className={cn(
               "absolute right-4 top-4 flex size-8 items-center justify-center rounded-full border",
               selected
-                ? "border-[var(--ny-accent)] bg-[var(--ny-accent)] text-white"
+                ? "border-(--ny-accent) bg-(--ny-accent) text-white"
                 : "border-espresso/15 bg-white/85 text-transparent",
             )}
             aria-hidden="true"
@@ -321,7 +324,7 @@ function SetCard({
             </span>
           )}
           {merchandising.savings !== undefined && (
-            <span className="mt-3 w-fit rounded-full bg-[var(--ny-accent)]/10 px-3 py-1 text-xs font-medium text-[var(--ny-accent)]">
+            <span className="mt-3 w-fit rounded-full bg-(--ny-accent)/10 px-3 py-1 text-xs font-medium text-(--ny-accent)">
               Выгода {formatPrice(merchandising.savings, product.currency)} при
               покупке набором
             </span>
@@ -355,7 +358,7 @@ function SetCard({
                 "text-right text-xs",
                 purchasable(product)
                   ? "text-taupe"
-                  : "font-medium text-[var(--ny-accent)]",
+                  : "font-medium text-(--ny-accent)",
               )}
             >
               {stockLabel(product)}
@@ -561,6 +564,24 @@ export function NewYearConfigurator({
         item.instantMadeToOrder === true &&
         item.productSlug === slug,
     )?.quantity ?? 0;
+  const figurinesInCart = items.reduce(
+    (sum, item) =>
+      item.fulfillmentType === "made_to_order" &&
+      item.instantMadeToOrder === true
+        ? sum +
+          item.quantity *
+            (item.newYearFigurines ?? newYearFigurinesPerItem(item.productSlug))
+        : sum,
+    0,
+  );
+  const customQuantityAfterAdd = figurinesInCart + selectedOrnaments.length;
+  const customMinimumMet =
+    mode !== "custom" ||
+    customQuantityAfterAdd >= MIN_NEW_YEAR_ORNAMENT_QUANTITY;
+  const customMissing = Math.max(
+    0,
+    MIN_NEW_YEAR_ORNAMENT_QUANTITY - customQuantityAfterAdd,
+  );
   const limitFor = (_product: NewYearConfiguratorProduct) =>
     MAX_MADE_TO_ORDER_QUANTITY;
   const blockedByCart = productsToAdd.some(
@@ -568,7 +589,10 @@ export function NewYearConfigurator({
       purchasable(product) && quantityInCart(product.slug) >= limitFor(product),
   );
   const canAdd =
-    hasSelection && productsToAdd.every(purchasable) && !blockedByCart;
+    hasSelection &&
+    customMinimumMet &&
+    productsToAdd.every(purchasable) &&
+    !blockedByCart;
 
   const toggleOrnament = (product: NewYearConfiguratorProduct) => {
     if (!purchasable(product)) return;
@@ -657,7 +681,7 @@ export function NewYearConfigurator({
         <ModeButton
           active={mode === "custom"}
           title="Своя коробка"
-          text="Отметьте любимые фигурки — мы сложим их вместе."
+          text="Отметьте от 7 фигурок — мы сложим их вместе."
           onClick={() => setMode("custom")}
         />
       </div>
@@ -711,7 +735,7 @@ export function NewYearConfigurator({
             {mainProducts.length === 0 ? (
               <p className="text-taupe">
                 {mode === "custom"
-                  ? "Отметьте фигурки, которые положить в коробку."
+                  ? "Отметьте минимум 7 фигурок, которые положить в коробку."
                   : "Выберите готовый набор."}
               </p>
             ) : (
@@ -781,8 +805,15 @@ export function NewYearConfigurator({
                 {formatPrice(total)}
               </span>
             </div>
+            {mode === "custom" && !customMinimumMet && (
+              <p className="mt-3 text-sm leading-relaxed text-(--ny-accent)">
+                Добавьте ещё {customMissing}{" "}
+                {accusativeFigurines(customMissing)} — минимальный заказ
+                новогодних фигурок: {MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт.
+              </p>
+            )}
             {blockedByCart && hasSelection && (
-              <p className="mt-3 text-sm leading-relaxed text-[var(--ny-accent)]">
+              <p className="mt-3 text-sm leading-relaxed text-(--ny-accent)">
                 Некоторые изделия уже лежат в корзине в максимальном доступном
                 количестве.
               </p>
@@ -792,7 +823,7 @@ export function NewYearConfigurator({
               size="lg"
               disabled={!canAdd}
               onClick={(event) => addSelection(event.currentTarget)}
-              className="mt-4 min-h-12 w-full rounded-full bg-espresso text-parchment hover:bg-[var(--ny-accent)]"
+              className="mt-4 min-h-12 w-full rounded-full bg-espresso text-parchment hover:bg-(--ny-accent)"
             >
               {added ? (
                 <>

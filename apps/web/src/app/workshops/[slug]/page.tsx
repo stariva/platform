@@ -298,7 +298,7 @@ export default async function WorkshopDetailPage({
             </div>
 
             {/* Cover */}
-            <div className="relative sm:aspect-[16/9] rounded-2xl overflow-hidden bg-sand">
+            <div className="relative sm:aspect-video rounded-2xl overflow-hidden bg-sand">
               <CoverPhoto
                 src={workshop.cover}
                 alt={workshop.title}
@@ -601,7 +601,7 @@ export default async function WorkshopDetailPage({
             <div className="lg:sticky lg:top-24">
               <div className="bg-parchment border border-espresso/10 rounded-2xl overflow-hidden shadow-[0_4px_30px_rgba(44,36,27,0.08)]">
                 {/* Mini cover — на мобильном большая обложка уже прямо над карточкой */}
-                <div className="relative aspect-[16/9] overflow-hidden bg-sand hidden lg:block">
+                <div className="relative aspect-video overflow-hidden bg-sand hidden lg:block">
                   <CoverPhoto
                     src={workshop.cover}
                     alt={workshop.title}
@@ -712,7 +712,7 @@ export default async function WorkshopDetailPage({
                   href={`/workshops/${w.slug}`}
                   className="group flex flex-col bg-parchment border border-espresso/8 rounded-2xl overflow-hidden hover:shadow-[0_8px_30px_rgba(44,36,27,0.08)] hover:-translate-y-1 transition-all duration-300"
                 >
-                  <div className="relative aspect-[16/9] overflow-hidden bg-sand">
+                  <div className="relative aspect-video overflow-hidden bg-sand">
                     <Image
                       src={w.cover}
                       alt={w.title}

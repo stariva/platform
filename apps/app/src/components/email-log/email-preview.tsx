@@ -36,7 +36,7 @@ export function EmailPreview({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="break-words">{subject}</DialogTitle>
+            <DialogTitle className="wrap-break-word">{subject}</DialogTitle>
             <DialogDescription>Кому: {recipient}</DialogDescription>
           </DialogHeader>
           {query.isPending && (

@@ -5,6 +5,7 @@ const order = {
   number: 42,
   kind: "stock",
   amountTotal: 12000,
+  amountDiscount: 0,
   amountDelivery: 2000,
   depositAmount: null as number | null,
   deliveryMethod: "pickup",

@@ -63,6 +63,11 @@ function customerLines(order: OrderRow): string[] {
   ].filter((line): line is string => Boolean(line));
 }
 
+function promoLine(order: OrderRow): string | null {
+  if (order.amountDiscount <= 0) return null;
+  return `Промокод ${order.promoCode ?? "без кода"}: скидка ${money(order.amountDiscount)}`;
+}
+
 /**
  * Куда отправить: пункт Ozon, а у старых заявок — текст покупателя. Новая
  * заявка приходит без пункта: его выбирают при доплате, когда изделие готово.
@@ -173,6 +178,7 @@ export function paymentNoticeId(
 /** Оплата этапа заказа под заказ: в обычном случае — что делать дальше, иначе — что проверить. */
 export function formatMadeToOrderPaymentMessage(
   order: OrderRow,
+  items: OrderItemRow[],
   payment: Pick<PaymentRow, "type" | "amount">,
   outcome: PaymentOutcome,
 ): OrderMessage {
@@ -189,6 +195,10 @@ export function formatMadeToOrderPaymentMessage(
       title: `Получена ${what}`,
       message: joinLines([
         ...customerLines(order),
+        promoLine(order),
+        "",
+        "Изделия:",
+        ...itemLines(items),
         "",
         fullPrepayment
           ? "Заказ оплачен полностью. Дальше: напечатать изделия, упаковать и в админке нажать «Готово — создать отправление Ozon». Габариты посылки уже заданы, доплаты не будет."

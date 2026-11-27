@@ -36,6 +36,7 @@ import { CatalogItemsUnavailableError } from "./catalog";
 import { isElkaKitSlug } from "./elka-kit-bundle";
 import type { MadeToOrderPaymentType } from "./made-to-order-flow";
 import type { MadeToOrderOptions } from "./made-to-order-options";
+import { reservePromoCode } from "./promo-codes";
 
 export interface OrderLineInput {
   productSlug: string;
@@ -193,7 +194,10 @@ export async function createMadeToOrderOrder(
   return { id: orderId, number: created.number, amountTotal: amountProducts };
 }
 
+export class InstantOrderTotalChangedError extends Error {}
+
 export interface CreateInstantMadeToOrderOrderInput {
+  expectedTotalKopecks: number;
   userId?: string;
   attribution?: CampaignAttribution | null;
   visitor?: VisitorInfo | null;
@@ -201,6 +205,7 @@ export interface CreateInstantMadeToOrderOrderInput {
   contactPhone: string;
   contactEmail?: string;
   comment?: string;
+  promoCode?: string;
   items: MadeToOrderLineInput[];
   deliveryPointId: string;
   pickupPoint: PickupPoint | null;
@@ -235,12 +240,29 @@ export async function createInstantMadeToOrderOrder(
     (sum, i) => sum + i.price * i.quantity,
     0,
   );
-  const amountTotal = amountProducts + input.amountDelivery;
-  assertValidOrderTotal(amountTotal);
   const now = new Date();
 
   instantOrdersDb ??= createDatabase("node");
   return instantOrdersDb.transaction(async (tx) => {
+    let amountDiscount = 0;
+    let promoCode: string | null = null;
+    let promoCodeId: string | null = null;
+    if (input.promoCode) {
+      const reserved = await reservePromoCode(
+        tx,
+        input.promoCode,
+        amountProducts,
+      );
+      amountDiscount = reserved.discountKopecks;
+      promoCode = reserved.promo.code;
+      promoCodeId = reserved.promo.id;
+    }
+    const amountTotal = amountProducts - amountDiscount + input.amountDelivery;
+    if (amountTotal !== input.expectedTotalKopecks) {
+      throw new InstantOrderTotalChangedError();
+    }
+    assertValidOrderTotal(amountTotal);
+
     const [created] = await tx
       .insert(productOrders)
       .values({
@@ -254,9 +276,12 @@ export async function createInstantMadeToOrderOrder(
         contactEmail: input.contactEmail ?? null,
         status: "awaiting_deposit",
         amountProducts,
+        amountDiscount,
         amountDelivery: input.amountDelivery,
         amountTotal,
         currency: "RUB",
+        promoCode,
+        promoCodeId,
         deliveryMethod: "pickup",
         deliveryPointId: input.deliveryPointId,
         deliveryAddress:

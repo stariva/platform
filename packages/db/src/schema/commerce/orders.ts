@@ -1,5 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -12,6 +15,7 @@ import type { CampaignAttribution } from "../attribution";
 import { user } from "../auth/user";
 import { customOrderRequests } from "../custom-order";
 import type { VisitorInfo } from "../visitor";
+import { promoCodes } from "./promo-codes";
 
 /** Статус заказа на товары (каталог, не мастер-классы). */
 export const productOrderStatus = pgEnum("product_order_status", [
@@ -93,9 +97,16 @@ export const productOrders = pgTable(
     status: productOrderStatus("status").notNull().default("pending"),
     // Суммы в копейках
     amountProducts: integer("amount_products").notNull(),
+    // Скидка по промокоду на изделия. amountProducts остаётся ценой до скидки.
+    amountDiscount: integer("amount_discount").notNull().default(0),
     amountDelivery: integer("amount_delivery").notNull().default(0),
     amountTotal: integer("amount_total").notNull(),
     currency: text("currency").notNull().default("RUB"),
+    // Снимок кода сохраняется, даже если сам промокод позже удалят.
+    promoCode: text("promo_code"),
+    promoCodeId: text("promo_code_id").references(() => promoCodes.id, {
+      onDelete: "set null",
+    }),
     // Идентификатор платежа в YooKassa
     paymentId: text("payment_id"),
     deliveryMethod: productDeliveryMethod("delivery_method").notNull(),
@@ -161,5 +172,10 @@ export const productOrders = pgTable(
   (table) => [
     uniqueIndex("product_orders_number_idx").on(table.number),
     uniqueIndex("product_orders_request_idx").on(table.requestNumber),
+    index("product_orders_promo_code_idx").on(table.promoCodeId),
+    check(
+      "product_orders_discount_range",
+      sql`${table.amountDiscount} >= 0 AND ${table.amountDiscount} <= ${table.amountProducts}`,
+    ),
   ],
 );

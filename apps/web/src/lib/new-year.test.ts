@@ -1,5 +1,6 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import type { Product } from "./catalog/types";
 import {
   groupNewYearProducts,
@@ -9,6 +10,7 @@ import {
   newYearSubcategoryFor,
   ornamentImage,
   ornamentSlug,
+  ornaments,
 } from "./new-year";
 
 const product = (overrides: Partial<Product>): Product => ({
@@ -108,8 +110,41 @@ test("new year image prefers the database photo and uses collection art only as 
   );
 });
 
+test("ornament fallback art uses files that exist for every collection item", () => {
+  for (const ornament of ornaments) {
+    const image = ornamentImage(ornament.id);
+    assert.equal(
+      newYearProductImage(
+        product({ slug: ornamentSlug(ornament.id), images: [] }),
+      ),
+      image,
+    );
+    const file = image.replace("/images/new-year/", "");
+    assert.equal(
+      existsSync(
+        new URL(`../../public/images/new-year/${file}`, import.meta.url),
+      ),
+      true,
+      ornament.id,
+    );
+  }
+  assert.equal(ornamentImage("house"), "/images/new-year/house.svg");
+  assert.equal(ornamentImage("samovar"), "/images/new-year/samovar.svg");
+  assert.equal(ornamentImage("matryoshka"), "/images/new-year/ornament.svg");
+  assert.equal(ornamentImage("loshadka"), "/images/new-year/ornament.svg");
+});
+
 test("new year set merchandising resolves composition and honest separate-price savings", () => {
-  const ornaments = (["shar", "window", "bublik"] as const).map((id) =>
+  const ids = [
+    "snowflake",
+    "varezhka",
+    "bell",
+    "star",
+    "house",
+    "samovar",
+    "bublik",
+  ] as const;
+  const ornaments = ids.map((id) =>
     product({ slug: ornamentSlug(id), price: 990 }),
   );
   const set = product({
@@ -121,11 +156,11 @@ test("new year set merchandising resolves composition and honest separate-price 
 
   assert.deepEqual(
     merchandising.items.map((item) => item.id),
-    ["shar", "window", "bublik"],
+    [...ids],
   );
   assert.equal(merchandising.items[0]?.product, ornaments[0]);
-  assert.equal(merchandising.separateTotal, 2970);
-  assert.equal(merchandising.savings, 1870);
+  assert.equal(merchandising.separateTotal, 6930);
+  assert.equal(merchandising.savings, 5830);
 });
 
 test("new year set merchandising hides comparison when composition pricing is incomplete", () => {
@@ -133,11 +168,11 @@ test("new year set merchandising hides comparison when composition pricing is in
     slug: "novogodniy-nabor-zimniy-uyut",
     price: 1100,
   });
-  const incomplete = [product({ slug: ornamentSlug("shar"), price: 990 })];
+  const incomplete = [product({ slug: ornamentSlug("snowflake"), price: 990 })];
 
   const merchandising = newYearSetMerchandising(set, incomplete);
 
-  assert.equal(merchandising.items.length, 3);
+  assert.equal(merchandising.items.length, 7);
   assert.equal(merchandising.separateTotal, undefined);
   assert.equal(merchandising.savings, undefined);
   assert.deepEqual(

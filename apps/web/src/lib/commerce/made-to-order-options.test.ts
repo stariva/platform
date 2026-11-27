@@ -65,3 +65,18 @@ test("options are described in one line for the cart and the master", () => {
     "Размер: M · Цвет: Графит",
   );
 });
+
+test("set contents are described with quantities", () => {
+  assert.equal(
+    describeMadeToOrderOptions({
+      size: "Как на фото",
+      color: "Как на фото",
+      measurements: [],
+      contents: [
+        { name: "Снежинка", quantity: 2 },
+        { name: "Звезда", quantity: 1 },
+      ],
+    }),
+    "Размер: Как на фото · Цвет: Как на фото · Состав одного набора: Снежинка × 2, Звезда",
+  );
+});

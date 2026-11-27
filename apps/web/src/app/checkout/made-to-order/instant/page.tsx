@@ -4,8 +4,11 @@ import {
   DeliveryPriceChangedError,
   DeliveryUnavailableError,
   type InstantMadeToOrderQuote,
+  type InstantPromoValidation,
   ItemsUnavailableError,
+  OrderTotalChangedError,
   ProductsPriceChangedError,
+  PromoCodeInvalidError,
 } from "@stariva/web-api/contract";
 import {
   ArrowRightIcon,
@@ -14,7 +17,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PickupPointPicker } from "@/components/checkout/pickup-point-picker";
 import { CheckoutProgress } from "@/components/stariva/checkout-progress";
@@ -22,6 +25,7 @@ import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
@@ -83,6 +87,13 @@ export default function InstantMadeToOrderCheckoutPage() {
   const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoState, setPromoState] = useState<
+    | { status: "idle" }
+    | { status: "checking" }
+    | { status: "invalid"; message: string }
+    | { status: "valid"; validation: InstantPromoValidation }
+  >({ status: "idle" });
 
   const checkoutTracked = useRef(false);
   useEffect(() => {
@@ -98,6 +109,23 @@ export default function InstantMadeToOrderCheckoutPage() {
   const quoteItemsKey = JSON.stringify(
     items.map((item) => [item.productSlug, item.quantity]),
   );
+
+  const promoItemsKey = JSON.stringify(
+    items.map((item) => [
+      item.productId,
+      item.productSlug,
+      item.quantity,
+      item.price,
+    ]),
+  );
+  const activePromoCart = useRef<{ key: string } | null>(null);
+  useLayoutEffect(() => {
+    activePromoCart.current = { key: promoItemsKey };
+    setPromoState({ status: "idle" });
+    return () => {
+      activePromoCart.current = null;
+    };
+  }, [promoItemsKey]);
 
   // Стоимость доставки считаем сразу после выбора пункта. Ozon Delivery for
   // Business оценивает заранее заданную посылку набора, карточки Seller не нужны.
@@ -196,9 +224,67 @@ export default function InstantMadeToOrderCheckoutPage() {
     reachGoal("checkout_delivery_complete");
   }
 
+  function handlePromoInput(value: string) {
+    setPromoInput(value);
+    if (promoState.status !== "idle" && promoState.status !== "checking") {
+      setPromoState({ status: "idle" });
+    }
+  }
+
+  async function handleApplyPromo() {
+    const requestedCart = activePromoCart.current;
+    if (!requestedCart || promoState.status === "checking") return;
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoState({ status: "invalid", message: "Введите промокод" });
+      return;
+    }
+
+    setPromoState({ status: "checking" });
+    try {
+      const validation = await webApi.checkout.validateInstantMadeToOrderPromo({
+        code,
+        items: items.map((item) => ({
+          productId: item.productId,
+          productSlug: item.productSlug,
+          quantity: item.quantity,
+        })),
+      });
+      if (activePromoCart.current !== requestedCart) return;
+      if (!validation.valid) {
+        setPromoState({
+          status: "invalid",
+          message: validation.reason ?? "Промокод нельзя применить",
+        });
+        return;
+      }
+      if (validation.code) setPromoInput(validation.code);
+      setPromoState({ status: "valid", validation });
+    } catch (error) {
+      if (activePromoCart.current !== requestedCart) return;
+      if (error instanceof ItemsUnavailableError) {
+        dropUnavailableItems(error.data.unavailableProductSlugs);
+      }
+      setPromoState({
+        status: "invalid",
+        message: formErrorMessage(
+          error,
+          "Не удалось проверить промокод. Попробуйте ещё раз.",
+        ),
+      });
+    }
+  }
+
+  const discount =
+    promoState.status === "valid"
+      ? (promoState.validation.discountKopecks ?? 0)
+      : 0;
+
   async function handleConfirm() {
     if (
       !items.length ||
+      submitting ||
+      promoState.status === "checking" ||
       quoteState.status !== "ready" ||
       !selectedPoint ||
       !contact
@@ -214,6 +300,10 @@ export default function InstantMadeToOrderCheckoutPage() {
         contactPhone: contact.phone,
         contactEmail: contact.email,
         comment: contact.comment || undefined,
+        promoCode:
+          promoState.status === "valid"
+            ? (promoState.validation.code ?? undefined)
+            : undefined,
         items: items.map((item) => ({
           productId: item.productId,
           productSlug: item.productSlug,
@@ -230,6 +320,8 @@ export default function InstantMadeToOrderCheckoutPage() {
         },
         expectedDeliveryKopecks: quoteState.quote.deliveryPriceKopecks,
         expectedProductsKopecks: subtotal,
+        expectedTotalKopecks:
+          subtotal - discount + quoteState.quote.deliveryPriceKopecks,
         personalDataConsent: contact.personalDataConsent,
         offerAccepted: true,
       });
@@ -247,6 +339,22 @@ export default function InstantMadeToOrderCheckoutPage() {
       } else if (error instanceof ProductsPriceChangedError) {
         refresh();
         toast.error(error.message);
+      } else if (error instanceof OrderTotalChangedError) {
+        refresh();
+        setQuoteAttempt((n) => n + 1);
+        if (promoState.status === "valid") {
+          setPromoState({
+            status: "invalid",
+            message: "Проверьте промокод ещё раз",
+          });
+        }
+        toast.error(error.message);
+      } else if (error instanceof PromoCodeInvalidError) {
+        setPromoState({
+          status: "invalid",
+          message: error.data.reason,
+        });
+        toast.error(error.data.reason);
       } else {
         toast.error(
           formErrorMessage(
@@ -325,7 +433,7 @@ export default function InstantMadeToOrderCheckoutPage() {
     : quoteState.status === "loading"
       ? { status: "loading" }
       : { status: "unknown" };
-  const total = subtotal + (quote?.deliveryPriceKopecks ?? 0);
+  const total = subtotal - discount + (quote?.deliveryPriceKopecks ?? 0);
 
   const statusOf = (target: Step): SectionStatus => {
     if (target === step) return "active";
@@ -352,6 +460,7 @@ export default function InstantMadeToOrderCheckoutPage() {
             items={items}
             subtotal={subtotal}
             delivery={deliveryCost}
+            discount={discount}
           />
 
           {notices.length > 0 && (
@@ -470,6 +579,56 @@ export default function InstantMadeToOrderCheckoutPage() {
                     onRetry={() => setQuoteAttempt((n) => n + 1)}
                   />
                 )}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="instant-promo-code"
+                    className="text-sm font-medium text-espresso"
+                  >
+                    Промокод
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="instant-promo-code"
+                      value={promoInput}
+                      onChange={(event) => handlePromoInput(event.target.value)}
+                      placeholder="Например, NEWYEAR"
+                      autoComplete="off"
+                      disabled={submitting || promoState.status === "checking"}
+                      aria-invalid={promoState.status === "invalid"}
+                      className="h-12 rounded-full border-espresso/15 px-4 uppercase"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleApplyPromo}
+                      disabled={
+                        submitting ||
+                        !promoInput.trim() ||
+                        promoState.status === "checking"
+                      }
+                      className="h-12 shrink-0 rounded-full border-espresso/20 px-5"
+                    >
+                      {promoState.status === "checking" ? (
+                        <Spinner />
+                      ) : (
+                        "Применить"
+                      )}
+                    </Button>
+                  </div>
+                  {promoState.status === "invalid" && (
+                    <p role="alert" className="text-sm text-terracotta-dark">
+                      {promoState.message}
+                    </p>
+                  )}
+                  {promoState.status === "valid" && (
+                    <p className="text-sm text-espresso">
+                      Промокод применён — скидка{" "}
+                      {formatPrice(
+                        (promoState.validation.discountKopecks ?? 0) / 100,
+                      )}
+                    </p>
+                  )}
+                </div>
                 <dl className="lg:hidden space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
                     <dt className="text-taupe">Изделия</dt>
@@ -477,6 +636,14 @@ export default function InstantMadeToOrderCheckoutPage() {
                       {formatPrice(subtotal / 100)}
                     </dd>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-taupe">Скидка</dt>
+                      <dd className="text-terracotta-dark tabular-nums">
+                        −{formatPrice(discount / 100)}
+                      </dd>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-4">
                     <dt className="text-taupe">Доставка</dt>
                     <dd className="text-espresso tabular-nums">
@@ -502,7 +669,9 @@ export default function InstantMadeToOrderCheckoutPage() {
                 </p>
                 <Button
                   onClick={handleConfirm}
-                  disabled={submitting || !quote}
+                  disabled={
+                    submitting || !quote || promoState.status === "checking"
+                  }
                   className="w-full h-14 rounded-full bg-espresso text-parchment hover:bg-espresso/85 text-[15px]"
                 >
                   {submitting ? (
@@ -521,6 +690,7 @@ export default function InstantMadeToOrderCheckoutPage() {
           items={items}
           subtotal={subtotal}
           delivery={deliveryCost}
+          discount={discount}
         />
       </div>
     </Shell>

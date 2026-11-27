@@ -385,6 +385,8 @@ export async function ProductOrderView({
                     amountTotal: order.amountTotal,
                     amountDelivery: order.amountDelivery,
                     amountProducts: order.amountProducts,
+                    amountDiscount: order.amountDiscount,
+                    promoCode: order.promoCode,
                     depositAmount: order.depositAmount,
                     depositPaid: Boolean(order.depositPaidAt),
                     leadTime: order.leadTime,
@@ -540,7 +542,7 @@ export function WorkshopOrderView({
               src={item.image}
               alt={item.name}
               sizes="(max-width: 1024px) 100vw, 600px"
-              className="aspect-[16/9] w-full rounded-none"
+              className="aspect-video w-full rounded-none"
             />
           )}
           <div className="p-5 space-y-4">

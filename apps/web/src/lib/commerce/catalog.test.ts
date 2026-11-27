@@ -51,6 +51,7 @@ const {
   isCatalogProductBuyable,
   isMadeToOrderBuyable,
   MadeToOrderOptionsError,
+  NewYearMinimumOrderError,
   resolveCatalogItems,
   resolveInstantMadeToOrderItems,
   resolveMadeToOrderItems,
@@ -322,13 +323,13 @@ test("instant made-to-order items need only a seasonal product with a price", as
   catalog = { products: [newYearShar()], status: "available" };
 
   const items = await resolveInstantMadeToOrderItems([
-    { productSlug: "novogodnee-ukrashenie-shar", quantity: 2 },
+    { productSlug: "novogodnee-ukrashenie-shar", quantity: 7 },
   ]);
 
   assert.deepEqual(items, [
     {
       productSlug: "novogodnee-ukrashenie-shar",
-      quantity: 2,
+      quantity: 7,
       name: "Цветочный шар",
       price: 49000,
       options: { size: "Как на фото", color: "Как на фото", measurements: [] },
@@ -343,10 +344,84 @@ test("instant made-to-order accepts the legacy planters slugs shown by the confi
   };
 
   const items = await resolveInstantMadeToOrderItems([
-    { productSlug: "novogodnee-ukrashenie-shar", quantity: 1 },
+    { productSlug: "novogodnee-ukrashenie-shar", quantity: 7 },
   ]);
 
   assert.equal(items.length, 1);
+});
+
+test("instant made-to-order requires at least seven physical figurines", async () => {
+  catalog = { products: [newYearShar()], status: "available" };
+
+  const error = await resolveInstantMadeToOrderItems([
+    { productSlug: "novogodnee-ukrashenie-shar", quantity: 6 },
+  ]).catch((e: unknown) => e);
+
+  assert.ok(error instanceof NewYearMinimumOrderError);
+  assert.equal(error.minimum, 7);
+  assert.equal(error.quantity, 6);
+});
+
+test("instant made-to-order counts ornaments across lines and still allows fixed sets alone", async () => {
+  const bell = newYearShar({
+    id: "new-year-bell",
+    slug: "novogodnee-ukrashenie-bell",
+    name: "Колокольчик",
+  });
+  const winterSet = newYearShar({
+    id: "new-year-winter-set",
+    slug: "novogodniy-nabor-zimniy-uyut",
+    name: "Зимний уют",
+    subcategory: "ornament_sets",
+  });
+  catalog = { products: [newYearShar(), bell, winterSet], status: "available" };
+
+  const items = await resolveInstantMadeToOrderItems([
+    { productSlug: "novogodnee-ukrashenie-shar", quantity: 3 },
+    { productSlug: "novogodnee-ukrashenie-bell", quantity: 4 },
+  ]);
+  assert.equal(items.length, 2);
+
+  const setOnly = await resolveInstantMadeToOrderItems([
+    { productSlug: "novogodniy-nabor-zimniy-uyut", quantity: 1 },
+  ]);
+  assert.equal(setOnly.length, 1);
+  assert.deepEqual(setOnly[0]?.options.contents, [
+    { name: "Снежинка", quantity: 1 },
+    { name: "Варежка", quantity: 1 },
+    { name: "Колокольчик", quantity: 1 },
+    { name: "Звезда", quantity: 1 },
+    { name: "Домик", quantity: 1 },
+    { name: "Самовар", quantity: 1 },
+    { name: "Баранка", quantity: 1 },
+  ]);
+
+  const setWithExtraOrnament = await resolveInstantMadeToOrderItems([
+    { productSlug: "novogodniy-nabor-zimniy-uyut", quantity: 1 },
+    { productSlug: "novogodnee-ukrashenie-shar", quantity: 1 },
+  ]);
+  assert.equal(setWithExtraOrnament.length, 2);
+});
+
+test("instant made-to-order does not sell packaging without figurines", async () => {
+  catalog = {
+    products: [
+      newYearShar({
+        id: "new-year-box",
+        slug: "novogodnyaya-podarochnaya-korobka",
+        name: "Подарочная коробка",
+        subcategory: "gift_boxes",
+      }),
+    ],
+    status: "available",
+  };
+
+  const error = await resolveInstantMadeToOrderItems([
+    { productSlug: "novogodnyaya-podarochnaya-korobka", quantity: 1 },
+  ]).catch((e: unknown) => e);
+
+  assert.ok(error instanceof NewYearMinimumOrderError);
+  assert.equal(error.quantity, 0);
 });
 
 test("instant made-to-order rejects other custom products", async () => {

@@ -19,6 +19,8 @@ export type MadeToOrderTerms = Pick<
   | "status"
   | "paid"
   | "amountProducts"
+  | "amountDiscount"
+  | "promoCode"
   | "amountTotal"
   | "amountDelivery"
   | "depositAmount"
@@ -97,6 +99,7 @@ export function MadeToOrderPayment({
   }
 
   const balance = terms.amountTotal - terms.depositAmount;
+  const fullyPrepaid = terms.depositAmount === terms.amountTotal;
   // Доплату выставляют, когда изделие готово; доставку считает сайт, когда
   // покупатель выберет пункт (или мастер назвала её сама)
   const balanceBilled = terms.status === "awaiting_balance" || terms.paid;
@@ -131,6 +134,12 @@ export function MadeToOrderPayment({
     <div className="border-t border-espresso/8 pt-3 space-y-3">
       <div className="space-y-1.5">
         <Row label="Изделия" value={money(terms.amountProducts)} />
+        {terms.amountDiscount > 0 && (
+          <Row
+            label={terms.promoCode ? `Промокод ${terms.promoCode}` : "Скидка"}
+            value={`−${money(terms.amountDiscount)}`}
+          />
+        )}
         <Row
           label="Доставка"
           value={
@@ -151,23 +160,25 @@ export function MadeToOrderPayment({
       </div>
       <div className="rounded-xl bg-sand px-4 py-3 space-y-1.5">
         <Row
-          label="Предоплата 50%"
+          label={fullyPrepaid ? "Оплата" : "Предоплата 50%"}
           value={money(terms.depositAmount)}
           done={terms.depositPaid}
         />
-        <Row
-          label={
-            balanceBilled
-              ? deliveryKnown
-                ? "Доплата"
-                : "Доплата без доставки"
-              : deliveryKnown
-                ? "Доплата, когда изделие готово"
-                : "Доплата без доставки, когда изделие готово"
-          }
-          value={money(balance)}
-          done={terms.paid}
-        />
+        {!fullyPrepaid && (
+          <Row
+            label={
+              balanceBilled
+                ? deliveryKnown
+                  ? "Доплата"
+                  : "Доплата без доставки"
+                : deliveryKnown
+                  ? "Доплата, когда изделие готово"
+                  : "Доплата без доставки, когда изделие готово"
+            }
+            value={money(balance)}
+            done={terms.paid}
+          />
+        )}
       </div>
       {terms.leadTime && (
         <p className="text-xs text-taupe">
@@ -197,6 +208,8 @@ export function MadeToOrderPayment({
           >
             {paying ? (
               <Spinner />
+            ) : step.type === "deposit" && fullyPrepaid ? (
+              `Оплатить ${money(step.amount)}`
             ) : (
               `Оплатить ${step.type === "deposit" ? "предоплату" : "доплату"} ${money(step.amount)}`
             )}

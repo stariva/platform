@@ -122,6 +122,8 @@ export const orderServices: OrderServices = {
       paid: Boolean(order.paidAt),
       amountTotal: order.amountTotal,
       amountProducts: order.amountProducts,
+      amountDiscount: order.amountDiscount,
+      promoCode: order.promoCode,
       amountDelivery: order.amountDelivery,
       depositAmount: order.depositAmount,
       depositPaid: Boolean(order.depositPaidAt),

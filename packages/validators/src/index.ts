@@ -7,4 +7,5 @@ export * from "./login";
 export * from "./otp";
 export * from "./product";
 export * from "./profile";
+export * from "./promo-code";
 export * from "./workshop";

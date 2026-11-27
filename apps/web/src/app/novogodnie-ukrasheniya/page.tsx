@@ -40,7 +40,7 @@ const NEW_YEAR_EXAMPLES = [
   },
   {
     src: "/images/new-year/examples-closeup.webp",
-    alt: "Петушок и резной наличник крупным планом на деревянной поверхности",
+    alt: "Петух и резной наличник крупным планом на деревянной поверхности",
   },
   {
     src: "/images/new-year/examples-cozy.webp",
@@ -306,14 +306,14 @@ export default function NewYearPage() {
           <figure className="ny-hero-art">
             <Image
               src={newYearHero}
-              alt="Шар, резной наличник, балалайка, петушок и бублик с красно-молочными узорами на еловых ветвях в тёплом свете гирлянды"
+              alt="Шар, резной наличник, балалайка, петух и баранка с красно-молочными узорами на еловых ветвях в тёплом свете гирлянды"
               fetchPriority="high"
               placeholder="blur"
               sizes="(min-width: 1600px) 880px, (min-width: 1024px) 55vw, calc(100vw - 48px)"
               className="block h-auto w-full"
             />
             <figcaption className="sr-only">
-              Цветочный шар, резной наличник, балалайка, петушок и бублик.
+              Ёлочный шар, резной наличник, балалайка, петух и баранка.
             </figcaption>
           </figure>
         </section>
@@ -435,7 +435,7 @@ export default function NewYearPage() {
             </div>
             <div className="flex flex-col gap-5 text-taupe leading-relaxed">
               <p>
-                Цветочный шар, нарядный петушок, балалайка и резной наличник. Мы
+                Ёлочный шар, нарядный петух, балалайка и резной наличник. Мы
                 собрали знакомые образы в коллекцию подвесных украшений с
                 растительными орнаментами.
               </p>

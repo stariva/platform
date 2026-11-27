@@ -25,12 +25,52 @@ export const NEW_YEAR_PARCEL = {
   heightCm: 10,
 } as const;
 
+/** Отдельные фигурки печатаются партиями: меньше этого количества заказ не принимаем. */
+export const MIN_NEW_YEAR_ORNAMENT_QUANTITY = 7;
+
+export function pluralFigurines(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return "фигурка";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return "фигурки";
+  }
+  return "фигурок";
+}
+
+export function accusativeFigurines(count: number): string {
+  const form = pluralFigurines(count);
+  return form === "фигурка" ? "фигурку" : form;
+}
+
 export const ornaments = [
   {
     id: "shar",
-    name: "Цветочный шар",
+    name: "Ёлочный шар",
     detail:
       "Круглый подвес с крупным цветком, веточками и растительным узором.",
+  },
+  {
+    id: "matryoshka",
+    name: "Матрёшка",
+    detail:
+      "Расписная матрёшка в цветочном платке — самый узнаваемый народный образ.",
+  },
+  {
+    id: "loshadka",
+    name: "Лошадка",
+    detail: "Узорная лошадка с цветочной сбруей — образ народной игрушки.",
+  },
+  {
+    id: "house",
+    name: "Домик",
+    detail: "Уютный домик с резными ставнями и тёплым светом в окнах.",
+  },
+  {
+    id: "samovar",
+    name: "Самовар",
+    detail:
+      "Нарядный самовар с цветочной розеткой — символ чаепития и гостеприимства.",
   },
   {
     id: "window",
@@ -44,12 +84,12 @@ export const ornaments = [
   },
   {
     id: "petukh",
-    name: "Петушок",
-    detail: "Нарядный петушок с цветком на крыле — символ домашнего тепла.",
+    name: "Петух",
+    detail: "Нарядный петух с цветком на крыле — символ домашнего тепла.",
   },
   {
     id: "bublik",
-    name: "Бублик",
+    name: "Баранка",
     detail: "Круглый подвес с ажурной серединой и растительным узором.",
   },
   {
@@ -89,23 +129,47 @@ export const ornaments = [
 export type Ornament = (typeof ornaments)[number];
 export const ornamentSlug = (id: Ornament["id"]) =>
   `novogodnee-ukrashenie-${id}`;
+
+const ornamentImageFile: Partial<Record<Ornament["id"], string>> = {
+  house: "house.svg",
+  samovar: "samovar.svg",
+  matryoshka: "ornament.svg",
+  loshadka: "ornament.svg",
+};
+
 export const ornamentImage = (id: Ornament["id"]) =>
-  `/images/new-year/${id}.png`;
+  `/images/new-year/${ornamentImageFile[id] ?? `${id}.png`}`;
 
 export const ornamentSets = [
   {
     slug: "novogodniy-nabor-zimniy-uyut",
     name: "Зимний уют",
     description:
-      "Три уютных символа зимы. Для небольшой ёлки или праздничного уголка дома.",
-    ids: ["shar", "window", "bublik"],
+      "Семь уютных символов зимы — от снежинки до самовара. Для ёлки или праздничного уголка дома.",
+    ids: [
+      "snowflake",
+      "varezhka",
+      "bell",
+      "star",
+      "house",
+      "samovar",
+      "bublik",
+    ],
   },
   {
     slug: "novogodniy-nabor-russkaya-skazka",
     name: "Русская сказка",
     description:
-      "Вся коллекция: одиннадцать разных историй на одной ёлке — от петушка до варежки.",
-    ids: ornaments.map((item) => item.id),
+      "Семь образов народной сказки на одной ёлке — от матрёшки до резного наличника.",
+    ids: [
+      "shar",
+      "matryoshka",
+      "petukh",
+      "loshadka",
+      "balalaika",
+      "window",
+      "koza",
+    ],
   },
 ] satisfies {
   slug: string;
@@ -150,7 +214,7 @@ export interface NewYearConfiguratorProduct {
   inStock: boolean;
   stockAvailable: number;
   madeToOrder: boolean;
-  material: string;
+  material?: string;
   dimensions?: string;
   color?: string;
 }
@@ -248,6 +312,35 @@ export function ornamentIdForSlug(slug: string): Ornament["id"] | undefined {
 export function ornamentDetailForSlug(slug: string): string | undefined {
   const id = ornamentIdForSlug(slug);
   return id ? ornaments.find((item) => item.id === id)?.detail : undefined;
+}
+
+/** Состав готового набора в заказе: имена и количество фигурок в порядке коллекции. */
+export function newYearSetContents(
+  slug: string,
+): { name: string; quantity: number }[] {
+  const definition = ornamentSets.find((set) => set.slug === slug);
+  if (!definition) return [];
+  const quantities = new Map<Ornament["id"], number>();
+  for (const id of definition.ids) {
+    quantities.set(id, (quantities.get(id) ?? 0) + 1);
+  }
+  return definition.ids.flatMap((id) => {
+    const quantity = quantities.get(id);
+    if (quantity === undefined) return [];
+    quantities.delete(id);
+    return [
+      {
+        name: ornaments.find((item) => item.id === id)?.name ?? id,
+        quantity,
+      },
+    ];
+  });
+}
+
+/** Сколько физических фигурок в одной единице товара: одна отдельная или состав набора. */
+export function newYearFigurinesPerItem(slug: string): number {
+  if (ornamentIdForSlug(slug)) return 1;
+  return ornamentSets.find((set) => set.slug === slug)?.ids.length ?? 0;
 }
 
 /** Фото товара из базы; локальный эскиз — только если фото ещё не загружено. */
