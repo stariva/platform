@@ -11,6 +11,7 @@ import { Hero } from "@/components/stariva/hero";
 import { HomeOrderProvider } from "@/components/stariva/home-order-context";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
 import { MobileStickyBar } from "@/components/stariva/mobile-sticky-bar";
+import { NewYearTeaser } from "@/components/stariva/new-year-teaser";
 import { PhotoshootsTeaser } from "@/components/stariva/photoshoots-teaser";
 import { Process } from "@/components/stariva/process";
 import { ProductCardImages } from "@/components/stariva/product-card-images";
@@ -193,6 +194,7 @@ export default function Page() {
           </div>
         </section>
         <ElkaTeaser />
+        <NewYearTeaser />
         <Process />
         <PhotoshootsTeaser />
         <section className="bg-sand py-12 lg:py-16">

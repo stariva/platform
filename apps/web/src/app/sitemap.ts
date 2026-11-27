@@ -3,6 +3,7 @@ import { blogPosts } from "@/lib/blog-data";
 import { categories, getProducts } from "@/lib/catalog/service";
 import { BIG_TREE_PATH, TREES_PATH, WORKSHOP_PATH } from "@/lib/elka/data";
 import { IN_STOCK_HREF } from "@/lib/in-stock";
+import { NEW_YEAR_PATH } from "@/lib/new-year";
 import { productHref } from "@/lib/products";
 import { SITE_URL as BASE_URL } from "@/lib/site-url";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
@@ -16,6 +17,11 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Статические страницы ──────────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}${NEW_YEAR_PATH}`,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
     { url: `${BASE_URL}/abazhury`, changeFrequency: "weekly", priority: 0.9 },
     {
       url: `${BASE_URL}${WORKSHOP_PATH}`,

@@ -1,4 +1,5 @@
 import type { Category, Product } from "./catalog/types";
+import { NEW_YEAR_IMAGE, NEW_YEAR_PATH } from "./new-year";
 
 export const categories: Category[] = [
   {
@@ -87,6 +88,12 @@ export const LAMPSHADES_HREF = "/abazhury";
 export const LAMPSHADE_SUBCATEGORY = "lampshades";
 
 export const catalogSections = [
+  {
+    label: "Новогодние украшения",
+    href: NEW_YEAR_PATH,
+    desc: "Ёлочные фигурки и наборы с народными орнаментами",
+    image: NEW_YEAR_IMAGE,
+  },
   {
     label: "Одежда",
     href: "/catalog/clothes",

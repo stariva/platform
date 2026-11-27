@@ -3,6 +3,77 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Seasonal collection: the artwork carries the colour, surfaces stay warm. */
+.ny-page {
+  --ny-accent: #a52127;
+  --ny-paper: #f5eee3;
+}
+.ny-section {
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 64px 24px;
+}
+.ny-hero {
+  display: grid;
+  background: var(--sand);
+}
+.ny-eyebrow {
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--taupe);
+}
+.ny-hero-title {
+  font-family: var(--font-serif);
+  font-size: clamp(64px, 7vw, 112px);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+}
+.ny-hero-title span { color: var(--ny-accent); font-style: italic; }
+.ny-heading {
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 4vw, 54px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+.ny-ribbon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  padding: 24px;
+  background: var(--ny-accent);
+  color: #fff7ed;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.ny-set-art {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: center;
+  gap: 16px;
+  min-height: 340px;
+  padding: 24px;
+  background: var(--ny-paper);
+}
+.ny-ornament-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--ny-paper);
+}
+@media (min-width: 1024px) {
+  .ny-hero { grid-template-columns: 45% 55%; }
+  .ny-section { padding: 88px 48px; }
+  .ny-set-art { min-height: 460px; }
+}
+
 :root {
   /* ── Stariva · Luxury Monochrome palette ─────────────────────────
      Inspired by The Row / Loro Piana / Jil Sander.
