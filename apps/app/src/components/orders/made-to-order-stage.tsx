@@ -16,7 +16,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { useConfirm } from "~/components/confirm-dialog";
-import { orpc } from "~/orpc/react";
+import { client, orpc } from "~/orpc/react";
 import {
   type AdminOrderView,
   dateTime,
@@ -157,17 +157,14 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
   });
   const completeProduction = useMutation({
     ...orpc.admin.orders.completeProduction.mutationOptions(),
-    onSuccess: (result) => {
-      if (!result.ozonSweep) {
-        toast.success(
-          "Заказ готов. Витрина не ответила — создайте отправление Ozon общей кнопкой позже",
-        );
-      } else if (result.ozonSweep.failed > 0) {
-        toast.success(
-          "Заказ готов. Ozon пока не создал отправление — повторите общей кнопкой позже",
-        );
-      } else {
+    onSuccess: async (_result, { id }) => {
+      const current = await client.admin.orders.byId({ id }).catch(() => null);
+      if (current?.ozonOrderId) {
         toast.success("Заказ готов, отправление Ozon создано");
+      } else {
+        toast.warning(
+          "Заказ готов. Отправление Ozon не подтверждено — проверьте заказ или повторите общей кнопкой позже",
+        );
       }
       router.refresh();
     },

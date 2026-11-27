@@ -236,7 +236,7 @@ export default function InstantMadeToOrderCheckoutPage() {
       await trackCreatedOrder(created.analytics);
       rememberOrderPhone(created.orderId, contact.phone);
       setRedirecting(true);
-      clearInstantMadeToOrder(created.orderId);
+      clearInstantMadeToOrder(items, created.orderId);
       window.location.href = created.confirmationUrl;
     } catch (error) {
       if (error instanceof ItemsUnavailableError) {

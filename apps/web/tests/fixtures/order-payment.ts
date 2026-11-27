@@ -198,19 +198,19 @@ await test("a lost master notification on an Ozon order is only logged", async (
 });
 
 // Доплата заказа под заказ: webhook создаёт отправление, затем сообщает мастеру
-const applyStage = (type: "deposit" | "balance") => {
+const applyStage = (type: "deposit" | "balance", amount = 12000) => {
   order.kind = "made_to_order";
   getOrderPayment.mockResolvedValueOnce({
     id: "row-1",
     orderId: order.id,
     type,
-    amount: 12000,
+    amount,
   });
   return applyProductOrderPayment(order.id, {
     id: "payment-1",
     status: "succeeded",
     paid: true,
-    amount: { value: "120.00", currency: "RUB" },
+    amount: { value: (amount / 100).toFixed(2), currency: "RUB" },
     metadata: { orderPaymentId: "row-1" },
   });
 };
@@ -252,6 +252,16 @@ await test("a full prepayment receipt lists the items and delivery rather than a
         { name: "Изделие", amount: 10000, quantity: 1 },
         { name: "Доставка", amount: 2000, quantity: 1 },
       ],
+    }),
+  );
+});
+
+await test("an old deposit link issues a receipt for the amount actually paid", async () => {
+  order.depositAmount = order.amountTotal;
+  await applyStage("deposit", 6000);
+  expect(issueNpdReceipt).toHaveBeenCalledWith(
+    expect.objectContaining({
+      services: [{ name: "Изделие, предоплата", amount: 6000, quantity: 1 }],
     }),
   );
 });

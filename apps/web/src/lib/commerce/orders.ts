@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@stariva/db";
+import { createDatabase } from "@stariva/db/client";
 import {
   type CampaignAttribution,
   productOrderItems,
@@ -216,6 +217,9 @@ export interface CreateInstantMadeToOrderOrderInput {
 /** Сколько времени ссылка на полную оплату остаётся актуальной. */
 const INSTANT_PAYMENT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
+// Neon HTTP не поддерживает интерактивные транзакции.
+let instantOrdersDb: ReturnType<typeof createDatabase> | undefined;
+
 /**
  * Заказ изделий, которые производятся после мгновенной полной оплаты. Используем
  * существующую механику made_to_order, но предоплата равна всей сумме: после
@@ -235,69 +239,72 @@ export async function createInstantMadeToOrderOrder(
   assertValidOrderTotal(amountTotal);
   const now = new Date();
 
-  const [created] = await db
-    .insert(productOrders)
-    .values({
-      id: orderId,
-      kind: "made_to_order",
-      userId: input.userId ?? null,
-      attribution: input.attribution ?? null,
-      visitor: input.visitor ?? null,
-      contactName: input.contactName,
-      contactPhone: input.contactPhone,
-      contactEmail: input.contactEmail ?? null,
-      status: "awaiting_deposit",
-      amountProducts,
-      amountDelivery: input.amountDelivery,
-      amountTotal,
-      currency: "RUB",
-      deliveryMethod: "pickup",
-      deliveryPointId: input.deliveryPointId,
-      deliveryAddress:
-        pickupPointAddress(input.pickupPoint) ??
-        (input.pointLabel ? { address: input.pointLabel } : null),
-      customerNotes: input.comment || null,
-      depositAmount: amountTotal,
-      leadTime: input.leadTime,
-      approvedAt: now,
-      paymentDueAt: new Date(now.getTime() + INSTANT_PAYMENT_WINDOW_MS),
-      checkoutSnapshot: {
-        parcel: input.parcel,
-        priceKopecks: input.amountDelivery,
-        ...(input.priceFallback ? { priceFallback: true } : {}),
-      },
-    })
-    .returning({ number: productOrders.number });
-  if (!created) throw new Error("product_order_not_created");
+  instantOrdersDb ??= createDatabase("node");
+  return instantOrdersDb.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(productOrders)
+      .values({
+        id: orderId,
+        kind: "made_to_order",
+        userId: input.userId ?? null,
+        attribution: input.attribution ?? null,
+        visitor: input.visitor ?? null,
+        contactName: input.contactName,
+        contactPhone: input.contactPhone,
+        contactEmail: input.contactEmail ?? null,
+        status: "awaiting_deposit",
+        amountProducts,
+        amountDelivery: input.amountDelivery,
+        amountTotal,
+        currency: "RUB",
+        deliveryMethod: "pickup",
+        deliveryPointId: input.deliveryPointId,
+        deliveryAddress:
+          pickupPointAddress(input.pickupPoint) ??
+          (input.pointLabel ? { address: input.pointLabel } : null),
+        customerNotes: input.comment || null,
+        depositAmount: amountTotal,
+        leadTime: input.leadTime,
+        approvedAt: now,
+        paymentDueAt: new Date(now.getTime() + INSTANT_PAYMENT_WINDOW_MS),
+        checkoutSnapshot: {
+          parcel: input.parcel,
+          priceKopecks: input.amountDelivery,
+          ...(input.priceFallback ? { priceFallback: true } : {}),
+        },
+      })
+      .returning({ number: productOrders.number });
+    if (!created) throw new Error("product_order_not_created");
 
-  const workshopLinks = await db
-    .select({ slug: products.slug, workshopSlug: products.workshopSlug })
-    .from(products)
-    .where(
-      inArray(
-        products.slug,
-        input.items.map((item) => item.productSlug),
-      ),
+    const workshopLinks = await tx
+      .select({ slug: products.slug, workshopSlug: products.workshopSlug })
+      .from(products)
+      .where(
+        inArray(
+          products.slug,
+          input.items.map((item) => item.productSlug),
+        ),
+      );
+    const workshopByProduct = new Map(
+      workshopLinks.map((p) => [p.slug, p.workshopSlug]),
     );
-  const workshopByProduct = new Map(
-    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
-  );
-  await db.insert(productOrderItems).values(
-    input.items.map((item) => ({
-      id: randomUUID(),
-      orderId,
-      productSlug: item.productSlug,
-      workshopSlug: workshopByProduct.get(item.productSlug) ?? null,
-      workshopLinkCaptured: true,
-      ozonSku: null,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      options: item.options,
-    })),
-  );
+    await tx.insert(productOrderItems).values(
+      input.items.map((item) => ({
+        id: randomUUID(),
+        orderId,
+        productSlug: item.productSlug,
+        workshopSlug: workshopByProduct.get(item.productSlug) ?? null,
+        workshopLinkCaptured: true,
+        ozonSku: null,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        options: item.options,
+      })),
+    );
 
-  return { id: orderId, number: created.number, amountTotal };
+    return { id: orderId, number: created.number, amountTotal };
+  });
 }
 
 /** Создаёт заказ на товары в статусе pending вместе с его позициями. */
@@ -1070,6 +1077,11 @@ export async function applyMadeToOrderPayment(
           .set({
             status: "in_production",
             depositPaidAt: now,
+            paidAt: sql`case
+              when ${productOrders.depositAmount} = ${productOrders.amountTotal}
+              then ${sql.param(now, productOrders.paidAt)}::timestamp
+              else ${productOrders.paidAt}
+            end`,
             paymentDueAt: null,
           })
           .where(
@@ -1116,20 +1128,6 @@ export async function applyMadeToOrderPayment(
             ),
           )
           .returning({ id: productOrders.id });
-  if (result.length > 0 && type === "deposit") {
-    // У мгновенного заказа единственный платёж покрывает всю сумму: он уже
-    // полностью оплачен, хотя производство только начинается
-    await db
-      .update(productOrders)
-      .set({ paidAt: now })
-      .where(
-        and(
-          eq(productOrders.id, orderId),
-          sql`${productOrders.depositAmount} = ${productOrders.amountTotal}`,
-          isNull(productOrders.paidAt),
-        ),
-      );
-  }
   return result.length > 0;
 }
 

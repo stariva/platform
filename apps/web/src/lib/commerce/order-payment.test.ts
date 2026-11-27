@@ -22,6 +22,7 @@ for (const scenario of [
   "a shipment failure still tells the master and then rethrows",
   "a deposit never touches the shipment",
   "a full prepayment receipt lists the items and delivery rather than a deposit",
+  "an old deposit link issues a receipt for the amount actually paid",
 ]) {
   test(scenario, () => {
     const result = spawnSync(

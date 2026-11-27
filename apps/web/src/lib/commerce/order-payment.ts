@@ -269,7 +269,9 @@ async function handleMadeToOrderPayment(
     payment,
     target: { kind: "product", orderId },
     services:
-      row.type === "deposit" && isFullyPrepaidMadeToOrder(order)
+      row.type === "deposit" &&
+      row.amount === order.amountTotal &&
+      isFullyPrepaidMadeToOrder(order)
         ? [
             // Мгновенный заказ оплачен целиком одним платежом: в чеке —
             // сами изделия и доставка, а не авансовая «предоплата»
