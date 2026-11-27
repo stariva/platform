@@ -93,14 +93,14 @@ export const products = pgTable(
     leadTimeMinDays: integer("lead_time_min_days"),
     leadTimeMaxDays: integer("lead_time_max_days"),
 
-    // ── В наличии (Ozon FBS + Ozon Доставка) ──
+    // ── В наличии и Ozon (FBS + Ozon Доставка) ──
     ozonProductId: bigint("ozon_product_id", { mode: "number" }),
     ozonOfferId: text("ozon_offer_id"),
     // fbs_sku — нужен для v2/delivery/checkout и v2/order/create
     ozonSku: bigint("ozon_sku", { mode: "number" }),
     // Остаток готовых изделий. Ведётся у нас: правится в админке, при оплате
-    // заказа списывается. Ozon Доставка отгружает только остаток, числящийся
-    // на Ozon, поэтому правки из админки дублируются на FBS-склад Ozon.
+    // заказа списывается. Если товар привязан к Ozon, правки из админки
+    // дублируются на FBS-склад Ozon.
     stockAvailable: integer("stock_available").notNull().default(0),
     // Не используется: остатки больше не сверяются с Ozon
     stockSyncedAt: timestamp("stock_synced_at", { withTimezone: true }),
@@ -145,11 +145,6 @@ export const products = pgTable(
       sql`(${table.leadTimeMinDays} IS NULL) = (${table.leadTimeMaxDays} IS NULL)
         AND (${table.leadTimeMinDays} IS NULL
           OR (${table.leadTimeMinDays} > 0 AND ${table.leadTimeMinDays} <= ${table.leadTimeMaxDays}))`,
-    ),
-    // Нельзя продавать «в наличии» без SKU для Ozon Доставки
-    check(
-      "products_stock_requires_sku",
-      sql`${table.stockAvailable} = 0 OR ${table.ozonSku} IS NOT NULL`,
     ),
   ],
 );
