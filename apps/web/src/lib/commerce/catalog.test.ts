@@ -52,6 +52,7 @@ const {
   isMadeToOrderBuyable,
   MadeToOrderOptionsError,
   resolveCatalogItems,
+  resolveInstantMadeToOrderItems,
   resolveMadeToOrderItems,
 } = await import("./catalog");
 
@@ -302,4 +303,62 @@ test("a product is orderable to measure with a RUB price and the flag", () => {
   assert.equal(isMadeToOrderBuyable({ ...sold, madeToOrder: false }), false);
   assert.equal(isMadeToOrderBuyable({ ...sold, currency: "USD" }), false);
   assert.equal(isMadeToOrderBuyable({ ...sold, price: 0 }), false);
+});
+
+const newYearShar = (overrides: Partial<Product> = {}): Product => ({
+  ...sold,
+  id: "new-year-shar",
+  slug: "novogodnee-ukrashenie-shar",
+  name: "Цветочный шар",
+  category: "interior",
+  subcategory: "ornaments",
+  ozonSku: undefined,
+  madeToOrder: true,
+  price: 490,
+  ...overrides,
+});
+
+test("instant made-to-order items need only a seasonal product with a price", async () => {
+  catalog = { products: [newYearShar()], status: "available" };
+
+  const items = await resolveInstantMadeToOrderItems([
+    { productSlug: "novogodnee-ukrashenie-shar", quantity: 2 },
+  ]);
+
+  assert.deepEqual(items, [
+    {
+      productSlug: "novogodnee-ukrashenie-shar",
+      quantity: 2,
+      name: "Цветочный шар",
+      price: 49000,
+      options: { size: "Как на фото", color: "Как на фото", measurements: [] },
+    },
+  ]);
+});
+
+test("instant made-to-order accepts the legacy planters slugs shown by the configurator", async () => {
+  catalog = {
+    products: [newYearShar({ subcategory: "planters" })],
+    status: "available",
+  };
+
+  const items = await resolveInstantMadeToOrderItems([
+    { productSlug: "novogodnee-ukrashenie-shar", quantity: 1 },
+  ]);
+
+  assert.equal(items.length, 1);
+});
+
+test("instant made-to-order rejects other custom products", async () => {
+  catalog = {
+    products: [newYearShar({ slug: "tunika-5565", subcategory: "planters" })],
+    status: "available",
+  };
+
+  const error = await resolveInstantMadeToOrderItems([
+    { productSlug: "tunika-5565", quantity: 1 },
+  ]).catch((e: unknown) => e);
+
+  assert.ok(error instanceof CatalogItemsUnavailableError);
+  assert.deepEqual(error.productSlugs, ["tunika-5565"]);
 });

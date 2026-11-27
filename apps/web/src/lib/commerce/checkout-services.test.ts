@@ -18,6 +18,9 @@ for (const scenario of [
   "create refuses a manual order that has no address for the point",
   "create reports delivery_unavailable when Ozon says no",
   "create does not go manual on an Ozon refusal",
+  "instant quote uses the fixed New Year parcel and its real delivery price",
+  "instant create stores a fully prepaid order without Seller SKU",
+  "instant create refuses a higher delivery price than the buyer saw",
 ]) {
   test(scenario, () => {
     const result = spawnSync(

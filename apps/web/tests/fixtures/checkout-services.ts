@@ -15,6 +15,15 @@ mock.module("../../src/lib/commerce/elka-kit-offer", () => ({
   hasPurchasedElkaWorkshop,
 }));
 
+const resolveInstantMadeToOrderItems = mock(async () => [
+  {
+    productSlug: "shar",
+    name: "Цветочный шар",
+    price: 10_000,
+    quantity: 1,
+    options: { size: "Как на фото", color: "Как на фото", measurements: [] },
+  },
+]);
 const resolveCatalogItems = mock(
   async (_requested: unknown, _options?: { elkaKitOwner?: boolean }) => [item],
 );
@@ -25,6 +34,7 @@ mock.module("../../src/lib/commerce/catalog", () => ({
   },
   MadeToOrderOptionsError: class extends Error {},
   resolveCatalogItems,
+  resolveInstantMadeToOrderItems,
   resolveMadeToOrderItems: async () => [],
 }));
 const createProductOrder = mock(async (_input: unknown) => ({
@@ -32,9 +42,17 @@ const createProductOrder = mock(async (_input: unknown) => ({
   number: 1001,
   amountTotal: 10_000,
 }));
+const createInstantMadeToOrderOrder = mock(async (_input: unknown) => ({
+  id: "order-instant-1",
+  number: 1002,
+  amountTotal: 25_000,
+}));
 mock.module("../../src/lib/commerce/orders", () => ({
+  attachOrderPaymentConfirmation: async () => {},
   attachPaymentId: async () => {},
+  createInstantMadeToOrderOrder,
   createMadeToOrderOrder: async () => ({}),
+  createOrderPayment: async () => "order-payment-1",
   createProductOrder,
 }));
 mock.module("../../src/lib/commerce/order-notifications", () => ({
@@ -67,6 +85,18 @@ const checkout = mock(
 mock.module("@/lib/ozon-delivery/client", () => ({
   checkDeliveryAvailable,
   checkout,
+}));
+const checkBusinessDeliveryClient = mock(async (_phone: string) => ({
+  available: true,
+}));
+const quoteParcel = mock(async (_input: unknown) => ({
+  available: true,
+  priceKopecks: 15_000,
+}));
+mock.module("@/lib/ozon-business-delivery/client", () => ({
+  checkBusinessDeliveryClient,
+  isOzonBusinessDeliveryConfigured: () => true,
+  quoteParcel,
 }));
 mock.module("@/lib/ozon-delivery/pickup-points-cache", () => ({
   getCachedPickupPointsInfo: async () => ({ points: [], unavailable: [] }),
@@ -255,4 +285,71 @@ await test("create does not go manual on an Ozon refusal", async () => {
     status: "check_failed",
   });
   expect(createProductOrder).not.toHaveBeenCalled();
+});
+
+await test("instant quote uses the fixed New Year parcel and its real delivery price", async () => {
+  resolveInstantMadeToOrderItems.mockClear();
+  quoteParcel.mockClear();
+  const result = await checkoutServices.quoteInstantMadeToOrder({
+    contactPhone: "+7 900 123-45-67",
+    items: [{ productSlug: "shar", quantity: 1 }],
+    delivery: { method: "pickup", pointId: "123" },
+  });
+  expect(result).toEqual({
+    status: "ok",
+    quote: { available: true, deliveryPriceKopecks: 15_000 },
+  });
+  expect(resolveInstantMadeToOrderItems).toHaveBeenCalledTimes(1);
+  expect(quoteParcel.mock.calls[0]?.[0]).toMatchObject({
+    pointId: "123",
+    parcel: { weightGrams: 700, lengthCm: 30, widthCm: 20, heightCm: 10 },
+    declaredValueKopecks: 10_000,
+  });
+});
+
+await test("instant create stores a fully prepaid order without Seller SKU", async () => {
+  createInstantMadeToOrderOrder.mockClear();
+  createPayment.mockClear();
+  const result = await checkoutServices.createInstantMadeToOrder({
+    ...createInput,
+    items: [{ productSlug: "shar", quantity: 1 }],
+    expectedDeliveryKopecks: 15_000,
+    expectedProductsKopecks: 10_000,
+  });
+  expect(result.status).toBe("ok");
+  const [order] = createInstantMadeToOrderOrder.mock.calls[0] as [
+    {
+      amountDelivery: number;
+      parcel: unknown;
+      items: Array<{ options?: unknown }>;
+    },
+  ];
+  expect(order.amountDelivery).toBe(15_000);
+  expect(order.parcel).toEqual({
+    weightGrams: 700,
+    lengthCm: 30,
+    widthCm: 20,
+    heightCm: 10,
+  });
+  expect(order.items[0]?.options).toMatchObject({
+    size: "Как на фото",
+    color: "Как на фото",
+  });
+  expect(createPayment).toHaveBeenCalledWith(
+    expect.objectContaining({
+      amountKopecks: 25_000,
+      metadata: expect.objectContaining({ paymentType: "deposit" }),
+    }),
+  );
+});
+
+await test("instant create refuses a higher delivery price than the buyer saw", async () => {
+  createInstantMadeToOrderOrder.mockClear();
+  const result = await checkoutServices.createInstantMadeToOrder({
+    ...createInput,
+    items: [{ productSlug: "shar", quantity: 1 }],
+    expectedDeliveryKopecks: 14_000,
+  });
+  expect(result).toEqual({ status: "delivery_price_changed" });
+  expect(createInstantMadeToOrderOrder).not.toHaveBeenCalled();
 });

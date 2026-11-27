@@ -10,11 +10,13 @@ import {
   productOrderItems,
   productOrders,
   type SQL,
+  sql,
 } from "@stariva/db";
 import { madeToOrderParcelSchema } from "@stariva/web-api/contract";
 import { z } from "zod";
 
 import { adminProcedure } from "../../../orpc";
+import { sweepStorefrontOzonDeliveries } from "../../../storefront";
 import { emailCustomer } from "./customer-email";
 import { depositFor, paymentDueFrom, toKopecks } from "./stage-math";
 
@@ -289,6 +291,36 @@ export const requestBalance = adminProcedure
       { from: ["in_production", "awaiting_balance"] },
     ),
   );
+
+/**
+ * Мгновенно оплаченное изделие готово: доплаты нет, поэтому заказ сразу
+ * переходит к отправке, а витрина создаёт отправление в Ozon Доставке для
+ * бизнеса по посылке, которую покупатель уже оплатил. Обычные заказы под
+ * заказ сюда не попадают: для них мастер выставляет доплату.
+ */
+export const completeProduction = adminProcedure
+  .input(z.object({ id: z.string().min(1) }))
+  .handler(async ({ context, input }) => {
+    const updated = await transition(
+      context.db,
+      input.id,
+      ["in_production"],
+      { status: "ready_to_ship" },
+      {
+        guard: sql`${productOrders.depositAmount} is not null and ${productOrders.depositAmount} = ${productOrders.amountTotal}`,
+        message: "Сначала укажите посылку и выставьте доплату",
+      },
+    );
+    // Отправление создаёт витрина: ключи Ozon Delivery for Business и логика
+    // повторов живут там. Если прогон не удался, заказ остаётся «к отправке»,
+    // а кнопка общего прогона в админке повторит попытку.
+    // Для обычного заказа ready_to_ship наступает после доплаты, и письмо об
+    // этом уже ушло платёжным webhook. У мгновенного этот переход делает
+    // мастер, поэтому письмо «изделия готовы» отправляем здесь.
+    await emailCustomer(context.db, updated.id);
+    const ozonSweep = await sweepStorefrontOzonDeliveries();
+    return { ...updated, ozonSweep };
+  });
 
 /** Ещё 3 дня на оплату — например, если срок вышел, а покупатель на связи. */
 export const extendPayment = adminProcedure

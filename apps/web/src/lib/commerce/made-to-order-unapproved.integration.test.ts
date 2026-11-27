@@ -434,3 +434,82 @@ test.skipIf(!DATABASE_URL)(
     }
   },
 );
+
+test.skipIf(!DATABASE_URL)(
+  "an instant order persists its items and rolls back the header if an item fails",
+  async () => {
+    const { db, orders, sql, productOrders } = await connect();
+    const comment = crypto.randomUUID();
+    const item = {
+      productSlug: "test-instant-order",
+      name: "Изделие",
+      price: 10_000,
+      quantity: 2,
+      options: { size: "Как на фото", color: "Как на фото", measurements: [] },
+    };
+    const input = {
+      contactName: "Анна",
+      contactPhone: "+79001234567",
+      deliveryPointId: "1234",
+      pickupPoint: null,
+      amountDelivery: 2_000,
+      parcel: { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 },
+      leadTime: "3 дня",
+      comment,
+    };
+
+    await expect(
+      orders.createInstantMadeToOrderOrder({
+        ...input,
+        items: [{ ...item, name: "invalid\0name" }],
+      }),
+    ).rejects.toThrow();
+    expect(
+      await db
+        .select({ id: productOrders.id })
+        .from(productOrders)
+        .where(sql`${productOrders.customerNotes} = ${comment}`),
+    ).toEqual([]);
+
+    const { id, amountTotal } = await orders.createInstantMadeToOrderOrder({
+      ...input,
+      items: [item],
+    });
+    expect(amountTotal).toBe(22_000);
+    expect(await orders.getProductOrderItems(id)).toEqual([
+      expect.objectContaining({ productSlug: item.productSlug, quantity: 2 }),
+    ]);
+  },
+);
+
+test.skipIf(!DATABASE_URL)(
+  "accepting a deposit records full payment only when the deposit covers the order",
+  async () => {
+    const { db, orders, productOrders, orderOf } = await connect();
+    for (const depositAmount of [5_000, 12_000]) {
+      const id = crypto.randomUUID();
+      await db.insert(productOrders).values({
+        id,
+        kind: "made_to_order",
+        contactName: "Анна",
+        contactPhone: "+79001234567",
+        status: "awaiting_deposit",
+        deliveryMethod: "pickup",
+        amountProducts: 10_000,
+        amountDelivery: 2_000,
+        amountTotal: 12_000,
+        depositAmount,
+      });
+
+      expect(
+        await orders.applyMadeToOrderPayment(id, "deposit", depositAmount),
+      ).toBe(true);
+      const order = await orderOf(id);
+      expect(order.status).toBe("in_production");
+      expect(order.depositPaidAt).toBeInstanceOf(Date);
+      expect(order.paidAt).toEqual(
+        depositAmount === 12_000 ? order.depositPaidAt : null,
+      );
+    }
+  },
+);

@@ -4,6 +4,7 @@ import { list } from "./list";
 import { remove } from "./remove";
 import {
   cancel,
+  completeProduction,
   decline,
   extendPayment,
   reopen,
@@ -26,6 +27,7 @@ export const adminOrdersRouter = {
   requestBalanceWithOzon,
   extendPayment,
   cancel,
+  completeProduction,
   remove,
   sweepOzonDeliveries,
 };

@@ -5,7 +5,10 @@ import type {
 } from "@stariva/db/schema";
 import { pickupPointAddressLine } from "@/lib/ozon-delivery/format";
 import { formatPrice } from "@/lib/products";
-import type { PaymentOutcome } from "./made-to-order-flow";
+import {
+  isFullyPrepaidMadeToOrder,
+  type PaymentOutcome,
+} from "./made-to-order-flow";
 import { describeMadeToOrderOptions } from "./made-to-order-options";
 
 type OrderRow = typeof productOrders.$inferSelect;
@@ -147,7 +150,10 @@ const warnsUnapprovedParcel = (
   order: OrderRow,
   type: PaymentRow["type"],
   outcome: PaymentOutcome,
-) => outcome === "applied" && type === "balance" && isParcelUnapproved(order);
+) =>
+  outcome === "applied" &&
+  (type === "balance" || isFullyPrepaidMadeToOrder(order)) &&
+  isParcelUnapproved(order);
 
 /**
  * Ключ уведомления об оплате. Предупреждение о неподтверждённом заказе — другое
@@ -170,7 +176,9 @@ export function formatMadeToOrderPaymentMessage(
   payment: Pick<PaymentRow, "type" | "amount">,
   outcome: PaymentOutcome,
 ): OrderMessage {
-  const what = `${STAGE_LABELS[payment.type]} ${money(payment.amount)} по заказу №${order.number}`;
+  const fullPrepayment =
+    payment.type === "deposit" && isFullyPrepaidMadeToOrder(order);
+  const what = `${fullPrepayment ? "оплата" : STAGE_LABELS[payment.type]} ${money(payment.amount)} по заказу №${order.number}`;
   // Это уведомление уходит всегда и при сбое повторяется вместе с webhook,
   // поэтому предупреждение о неподтверждённом отправлении не потеряется
   if (warnsUnapprovedParcel(order, payment.type, outcome)) {
@@ -182,12 +190,14 @@ export function formatMadeToOrderPaymentMessage(
       message: joinLines([
         ...customerLines(order),
         "",
-        payment.type === "deposit"
-          ? "Дальше: сплести изделие, упаковать и в админке указать вес и размеры посылки. Доплата выставится за изделие, а доставку Ozon посчитает сайт, когда покупатель выберет пункт выдачи."
-          : order.checkoutSnapshot
-            ? "Заказ оплачен полностью. Отправление создаётся в Ozon: дальше распечатайте этикетку в кабинете доставки Ozon и сдайте посылку в пункт Ozon."
-            : "Заказ оплачен полностью. Дальше: отправить и указать номер отправления в админке.",
-        payment.type === "balance" && deliveryLine(order),
+        fullPrepayment
+          ? "Заказ оплачен полностью. Дальше: напечатать изделия, упаковать и в админке нажать «Готово — создать отправление Ozon». Габариты посылки уже заданы, доплаты не будет."
+          : payment.type === "deposit"
+            ? "Дальше: сплести изделие, упаковать и в админке указать вес и размеры посылки. Доплата выставится за изделие, а доставку Ozon посчитает сайт, когда покупатель выберет пункт выдачи."
+            : order.checkoutSnapshot
+              ? "Заказ оплачен полностью. Отправление создаётся в Ozon: дальше распечатайте этикетку в кабинете доставки Ozon и сдайте посылку в пункт Ozon."
+              : "Заказ оплачен полностью. Дальше: отправить и указать номер отправления в админке.",
+        (payment.type === "balance" || fullPrepayment) && deliveryLine(order),
       ]),
     };
   }

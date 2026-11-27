@@ -167,6 +167,25 @@ test("deposit message tells the master to start and then bill the balance", () =
   assert.ok(message.includes("выберет пункт выдачи"));
 });
 
+test("a full prepayment tells the master to start production, not to bill the balance", () => {
+  const { title, message } = formatMadeToOrderPaymentMessage(
+    {
+      ...order,
+      depositAmount: order.amountTotal,
+      deliveryPointId: "point-1",
+      deliveryAddress: { title: "ПВЗ Ozon", address: "Тверская, 1" },
+    },
+    { type: "deposit", amount: order.amountTotal },
+    "applied",
+  );
+
+  assert.match(title, /^Получена оплата 7\s?000/);
+  assert.ok(message.includes("напечатать изделия"));
+  assert.ok(message.includes("Пункт выдачи Ozon: ПВЗ Ozon, Тверская, 1"));
+  assert.ok(!message.includes("Доплата выставится"));
+  assert.ok(!message.includes("предоплат"));
+});
+
 test("balance message tells the master to ship", () => {
   const { title, message } = formatMadeToOrderPaymentMessage(
     order,

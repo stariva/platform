@@ -65,6 +65,18 @@ function checkout(overrides: Partial<CheckoutServices> = {}): CheckoutServices {
     checkPhone: async () => ({ status: "ok", check: { available: true } }),
     quote: async () => ({ status: "ok", quote }),
     create: async () => ({ status: "ok", order: createdOrder }),
+    checkInstantMadeToOrderPhone: async () => ({
+      status: "ok",
+      check: { available: true },
+    }),
+    quoteInstantMadeToOrder: async () => ({
+      status: "ok",
+      quote: { available: true, deliveryPriceKopecks: 25000 },
+    }),
+    createInstantMadeToOrder: async () => ({
+      status: "ok",
+      order: createdOrder,
+    }),
     requestMadeToOrder: async () => ({
       status: "ok",
       request: { orderId: "ord_2", estimate: 4500 },
@@ -486,4 +498,77 @@ test("made-to-order limits the size and colour to a short text", async () => {
     }),
   );
   expect(error).toMatchObject({ code: "BAD_REQUEST" });
+});
+
+test("instant made-to-order checkout uses its own quote and create services", async () => {
+  const seen: string[] = [];
+  const instantQuote = { available: true, deliveryPriceKopecks: 15000 };
+  const client = wireClient({
+    services: {
+      checkout: checkout({
+        quoteInstantMadeToOrder: async (input) => {
+          seen.push(`quote:${input.delivery.pointId}`);
+          return { status: "ok", quote: instantQuote };
+        },
+        createInstantMadeToOrder: async (input) => {
+          seen.push(
+            `create:${input.expectedDeliveryKopecks}:${input.expectedProductsKopecks}`,
+          );
+          return { status: "ok", order: createdOrder };
+        },
+      }),
+    },
+  });
+
+  expect(
+    await client.checkout.quoteInstantMadeToOrder({
+      contactPhone: "+7 900 123-45-67",
+      items: [{ productSlug: "shar", quantity: 2 }],
+      delivery: { method: "pickup", pointId: "123" },
+    }),
+  ).toEqual(instantQuote);
+  expect(
+    await client.checkout.createInstantMadeToOrder({
+      ...createInput,
+      items: [{ productSlug: "shar", quantity: 2 }],
+      expectedDeliveryKopecks: 15000,
+      expectedProductsKopecks: 240000,
+    }),
+  ).toEqual(createdOrder);
+  expect(seen).toEqual(["quote:123", "create:15000:240000"]);
+});
+
+test("instant made-to-order create maps price changes and unavailable items", async () => {
+  const priceChanged = wireClient({
+    services: {
+      checkout: checkout({
+        createInstantMadeToOrder: async () => ({
+          status: "delivery_price_changed",
+        }),
+      }),
+    },
+  });
+  const [priceError] = await safe(
+    priceChanged.checkout.createInstantMadeToOrder(createInput),
+  );
+  expect(priceError).toBeInstanceOf(DeliveryPriceChangedError);
+  expect(lastStatus()).toBe(409);
+
+  const unavailable = wireClient({
+    services: {
+      checkout: checkout({
+        createInstantMadeToOrder: async () => ({
+          status: "items_unavailable",
+          unavailableProductSlugs: ["shar"],
+        }),
+      }),
+    },
+  });
+  const [itemsError] = await safe(
+    unavailable.checkout.createInstantMadeToOrder(createInput),
+  );
+  expect(itemsError).toBeInstanceOf(ItemsUnavailableError);
+  expect((itemsError as ItemsUnavailableError).data).toEqual({
+    unavailableProductSlugs: ["shar"],
+  });
 });

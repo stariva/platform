@@ -35,6 +35,8 @@ const cartItemSchema = z.object({
   fulfillmentType: fulfillmentTypeSchema.default("stock"),
   /** Размер и цвет, выбранные на карточке; только для изделий под заказ. */
   options: madeToOrderOptionsSchema.optional(),
+  /** Новогодние изделия с фиксированным образцом: оплачиваются сразу, а не через заявку мастеру. */
+  instantMadeToOrder: z.boolean().optional(),
   /** Набор для плетения: к нему можно оформить подарок с кодом доступа. */
   kit: z.boolean().optional(),
 });
@@ -49,11 +51,15 @@ export type PricedCartItem = WithListPrice<CartItem>;
  * размеру и цвету: одно и то же изделие в разных вариантах — разные строки.
  */
 export function cartLineKey(
-  item: Pick<CartItem, "productSlug" | "fulfillmentType" | "options">,
+  item: Pick<
+    CartItem,
+    "productSlug" | "fulfillmentType" | "options" | "instantMadeToOrder"
+  >,
 ): string {
   if (item.fulfillmentType === "stock") return `stock:${item.productSlug}`;
   const { size = "", color = "" } = item.options ?? {};
-  return `made_to_order:${item.productSlug}:${size}:${color}`;
+  const kind = item.instantMadeToOrder === true ? "instant" : "made_to_order";
+  return `${kind}:${item.productSlug}:${size}:${color}`;
 }
 
 /** Свежие данные каталога по одному товару из корзины. */
@@ -84,6 +90,11 @@ interface CartContextValue {
    * изделия под заказ. orderId — корзину очищает оформленный заказ или заявка.
    */
   clear: (fulfillmentType?: FulfillmentType, orderId?: string) => void;
+  /** Вычитает из корзины только позиции и количества отправленного заказа. */
+  clearInstantMadeToOrder: (
+    orderedItems: readonly CartItem[],
+    orderId: string,
+  ) => void;
   /** Подставляет актуальные цены и ограничивает количество остатком. */
   syncWithCatalog: (updates: CatalogUpdate[]) => void;
   /**
@@ -103,7 +114,7 @@ const STORAGE_KEY = "stariva:cart";
  * Невалидная позиция (например, из старой версии корзины) не должна обнулять
  * остальные: пропускаем только её. Дубликаты склеиваем, как это делает add.
  */
-function readStoredCart(): CartItem[] {
+function readStoredCart(fallback: CartItem[] = []): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -135,7 +146,7 @@ function readStoredCart(): CartItem[] {
     }
     return [...byKey.values()];
   } catch {
-    return [];
+    return fallback;
   }
 }
 
@@ -176,28 +187,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // localStorage может быть недоступен (приватный режим и т.п.) — не критично
-    }
-  }, [items, hydrated]);
-
   /** Применяет изменение и отправляет его в журнал корзин. */
   const commit = useCallback(
     (
       action: CartEventAction,
       update: (prev: CartItem[]) => CartItem[],
       orderId?: string,
+      prev = itemsRef.current,
     ) => {
-      const prev = itemsRef.current;
       const next = update(prev);
       if (next === prev && !orderId) return;
       itemsRef.current = next;
       setItems(next);
       if (hydratedRef.current) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          // localStorage может быть недоступен (приватный режим и т.п.) — не критично
+        }
         logCartEvent({ action, before: prev, after: next, orderId });
       }
     },
@@ -256,6 +263,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             ? prev.filter((i) => i.fulfillmentType !== fulfillmentType)
             : [],
         orderId,
+      );
+    },
+    [commit],
+  );
+
+  const clearInstantMadeToOrder = useCallback<
+    CartContextValue["clearInstantMadeToOrder"]
+  >(
+    (orderedItems, orderId) => {
+      const quantities = new Map(
+        orderedItems.map((item) => [cartLineKey(item), item.quantity]),
+      );
+      commit(
+        "order",
+        (prev) =>
+          prev.flatMap((item) => {
+            if (
+              item.fulfillmentType !== "made_to_order" ||
+              item.instantMadeToOrder !== true
+            ) {
+              return [item];
+            }
+            const ordered = quantities.get(cartLineKey(item));
+            if (ordered === undefined) return [item];
+            const quantity = item.quantity - ordered;
+            return quantity > 0 ? [{ ...item, quantity }] : [];
+          }),
+        orderId,
+        // Событие storage из соседней вкладки могло ещё не прийти.
+        readStoredCart(itemsRef.current),
       );
     },
     [commit],
@@ -330,6 +367,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       remove,
       setQty,
       clear,
+      clearInstantMadeToOrder,
       syncWithCatalog,
       setUnavailableKeys,
       subtotal,
@@ -342,6 +380,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       remove,
       setQty,
       clear,
+      clearInstantMadeToOrder,
       syncWithCatalog,
       subtotal,
       count,

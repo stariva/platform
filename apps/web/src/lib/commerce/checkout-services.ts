@@ -2,6 +2,14 @@ import type { CheckoutQuote, CheckoutServices } from "@stariva/web-api";
 import { normalizeTelegramHandle } from "@stariva/web-api/contract";
 import { attributionFromRequest } from "@/lib/campaign-attribution";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
+import { NEW_YEAR_PARCEL } from "@/lib/new-year";
+import {
+  checkBusinessDeliveryClient,
+  isOzonBusinessDeliveryConfigured,
+  quoteParcel,
+} from "@/lib/ozon-business-delivery/client";
+import { isOzonBusinessOutage } from "@/lib/ozon-business-delivery/errors";
 import { isOzonDeliveryConfigured } from "@/lib/ozon-delivery/auth";
 import { checkDeliveryAvailable, checkout } from "@/lib/ozon-delivery/client";
 import { isOzonInfrastructureError } from "@/lib/ozon-delivery/errors";
@@ -19,18 +27,23 @@ import {
   CatalogItemsUnavailableError,
   MadeToOrderOptionsError,
   resolveCatalogItems,
+  resolveInstantMadeToOrderItems,
   resolveMadeToOrderItems,
 } from "./catalog";
 import { priceKitBundleLines, resolveKitOrderGift } from "./elka-kit-bundle";
 import { hasPurchasedElkaWorkshop } from "./elka-kit-offer";
+import { FALLBACK_DELIVERY_PRICE_KOPECKS } from "./made-to-order-flow";
 import {
   notifyCustomer,
   notifyMadeToOrderRequested,
 } from "./order-notifications";
 import { siteUrl } from "./order-services";
 import {
+  attachOrderPaymentConfirmation,
   attachPaymentId,
+  createInstantMadeToOrderOrder,
   createMadeToOrderOrder,
+  createOrderPayment,
   createProductOrder,
 } from "./orders";
 
@@ -66,6 +79,66 @@ function unavailableItems(error: CatalogItemsUnavailableError) {
     status: "items_unavailable",
     unavailableProductSlugs: error.productSlugs,
   } as const;
+}
+
+type InstantDeliveryQuote =
+  | {
+      available: true;
+      deliveryPriceKopecks: number;
+      fallback?: boolean;
+    }
+  | { available: false; reason: string; deliveryPriceKopecks: 0 };
+
+/** Причины quoteParcel написаны для мастера; покупателю подсказка про ручную цену не нужна. */
+function customerQuoteReason(reason: string | undefined): string {
+  return (
+    reason?.replace(/\. Можно указать стоимость вручную$/, "") ??
+    "Ozon не доставит такой заказ в этот пункт"
+  );
+}
+
+/**
+ * Считает доставку новогоднего набора через Ozon Delivery for Business. При
+ * временном сбое Ozon покупатель не теряется: берём ту же цену-заглушку, что и
+ * в обычных заказах под заказ. Перед отправкой Ozon пересчитает доставку
+ * заново, а разницу мастер увидит в уведомлении.
+ */
+async function quoteInstantParcel(input: {
+  contactPhone: string;
+  delivery: { pointId: string };
+  items: { price: number; quantity: number }[];
+}): Promise<InstantDeliveryQuote> {
+  const declaredValueKopecks = input.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+  try {
+    const quote = await quoteParcel({
+      recipientPhone: input.contactPhone,
+      pointId: input.delivery.pointId,
+      parcel: NEW_YEAR_PARCEL,
+      declaredValueKopecks,
+    });
+    if (!quote.available) {
+      return {
+        available: false,
+        reason: customerQuoteReason(quote.reason),
+        deliveryPriceKopecks: 0,
+      };
+    }
+    return { available: true, deliveryPriceKopecks: quote.priceKopecks };
+  } catch (error) {
+    if (!isOzonBusinessOutage(error)) throw error;
+    console.warn(
+      "[checkout/instant] Ozon Business недоступен, используем цену-заглушку:",
+      error,
+    );
+    return {
+      available: true,
+      deliveryPriceKopecks: FALLBACK_DELIVERY_PRICE_KOPECKS,
+      fallback: true,
+    };
+  }
 }
 
 /**
@@ -293,6 +366,189 @@ export const checkoutServices: CheckoutServices = {
       };
     } catch (error) {
       console.error("[checkout/create] Ошибка создания платежа:", error);
+      return { status: "payment_failed" };
+    }
+  },
+
+  async checkInstantMadeToOrderPhone(phone) {
+    if (!isOzonBusinessDeliveryConfigured()) return { status: "unconfigured" };
+    try {
+      return { status: "ok", check: await checkBusinessDeliveryClient(phone) };
+    } catch (error) {
+      // Проверка телефона — подсказка, а не условие заказа: временный сбой
+      // Ozon не должен останавливать оформление
+      if (isOzonBusinessOutage(error)) {
+        console.warn(
+          "[checkout/instant-check] Ozon недоступен, проверку телефона пропускаем:",
+          error,
+        );
+        return { status: "ok", check: { available: true } };
+      }
+      console.error("[checkout/instant-check] Ошибка:", error);
+      return { status: "check_failed" };
+    }
+  },
+
+  async quoteInstantMadeToOrder(input) {
+    if (!isOzonBusinessDeliveryConfigured()) return { status: "unconfigured" };
+    try {
+      const items = await resolveInstantMadeToOrderItems(input.items);
+      const result = await quoteInstantParcel({ ...input, items });
+      return {
+        status: "ok",
+        quote: {
+          available: result.available,
+          ...(result.available ? {} : { reason: result.reason }),
+          deliveryPriceKopecks: result.deliveryPriceKopecks,
+        },
+      };
+    } catch (error) {
+      if (error instanceof CatalogItemsUnavailableError) {
+        return unavailableItems(error);
+      }
+      console.error("[checkout/instant-quote] Ошибка:", error);
+      return { status: "check_failed" };
+    }
+  },
+
+  async createInstantMadeToOrder({ userId, headers, ...data }) {
+    if (!isYooKassaConfigured() || !isOzonBusinessDeliveryConfigured()) {
+      return { status: "unconfigured" };
+    }
+
+    let items: Awaited<ReturnType<typeof resolveInstantMadeToOrderItems>>;
+    try {
+      items = await resolveInstantMadeToOrderItems(data.items);
+    } catch (error) {
+      if (error instanceof CatalogItemsUnavailableError) {
+        return unavailableItems(error);
+      }
+      console.error("[checkout/instant-create] Ошибка проверки заказа:", error);
+      return { status: "check_failed" };
+    }
+
+    const productsKopecks = items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+    if (
+      data.expectedProductsKopecks !== undefined &&
+      productsKopecks > data.expectedProductsKopecks
+    ) {
+      return { status: "products_price_changed" };
+    }
+
+    let deliveryQuote: InstantDeliveryQuote;
+    try {
+      deliveryQuote = await quoteInstantParcel({ ...data, items });
+    } catch (error) {
+      console.error(
+        "[checkout/instant-create] Ошибка расчёта доставки:",
+        error,
+      );
+      return { status: "check_failed" };
+    }
+    if (!deliveryQuote.available) return { status: "delivery_unavailable" };
+    if (
+      data.expectedDeliveryKopecks !== undefined &&
+      deliveryQuote.deliveryPriceKopecks > data.expectedDeliveryKopecks
+    ) {
+      return { status: "delivery_price_changed" };
+    }
+
+    // Адрес пункта нужен мастеру в админке и покупателю на странице заказа.
+    // Если справочник точек не ответил, остаётся подпись от покупателя.
+    const pickupPoint = await getCachedPickupPointsInfo([data.delivery.pointId])
+      .then(({ points }) => points[0] ?? null)
+      .catch((error: unknown) => {
+        console.warn(
+          "[checkout/instant-create] Не удалось получить адрес пункта:",
+          error,
+        );
+        return null;
+      });
+
+    let order: Awaited<ReturnType<typeof createInstantMadeToOrderOrder>>;
+    try {
+      order = await createInstantMadeToOrderOrder({
+        userId: userId ?? undefined,
+        attribution: attributionFromRequest({ headers }),
+        visitor: await collectVisitor({ headers }),
+        contactName: data.contactName,
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+        comment: data.comment,
+        items,
+        deliveryPointId: data.delivery.pointId,
+        pickupPoint,
+        pointLabel: data.delivery.pointLabel,
+        amountDelivery: deliveryQuote.deliveryPriceKopecks,
+        parcel: NEW_YEAR_PARCEL,
+        priceFallback: deliveryQuote.available
+          ? deliveryQuote.fallback === true
+          : false,
+        leadTime: MADE_TO_ORDER_DAYS,
+      });
+    } catch (error) {
+      console.error(
+        "[checkout/instant-create] Ошибка сохранения заказа:",
+        error,
+      );
+      return { status: "check_failed" };
+    }
+
+    const paymentRowId = await createOrderPayment(
+      order.id,
+      "deposit",
+      order.amountTotal,
+    );
+    try {
+      const payment = await createPayment({
+        amountKopecks: order.amountTotal,
+        description: `Заказ Stariva №${order.number}`,
+        returnUrl: `${siteUrl(headers)}/order/${order.id}?payment=success`,
+        metadata: {
+          orderId: order.id,
+          kind: "product",
+          orderPaymentId: paymentRowId,
+          paymentType: "deposit",
+          // Фиксация согласия и акцепта: редакция документов на момент заказа.
+          pdConsent: LEGAL_VERSION,
+          offerAccepted: LEGAL_VERSION,
+        },
+        idempotenceKey: paymentRowId,
+      });
+      const confirmationUrl = payment.confirmation?.confirmation_url;
+      if (!confirmationUrl) return { status: "payment_failed" };
+      await attachOrderPaymentConfirmation(
+        paymentRowId,
+        payment.id,
+        confirmationUrl,
+      );
+
+      return {
+        status: "ok",
+        order: {
+          confirmationUrl,
+          orderId: order.id,
+          orderNumber: order.number,
+          analytics: {
+            id: order.id,
+            revenue: order.amountTotal / 100,
+            products: items.map((item) => ({
+              id: item.productSlug,
+              name: item.name,
+              price: item.price / 100,
+              quantity: item.quantity,
+            })),
+          },
+        },
+      };
+    } catch (error) {
+      console.error(
+        "[checkout/instant-create] Ошибка создания платежа:",
+        error,
+      );
       return { status: "payment_failed" };
     }
   },

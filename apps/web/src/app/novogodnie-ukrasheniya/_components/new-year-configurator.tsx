@@ -12,12 +12,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
-import {
-  type CartItem,
-  MAX_CART_QUANTITY,
-  useCart,
-} from "@/lib/cart/cart-context";
+import { type CartItem, useCart } from "@/lib/cart/cart-context";
 import { flyToCart } from "@/lib/cart/fly-to-cart";
+import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
+import { PHOTO_COLOR, PHOTO_SIZE } from "@/lib/made-to-order";
 import {
   ornaments as collectionOrnaments,
   type NewYearConfiguratorProduct,
@@ -41,12 +39,7 @@ interface NewYearConfiguratorProps {
 
 function purchasable(product: NewYearConfiguratorProduct): boolean {
   return Boolean(
-    product.inStock &&
-      product.stockAvailable >= 1 &&
-      product.currency === "RUB" &&
-      typeof product.ozonSku === "number" &&
-      Number.isSafeInteger(product.ozonSku) &&
-      product.ozonSku > 0,
+    product.madeToOrder && product.currency === "RUB" && product.price > 0,
   );
 }
 
@@ -56,8 +49,9 @@ function cartLine(
   return {
     productId: product.id,
     productSlug: product.slug,
-    fulfillmentType: "stock",
-    ozonSku: product.ozonSku as number,
+    fulfillmentType: "made_to_order",
+    instantMadeToOrder: true,
+    options: { size: PHOTO_SIZE, color: PHOTO_COLOR, measurements: [] },
     name: product.name,
     image: newYearProductImage(product),
     price: Math.round(product.price * 100),
@@ -65,10 +59,7 @@ function cartLine(
 }
 
 function stockLabel(product: NewYearConfiguratorProduct): string {
-  if (!purchasable(product)) return "Нет в наличии";
-  return product.stockAvailable === 1
-    ? "Осталась 1 штука"
-    : `В наличии: ${product.stockAvailable}`;
+  return purchasable(product) ? "Изготовим после заказа" : "Скоро появится";
 }
 
 function pluralFigurines(count: number): string {
@@ -465,10 +456,13 @@ export function NewYearConfigurator({
 
   const quantityInCart = (slug: string) =>
     items.find(
-      (item) => item.fulfillmentType === "stock" && item.productSlug === slug,
+      (item) =>
+        item.fulfillmentType === "made_to_order" &&
+        item.instantMadeToOrder === true &&
+        item.productSlug === slug,
     )?.quantity ?? 0;
-  const limitFor = (product: NewYearConfiguratorProduct) =>
-    Math.min(product.stockAvailable, MAX_CART_QUANTITY);
+  const limitFor = (_product: NewYearConfiguratorProduct) =>
+    MAX_MADE_TO_ORDER_QUANTITY;
   const blockedByCart = productsToAdd.some(
     (product) =>
       purchasable(product) && quantityInCart(product.slug) >= limitFor(product),
@@ -685,7 +679,7 @@ export function NewYearConfigurator({
             </div>
             {blockedByCart && hasSelection && (
               <p className="mt-3 text-sm leading-relaxed text-[var(--ny-accent)]">
-                Некоторые товары уже лежат в корзине в максимальном доступном
+                Некоторые изделия уже лежат в корзине в максимальном доступном
                 количестве.
               </p>
             )}
@@ -709,8 +703,8 @@ export function NewYearConfigurator({
               )}
             </Button>
             <p className="mt-3 text-xs leading-relaxed text-taupe">
-              Цена и остатки проверяются из каталога. В корзине состав можно
-              изменить до оформления заказа.
+              Цена и состав проверяются по актуальному каталогу. Изделия
+              напечатают после оплаты, доставка рассчитается на следующем шаге.
             </p>
           </div>
         </aside>

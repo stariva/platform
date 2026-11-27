@@ -5,10 +5,32 @@ type PaymentRow = typeof productOrderPayments.$inferSelect;
 
 export type MadeToOrderPaymentType = PaymentRow["type"];
 
+/**
+ * Цена-заглушка на время сбоя Ozon Доставки: покупатель не должен ждать,
+ * пока чинится интеграция. До отправки Ozon пересчитает доставку заново,
+ * а разницу мастер увидит в уведомлении.
+ */
+export const FALLBACK_DELIVERY_PRICE_KOPECKS = 15_000;
+
 type PaymentStepOrder = Pick<
   OrderRow,
   "kind" | "status" | "amountTotal" | "depositAmount" | "paymentDueAt"
 >;
+
+/**
+ * Заказ с мгновенной оплатой: единственный платёж записан как "deposit", но
+ * покрывает изделия и доставку целиком. Обычная заявка так быть не может —
+ * мастер выставляет ровно половину стоимости изделий.
+ */
+export function isFullyPrepaidMadeToOrder(
+  order: Pick<OrderRow, "amountTotal" | "depositAmount">,
+): boolean {
+  return (
+    order.depositAmount !== null &&
+    order.depositAmount > 0 &&
+    order.depositAmount === order.amountTotal
+  );
+}
 
 /** Сколько стоит этап: предоплата фиксируется при одобрении, доплата — всё остальное. */
 export function madeToOrderStageAmount(

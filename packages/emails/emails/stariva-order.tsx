@@ -70,6 +70,10 @@ function balanceOf(props: StarivaOrderEmailProps) {
 
 function copy(props: StarivaOrderEmailProps) {
   const no = `№${props.orderNumber}`;
+  const fullPrepayment =
+    props.depositAmount !== null &&
+    props.depositAmount > 0 &&
+    props.depositAmount === props.amountTotal;
   const due = props.paymentDueLabel ? ` до ${props.paymentDueLabel}` : "";
   switch (props.status) {
     case "requested":
@@ -88,6 +92,14 @@ function copy(props: StarivaOrderEmailProps) {
         button: "Внести предоплату",
       };
     case "in_production":
+      if (fullPrepayment) {
+        return {
+          subject: `Заказ ${no} оплачен полностью`,
+          heading: "Спасибо, заказ оплачен",
+          intro: `Оплата ${rubles(props.amountTotal)} получена. Мастер изготовит ваши изделия${props.leadTime ? `, срок изготовления — ${props.leadTime}` : ""}. Доплата не понадобится: доставка уже оплачена. Когда заказ будет готов, придёт письмо.`,
+          button: "Открыть заказ",
+        };
+      }
       return {
         subject: `Предоплата по заказу ${no} получена`,
         heading: "Мастер начал плести",
@@ -117,6 +129,15 @@ function copy(props: StarivaOrderEmailProps) {
         button: "Открыть заказ",
       };
     case "ready_to_ship":
+      if (fullPrepayment) {
+        return {
+          subject: `Изделия по заказу ${no} готовы`,
+          heading: "Изделия готовы",
+          intro:
+            "Ваши изделия готовы. Мастер упакует их и передаст в доставку Ozon — номер отправления появится на странице заказа.",
+          button: "Открыть заказ",
+        };
+      }
       return {
         subject: `Заказ ${no} оплачен полностью`,
         heading: "Заказ оплачен",
@@ -176,7 +197,20 @@ export function orderEmailSubject(props: StarivaOrderEmailProps): string {
 /** Строки «подпись — значение» под вступлением: суммы, сроки, трек-номер. */
 function facts(props: StarivaOrderEmailProps): [string, string][] {
   const rows: [string, string][] = [];
+  const fullPrepayment =
+    props.depositAmount !== null &&
+    props.depositAmount > 0 &&
+    props.depositAmount === props.amountTotal;
   switch (props.status) {
+    case "in_production":
+      if (fullPrepayment) {
+        rows.push(["Оплачено", rubles(props.amountTotal)]);
+        if (props.amountDelivery > 0) {
+          rows.push(["В том числе доставка", rubles(props.amountDelivery)]);
+        }
+        if (props.leadTime) rows.push(["Срок изготовления", props.leadTime]);
+      }
+      break;
     case "awaiting_deposit":
       rows.push(["Стоимость заказа", rubles(props.amountTotal)]);
       rows.push(["Предоплата", rubles(props.depositAmount ?? 0)]);

@@ -301,15 +301,39 @@ function confirmedCopy(order: OrderView): {
     };
   }
 
+  // У мгновенного заказа единственная оплата записана как предоплата, но
+  // покрывает всё: после неё изделия ещё нужно произвести, а не просто упаковать
+  const fullyPrepaid =
+    order.depositAmount !== null && order.depositAmount === order.amountTotal;
+  const productionStep: Step[] =
+    fullyPrepaid && order.status === "in_production"
+      ? [
+          {
+            title: "Ольга печатает изделия",
+            text: order.leadTime
+              ? `Срок изготовления: ${order.leadTime}.`
+              : undefined,
+          },
+        ]
+      : fullyPrepaid
+        ? [
+            {
+              title: "Изделия напечатаны",
+              done: true,
+            },
+          ]
+        : [];
+
   return {
     title: "Спасибо, заказ оплачен полностью",
     lead: `${itemsLabel(order)}, заказ ${no} на ${money(order.amountTotal)}.`,
     steps: [
       {
-        title: "Доплата получена",
+        title: fullyPrepaid ? "Оплата получена" : "Доплата получена",
         text: order.hasEmail ? "Чек придёт на почту." : undefined,
         done: true,
       },
+      ...productionStep,
       order.status === "ozon_order_failed"
         ? {
             title: "Ольга оформит доставку сама",

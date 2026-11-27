@@ -27,7 +27,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { trackProductEvent } from "@/lib/analytics";
 import {
   cartLineKey,
-  type FulfillmentType,
   type PricedCartItem,
   useCart,
 } from "@/lib/cart/cart-context";
@@ -43,21 +42,35 @@ import {
 } from "@/lib/in-stock";
 import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { CartItemRow } from "./cart-item-row";
-import { CartSummary, MobileCheckoutBar } from "./cart-summary";
+import {
+  type CartCheckoutKind,
+  CartSummary,
+  MobileCheckoutBar,
+} from "./cart-summary";
 
-const SECTION_ORDER: FulfillmentType[] = ["stock", "made_to_order"];
+const SECTION_ORDER: CartCheckoutKind[] = [
+  "stock",
+  "instant_made_to_order",
+  "made_to_order",
+];
 
-const SECTION_TITLES: Record<FulfillmentType, { title: string; hint: string }> =
-  {
-    stock: {
-      title: "Готовые изделия",
-      hint: "Отправим со склада, оплачиваются отдельно",
-    },
-    made_to_order: {
-      title: "Под заказ",
-      hint: "Сначала заявка мастеру, оплата — после согласования",
-    },
-  };
+const SECTION_TITLES: Record<
+  CartCheckoutKind,
+  { title: string; hint: string }
+> = {
+  stock: {
+    title: "Готовые изделия",
+    hint: "Отправим со склада, оплачиваются отдельно",
+  },
+  instant_made_to_order: {
+    title: "Новогодние изделия",
+    hint: "Напечатаем после оплаты, оформляются отдельно",
+  },
+  made_to_order: {
+    title: "Под заказ",
+    hint: "Сначала заявка мастеру, оплата — после согласования",
+  },
+};
 
 export default function CartPage() {
   const {
@@ -77,7 +90,21 @@ export default function CartPage() {
     states.get(cartLineKey(item)) ?? { status: "unknown" };
   // Готовые изделия и изделия под заказ оформляются и оплачиваются раздельно
   const sections = SECTION_ORDER.map((kind) => {
-    const sectionItems = items.filter((item) => item.fulfillmentType === kind);
+    const sectionItems = items.filter((item) => {
+      if (kind === "instant_made_to_order") {
+        return (
+          item.fulfillmentType === "made_to_order" &&
+          item.instantMadeToOrder === true
+        );
+      }
+      if (kind === "made_to_order") {
+        return (
+          item.fulfillmentType === "made_to_order" &&
+          item.instantMadeToOrder !== true
+        );
+      }
+      return item.fulfillmentType === kind;
+    });
     const buyable = sectionItems.filter(
       (item) => stateOf(item).status !== "unavailable",
     );
@@ -140,15 +167,18 @@ export default function CartPage() {
       <main className="pt-24 lg:pt-32 pb-28 lg:pb-24 px-5">
         <div className="max-w-6xl mx-auto">
           {/* Шаги оплаты — только у готовых изделий; под заказ сначала заявка */}
-          {hasItems && sections.some((section) => section.kind === "stock") && (
-            <CheckoutProgress current={0} />
-          )}
+          {hasItems &&
+            sections.some(
+              (section) =>
+                section.kind === "stock" ||
+                section.kind === "instant_made_to_order",
+            ) && <CheckoutProgress current={0} />}
 
           <div className="flex items-end justify-between gap-4 mb-6 lg:mb-8">
             <h1 className="font-serif text-4xl lg:text-5xl text-espresso">
               Корзина
               {hasItems && (
-                <span className="ml-3 align-middle font-sans text-sm text-taupe">
+                <span className="ml-3 align-middle font-sans text-sm whitespace-nowrap text-taupe">
                   {totalCount} {pluralItems(totalCount)}
                 </span>
               )}

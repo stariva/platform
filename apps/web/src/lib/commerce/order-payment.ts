@@ -1,4 +1,7 @@
-import { madeToOrderReceiptLines } from "@/lib/commerce/made-to-order-flow";
+import {
+  isFullyPrepaidMadeToOrder,
+  madeToOrderReceiptLines,
+} from "@/lib/commerce/made-to-order-flow";
 import {
   notifyCustomer,
   notifyMadeToOrderPayment,
@@ -265,11 +268,33 @@ async function handleMadeToOrderPayment(
   await issueNpdReceipt({
     payment,
     target: { kind: "product", orderId },
-    services: madeToOrderReceiptLines(
-      items[0]?.name ?? "Изделие на заказ",
-      row,
-      order.amountDelivery,
-    ),
+    services:
+      row.type === "deposit" &&
+      row.amount === order.amountTotal &&
+      isFullyPrepaidMadeToOrder(order)
+        ? [
+            // Мгновенный заказ оплачен целиком одним платежом: в чеке —
+            // сами изделия и доставка, а не авансовая «предоплата»
+            ...items.map((item) => ({
+              name: item.name,
+              amount: item.price,
+              quantity: item.quantity,
+            })),
+            ...(order.amountDelivery > 0
+              ? [
+                  {
+                    name: "Доставка",
+                    amount: order.amountDelivery,
+                    quantity: 1,
+                  },
+                ]
+              : []),
+          ]
+        : madeToOrderReceiptLines(
+            items[0]?.name ?? "Изделие на заказ",
+            row,
+            order.amountDelivery,
+          ),
     email: {
       to: await getProductOrderCustomerEmail(order),
       subject: `заказу №${order.number}`,

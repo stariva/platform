@@ -2,9 +2,17 @@ import { expect, mock, test } from "bun:test";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 
+const sweep = mock(async () => ({
+  checked: 1,
+  repriced: 0,
+  shipped: 1,
+  failed: 0,
+}));
+
 mock.module("../../../storefront", () => ({
   pushStorefrontStockToOzon: async () => true,
   revalidateStorefront: async () => true,
+  sweepStorefrontOzonDeliveries: sweep,
 }));
 
 const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
@@ -12,9 +20,8 @@ const parcel = { weightGrams: 800, lengthCm: 60, widthCm: 30, heightCm: 20 };
 // Importing the router creates a pool; these tests only use the fake DB below.
 const originalUrl = process.env.POSTGRES_URL;
 process.env.POSTGRES_URL ??= "postgres://postgres@localhost/order_balance_test";
-const { cancel, requestBalance, requestBalanceWithOzon } = await import(
-  "./stages"
-);
+const { cancel, completeProduction, requestBalance, requestBalanceWithOzon } =
+  await import("./stages");
 if (originalUrl === undefined) delete process.env.POSTGRES_URL;
 
 const dialect = new PgDialect();
@@ -171,4 +178,34 @@ test("requestBalance accepts the maximum integer total", async () => {
       amountDelivery: 100,
     }),
   );
+});
+
+test("completeProduction moves a fully prepaid order to shipping and asks the storefront to create the parcel", async () => {
+  sweep.mockClear();
+  const { db, set, where } = fakeDb(0, [
+    { id: "order", status: "ready_to_ship" },
+  ]);
+  const handler = completeProduction["~orpc"].handler;
+  const result = await handler({
+    context: { db } as unknown as Parameters<typeof handler>[0]["context"],
+    input: { id: "order" },
+    path: [],
+    procedure: completeProduction,
+    errors: {},
+    lastEventId: undefined,
+  });
+
+  expect(result).toMatchObject({
+    status: "ready_to_ship",
+    ozonSweep: { shipped: 1 },
+  });
+  expect(set).toHaveBeenCalledWith(
+    expect.objectContaining({ status: "ready_to_ship" }),
+  );
+  const condition = sqlOf(where.mock.calls[0]?.[0]);
+  expect(condition).toContain('"deposit_amount" is not null');
+  expect(condition).toContain(
+    '"deposit_amount" = "product_orders"."amount_total"',
+  );
+  expect(sweep).toHaveBeenCalledTimes(1);
 });

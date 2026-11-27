@@ -63,6 +63,78 @@ const create = checkout.create.handler(async ({ input, context, errors }) => {
   }
 });
 
+const checkInstantMadeToOrderPhone =
+  checkout.checkInstantMadeToOrderPhone.handler(
+    async ({ input, context, errors }) => {
+      const result =
+        await context.services.checkout.checkInstantMadeToOrderPhone(
+          input.phone,
+        );
+      switch (result.status) {
+        case "ok":
+          return result.check;
+        case "unconfigured":
+          throw errors.DELIVERY_UNAVAILABLE();
+        case "check_failed":
+          throw errors.CHECKOUT_CHECK_FAILED({
+            message: "Не удалось проверить доступность доставки",
+          });
+      }
+    },
+  );
+
+const quoteInstantMadeToOrder = checkout.quoteInstantMadeToOrder.handler(
+  async ({ input, context, errors }) => {
+    const result =
+      await context.services.checkout.quoteInstantMadeToOrder(input);
+    switch (result.status) {
+      case "ok":
+        return result.quote;
+      case "unconfigured":
+        throw errors.DELIVERY_UNAVAILABLE();
+      case "items_unavailable":
+        throw errors.ITEMS_UNAVAILABLE({
+          data: { unavailableProductSlugs: result.unavailableProductSlugs },
+        });
+      case "check_failed":
+        throw errors.CHECKOUT_CHECK_FAILED({
+          message: "Не удалось рассчитать стоимость доставки",
+        });
+    }
+  },
+);
+
+const createInstantMadeToOrder = checkout.createInstantMadeToOrder.handler(
+  async ({ input, context, errors }) => {
+    const session = await context.getSession();
+    const result = await context.services.checkout.createInstantMadeToOrder({
+      ...input,
+      userId: session?.user.id ?? null,
+      headers: context.headers,
+    });
+    switch (result.status) {
+      case "ok":
+        return result.order;
+      case "unconfigured":
+        throw errors.PAYMENTS_UNAVAILABLE();
+      case "items_unavailable":
+        throw errors.ITEMS_UNAVAILABLE({
+          data: { unavailableProductSlugs: result.unavailableProductSlugs },
+        });
+      case "check_failed":
+        throw errors.CHECKOUT_CHECK_FAILED();
+      case "delivery_unavailable":
+        throw errors.DELIVERY_NOT_AVAILABLE();
+      case "delivery_price_changed":
+        throw errors.DELIVERY_PRICE_CHANGED();
+      case "products_price_changed":
+        throw errors.PRODUCTS_PRICE_CHANGED();
+      case "payment_failed":
+        throw errors.PAYMENT_CREATE_FAILED();
+    }
+  },
+);
+
 const requestMadeToOrder = checkout.requestMadeToOrder.handler(
   async ({ input, context, errors }) => {
     const session = await context.getSession();
@@ -90,4 +162,12 @@ const requestMadeToOrder = checkout.requestMadeToOrder.handler(
   },
 );
 
-export const checkoutRouter = { checkPhone, quote, create, requestMadeToOrder };
+export const checkoutRouter = {
+  checkPhone,
+  quote,
+  create,
+  checkInstantMadeToOrderPhone,
+  quoteInstantMadeToOrder,
+  createInstantMadeToOrder,
+  requestMadeToOrder,
+};

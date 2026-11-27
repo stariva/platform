@@ -14,13 +14,17 @@ import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { FulfillmentType } from "@/lib/cart/cart-context";
+
 import { IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
+/** Обычные разделы корзины плюс новогодние изделия с мгновенной оплатой. */
+export type CartCheckoutKind = FulfillmentType | "instant_made_to_order";
+
 const COPY: Record<
-  FulfillmentType,
+  CartCheckoutKind,
   {
     delivery: string;
     deliveryValue: string;
@@ -43,6 +47,25 @@ const COPY: Record<
         : `${count} ${pluralItems(count)} уже нет в наличии.`,
     perks: () => [
       { Icon: PackageCheckIcon, text: `Отправим за ${IN_STOCK_SHIP_DAYS}` },
+      { Icon: TruckIcon, text: "Доставка в пункт выдачи Ozon по всей России" },
+      { Icon: LockKeyholeIcon, text: "Безопасная онлайн-оплата через ЮKassa" },
+    ],
+  },
+  instant_made_to_order: {
+    delivery: "Доставка Ozon",
+    deliveryValue: "на следующем шаге",
+    totalLabel: "Итого",
+    checkoutLabel: "Перейти к оплате",
+    checkoutHref: "/checkout/made-to-order/instant",
+    unavailable: (count) =>
+      count === 1
+        ? "Одно изделие сейчас нельзя заказать."
+        : `${count} ${pluralItems(count)} сейчас нельзя заказать.`,
+    perks: (leadTime) => [
+      {
+        Icon: PackageCheckIcon,
+        text: `Напечатаем после оплаты, обычно за ${leadTime}`,
+      },
       { Icon: TruckIcon, text: "Доставка в пункт выдачи Ozon по всей России" },
       { Icon: LockKeyholeIcon, text: "Безопасная онлайн-оплата через ЮKassa" },
     ],
@@ -76,7 +99,7 @@ const COPY: Record<
 
 interface CartSummaryProps {
   /** Готовые изделия отправляет Ozon, изделия под заказ плетёт и отправляет мастер */
-  kind: FulfillmentType;
+  kind: CartCheckoutKind;
   /** Сумма и количество только по тем изделиям, которые можно купить */
   subtotal: number;
   count: number;
@@ -219,7 +242,7 @@ function CheckoutButton({
   blocked,
   className,
 }: {
-  kind: FulfillmentType;
+  kind: CartCheckoutKind;
   blocked: boolean;
   className?: string;
 }) {
@@ -256,7 +279,7 @@ export function MobileCheckoutBar({
   blocked,
   visible,
 }: {
-  kind: FulfillmentType;
+  kind: CartCheckoutKind;
   subtotal: number;
   count: number;
   blocked: boolean;
