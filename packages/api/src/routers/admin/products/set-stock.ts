@@ -11,9 +11,9 @@ import { storefrontPaths } from "./mapping";
 
 /**
  * Остаток готовых изделий. Ведётся у нас и правится здесь, при оплате заказа
- * списывается сам. Ozon Доставка отгружает только то, что числится в остатке
- * на Ozon, поэтому новое значение сразу дублируется на FBS-склад Ozon, а сам
- * товар скрывается с витрины Ozon (кроме тех, что продаются и на Ozon).
+ * списывается сам. Если товар привязан к Ozon, новое значение сразу
+ * дублируется на FBS-склад Ozon, а сам товар скрывается с витрины Ozon
+ * (кроме тех, что продаются и на Ozon).
  */
 export const setStock = adminProcedure
   .input(
@@ -39,27 +39,20 @@ export const setStock = adminProcedure
     if (!current) {
       throw new ORPCError("NOT_FOUND", { message: "Товар не найден" });
     }
-    // Для доставки нужен SKU, для синхронизации остатка — артикул.
-    if (
-      input.stockAvailable > 0 &&
-      (current.ozonSku === null || current.ozonOfferId === null)
-    ) {
-      throw new ORPCError("BAD_REQUEST", {
-        message:
-          "У товара нет SKU или артикула Ozon — его можно продавать только под заказ",
-      });
-    }
-
     await context.db
       .update(products)
       .set({ stockAvailable: input.stockAvailable })
       .where(eq(products.id, input.id));
 
+    // Полная привязка к Ozon: SKU нужен для доставки и видимости,
+    // артикул — для синхронизации остатка. Без привязки остаток просто
+    // сохраняется у нас.
+    const ozonLinked = current.ozonSku !== null && current.ozonOfferId !== null;
     const [revalidated, ozonSynced] = await Promise.all([
       revalidateStorefront(storefrontPaths(current)),
-      current.ozonSku === null
-        ? true
-        : pushStorefrontStockToOzon([current.slug]),
+      ozonLinked
+        ? pushStorefrontStockToOzon([current.slug])
+        : Promise.resolve(null),
     ]);
     return { stockAvailable: input.stockAvailable, revalidated, ozonSynced };
   });

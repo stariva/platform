@@ -8,17 +8,14 @@ import { orpc } from "~/orpc/react";
 
 /**
  * Остаток в таблице: клик — поле ввода, Enter или уход фокуса сохраняет, Esc отменяет.
- * Как и на странице товара, новое значение сразу уходит на склад Ozon.
- * Без SKU и артикула Ozon товар продаётся только под заказ — остаток не правится.
+ * Если товар привязан к Ozon, новое значение сразу уходит на склад Ozon.
  */
 export function StockCell({
   id,
   stockAvailable,
-  canStock,
 }: {
   id: string;
   stockAvailable: number;
-  canStock: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -37,7 +34,9 @@ export function StockCell({
     onSuccess: (result) => {
       setShown(result.stockAvailable);
       setEditing(false);
-      if (result.ozonSynced) {
+      if (result.ozonSynced === null) {
+        toast.success("Остаток сохранён");
+      } else if (result.ozonSynced) {
         toast.success("Остаток сохранён и отправлен в Ozon");
       } else {
         toast.warning(
@@ -80,18 +79,6 @@ export function StockCell({
       <span className="text-muted-foreground text-xs">Нет в наличии</span>
     );
 
-  // Без Ozon можно только обнулить остаток, если он почему-то есть.
-  if (!canStock && shown === 0) {
-    return (
-      <span
-        className="text-muted-foreground text-xs"
-        title="Нет SKU или артикула Ozon — только под заказ"
-      >
-        Нет в наличии
-      </span>
-    );
-  }
-
   if (!editing) {
     return (
       <button
@@ -112,7 +99,7 @@ export function StockCell({
       inputMode="numeric"
       step="1"
       min="0"
-      max={canStock ? 9999 : 0}
+      max={9999}
       value={draft}
       disabled={mutation.isPending}
       aria-label="Готовых изделий в наличии"

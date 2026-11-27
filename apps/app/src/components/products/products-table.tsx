@@ -431,10 +431,6 @@ export function ProductsTable({
                       <StockCell
                         id={product.id}
                         stockAvailable={product.stockAvailable}
-                        canStock={
-                          product.ozonSku !== null &&
-                          product.ozonOfferId !== null
-                        }
                       />
                     </div>
                   </TableCell>

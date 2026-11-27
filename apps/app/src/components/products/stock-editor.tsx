@@ -16,8 +16,8 @@ interface Props {
 
 /**
  * Остаток готовых изделий. Ведётся у нас: при оплате заказа он списывается
- * сам, пополнять его нужно здесь. При сохранении дублируется на склад Ozon —
- * Ozon Доставка отгружает только то, что числится в остатке на Ozon.
+ * сам, пополнять его нужно здесь. Если товар привязан к Ozon, при сохранении
+ * остаток дублируется на склад Ozon.
  *
  * Готовые изделия с витрины Ozon скрыты; переключатель «Продавать на Ozon»
  * выставляет товар и туда. Остаток тогда общий: покупки на Ozon уменьшают
@@ -39,10 +39,12 @@ export function StockEditor({
   const mutation = useMutation({
     ...orpc.admin.products.setStock.mutationOptions(),
     onSuccess: (result) => {
-      setSyncFailed(!result.ozonSynced);
+      setSyncFailed(result.ozonSynced === false);
       setSaved(result.stockAvailable);
       setValue(String(result.stockAvailable));
-      if (result.ozonSynced) {
+      if (result.ozonSynced === null) {
+        toast.success("Остаток сохранён");
+      } else if (result.ozonSynced) {
         toast.success("Остаток сохранён и отправлен в Ozon");
       } else {
         toast.warning(
@@ -72,6 +74,7 @@ export function StockEditor({
     onError: (error: Error) => toast.error(error.message || "Не сохранилось"),
   });
 
+  const ozonLinked = sku !== null && offerId !== null;
   const parsed = value.trim() === "" ? Number.NaN : Number(value);
   const canSave =
     Number.isInteger(parsed) &&
@@ -91,7 +94,6 @@ export function StockEditor({
           min="0"
           step="1"
           className="max-w-32"
-          disabled={sku === null}
           value={value}
           onChange={(event) => setValue(event.target.value)}
         />
@@ -105,12 +107,12 @@ export function StockEditor({
         </Button>
       </div>
       <p className="text-muted-foreground text-xs">
-        {sku
-          ? `Ozon SKU ${sku}${offerId ? ` · артикул ${offerId}` : ""}. При сохранении остаток уходит на склад Ozon${onOzon ? "" : ", а товар скрывается с витрины Ozon"}. `
-          : "Нет SKU Ozon — продаётся только под заказ. "}
+        {ozonLinked
+          ? `Ozon SKU ${sku} · артикул ${offerId}. При сохранении остаток уходит на склад Ozon${onOzon ? "" : ", а товар скрывается с витрины Ozon"}. `
+          : "Нет полной привязки к Ozon — остаток хранится только на сайте. "}
         Остаток уменьшается сам, когда заказ оплачен.
       </p>
-      {sku !== null && offerId !== null && (
+      {ozonLinked && (
         <div className="flex items-center justify-between gap-4 border-t pt-3">
           <div>
             <Label htmlFor="sellOnOzon" className="font-medium">
