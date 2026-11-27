@@ -273,6 +273,42 @@ export const madeToOrderRequestedSchema = z.object({
 
 export type MadeToOrderRequested = z.infer<typeof madeToOrderRequestedSchema>;
 
+/** Расчёт доставки изделий, которые производятся после оплаты. */
+export const instantMadeToOrderQuoteSchema = z.object({
+  available: z.boolean(),
+  /** Почему недоступно, если `available` ложно. */
+  reason: z.string().optional(),
+  /** Стоимость доставки, копейки. */
+  deliveryPriceKopecks: z.number().int().nonnegative(),
+});
+
+export type InstantMadeToOrderQuote = z.infer<
+  typeof instantMadeToOrderQuoteSchema
+>;
+
+/**
+ * Мгновенное оформление изделий, которые производятся после оплаты: доставка
+ * считается сразу по заранее известной посылке, без карточек и SKU Ozon Seller.
+ */
+export const createInstantMadeToOrderInputSchema = z.object({
+  contactName: z.string().min(1).max(120),
+  contactPhone: phone,
+  contactEmail: z.email("Укажите email").trim(),
+  comment: z.string().trim().max(1500).optional(),
+  items: z.array(stockItemSchema).min(1).max(MAX_MADE_TO_ORDER_LINES),
+  delivery: pickupDeliverySchema,
+  /** Не создаём платёж, если серверная доставка дороже показанной покупателю. */
+  expectedDeliveryKopecks: z.number().int().nonnegative().optional(),
+  /** Не создаём платёж, если серверная цена товаров выше показанной покупателю. */
+  expectedProductsKopecks: z.number().int().positive().optional(),
+  personalDataConsent,
+  offerAccepted: z.literal(true, { error: "Подтвердите согласие с офертой" }),
+});
+
+export type CreateInstantMadeToOrderInput = z.infer<
+  typeof createInstantMadeToOrderInputSchema
+>;
+
 export const checkoutContract = {
   /** Принимает ли Ozon Доставка заказы на этот телефон. */
   checkPhone: oc
@@ -308,6 +344,44 @@ export const checkoutContract = {
       [PaymentCreateFailedError.code]: PaymentCreateFailedError,
     })
     .input(createOrderInputSchema)
+    .output(createdOrderSchema),
+
+  /** Принимает ли Ozon Доставка для бизнеса заказы на этот телефон. */
+  checkInstantMadeToOrderPhone: oc
+    .errors({
+      [DeliveryUnavailableError.code]: DeliveryUnavailableError,
+      [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
+    })
+    .input(z.object({ phone }))
+    .output(phoneCheckSchema),
+
+  /** Стоимость доставки изделий с мгновенной оплатой в выбранный пункт. */
+  quoteInstantMadeToOrder: oc
+    .errors({
+      [DeliveryUnavailableError.code]: DeliveryUnavailableError,
+      [ItemsUnavailableError.code]: ItemsUnavailableError,
+      [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
+    })
+    .input(quoteInputSchema)
+    .output(instantMadeToOrderQuoteSchema),
+
+  /**
+   * Проверяет состав и доставку, сохраняет заказ как полностью оплачиваемый
+   * заранее и возвращает ссылку на оплату. После оплаты изделия уходят в
+   * производство, а когда они готовы, отправление создаётся в Ozon Доставке
+   * для бизнеса — карточки и SKU Ozon Seller для этого не нужны.
+   */
+  createInstantMadeToOrder: oc
+    .errors({
+      [PaymentsUnavailableError.code]: PaymentsUnavailableError,
+      [ItemsUnavailableError.code]: ItemsUnavailableError,
+      [CheckoutCheckFailedError.code]: CheckoutCheckFailedError,
+      [DeliveryNotAvailableError.code]: DeliveryNotAvailableError,
+      [DeliveryPriceChangedError.code]: DeliveryPriceChangedError,
+      [ProductsPriceChangedError.code]: ProductsPriceChangedError,
+      [PaymentCreateFailedError.code]: PaymentCreateFailedError,
+    })
+    .input(createInstantMadeToOrderInputSchema)
     .output(createdOrderSchema),
 
   /**

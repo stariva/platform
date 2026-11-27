@@ -4,9 +4,11 @@ import { logger } from "@stariva/config";
 import {
   type CheckoutQuote,
   type CreatedOrder,
+  type CreateInstantMadeToOrderInput,
   type CreateOrderInput,
   type CustomOrderRequest,
   type EmailEventsSyncResult,
+  type InstantMadeToOrderQuote,
   type LessonVideoResult,
   type MadeToOrderDeliverySweepResult,
   type MadeToOrderRequest,
@@ -185,6 +187,34 @@ export interface CheckoutServices {
    */
   create: (
     input: CreateOrderInput & { userId: string | null; headers: Headers },
+  ) => Promise<
+    | { status: "ok"; order: CreatedOrder }
+    | { status: "unconfigured" }
+    | { status: "delivery_unavailable" }
+    | { status: "delivery_price_changed" }
+    | { status: "products_price_changed" }
+    | { status: "payment_failed" }
+    | CheckoutRejection
+  >;
+  checkInstantMadeToOrderPhone: (
+    phone: string,
+  ) => Promise<
+    | { status: "ok"; check: PhoneCheck }
+    | { status: "unconfigured" }
+    | { status: "check_failed" }
+  >;
+  quoteInstantMadeToOrder: (
+    input: QuoteInput,
+  ) => Promise<
+    | { status: "ok"; quote: InstantMadeToOrderQuote }
+    | { status: "unconfigured" }
+    | CheckoutRejection
+  >;
+  createInstantMadeToOrder: (
+    input: CreateInstantMadeToOrderInput & {
+      userId: string | null;
+      headers: Headers;
+    },
   ) => Promise<
     | { status: "ok"; order: CreatedOrder }
     | { status: "unconfigured" }

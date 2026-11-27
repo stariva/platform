@@ -155,6 +155,24 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
     ...orpc.admin.orders.requestBalanceWithOzon.mutationOptions(),
     ...handlers,
   });
+  const completeProduction = useMutation({
+    ...orpc.admin.orders.completeProduction.mutationOptions(),
+    onSuccess: (result) => {
+      if (!result.ozonSweep) {
+        toast.success(
+          "Заказ готов. Витрина не ответила — создайте отправление Ozon общей кнопкой позже",
+        );
+      } else if (result.ozonSweep.failed > 0) {
+        toast.success(
+          "Заказ готов. Ozon пока не создал отправление — повторите общей кнопкой позже",
+        );
+      } else {
+        toast.success("Заказ готов, отправление Ozon создано");
+      }
+      router.refresh();
+    },
+    onError: (error: Error) => toast.error(error.message || "Не получилось"),
+  });
   const extendPayment = useMutation({
     ...orpc.admin.orders.extendPayment.mutationOptions(),
     ...handlers,
@@ -169,6 +187,7 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
     reopen,
     requestBalance,
     requestBalanceWithOzon,
+    completeProduction,
     extendPayment,
     cancel,
   ].some((mutation) => mutation.isPending);
@@ -446,52 +465,81 @@ export function MadeToOrderStage({ order }: { order: AdminOrderView }) {
           </div>
         )}
 
-        {order.status === "in_production" && (
-          <div className="space-y-3">
-            <p className="text-muted-foreground text-sm">
-              Предоплата получена
-              {order.depositPaidAt &&
-                ` ${dateTime.format(new Date(order.depositPaidAt))}`}
-              . Когда изделие будет готово, упакуйте его и укажите вес и размеры
-              посылки: доплата выставится за изделие. Покупатель сам выберет
-              пункт выдачи, и сайт посчитает доставку Ozon и добавит её к
-              доплате.
-            </p>
+        {order.status === "in_production" &&
+          (order.instantMadeToOrder ? (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                {PARCEL_FIELDS.map(({ key, label }) => (
-                  <div key={key} className="space-y-1.5">
-                    <Label htmlFor={`parcel-${key}`}>{label}</Label>
-                    <Input
-                      id={`parcel-${key}`}
-                      inputMode="numeric"
-                      value={parcelFields[key]}
-                      onChange={(event) =>
-                        setParcelFields((prev) => ({
-                          ...prev,
-                          [key]: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                ))}
+              <div className="space-y-1 rounded-lg border p-3">
+                <Line label="Оплачено полностью">
+                  {rubles.format(order.amountTotal)}
+                </Line>
+                <Line label="В том числе доставка">
+                  {rubles.format(order.amountDelivery)}
+                </Line>
               </div>
+              <p className="text-muted-foreground text-sm">
+                Оплата получена
+                {order.depositPaidAt &&
+                  ` ${dateTime.format(new Date(order.depositPaidAt))}`}
+                . Покупатель уже выбрал пункт выдачи и оплатил доставку —
+                доплаты не будет. Когда изделия будут готовы и упакованы,
+                создайте отправление Ozon.
+              </p>
               <Button
                 className="w-full"
-                disabled={!parcel || busy}
-                onClick={() =>
-                  parcel &&
-                  requestBalanceWithOzon.mutate({ id: order.id, parcel })
-                }
+                disabled={busy}
+                onClick={() => completeProduction.mutate({ id: order.id })}
               >
-                {requestBalanceWithOzon.isPending
-                  ? "Выставляем доплату…"
-                  : "Готово — выставить доплату"}
+                {completeProduction.isPending
+                  ? "Создаём отправление…"
+                  : "Готово — создать отправление Ozon"}
               </Button>
             </div>
-            {manualBalanceForm}
-          </div>
-        )}
+          ) : (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-sm">
+                Предоплата получена
+                {order.depositPaidAt &&
+                  ` ${dateTime.format(new Date(order.depositPaidAt))}`}
+                . Когда изделие будет готово, упакуйте его и укажите вес и
+                размеры посылки: доплата выставится за изделие. Покупатель сам
+                выберет пункт выдачи, и сайт посчитает доставку Ozon и добавит
+                её к доплате.
+              </p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {PARCEL_FIELDS.map(({ key, label }) => (
+                    <div key={key} className="space-y-1.5">
+                      <Label htmlFor={`parcel-${key}`}>{label}</Label>
+                      <Input
+                        id={`parcel-${key}`}
+                        inputMode="numeric"
+                        value={parcelFields[key]}
+                        onChange={(event) =>
+                          setParcelFields((prev) => ({
+                            ...prev,
+                            [key]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!parcel || busy}
+                  onClick={() =>
+                    parcel &&
+                    requestBalanceWithOzon.mutate({ id: order.id, parcel })
+                  }
+                >
+                  {requestBalanceWithOzon.isPending
+                    ? "Выставляем доплату…"
+                    : "Готово — выставить доплату"}
+                </Button>
+              </div>
+              {manualBalanceForm}
+            </div>
+          ))}
 
         {order.status === "declined" && (
           <p className="text-sm">

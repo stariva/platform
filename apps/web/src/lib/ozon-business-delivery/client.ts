@@ -327,6 +327,35 @@ export async function probeOzonBusinessDelivery(): Promise<void> {
   );
 }
 
+/**
+ * Может ли Ozon доставить заказ на этот телефон: покупатель должен быть
+ * зарегистрирован в Ozon. Проверка нужна ещё до выбора пункта выдачи.
+ */
+export async function checkBusinessDeliveryClient(
+  recipientPhone: string,
+): Promise<{ available: boolean; reason?: string }> {
+  const phone = ozonPhone(recipientPhone);
+  if (!phone) {
+    return {
+      available: false,
+      reason:
+        "Укажите российский номер телефона, на который зарегистрирован Ozon",
+    };
+  }
+  const client = await call(
+    "/v1/delivery/check-client",
+    { phone_number: phone },
+    checkClientSchema,
+  );
+  return client.can_be_delivered
+    ? { available: true }
+    : {
+        available: false,
+        reason:
+          "На этот телефон Ozon доставить не сможет: зарегистрируйтесь в приложении Ozon или укажите номер, к которому оно привязано",
+      };
+}
+
 function pointNumber(pointId: string): number | null {
   const id = Number(pointId);
   return Number.isSafeInteger(id) && id > 0 ? id : null;

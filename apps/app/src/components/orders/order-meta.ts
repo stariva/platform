@@ -36,6 +36,8 @@ export interface AdminOrderView {
   deliveryPointId: string | null;
   /** Доплата ждёт, пока покупатель выберет пункт и сайт посчитает доставку. */
   deliveryQuotePending: boolean;
+  /** Единственная оплата уже покрыла изделия и доставку — доплаты не будет. */
+  instantMadeToOrder: boolean;
   deliveryAddress: {
     address: string | null;
     title: string | null;

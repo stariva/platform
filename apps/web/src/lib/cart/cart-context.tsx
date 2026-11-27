@@ -35,6 +35,8 @@ const cartItemSchema = z.object({
   fulfillmentType: fulfillmentTypeSchema.default("stock"),
   /** Размер и цвет, выбранные на карточке; только для изделий под заказ. */
   options: madeToOrderOptionsSchema.optional(),
+  /** Новогодние изделия с фиксированным образцом: оплачиваются сразу, а не через заявку мастеру. */
+  instantMadeToOrder: z.boolean().optional(),
   /** Набор для плетения: к нему можно оформить подарок с кодом доступа. */
   kit: z.boolean().optional(),
 });
@@ -49,11 +51,15 @@ export type PricedCartItem = WithListPrice<CartItem>;
  * размеру и цвету: одно и то же изделие в разных вариантах — разные строки.
  */
 export function cartLineKey(
-  item: Pick<CartItem, "productSlug" | "fulfillmentType" | "options">,
+  item: Pick<
+    CartItem,
+    "productSlug" | "fulfillmentType" | "options" | "instantMadeToOrder"
+  >,
 ): string {
   if (item.fulfillmentType === "stock") return `stock:${item.productSlug}`;
   const { size = "", color = "" } = item.options ?? {};
-  return `made_to_order:${item.productSlug}:${size}:${color}`;
+  const kind = item.instantMadeToOrder === true ? "instant" : "made_to_order";
+  return `${kind}:${item.productSlug}:${size}:${color}`;
 }
 
 /** Свежие данные каталога по одному товару из корзины. */
@@ -84,6 +90,8 @@ interface CartContextValue {
    * изделия под заказ. orderId — корзину очищает оформленный заказ или заявка.
    */
   clear: (fulfillmentType?: FulfillmentType, orderId?: string) => void;
+  /** Убирает только новогодние изделия мгновенного оформления после их заказа. */
+  clearInstantMadeToOrder: (orderId?: string) => void;
   /** Подставляет актуальные цены и ограничивает количество остатком. */
   syncWithCatalog: (updates: CatalogUpdate[]) => void;
   /**
@@ -261,6 +269,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [commit],
   );
 
+  const clearInstantMadeToOrder = useCallback(
+    (orderId?: string) => {
+      commit(
+        orderId ? "order" : "clear",
+        (prev) => prev.filter((item) => item.instantMadeToOrder !== true),
+        orderId,
+      );
+    },
+    [commit],
+  );
+
   const syncWithCatalog = useCallback(
     (updates: CatalogUpdate[]) => {
       const byProduct = new Map(
@@ -330,6 +349,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       remove,
       setQty,
       clear,
+      clearInstantMadeToOrder,
       syncWithCatalog,
       setUnavailableKeys,
       subtotal,
@@ -342,6 +362,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       remove,
       setQty,
       clear,
+      clearInstantMadeToOrder,
       syncWithCatalog,
       subtotal,
       count,

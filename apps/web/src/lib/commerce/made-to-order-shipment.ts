@@ -14,6 +14,7 @@ import {
 } from "@/lib/ozon-business-delivery/errors";
 import type { PickupPoint } from "@/lib/ozon-delivery/types";
 import { formatPrice } from "@/lib/products";
+import { FALLBACK_DELIVERY_PRICE_KOPECKS } from "./made-to-order-flow";
 import {
   notifyMadeToOrderPayment,
   notifyOzonOrderFailed,
@@ -33,14 +34,6 @@ import {
   replaceMadeToOrderDeliveryPrice,
   saveMadeToOrderDeliveryPrice,
 } from "./orders";
-
-/**
- * Цена-заглушка на время сбоя Ozon Доставки: покупатель не должен ждать,
- * пока чинится интеграция, поэтому доплата открывается с этой стоимостью.
- * До оплаты воркер заменит её реальной (sweepMadeToOrderDeliveries), после
- * оплаты разницу с реальной ценой сообщит уведомление мастеру.
- */
-const FALLBACK_DELIVERY_PRICE_KOPECKS = 15_000;
 
 /**
  * Не чаще раза в полчаса: разовый сбой Ozon не должен будить мастера на
@@ -445,19 +438,17 @@ export async function sweepMadeToOrderDeliveries(
   for (const { id } of await listMadeToOrderStuckShipments()) {
     result.checked++;
     // Оплата нужна для повторного уведомления о неподтверждённом заказе
-    // (markMadeToOrderShipmentUnapproved): берём последнюю успешную доплату
+    // (markMadeToOrderShipmentUnapproved). У обычного заказа это доплата,
+    // у мгновенного — единственная полная оплата, записанная как предоплата
     const payments = await listOrderPayments(id);
     const balance = payments
-      .filter(
-        (payment) =>
-          payment.type === "balance" && payment.status === "succeeded",
-      )
+      .filter((payment) => payment.status === "succeeded")
       .sort(
         (a, b) => (b.paidAt?.getTime() ?? 0) - (a.paidAt?.getTime() ?? 0),
       )[0];
     if (!balance) {
       console.error(
-        `[made-to-order] У заказа ${id} нет оплаченной доплаты, повторить отправление не получится`,
+        `[made-to-order] У заказа ${id} нет успешной оплаты, повторить отправление не получится`,
       );
       result.failed++;
       continue;

@@ -140,7 +140,7 @@ export function ProductForm({
 
   const setDefaultMadeToOrder = (subcategory: string) => {
     if (!id && !madeToOrderTouched.current) {
-      const readyMade = ["kits", "ornaments", "ornament_sets", "gift_boxes"];
+      const readyMade = ["kits"];
       setValue("madeToOrder", !readyMade.includes(subcategory));
     }
   };

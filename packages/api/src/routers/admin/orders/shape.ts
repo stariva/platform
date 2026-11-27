@@ -69,6 +69,19 @@ function deliveryQuotePending(order: OrderRow): boolean {
   return Boolean(snapshot?.parcel) && snapshot?.priceKopecks == null;
 }
 
+/**
+ * Мгновенно оплаченное изделие под заказ: единственный платёж, записанный
+ * как предоплата, покрывает изделия и доставку целиком. Доплаты не будет.
+ */
+function instantMadeToOrder(order: OrderRow): boolean {
+  return (
+    order.kind === "made_to_order" &&
+    order.depositAmount !== null &&
+    order.depositAmount > 0 &&
+    order.depositAmount === order.amountTotal
+  );
+}
+
 /** Заказ для админки: суммы в рублях, всё, что известно о заказе и доставке. */
 export function toAdminOrder(
   order: OrderRow,
@@ -104,6 +117,7 @@ export function toAdminOrder(
     deliveryAddress: deliveryAddress(order),
     ozonDelivery: ozonDelivery(order),
     deliveryQuotePending: deliveryQuotePending(order),
+    instantMadeToOrder: instantMadeToOrder(order),
     deliveryNote: order.deliveryNote,
     masterNotes: order.masterNotes,
     trackingNumber: order.trackingNumber,

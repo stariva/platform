@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+import { render } from "@react-email/components";
 
+import StarivaOrderEmail from "./emails/stariva-order";
 import { buildOrderStatusEmail } from "./order-email";
 
 const approvedAt = new Date("2026-10-13T09:00:00Z");
@@ -47,6 +49,21 @@ test("the deposit letter does not ask for a pickup point", () => {
   const email = send({});
   expect(email?.props.deliveryQuoteNeeded).toBe(false);
   expect(email?.props.status).toBe("awaiting_deposit");
+});
+
+test("a fully prepaid order in production does not mention a deposit or a later balance", async () => {
+  const email = send({
+    status: "in_production",
+    depositAmount: order.amountTotal,
+  });
+  if (!email) throw new Error("expected an email");
+  expect(email.subject).toBe("Заказ №1042 оплачен полностью — Stariva");
+  const html = await render(StarivaOrderEmail(email.props));
+  expect(html).toContain("Доплата не понадобится");
+  expect(html).not.toContain(
+    "Когда оно будет готово, придёт письмо с доплатой",
+  );
+  expect(html).not.toContain("Предоплата");
 });
 
 test("a finished product asks to pick a pickup point only while the delivery is not priced", () => {

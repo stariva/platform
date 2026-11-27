@@ -1,15 +1,28 @@
 import type { Product } from "./catalog/types";
 
-/** Merchandising only: prices, stock, photos and Ozon SKUs always come from products.
+/** Merchandising only: prices, photos and descriptions always come from products.
  * Publish figurines as interior / ornaments, sets as interior / ornament_sets
- * and printable packaging as interior / gift_boxes; madeToOrder=false.
- * Sets are separately packed stock with their own SKU, never virtual bundles.
- * The base set SKU is without the printable box: packaging is a separate
+ * and printable packaging as interior / gift_boxes; madeToOrder=true.
+ * They are produced after payment, so neither stock nor Ozon Seller SKUs are
+ * needed: delivery is calculated and shipped through Ozon Delivery for Business.
+ * The base set is without the printable box: packaging is a separate
  * gift_boxes product, so the buyer can choose either variant.
  */
 export const NEW_YEAR_PATH = "/novogodnie-ukrasheniya";
 export const NEW_YEAR_IMAGE =
   "/images/new-year/collection-russkaya-skazka.webp";
+
+/**
+ * Посылка любой конфигурации новогоднего набора — по ней Ozon считает доставку
+ * до оплаты. Выбранная покупателем коробка не меняет внешний отправочный размер:
+ * все составы помещаются в одинаковый транспортный короб.
+ */
+export const NEW_YEAR_PARCEL = {
+  weightGrams: 700,
+  lengthCm: 30,
+  widthCm: 20,
+  heightCm: 10,
+} as const;
 
 export const ornaments = [
   {
@@ -103,6 +116,7 @@ export interface NewYearConfiguratorProduct {
   ozonSku?: number;
   inStock: boolean;
   stockAvailable: number;
+  madeToOrder: boolean;
   material: string;
   dimensions?: string;
   color?: string;
@@ -124,6 +138,7 @@ export function toNewYearConfiguratorProduct(
     ozonSku: product.ozonSku,
     inStock: product.inStock,
     stockAvailable: product.stockAvailable,
+    madeToOrder: product.madeToOrder,
     material: product.material,
     dimensions: product.dimensions,
     color: product.color,

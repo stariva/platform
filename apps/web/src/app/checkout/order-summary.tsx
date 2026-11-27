@@ -62,9 +62,9 @@ export function MobileOrderSummary({
         aria-controls={panelId}
         className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
       >
-        <span className="flex items-center gap-2 text-sm text-espresso">
+        <span className="flex min-w-0 items-center gap-2 whitespace-nowrap text-sm text-espresso">
           {open ? "Скрыть состав" : "Ваш заказ"}
-          <span className="text-taupe">
+          <span className="whitespace-nowrap text-taupe">
             · {count} {pluralItems(count)}
           </span>
           <ChevronDownIcon

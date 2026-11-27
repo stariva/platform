@@ -192,6 +192,114 @@ export async function createMadeToOrderOrder(
   return { id: orderId, number: created.number, amountTotal: amountProducts };
 }
 
+export interface CreateInstantMadeToOrderOrderInput {
+  userId?: string;
+  attribution?: CampaignAttribution | null;
+  visitor?: VisitorInfo | null;
+  contactName: string;
+  contactPhone: string;
+  contactEmail?: string;
+  comment?: string;
+  items: MadeToOrderLineInput[];
+  deliveryPointId: string;
+  pickupPoint: PickupPoint | null;
+  /** Адрес пункта как его видел покупатель — запасной вариант, если каталог точек не ответил. */
+  pointLabel?: string;
+  /** Стоимость доставки, которую увидел и оплатит покупатель, копейки. */
+  amountDelivery: number;
+  parcel: MadeToOrderParcel;
+  /** true — Ozon не ответил, и цена временная; разницу мастер увидит при отправке. */
+  priceFallback?: boolean;
+  leadTime: string;
+}
+
+/** Сколько времени ссылка на полную оплату остаётся актуальной. */
+const INSTANT_PAYMENT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Заказ изделий, которые производятся после мгновенной полной оплаты. Используем
+ * существующую механику made_to_order, но предоплата равна всей сумме: после
+ * webhook заказ уходит в производство, а доплаты больше нет. Пункт и посылка
+ * известны сразу, поэтому отправление Ozon можно будет создать, как только
+ * изделия готовы.
+ */
+export async function createInstantMadeToOrderOrder(
+  input: CreateInstantMadeToOrderOrderInput,
+): Promise<{ id: string; number: number; amountTotal: number }> {
+  const orderId = randomUUID();
+  const amountProducts = input.items.reduce(
+    (sum, i) => sum + i.price * i.quantity,
+    0,
+  );
+  const amountTotal = amountProducts + input.amountDelivery;
+  assertValidOrderTotal(amountTotal);
+  const now = new Date();
+
+  const [created] = await db
+    .insert(productOrders)
+    .values({
+      id: orderId,
+      kind: "made_to_order",
+      userId: input.userId ?? null,
+      attribution: input.attribution ?? null,
+      visitor: input.visitor ?? null,
+      contactName: input.contactName,
+      contactPhone: input.contactPhone,
+      contactEmail: input.contactEmail ?? null,
+      status: "awaiting_deposit",
+      amountProducts,
+      amountDelivery: input.amountDelivery,
+      amountTotal,
+      currency: "RUB",
+      deliveryMethod: "pickup",
+      deliveryPointId: input.deliveryPointId,
+      deliveryAddress:
+        pickupPointAddress(input.pickupPoint) ??
+        (input.pointLabel ? { address: input.pointLabel } : null),
+      customerNotes: input.comment || null,
+      depositAmount: amountTotal,
+      leadTime: input.leadTime,
+      approvedAt: now,
+      paymentDueAt: new Date(now.getTime() + INSTANT_PAYMENT_WINDOW_MS),
+      checkoutSnapshot: {
+        parcel: input.parcel,
+        priceKopecks: input.amountDelivery,
+        ...(input.priceFallback ? { priceFallback: true } : {}),
+      },
+    })
+    .returning({ number: productOrders.number });
+  if (!created) throw new Error("product_order_not_created");
+
+  const workshopLinks = await db
+    .select({ slug: products.slug, workshopSlug: products.workshopSlug })
+    .from(products)
+    .where(
+      inArray(
+        products.slug,
+        input.items.map((item) => item.productSlug),
+      ),
+    );
+  const workshopByProduct = new Map(
+    workshopLinks.map((p) => [p.slug, p.workshopSlug]),
+  );
+  await db.insert(productOrderItems).values(
+    input.items.map((item) => ({
+      id: randomUUID(),
+      orderId,
+      productSlug: item.productSlug,
+      workshopSlug: workshopByProduct.get(item.productSlug) ?? null,
+      workshopLinkCaptured: true,
+      ozonSku: null,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      options: item.options,
+    })),
+  );
+
+  return { id: orderId, number: created.number, amountTotal };
+}
+
 /** Создаёт заказ на товары в статусе pending вместе с его позициями. */
 export async function createProductOrder(
   input: CreateProductOrderInput,
@@ -1008,6 +1116,20 @@ export async function applyMadeToOrderPayment(
             ),
           )
           .returning({ id: productOrders.id });
+  if (result.length > 0 && type === "deposit") {
+    // У мгновенного заказа единственный платёж покрывает всю сумму: он уже
+    // полностью оплачен, хотя производство только начинается
+    await db
+      .update(productOrders)
+      .set({ paidAt: now })
+      .where(
+        and(
+          eq(productOrders.id, orderId),
+          sql`${productOrders.depositAmount} = ${productOrders.amountTotal}`,
+          isNull(productOrders.paidAt),
+        ),
+      );
+  }
   return result.length > 0;
 }
 

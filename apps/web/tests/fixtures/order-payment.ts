@@ -6,6 +6,7 @@ const order = {
   kind: "stock",
   amountTotal: 12000,
   amountDelivery: 2000,
+  depositAmount: null as number | null,
   deliveryMethod: "pickup",
   deliveryPointId: "point-1",
 };
@@ -238,6 +239,21 @@ await test("a deposit never touches the shipment", async () => {
   await applyStage("deposit");
   expect(createMadeToOrderShipment).not.toHaveBeenCalled();
   expect(calls).toEqual(["notify:row-1"]);
+});
+
+await test("a full prepayment receipt lists the items and delivery rather than a deposit", async () => {
+  order.depositAmount = 12000;
+  issueNpdReceipt.mockClear();
+  await applyStage("deposit");
+  expect(createMadeToOrderShipment).not.toHaveBeenCalled();
+  expect(issueNpdReceipt).toHaveBeenCalledWith(
+    expect.objectContaining({
+      services: [
+        { name: "Изделие", amount: 10000, quantity: 1 },
+        { name: "Доставка", amount: 2000, quantity: 1 },
+      ],
+    }),
+  );
 });
 
 await test("kit access is retried before shipment claims", async () => {

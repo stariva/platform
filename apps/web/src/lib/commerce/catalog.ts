@@ -5,7 +5,10 @@ import {
   getProductMadeToOrder,
   isMadeToOrderColor,
   isMadeToOrderSize,
+  PHOTO_COLOR,
+  PHOTO_SIZE,
 } from "@/lib/made-to-order";
+import { newYearSubcategoryFor } from "@/lib/new-year";
 import { applyBundlePricing } from "./bundles";
 import { elkaKitPrice } from "./elka-kit-price";
 import {
@@ -143,6 +146,71 @@ export async function resolveMadeToOrderItems(
       name: product.name,
       price,
       options: item.options,
+    });
+  }
+
+  if (unavailable.size > 0) {
+    throw new CatalogItemsUnavailableError([...unavailable]);
+  }
+  return resolved;
+}
+
+/**
+ * Изделия новогоднего конфигуратора для мгновенной оплаты. От обычных изделий
+ * под заказ они отличаются тем, что производятся по фиксированному образцу:
+ * размер и цвет всегда «как на фото», а посылка заранее известна. Поэтому
+ * остаток и Ozon Seller SKU не нужны, но товар должен быть опубликован в
+ * сезонной подкатегории (или в legacy-slug из planters, который уже показывает
+ * витрина) и помечен как изготавливаемый после заказа.
+ */
+export async function resolveInstantMadeToOrderItems(
+  requestedItems: RequestedCatalogItem[],
+): Promise<ResolvedMadeToOrderItem[]> {
+  const { products, status } = await getProductsResult();
+  if (status === "unavailable") throw new Error("catalog_unavailable");
+
+  const productsBySlug = new Map(
+    products.map((product) => [product.slug, product]),
+  );
+  const quantities = new Map<string, number>();
+  for (const item of requestedItems) {
+    quantities.set(
+      item.productSlug,
+      (quantities.get(item.productSlug) ?? 0) + item.quantity,
+    );
+  }
+  const resolved: ResolvedMadeToOrderItem[] = [];
+  const unavailable = new Set<string>();
+
+  for (const [productSlug, quantity] of quantities) {
+    const product = productsBySlug.get(productSlug);
+    const price = product ? priceInKopecks(product) : null;
+    if (
+      !product ||
+      requestedItems.some(
+        (item) =>
+          item.productSlug === productSlug &&
+          item.productId &&
+          item.productId !== product.id,
+      ) ||
+      price === null ||
+      !product.madeToOrder ||
+      !newYearSubcategoryFor(product) ||
+      quantity > MAX_MADE_TO_ORDER_QUANTITY
+    ) {
+      unavailable.add(productSlug);
+      continue;
+    }
+    resolved.push({
+      productSlug,
+      quantity,
+      name: product.name,
+      price,
+      options: {
+        size: PHOTO_SIZE,
+        color: PHOTO_COLOR,
+        measurements: [],
+      },
     });
   }
 
