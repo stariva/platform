@@ -7,6 +7,17 @@ const PLACEHOLDER_IMAGE =
   "https://cdn.stariva.ru/site/images/catalog/placeholder.jpg";
 const DEFAULT_MATERIAL = "100% хлопок";
 
+/**
+ * Новогодние украшения, наборы и коробки печатаются, а не плетутся из шнура,
+ * поэтому хлопковый фолбэк для них — враньё: без явного материала в базе
+ * поле просто не выводим.
+ */
+const PRINTED_SUBCATEGORIES = new Set([
+  "ornaments",
+  "ornament_sets",
+  "gift_boxes",
+]);
+
 /** Строка таблицы products → модель витрины. Цены в базе — в копейках. */
 export function productRowToProduct(row: ProductRow): Product {
   const ozonSku = row.ozonSku ?? undefined;
@@ -41,7 +52,11 @@ export function productRowToProduct(row: ProductRow): Product {
       row.leadTimeMinDays !== null && row.leadTimeMaxDays !== null
         ? { min: row.leadTimeMinDays, max: row.leadTimeMaxDays }
         : undefined,
-    material: row.material || DEFAULT_MATERIAL,
+    material:
+      row.material ||
+      (PRINTED_SUBCATEGORIES.has(row.subcategory)
+        ? undefined
+        : DEFAULT_MATERIAL),
     dimensions: row.dimensions ?? undefined,
     careInstructions: row.careInstructions ?? undefined,
     ideaAuthor: row.ideaAuthor ?? undefined,

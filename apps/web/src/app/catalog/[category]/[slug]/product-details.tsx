@@ -164,11 +164,14 @@ export function ProductDetails({
   const readyToShip = isPurchasable(product);
   const madeToOrder = getProductMadeToOrder(product);
   const productUrl = `https://stariva.ru/catalog/${categorySlug}/${product.slug}`;
-  // Бейдж не должен обещать хлопок там, где шнур полиэфирный или пряжа шерстяная
+  // Бейдж не должен обещать хлопок там, где шнур полиэфирный или пряжа шерстяная.
+  // Материал не задан вовсе (печатные новогодние украшения) — бейдж не показываем.
   const materialBadge =
-    product.material && product.material.length <= 28
-      ? product.material
-      : "Натуральные материалы";
+    product.material === undefined
+      ? null
+      : product.material.length <= 28
+        ? product.material
+        : "Натуральные материалы";
   const specs = productSpecs(product, categorySlug);
   const section = getProductSection(category, product.subcategory);
 
@@ -303,25 +306,29 @@ export function ProductDetails({
                   </svg>
                   {kit ? "Всё для плетения в коробке" : "Ручная работа"}
                 </span>
-                <span className="w-px h-3 bg-espresso/15" />
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M2 6.5l2.5 2.5 5.5-5.5"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  {materialBadge}
-                </span>
+                {materialBadge && (
+                  <>
+                    <span className="w-px h-3 bg-espresso/15" />
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M2 6.5l2.5 2.5 5.5-5.5"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      {materialBadge}
+                    </span>
+                  </>
+                )}
                 <span className="w-px h-3 bg-espresso/15" />
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-sage label-caps">
                   <svg

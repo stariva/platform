@@ -201,7 +201,7 @@ export interface NewYearConfiguratorProduct {
   inStock: boolean;
   stockAvailable: number;
   madeToOrder: boolean;
-  material: string;
+  material?: string;
   dimensions?: string;
   color?: string;
 }
