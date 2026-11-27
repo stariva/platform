@@ -16,7 +16,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
-    "@hookform/resolvers": "^7.0.8",
+    "@hookform/resolvers": "^7.0.9",
     "@orpc/client": "2.0.0-beta.53",
     "@orpc/server": "2.0.0-beta.53",
     "@orpc/tanstack-query": "2.0.0-beta.53",
