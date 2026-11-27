@@ -24,6 +24,30 @@ import { SITE_URL } from "@/lib/site-url";
 import { NewYearConfigurator } from "./_components/new-year-configurator";
 
 export const dynamic = "force-dynamic";
+
+const NEW_YEAR_EXAMPLES = [
+  {
+    src: "/images/new-year/examples-tree.webp",
+    alt: "Красно-молочные новогодние фигурки с народными узорами на ёлке",
+  },
+  {
+    src: "/images/new-year/examples-hands.webp",
+    alt: "Новогодняя фигурка в руке на фоне ёлки и гирлянды",
+  },
+  {
+    src: "/images/new-year/examples-table.webp",
+    alt: "Новогодние фигурки на деревянном столе среди еловых ветвей",
+  },
+  {
+    src: "/images/new-year/examples-closeup.webp",
+    alt: "Петушок и резной наличник крупным планом на деревянной поверхности",
+  },
+  {
+    src: "/images/new-year/examples-cozy.webp",
+    alt: "Новогодние украшения на столе рядом со свечой, книгой и чашкой какао",
+  },
+] as const;
+
 export const metadata: Metadata = {
   title: "Новогодние украшения — коллекция «Русская сказка»",
   description:
@@ -278,6 +302,52 @@ export default function NewYearPage() {
         >
           <Collection />
         </Suspense>
+        <section
+          id="examples"
+          className="ny-section"
+          aria-labelledby="examples-title"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="ny-eyebrow">Примеры работ</p>
+              <h2 id="examples-title" className="ny-heading">
+                Так фигурки выглядят дома
+              </h2>
+            </div>
+            <p className="max-w-md leading-relaxed text-taupe">
+              Фотографии показывают цвет, фактуру печати и масштаб украшений в
+              интерьере. Актуальный состав коллекции — в каталоге выше.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-12">
+            {NEW_YEAR_EXAMPLES.map((example, index) => (
+              <figure
+                key={example.src}
+                className={
+                  index === 0
+                    ? "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-7"
+                    : index === 1
+                      ? "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-5"
+                      : "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-4"
+                }
+              >
+                <Image
+                  src={example.src}
+                  alt={example.alt}
+                  fill
+                  sizes={
+                    index === 0
+                      ? "(max-width: 768px) 100vw, 58vw"
+                      : index === 1
+                        ? "(max-width: 768px) 100vw, 42vw"
+                        : "(max-width: 768px) 100vw, 33vw"
+                  }
+                  className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]"
+                />
+              </figure>
+            ))}
+          </div>
+        </section>
         <section className="bg-sand">
           <div className="ny-section grid gap-10 md:grid-cols-2">
             <div>
