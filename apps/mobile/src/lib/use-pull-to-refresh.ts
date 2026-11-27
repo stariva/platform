@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type RefObject, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Сколько потянуть вниз, чтобы обновление запустилось. */
 const TRIGGER_PX = 72;
@@ -20,15 +20,13 @@ export interface PullToRefresh {
  * Обновление — инвалидация всех запросов react-query: экраны сами перечитают
  * то, что показывают.
  */
-export function usePullToRefresh(
-  containerRef: RefObject<HTMLElement | null>,
-): PullToRefresh {
+export function usePullToRefresh(container: HTMLElement | null): PullToRefresh {
   const queryClient = useQueryClient();
+  const pullDistance = useRef(0);
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const container = containerRef.current;
     if (!container) return;
 
     let startY = 0;
@@ -39,6 +37,7 @@ export function usePullToRefresh(
       const touch = event.touches[0];
       if (!touch) return;
       startY = touch.clientY;
+      pullDistance.current = 0;
       tracking = true;
     };
 
@@ -48,23 +47,21 @@ export function usePullToRefresh(
       if (!touch) return;
       // Дистанция с сопротивлением: дальше тянуть всё тяжелее
       const distance = Math.max(0, touch.clientY - startY);
-      setPull(distance > 0 ? Math.min(distance * 0.5, TRIGGER_PX * 1.5) : 0);
+      pullDistance.current = Math.min(distance * 0.5, TRIGGER_PX * 1.5);
+      setPull(pullDistance.current);
     };
 
     const finish = () => {
       if (!tracking) return;
       tracking = false;
-      setPull((current) => {
-        if (current >= TRIGGER_PX * 0.9) {
-          setRefreshing(true);
-          void queryClient.invalidateQueries().finally(() => {
-            setRefreshing(false);
-            setPull(0);
-          });
-          return 0;
-        }
-        return 0;
-      });
+      if (pullDistance.current >= TRIGGER_PX * 0.9) {
+        setRefreshing(true);
+        void queryClient.invalidateQueries().finally(() => {
+          setRefreshing(false);
+        });
+      }
+      pullDistance.current = 0;
+      setPull(0);
     };
 
     container.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -72,12 +69,13 @@ export function usePullToRefresh(
     container.addEventListener("touchend", finish, { passive: true });
     container.addEventListener("touchcancel", finish, { passive: true });
     return () => {
+      if (tracking) setPull(0);
       container.removeEventListener("touchstart", onTouchStart);
       container.removeEventListener("touchmove", onTouchMove);
       container.removeEventListener("touchend", finish);
       container.removeEventListener("touchcancel", finish);
     };
-  }, [containerRef, queryClient]);
+  }, [container, queryClient]);
 
   return { pull, refreshing };
 }

@@ -48,16 +48,41 @@ test("Android: minSdk не ниже 26 (требование модерации 
   expect(Number(minSdk)).toBeGreaterThanOrEqual(26);
 });
 
-test("Android: манифест просит только безопасные разрешения", () => {
-  const manifest = read("android/app/src/main/AndroidManifest.xml");
+function hasOnlyAllowedPermissions(manifest: string): boolean {
   const permissions = [
-    ...manifest.matchAll(
-      /uses-permission android:name="android\.permission\.([A-Z_]+)"/g,
-    ),
-  ].map((m) => m[1]);
+    ...manifest
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .matchAll(/<uses-permission\s+([^>]*)>/g),
+  ].map(
+    ([, attributes]) =>
+      /(?:^|\s)android:name\s*=\s*(["'])([^"']+)\1/.exec(attributes ?? "")?.[2],
+  );
   // VIBRATE нужен хаптике из WebView; всё остальное — повод пересмотреть
   // декларацию разрешений в RuStore
-  expect([...permissions].sort()).toEqual(["INTERNET", "VIBRATE"]);
+  const [first, second] = permissions.sort();
+  return (
+    permissions.length === 2 &&
+    first === "android.permission.INTERNET" &&
+    second === "android.permission.VIBRATE"
+  );
+}
+
+test("Android: манифест просит только безопасные разрешения", () => {
+  expect(
+    hasOnlyAllowedPermissions(read("android/app/src/main/AndroidManifest.xml")),
+  ).toBe(true);
+});
+
+test("Android: многострочное разрешение CAMERA отклоняется", () => {
+  const manifest = read("android/app/src/main/AndroidManifest.xml");
+  const withCamera = manifest.replace(
+    "</manifest>",
+    `<uses-permission
+      android:maxSdkVersion="32"
+      android:name="android.permission.CAMERA" />
+    </manifest>`,
+  );
+  expect(hasOnlyAllowedPermissions(withCamera)).toBe(false);
 });
 
 test("iOS: privacy-манифест лежит в проекте и подключён к сборке", () => {

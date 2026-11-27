@@ -1,7 +1,7 @@
 import type { CatalogCourse } from "@stariva/web-api/contract";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { absoluteUrl, api } from "@/lib/api";
+import { absoluteUrl, api, TransportError } from "@/lib/api";
 import { readJson, writeJson } from "@/lib/storage";
 
 export interface CatalogWorkshop {
@@ -78,7 +78,7 @@ export function useCatalog() {
         void writeJson(CATALOG_CACHE_KEY, courses);
         return courses.map(toWorkshop);
       } catch (error) {
-        if (!navigator.onLine) {
+        if (error instanceof TransportError) {
           const cached = await readJson(CATALOG_CACHE_KEY, catalogCacheSchema);
           if (cached) return cached.map(toWorkshop);
         }

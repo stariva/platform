@@ -26,7 +26,7 @@ import { useMyCourses } from "@/features/my-workshops/queries";
 import { API_URL } from "@/lib/api";
 import type { CatalogWorkshop } from "@/lib/catalog";
 import { useCatalog } from "@/lib/catalog";
-import { native } from "@/lib/native";
+import { native, SUPPORT_EMAIL } from "@/lib/native";
 import {
   expireSession,
   signOut,
@@ -66,7 +66,7 @@ const sections = [
 ] as const;
 
 function App() {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [content, setContent] = useState<HTMLDivElement | null>(null);
   const params = new URLSearchParams(window.location.search);
   const [slug, setSlug] = useState(params.get("slug") ?? "");
   const [lessonId, setLessonId] = useState(params.get("lesson") ?? "");
@@ -92,8 +92,9 @@ function App() {
       "auto",
   );
 
+  const [copyStatus, setCopyStatus] = useState("");
   const update = useAppUpdate();
-  const pullToRefresh = usePullToRefresh(contentRef);
+  const pullToRefresh = usePullToRefresh(content);
   const session = useSession();
   const catalog = useCatalog();
   const myCourses = useMyCourses(
@@ -168,10 +169,10 @@ function App() {
   }, [favorites]);
   useEffect(() => {
     if (routeKey) {
-      contentRef.current?.scrollTo(0, 0);
+      content?.scrollTo(0, 0);
       window.scrollTo(0, 0);
     }
-  }, [routeKey]);
+  }, [content, routeKey]);
 
   let screen: React.ReactNode;
   if (session.status === "loading") {
@@ -353,9 +354,44 @@ function App() {
           </div>
           <h2 className="section-title mt-9">Помощь и документы</h2>
           <div className="mt-4 divide-y divide-line rounded-[var(--radius-lg)] bg-surface ring-1 ring-line">
+            <div className="px-4 py-3 text-sm">
+              <button
+                type="button"
+                onClick={() =>
+                  void native.openExternal(`mailto:${SUPPORT_EMAIL}`)
+                }
+                className="flex min-h-11 w-full items-center justify-between gap-3 text-left font-medium"
+              >
+                Написать в поддержку
+                <ArrowRight
+                  size={17}
+                  className="shrink-0 text-muted"
+                  aria-hidden
+                />
+              </button>
+              <p className="select-text text-muted">{SUPPORT_EMAIL}</p>
+              <button
+                type="button"
+                className="min-h-11 font-medium text-accent"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(SUPPORT_EMAIL);
+                    setCopyStatus("Адрес скопирован");
+                  } catch {
+                    setCopyStatus(
+                      "Выделите адрес выше и скопируйте его вручную.",
+                    );
+                  }
+                }}
+              >
+                Скопировать адрес
+              </button>
+              <p role="status" className="text-muted">
+                {copyStatus}
+              </p>
+            </div>
             {(
               [
-                ["Написать в поддержку", `mailto:info@stariva.ru`],
                 [
                   "Политика конфиденциальности",
                   `${API_URL || "https://stariva.ru"}/privacy-policy`,
@@ -384,7 +420,7 @@ function App() {
       );
     screen = (
       <div className="app-shell">
-        <div ref={contentRef} className="app-content">
+        <div ref={setContent} className="app-content">
           {(pullToRefresh.pull > 0 || pullToRefresh.refreshing) && (
             <div
               aria-hidden
