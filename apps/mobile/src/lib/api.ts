@@ -9,6 +9,8 @@ import { tokens } from "@/lib/tokens";
  */
 export const API_URL = import.meta.env.VITE_API_URL ?? "";
 
+export class TransportError extends TypeError {}
+
 interface CallContext {
   /** Запрос должен уйти, даже если приложение сворачивают (прогресс). */
   keepalive?: boolean;
@@ -27,12 +29,19 @@ export const api: WebClient<CallContext> = createORPCClient(
       const headers = new Headers(init.headers);
       const token = await tokens.get();
       if (token) headers.set("authorization", `Bearer ${token}`);
-      return fetch(url, {
-        ...init,
-        headers,
-        credentials: "omit",
-        keepalive: context.keepalive ?? false,
-      });
+      try {
+        return await fetch(url, {
+          ...init,
+          headers,
+          credentials: "omit",
+          keepalive: context.keepalive ?? false,
+        });
+      } catch (error) {
+        if (error instanceof TypeError) {
+          throw new TransportError(error.message, { cause: error });
+        }
+        throw error;
+      }
     },
   }),
 );
