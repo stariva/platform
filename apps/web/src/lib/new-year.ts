@@ -52,6 +52,18 @@ export const ornaments = [
     name: "Венок с бантом",
     detail: "Круглый подвес с ажурной серединой и растительным узором.",
   },
+  {
+    id: "koza",
+    name: "Коза",
+    detail:
+      "Нарядная коза с цветком на роге — символ достатка и весёлой святки.",
+  },
+  {
+    id: "kozlik",
+    name: "Козлик",
+    detail:
+      "Шаловливый козлик с цветочным узором — добрый знак наступающего года.",
+  },
 ] as const;
 
 export type Ornament = (typeof ornaments)[number];
@@ -72,7 +84,7 @@ export const ornamentSets = [
     slug: "novogodniy-nabor-russkaya-skazka",
     name: "Русская сказка",
     description:
-      "Вся коллекция: пять разных историй на одной ёлке — от петушка до резного наличника.",
+      "Вся коллекция: семь разных историй на одной ёлке — от петушка до резного наличника.",
     ids: ornaments.map((item) => item.id),
   },
 ] satisfies {
