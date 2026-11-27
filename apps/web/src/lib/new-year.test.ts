@@ -30,7 +30,7 @@ const product = (overrides: Partial<Product>): Product => ({
 
 test("new year grouping uses database subcategories for arbitrary product slugs", () => {
   const ornament = product({
-    id: "bell",
+    id: "shar",
     slug: "kolokolchik-red",
     subcategory: "ornaments",
   });
@@ -60,7 +60,7 @@ test("new year grouping uses database subcategories for arbitrary product slugs"
 test("new year grouping keeps legacy slugs working while products are recategorized", () => {
   const ornament = product({
     id: "legacy-ornament",
-    slug: "novogodnee-ukrashenie-bell",
+    slug: "novogodnee-ukrashenie-shar",
   });
   const set = product({
     id: "legacy-set",
@@ -87,14 +87,14 @@ test("new year grouping keeps legacy slugs working while products are recategori
 });
 
 test("new year image prefers the database photo and uses collection art only as a placeholder fallback", () => {
-  const withPhoto = product({ slug: "novogodnee-ukrashenie-bell" });
+  const withPhoto = product({ slug: "novogodnee-ukrashenie-shar" });
   assert.equal(newYearProductImage(withPhoto), withPhoto.images[0]);
 
   const withoutPhoto = product({
-    slug: "novogodnee-ukrashenie-bell",
+    slug: "novogodnee-ukrashenie-shar",
     images: ["https://cdn.stariva.ru/site/images/catalog/placeholder.jpg"],
   });
-  assert.equal(newYearProductImage(withoutPhoto), ornamentImage("bell"));
+  assert.equal(newYearProductImage(withoutPhoto), ornamentImage("shar"));
 });
 
 test("seasonal subcategories are recognized for catalog routing", () => {

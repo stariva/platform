@@ -8,55 +8,35 @@ import type { Product } from "./catalog/types";
  * gift_boxes product, so the buyer can choose either variant.
  */
 export const NEW_YEAR_PATH = "/novogodnie-ukrasheniya";
-export const NEW_YEAR_IMAGE = "/images/new-year/collection.jpg";
+export const NEW_YEAR_IMAGE =
+  "/images/new-year/collection-russkaya-skazka.webp";
 
 export const ornaments = [
   {
-    id: "bell",
-    name: "Колокольчик",
-    detail: "Бант, цветочная розетка и праздничный звон в силуэте.",
-  },
-  {
-    id: "bublik",
-    name: "Венок с бантом",
-    detail: "Круглый подвес с ажурной серединой и растительным узором.",
-  },
-  {
-    id: "house",
-    name: "Пряничный домик",
+    id: "shar",
+    name: "Цветочный шар",
     detail:
-      "Маленькое окошко, заснеженная крыша и настроение домашнего праздника.",
-  },
-  {
-    id: "ornament",
-    name: "Кокошник",
-    detail:
-      "Ажурный орнамент и выразительный силуэт народного головного убора.",
-  },
-  {
-    id: "samovar",
-    name: "Самовар",
-    detail: "Узорный самовар — маленький символ большого гостеприимства.",
-  },
-  {
-    id: "snowflake",
-    name: "Снежинка",
-    detail: "Шесть лучей и цветочная розетка в центре.",
-  },
-  {
-    id: "star",
-    name: "Звезда",
-    detail: "Пятиконечная звезда с цветочным узором.",
-  },
-  {
-    id: "varezhka",
-    name: "Варежка",
-    detail: "Зимний силуэт с манжетой и нежным растительным орнаментом.",
+      "Круглый подвес с крупным цветком, веточками и растительным узором.",
   },
   {
     id: "window",
     name: "Резной наличник",
     detail: "Распахнутые ставни и узоры, вдохновлённые деревянным зодчеством.",
+  },
+  {
+    id: "balalaika",
+    name: "Балалайка",
+    detail: "Узорный корпус, тонкий гриф и тёплый музыкальный образ.",
+  },
+  {
+    id: "petukh",
+    name: "Петушок",
+    detail: "Нарядный петушок с цветком на крыле — символ домашнего тепла.",
+  },
+  {
+    id: "bublik",
+    name: "Венок с бантом",
+    detail: "Круглый подвес с ажурной серединой и растительным узором.",
   },
 ] as const;
 
@@ -64,21 +44,21 @@ export type Ornament = (typeof ornaments)[number];
 export const ornamentSlug = (id: Ornament["id"]) =>
   `novogodnee-ukrashenie-${id}`;
 export const ornamentImage = (id: Ornament["id"]) =>
-  `/images/new-year/${id}.svg`;
+  `/images/new-year/${id}.png`;
 
 export const ornamentSets = [
   {
     slug: "novogodniy-nabor-zimniy-uyut",
     name: "Зимний уют",
     description:
-      "Знакомые с детства символы зимы. Для небольшой ёлки или праздничного уголка дома.",
-    ids: ["house", "varezhka", "star", "bublik", "bell", "snowflake"],
+      "Три уютных символа зимы. Для небольшой ёлки или праздничного уголка дома.",
+    ids: ["shar", "window", "bublik"],
   },
   {
     slug: "novogodniy-nabor-russkaya-skazka",
     name: "Русская сказка",
     description:
-      "Вся коллекция: от пряничного домика до резного наличника. Девять разных историй на одной ёлке.",
+      "Вся коллекция: пять разных историй на одной ёлке — от петушка до резного наличника.",
     ids: ornaments.map((item) => item.id),
   },
 ] satisfies {

@@ -24,6 +24,30 @@ import { SITE_URL } from "@/lib/site-url";
 import { NewYearConfigurator } from "./_components/new-year-configurator";
 
 export const dynamic = "force-dynamic";
+
+const NEW_YEAR_EXAMPLES = [
+  {
+    src: "/images/new-year/examples-tree.webp",
+    alt: "Красно-молочные новогодние фигурки с народными узорами на ёлке",
+  },
+  {
+    src: "/images/new-year/examples-hands.webp",
+    alt: "Новогодняя фигурка в руке на фоне ёлки и гирлянды",
+  },
+  {
+    src: "/images/new-year/examples-table.webp",
+    alt: "Новогодние фигурки на деревянном столе среди еловых ветвей",
+  },
+  {
+    src: "/images/new-year/examples-closeup.webp",
+    alt: "Петушок и резной наличник крупным планом на деревянной поверхности",
+  },
+  {
+    src: "/images/new-year/examples-cozy.webp",
+    alt: "Новогодние украшения на столе рядом со свечой, книгой и чашкой какао",
+  },
+] as const;
+
 export const metadata: Metadata = {
   title: "Новогодние украшения — коллекция «Русская сказка»",
   description:
@@ -34,7 +58,7 @@ export const metadata: Metadata = {
     description:
       "Маленькие истории для вашей ёлки. Коллекция украшений с народными орнаментами.",
     url: `${SITE_URL}${NEW_YEAR_PATH}`,
-    images: [{ url: NEW_YEAR_IMAGE, width: 1280, height: 853 }],
+    images: [{ url: NEW_YEAR_IMAGE, width: 1280, height: 1067 }],
   },
   twitter: {
     card: "summary_large_image",
@@ -209,7 +233,7 @@ export default function NewYearPage() {
           { name: "Новогодние украшения", href: NEW_YEAR_PATH },
         ]}
       />
-      <main className="ny-page bg-parchment pt-[60px] text-espresso lg:pt-[68px]">
+      <main className="ny-page bg-parchment pt-15 text-espresso lg:pt-17">
         <section className="ny-hero">
           <div className="flex flex-col items-start justify-center px-6 py-12 lg:px-16 lg:py-20">
             <nav
@@ -247,17 +271,18 @@ export default function NewYearPage() {
               Созданы на 3D-принтере · вдохновлены народными орнаментами
             </p>
           </div>
-          <figure className="relative min-h-80 lg:min-h-[660px]">
+          <figure className="relative min-h-80 lg:min-h-165">
             <Image
               src={NEW_YEAR_IMAGE}
-              alt="Красно-молочные ёлочные украшения с народными узорами среди еловых ветвей"
+              alt="Красно-молочные новогодние фигурки с народными узорами: цветочный шар, резной наличник, балалайка, петушок и венок"
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 55vw"
-              className="object-cover"
+              className="object-contain"
             />
-            <figcaption className="absolute bottom-4 left-4 right-4 rounded-lg bg-parchment/95 px-4 py-3 text-xs text-espresso">
-              Настроение коллекции. Точный состав каждого набора указан ниже.
+            <figcaption className="sr-only">
+              Цветочный шар, резной наличник, балалайка, петушок и венок с
+              бантом.
             </figcaption>
           </figure>
         </section>
@@ -277,6 +302,52 @@ export default function NewYearPage() {
         >
           <Collection />
         </Suspense>
+        <section
+          id="examples"
+          className="ny-section"
+          aria-labelledby="examples-title"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="ny-eyebrow">Примеры работ</p>
+              <h2 id="examples-title" className="ny-heading">
+                Так фигурки выглядят дома
+              </h2>
+            </div>
+            <p className="max-w-md leading-relaxed text-taupe">
+              Фотографии показывают цвет, фактуру печати и масштаб украшений в
+              интерьере. Актуальный состав коллекции — в каталоге выше.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-12">
+            {NEW_YEAR_EXAMPLES.map((example, index) => (
+              <figure
+                key={example.src}
+                className={
+                  index === 0
+                    ? "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-7"
+                    : index === 1
+                      ? "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-5"
+                      : "group relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand md:col-span-4"
+                }
+              >
+                <Image
+                  src={example.src}
+                  alt={example.alt}
+                  fill
+                  sizes={
+                    index === 0
+                      ? "(max-width: 768px) 100vw, 58vw"
+                      : index === 1
+                        ? "(max-width: 768px) 100vw, 42vw"
+                        : "(max-width: 768px) 100vw, 33vw"
+                  }
+                  className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]"
+                />
+              </figure>
+            ))}
+          </div>
+        </section>
         <section className="bg-sand">
           <div className="ny-section grid gap-10 md:grid-cols-2">
             <div>
@@ -288,9 +359,9 @@ export default function NewYearPage() {
             </div>
             <div className="flex flex-col gap-5 text-taupe leading-relaxed">
               <p>
-                Резные наличники, нарядный самовар, пряничный домик. Мы собрали
-                знакомые образы в коллекцию подвесных украшений с растительными
-                орнаментами.
+                Цветочный шар, нарядный петушок, балалайка и резной наличник. Мы
+                собрали знакомые образы в коллекцию подвесных украшений с
+                растительными орнаментами.
               </p>
               <p>
                 Фигурки напечатаны на 3D-принтере. У этой технологии есть своя
