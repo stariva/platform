@@ -124,8 +124,16 @@ export const ornaments = [
 export type Ornament = (typeof ornaments)[number];
 export const ornamentSlug = (id: Ornament["id"]) =>
   `novogodnee-ukrashenie-${id}`;
+
+const ornamentImageFile: Partial<Record<Ornament["id"], string>> = {
+  house: "house.svg",
+  samovar: "samovar.svg",
+  matryoshka: "ornament.svg",
+  loshadka: "ornament.svg",
+};
+
 export const ornamentImage = (id: Ornament["id"]) =>
-  `/images/new-year/${id}.png`;
+  `/images/new-year/${ornamentImageFile[id] ?? `${id}.png`}`;
 
 export const ornamentSets = [
   {

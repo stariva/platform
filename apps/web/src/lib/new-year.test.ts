@@ -1,8 +1,10 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import type { Product } from "./catalog/types";
 import {
   groupNewYearProducts,
+  ornaments,
   isNewYearSubcategory,
   newYearProductImage,
   newYearSetMerchandising,
@@ -106,6 +108,21 @@ test("new year image prefers the database photo and uses collection art only as 
     newYearProductImage(snowflakeWithoutPhoto),
     ornamentImage("snowflake"),
   );
+});
+
+test("ornament fallback art uses files that exist for every collection item", () => {
+  for (const ornament of ornaments) {
+    const file = ornamentImage(ornament.id).replace("/images/new-year/", "");
+    assert.equal(
+      existsSync(new URL(`../../public/images/new-year/${file}`, import.meta.url)),
+      true,
+      ornament.id,
+    );
+  }
+  assert.equal(ornamentImage("house"), "/images/new-year/house.svg");
+  assert.equal(ornamentImage("samovar"), "/images/new-year/samovar.svg");
+  assert.equal(ornamentImage("matryoshka"), "/images/new-year/ornament.svg");
+  assert.equal(ornamentImage("loshadka"), "/images/new-year/ornament.svg");
 });
 
 test("new year set merchandising resolves composition and honest separate-price savings", () => {
