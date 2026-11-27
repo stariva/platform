@@ -142,12 +142,12 @@ function analyticsRange(
 }
 
 /**
- * Необработанную ошибку синхронизации (Яндекс ответил ошибкой, битый TSV,
- * сбой базы) заворачиваем в контрактную с текстом первопричины: иначе oRPC
- * прячет её от клиента, и в Hatchet виден просто Internal Server Error.
+ * Необработанную ошибку синхронизации (внешнее API ответило ошибкой, битый
+ * ответ, сбой базы) заворачиваем в контрактную с текстом первопричины: иначе
+ * oRPC прячет её от клиента, и в Hatchet виден просто Internal Server Error.
  * Эндпоинты вызывает только свой воркер — детали отдавать безопасно.
  */
-function analyticsFailure(error: unknown): { message: string; cause: unknown } {
+function failureDetails(error: unknown): { message: string; cause: unknown } {
   const message = error instanceof Error ? error.message : String(error);
   return { message: message.slice(0, 500), cause: error };
 }
@@ -159,7 +159,7 @@ const metrikaGoals = jobs.analytics.metrikaGoals.handler(async ({ errors }) => {
   } catch (error) {
     // Свои ORPCError отдаём как есть
     if (error instanceof ORPCError) throw error;
-    throw errors.ANALYTICS_FAILED(analyticsFailure(error));
+    throw errors.ANALYTICS_FAILED(failureDetails(error));
   }
 });
 
@@ -176,7 +176,7 @@ const metrikaLogs = jobs.analytics.metrikaLogs.handler(
         throw errors.ANALYTICS_PENDING({ cause: error });
       // Свои ORPCError (валидация диапазона и т. п.) отдаём как есть
       if (error instanceof ORPCError) throw error;
-      throw errors.ANALYTICS_FAILED(analyticsFailure(error));
+      throw errors.ANALYTICS_FAILED(failureDetails(error));
     }
   },
 );
@@ -194,7 +194,7 @@ const directReport = jobs.analytics.directReport.handler(
         throw errors.ANALYTICS_PENDING({ cause: error });
       // Свои ORPCError (валидация диапазона и т. п.) отдаём как есть
       if (error instanceof ORPCError) throw error;
-      throw errors.ANALYTICS_FAILED(analyticsFailure(error));
+      throw errors.ANALYTICS_FAILED(failureDetails(error));
     }
   },
 );
@@ -215,7 +215,7 @@ const ozonSyncStock = jobs.ozon.syncStock.handler(
       return result;
     } catch (error) {
       logger.error("ozon.stock.pull_error", error);
-      throw errors.OZON_REQUEST_FAILED({ cause: error });
+      throw errors.OZON_REQUEST_FAILED(failureDetails(error));
     }
   },
 );
@@ -228,7 +228,7 @@ const ozonPvzSync = jobs.pvz.sync.handler(async ({ errors, signal }) => {
     return await syncOzonPickupPoints(signal);
   } catch (error) {
     logger.error("ozon.pvz.sync_error", error);
-    throw errors.OZON_REQUEST_FAILED({ cause: error });
+    throw errors.OZON_REQUEST_FAILED(failureDetails(error));
   }
 });
 

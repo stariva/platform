@@ -17,7 +17,11 @@ export const OzonNotConfiguredError = error("OZON_NOT_CONFIGURED", {
   message: "ozon_not_configured",
 });
 
-/** Ozon Seller API не ответил или ответил ошибкой; подробности — в логе сайта. */
+/**
+ * Ozon Seller API не ответил или ответил ошибкой. Процедуры вызывают только
+ * свои воркер и админка, поэтому в message отдаём первопричину — иначе oRPC
+ * прячет её, и разбирательство каждый раз идёт в логи сайта.
+ */
 export const OzonRequestFailedError = error("OZON_REQUEST_FAILED", {
   message: "ozon_request_failed",
 });

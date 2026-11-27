@@ -72,15 +72,17 @@ test("reports missing Ozon keys", async () => {
   expect(lastStatus()).toBe(503);
 });
 
-test("hides Ozon failure details behind a typed error", async () => {
+test("details the Ozon failure behind a typed error", async () => {
   push = async () => {
-    throw new Error("ozon_seller_request_failed_500: secret detail");
+    throw new Error("ozon_seller_request_failed_500: invalid api key");
   };
   const [error] = await safe(
     client(`Bearer ${secret}`).admin.ozon.pushStock({ slugs: ["vase"] }),
   );
   expect(error).toBeInstanceOf(OzonRequestFailedError);
-  expect(String(error)).not.toContain("secret detail");
+  expect((error as Error).message).toBe(
+    "ozon_seller_request_failed_500: invalid api key",
+  );
   expect(lastStatus()).toBe(502);
 });
 

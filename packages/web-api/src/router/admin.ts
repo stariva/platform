@@ -12,9 +12,15 @@ const pushStock = admin.ozon.pushStock.handler(async ({ input, errors }) => {
       visibilityOnly: input.visibilityOnly,
     });
   } catch (error) {
-    // Текст ответа Ozon остаётся в логе сайта, админке хватает кода
+    // Процедуру вызывает только своя админка, поэтому отдаём текст
+    // первопричины: иначе мастер видит голый ozon_request_failed и идёт
+    // в логи сайта за каждой мелочью
     logger.error("ozon.stock.push_error", error);
-    throw errors.OZON_REQUEST_FAILED({ cause: error });
+    const message = error instanceof Error ? error.message : String(error);
+    throw errors.OZON_REQUEST_FAILED({
+      message: message.slice(0, 500),
+      cause: error,
+    });
   }
 });
 

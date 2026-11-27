@@ -455,15 +455,17 @@ test("ozon stock sync is a quiet no-op without Seller API keys", async () => {
   expect(result).toEqual({ configured: false, checked: 0, lowered: [] });
 });
 
-test("ozon stock sync hides Ozon failure details", async () => {
+test("ozon stock sync details the Ozon failure for the worker", async () => {
   ozonPull = async () => {
-    throw new Error("ozon_seller_request_failed_500: secret detail");
+    throw new Error("ozon_seller_request_failed_500: invalid api key");
   };
-  const [error, , definedError] = await safe(
+  const [, , definedError] = await safe(
     client(`Bearer ${secret}`).jobs.ozon.syncStock(),
   );
   expect(definedError?.code).toBe("OZON_REQUEST_FAILED");
-  expect(String(error)).not.toContain("secret detail");
+  expect(definedError?.message).toBe(
+    "ozon_seller_request_failed_500: invalid api key",
+  );
   expect(lastStatus()).toBe(502);
 });
 
