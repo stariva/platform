@@ -2,6 +2,8 @@ import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 
+export const SUPPORT_EMAIL = "info@stariva.ru";
+
 /** Web APIs работают в браузере и WebView; нативные плагины можно подключить здесь без изменения экранов. */
 export const native = {
   onBackButton: async (handler: () => void) => {
@@ -26,6 +28,12 @@ export const native = {
     else if (navigator.clipboard) await navigator.clipboard.writeText(url);
   },
   openExternal: async (url: string) => {
+    // mailto/tel внутри браузерного плагина не открываются: их разбирает сам
+    // WebView и запускает системное приложение
+    if (url.startsWith("mailto:") || url.startsWith("tel:")) {
+      window.location.href = url;
+      return;
+    }
     if (Capacitor.isNativePlatform()) await Browser.open({ url });
     else window.open(url, "_blank", "noopener,noreferrer");
   },

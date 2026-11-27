@@ -32,4 +32,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Хаптика при записи/избранном: без разрешения navigator.vibrate молча не работает -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

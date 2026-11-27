@@ -41,6 +41,50 @@ test("Capgo в ручном режиме и без статистики в об�
   expect(updater?.statsUrl).toBe("");
 });
 
+test("Android: minSdk не ниже 26 (требование модерации RuStore — Android 8+)", () => {
+  const minSdk = /minSdkVersion = (\d+)/.exec(
+    read("android/variables.gradle"),
+  )?.[1];
+  expect(Number(minSdk)).toBeGreaterThanOrEqual(26);
+});
+
+function hasOnlyAllowedPermissions(manifest: string): boolean {
+  const permissions = [
+    ...manifest
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .matchAll(/<uses-permission\s+([^>]*)>/g),
+  ].map(
+    ([, attributes]) =>
+      /(?:^|\s)android:name\s*=\s*(["'])([^"']+)\1/.exec(attributes ?? "")?.[2],
+  );
+  // VIBRATE нужен хаптике из WebView; всё остальное — повод пересмотреть
+  // декларацию разрешений в RuStore
+  const [first, second] = permissions.sort();
+  return (
+    permissions.length === 2 &&
+    first === "android.permission.INTERNET" &&
+    second === "android.permission.VIBRATE"
+  );
+}
+
+test("Android: манифест просит только безопасные разрешения", () => {
+  expect(
+    hasOnlyAllowedPermissions(read("android/app/src/main/AndroidManifest.xml")),
+  ).toBe(true);
+});
+
+test("Android: многострочное разрешение CAMERA отклоняется", () => {
+  const manifest = read("android/app/src/main/AndroidManifest.xml");
+  const withCamera = manifest.replace(
+    "</manifest>",
+    `<uses-permission
+      android:maxSdkVersion="32"
+      android:name="android.permission.CAMERA" />
+    </manifest>`,
+  );
+  expect(hasOnlyAllowedPermissions(withCamera)).toBe(false);
+});
+
 test("iOS: privacy-манифест лежит в проекте и подключён к сборке", () => {
   expect(pbxproj).toContain("PrivacyInfo.xcprivacy in Resources");
   expect(read("ios/App/App/PrivacyInfo.xcprivacy")).toContain(
