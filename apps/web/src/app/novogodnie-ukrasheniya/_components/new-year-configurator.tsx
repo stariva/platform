@@ -8,6 +8,7 @@ import {
   ShoppingBagIcon,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
@@ -18,12 +19,13 @@ import {
 } from "@/lib/cart/cart-context";
 import { flyToCart } from "@/lib/cart/fly-to-cart";
 import {
+  ornaments as collectionOrnaments,
   type NewYearConfiguratorProduct,
   newYearProductImage,
   ornamentDetailForSlug,
   ornamentSets,
 } from "@/lib/new-year";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, productHref } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
 const ADDED_MS = 1800;
@@ -60,13 +62,6 @@ function cartLine(
     image: newYearProductImage(product),
     price: Math.round(product.price * 100),
   };
-}
-
-function fallbackSetDescription(slug: string): string {
-  return (
-    ornamentSets.find((set) => set.slug === slug)?.description ??
-    "Готовое сочетание украшений из новогодней коллекции."
-  );
 }
 
 function stockLabel(product: NewYearConfiguratorProduct): string {
@@ -223,66 +218,88 @@ function SetCard({
   disabled: boolean;
   onSelect: () => void;
 }) {
+  const set = ornamentSets.find((item) => item.slug === product.slug);
+  const composition = set?.ids
+    .map((id) => collectionOrnaments.find((item) => item.id === id)?.name)
+    .join(", ");
+
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      disabled={disabled}
-      onClick={onSelect}
-      className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl border text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso disabled:cursor-not-allowed disabled:opacity-55",
-        selected
-          ? "border-[var(--ny-accent)] bg-white shadow-[0_18px_44px_-28px_rgba(165,33,39,0.55)]"
-          : "border-espresso/10 bg-white/55 hover:border-espresso/30 hover:bg-white",
-      )}
-    >
-      <span className="relative grid min-h-48 place-items-center bg-[var(--ny-paper)] p-5">
-        <ProductImage
-          product={product}
-          sizes="(max-width: 768px) 88vw, 300px"
-          className="max-h-48 transition-transform duration-300 motion-safe:group-hover:scale-105"
-        />
-        <span
-          className={cn(
-            "absolute right-4 top-4 flex size-8 items-center justify-center rounded-full border",
-            selected
-              ? "border-[var(--ny-accent)] bg-[var(--ny-accent)] text-white"
-              : "border-espresso/15 bg-white/85 text-transparent",
-          )}
-          aria-hidden="true"
-        >
-          <CheckIcon className="size-4" strokeWidth={2.5} />
-        </span>
-      </span>
-      <span className="flex flex-1 flex-col p-5">
-        <span className="block font-serif text-2xl leading-tight text-espresso">
-          {product.name}
-        </span>
-        <span className="mt-2 line-clamp-3 block text-sm leading-relaxed text-taupe">
-          {product.shortDescription || fallbackSetDescription(product.slug)}
-        </span>
-        {(product.material || product.dimensions) && (
-          <span className="mt-3 block text-xs leading-relaxed text-taupe">
-            {[product.material, product.dimensions].filter(Boolean).join(" · ")}
-          </span>
+    <div className="flex flex-col">
+      <button
+        type="button"
+        aria-pressed={selected}
+        disabled={disabled}
+        onClick={onSelect}
+        className={cn(
+          "group relative flex flex-1 flex-col overflow-hidden rounded-2xl border text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso disabled:cursor-not-allowed disabled:opacity-55",
+          selected
+            ? "border-[var(--ny-accent)] bg-white shadow-[0_18px_44px_-28px_rgba(165,33,39,0.55)]"
+            : "border-espresso/10 bg-white/55 hover:border-espresso/30 hover:bg-white",
         )}
-        <span className="mt-auto flex items-end justify-between gap-3 pt-5">
-          <span className="text-xl font-medium text-espresso">
-            {formatPrice(product.price, product.currency)}
-          </span>
+      >
+        <span className="relative grid min-h-48 place-items-center bg-[var(--ny-paper)] p-5">
+          <ProductImage
+            product={product}
+            sizes="(max-width: 768px) 88vw, 300px"
+            className="max-h-48 transition-transform duration-300 motion-safe:group-hover:scale-105"
+          />
           <span
             className={cn(
-              "text-xs",
-              purchasable(product)
-                ? "text-taupe"
-                : "font-medium text-[var(--ny-accent)]",
+              "absolute right-4 top-4 flex size-8 items-center justify-center rounded-full border",
+              selected
+                ? "border-[var(--ny-accent)] bg-[var(--ny-accent)] text-white"
+                : "border-espresso/15 bg-white/85 text-transparent",
             )}
+            aria-hidden="true"
           >
-            {stockLabel(product)}
+            <CheckIcon className="size-4" strokeWidth={2.5} />
           </span>
         </span>
-      </span>
-    </button>
+        <span className="flex flex-1 flex-col p-5">
+          <span className="block font-serif text-2xl leading-tight text-espresso">
+            {product.name}
+          </span>
+          {(composition || product.shortDescription) && (
+            <span className="mt-2 block text-sm leading-relaxed text-taupe">
+              {composition
+                ? `Состав: ${composition}`
+                : product.shortDescription}
+            </span>
+          )}
+          {(product.material || product.dimensions) && (
+            <span className="mt-3 block text-xs leading-relaxed text-taupe">
+              {[product.material, product.dimensions]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )}
+          <span className="mt-auto flex items-end justify-between gap-3 pt-5">
+            <span className="text-xl font-medium text-espresso">
+              {formatPrice(product.price, product.currency)}
+            </span>
+            <span
+              className={cn(
+                "text-xs",
+                purchasable(product)
+                  ? "text-taupe"
+                  : "font-medium text-[var(--ny-accent)]",
+              )}
+            >
+              {stockLabel(product)}
+            </span>
+          </span>
+        </span>
+      </button>
+      {!set && (
+        <Link
+          href={productHref(product)}
+          aria-label={`Состав набора «${product.name}» в карточке товара`}
+          className="mt-2 inline-flex min-h-11 items-center self-start text-sm text-espresso underline underline-offset-4"
+        >
+          Состав в карточке товара
+        </Link>
+      )}
+    </div>
   );
 }
 
@@ -347,7 +364,7 @@ function BoxOption({
       </span>
       {price !== undefined && (
         <span className="shrink-0 text-sm font-medium tabular-nums">
-          {formatPrice(price)}
+          {formatPrice(price, product?.currency ?? "RUB")}
         </span>
       )}
     </button>
@@ -420,7 +437,7 @@ export function NewYearConfigurator({
   const [mode, setMode] = useState<Mode>("custom");
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [selectedSetSlug, setSelectedSetSlug] = useState<string | null>(
-    sets.find(purchasable)?.slug ?? sets[0]?.slug ?? null,
+    sets.find(purchasable)?.slug ?? null,
   );
   const [boxSlug, setBoxSlug] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
@@ -453,15 +470,11 @@ export function NewYearConfigurator({
   const limitFor = (product: NewYearConfiguratorProduct) =>
     Math.min(product.stockAvailable, MAX_CART_QUANTITY);
   const blockedByCart = productsToAdd.some(
-    (product) => quantityInCart(product.slug) >= limitFor(product),
+    (product) =>
+      purchasable(product) && quantityInCart(product.slug) >= limitFor(product),
   );
   const canAdd =
-    hasSelection &&
-    productsToAdd.every(
-      (product) =>
-        purchasable(product) &&
-        quantityInCart(product.slug) < limitFor(product),
-    );
+    hasSelection && productsToAdd.every(purchasable) && !blockedByCart;
 
   const toggleOrnament = (product: NewYearConfiguratorProduct) => {
     if (!purchasable(product)) return;

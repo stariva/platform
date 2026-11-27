@@ -152,22 +152,20 @@ export function newYearProductImage(
   return ornamentId ? ornamentImage(ornamentId) : "/placeholder.jpg";
 }
 
-function isLegacyOrnament(product: Product): boolean {
-  return (
-    product.subcategory === "planters" &&
-    ornaments.some((item) => ornamentSlug(item.id) === product.slug)
-  );
-}
+const LEGACY_BOX_SLUGS = ["novogodnyaya-podarochnaya-korobka"];
 
-function isLegacySet(product: Product): boolean {
-  return (
-    product.subcategory === "planters" &&
-    ornamentSets.some((set) => set.slug === product.slug)
-  );
-}
-
-function isLegacyBox(product: Product): boolean {
-  return product.subcategory === "planters" && product.slug.includes("korob");
+export function newYearSubcategoryFor(
+  product: Pick<Product, "slug" | "subcategory">,
+): NewYearSubcategory | undefined {
+  if (isNewYearSubcategory(product.subcategory)) return product.subcategory;
+  if (product.subcategory !== "planters") return undefined;
+  if (ornaments.some((item) => ornamentSlug(item.id) === product.slug)) {
+    return "ornaments";
+  }
+  if (ornamentSets.some((set) => set.slug === product.slug)) {
+    return "ornament_sets";
+  }
+  if (LEGACY_BOX_SLUGS.includes(product.slug)) return "gift_boxes";
 }
 
 export interface NewYearProductGroups {
@@ -183,17 +181,19 @@ export interface NewYearProductGroups {
 export function groupNewYearProducts(
   products: Product[],
 ): NewYearProductGroups {
-  return {
-    ornaments: products.filter(
-      (product) =>
-        product.subcategory === "ornaments" || isLegacyOrnament(product),
-    ),
-    sets: products.filter(
-      (product) =>
-        product.subcategory === "ornament_sets" || isLegacySet(product),
-    ),
-    boxes: products.filter(
-      (product) => product.subcategory === "gift_boxes" || isLegacyBox(product),
-    ),
-  };
+  const groups: NewYearProductGroups = { ornaments: [], sets: [], boxes: [] };
+  for (const product of products) {
+    switch (newYearSubcategoryFor(product)) {
+      case "ornaments":
+        groups.ornaments.push(product);
+        break;
+      case "ornament_sets":
+        groups.sets.push(product);
+        break;
+      case "gift_boxes":
+        groups.boxes.push(product);
+        break;
+    }
+  }
+  return groups;
 }
