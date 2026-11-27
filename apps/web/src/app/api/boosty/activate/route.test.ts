@@ -43,16 +43,20 @@ mock.module("@/lib/workshops/boosty-receipt", () => ({
   issueBoostyOrderReceipt,
 }));
 // Импорт настоящего next/server в моке зависает bun: достаточно своего
-// NextResponse.json и after. Маршрут больше ничего из next/server не берёт.
+// NextResponse и after. Мок общий для всех файлов, а маршруты корзины и
+// контактов вызывают `new NextResponse(null, …)` — поэтому это класс,
+// а не объект с одним json.
+class NextResponseMock extends Response {
+  static json(body: unknown, init?: ResponseInit) {
+    return new Response(JSON.stringify(body), {
+      ...init,
+      headers: { "content-type": "application/json", ...init?.headers },
+    });
+  }
+}
 mock.module("next/server", () => ({
   after,
-  NextResponse: {
-    json: (body: unknown, init?: ResponseInit) =>
-      new Response(JSON.stringify(body), {
-        ...init,
-        headers: { "content-type": "application/json", ...init?.headers },
-      }),
-  },
+  NextResponse: NextResponseMock,
 }));
 mock.module("@/lib/workshops/buyer", () => ({
   findOrCreateBuyer: async () => ({ id: "buyer", email: "buyer@example.test" }),
