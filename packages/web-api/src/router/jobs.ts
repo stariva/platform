@@ -141,9 +141,26 @@ function analyticsRange(
   return range;
 }
 
+/**
+ * Необработанную ошибку синхронизации (Яндекс ответил ошибкой, битый TSV,
+ * сбой базы) заворачиваем в контрактную с текстом первопричины: иначе oRPC
+ * прячет её от клиента, и в Hatchet виден просто Internal Server Error.
+ * Эндпоинты вызывает только свой воркер — детали отдавать безопасно.
+ */
+function analyticsFailure(error: unknown): { message: string; cause: unknown } {
+  const message = error instanceof Error ? error.message : String(error);
+  return { message: message.slice(0, 500), cause: error };
+}
+
 const metrikaGoals = jobs.analytics.metrikaGoals.handler(async ({ errors }) => {
   if (!isMetrikaConfigured()) throw errors.ANALYTICS_NOT_CONFIGURED();
-  return syncMetrikaGoals();
+  try {
+    return await syncMetrikaGoals();
+  } catch (error) {
+    // Свои ORPCError отдаём как есть
+    if (error instanceof ORPCError) throw error;
+    throw errors.ANALYTICS_FAILED(analyticsFailure(error));
+  }
 });
 
 const metrikaLogs = jobs.analytics.metrikaLogs.handler(
@@ -157,7 +174,9 @@ const metrikaLogs = jobs.analytics.metrikaLogs.handler(
     } catch (error) {
       if (error instanceof MetrikaLogsPendingError)
         throw errors.ANALYTICS_PENDING({ cause: error });
-      throw error;
+      // Свои ORPCError (валидация диапазона и т. п.) отдаём как есть
+      if (error instanceof ORPCError) throw error;
+      throw errors.ANALYTICS_FAILED(analyticsFailure(error));
     }
   },
 );
@@ -173,7 +192,9 @@ const directReport = jobs.analytics.directReport.handler(
     } catch (error) {
       if (error instanceof DirectReportPendingError)
         throw errors.ANALYTICS_PENDING({ cause: error });
-      throw error;
+      // Свои ORPCError (валидация диапазона и т. п.) отдаём как есть
+      if (error instanceof ORPCError) throw error;
+      throw errors.ANALYTICS_FAILED(analyticsFailure(error));
     }
   },
 );

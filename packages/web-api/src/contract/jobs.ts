@@ -210,6 +210,16 @@ export const AnalyticsPendingError = error("ANALYTICS_PENDING", {
   message: "analytics_pending",
 });
 
+/**
+ * Синхронизация упала: Яндекс ответил ошибкой, выгрузка не разобралась
+ * или не записалась в базу. Процедуры вызывает только свой воркер по
+ * JOBS_SECRET, поэтому в message отдаём первопричину — иначе oRPC прячет
+ * её, и в Hatchet виден просто Internal Server Error.
+ */
+export const AnalyticsFailedError = error("ANALYTICS_FAILED", {
+  message: "analytics_failed",
+});
+
 /** Дни выгрузки по Москве, включительно; без них — последние дни по вчера. */
 const analyticsRange = {
   from: z.iso.date().optional(),
@@ -219,6 +229,7 @@ const analyticsRange = {
 const analyticsProcedure = jobProcedure.errors({
   [AnalyticsNotConfiguredError.code]: AnalyticsNotConfiguredError,
   [AnalyticsPendingError.code]: AnalyticsPendingError,
+  [AnalyticsFailedError.code]: AnalyticsFailedError,
 });
 
 export const analyticsContract = {

@@ -72,6 +72,7 @@ export {
   NewsletterFailedError,
 } from "./forms";
 export {
+  AnalyticsFailedError,
   AnalyticsNotConfiguredError,
   AnalyticsPendingError,
   AttemptLostError,

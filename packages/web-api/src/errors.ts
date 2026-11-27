@@ -1,6 +1,9 @@
 import { COMMON_ERROR_STATUS_MAP } from "@orpc/server";
 import {
   AdminNotConfiguredError,
+  AnalyticsFailedError,
+  AnalyticsNotConfiguredError,
+  AnalyticsPendingError,
   AttemptLostError,
   CheckoutCheckFailedError,
   CustomOrderConflictError,
@@ -52,6 +55,11 @@ export const webErrorStatusMap = {
   [PlaylistMissingError.code]: 409,
   // Прогон не дослал часть уведомлений: воркер повторит его целиком
   [RemindersFailedError.code]: 500,
+  [AnalyticsNotConfiguredError.code]: 503,
+  // Яндекс ещё готовит выгрузку — штатное ожидание, а не сбой: в логе
+  // ошибок таким ретраям не место, иначе они тонут в их шуме настоящие
+  [AnalyticsPendingError.code]: 409,
+  [AnalyticsFailedError.code]: 500,
   [AdminNotConfiguredError.code]: 503,
   [OzonNotConfiguredError.code]: 503,
   [OzonRequestFailedError.code]: 502,

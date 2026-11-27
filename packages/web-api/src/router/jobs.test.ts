@@ -57,6 +57,7 @@ mock.module("../services/storage-mirror", () => ({
 
 let yandexConfigured = false;
 let yandexPending = false;
+let yandexError: Error | null = null;
 const metrikaCalls: unknown[][] = [];
 const directCalls: unknown[][] = [];
 // Остальные экспорты настоящие: мок модуля действует на весь процесс тестов
@@ -67,10 +68,14 @@ const { DirectReportPendingError } = direct;
 mock.module("../services/yandex/metrika", () => ({
   ...metrika,
   isMetrikaConfigured: () => yandexConfigured,
-  syncMetrikaGoals: async () => ({ goals: 4 }),
+  syncMetrikaGoals: async () => {
+    if (yandexError) throw yandexError;
+    return { goals: 4 };
+  },
   syncMetrikaLogs: async (...args: unknown[]) => {
     metrikaCalls.push(args);
     if (yandexPending) throw new MetrikaLogsPendingError(1);
+    if (yandexError) throw yandexError;
     return { rows: 10, requestId: 7 };
   },
 }));
@@ -80,6 +85,7 @@ mock.module("../services/yandex/direct", () => ({
   syncDirectReport: async (...args: unknown[]) => {
     directCalls.push(args);
     if (yandexPending) throw new DirectReportPendingError("pending");
+    if (yandexError) throw yandexError;
     return { rows: 3, goals: 2 };
   },
 }));
@@ -397,6 +403,29 @@ test("analytics jobs ask Hatchet to retry while Yandex prepares data", async () 
   const [, , direct] = await safe(api.directReport({ report: "stats" }));
   expect(direct?.code).toBe("ANALYTICS_PENDING");
   yandexPending = false;
+});
+
+test("analytics jobs pass the cause of a failure to Hatchet", async () => {
+  yandexConfigured = true;
+  yandexError = new Error("direct_report_failed_400: неверный запрос");
+  const api = client(`Bearer ${secret}`).jobs.analytics;
+
+  const [, , direct] = await safe(api.directReport({ report: "stats" }));
+  expect(direct?.code).toBe("ANALYTICS_FAILED");
+  expect(direct?.message).toBe("direct_report_failed_400: неверный запрос");
+
+  yandexError = new Error("metrika_logs_too_large: не больше 5 дн. за раз");
+  const [, , logs] = await safe(api.metrikaLogs({ source: "visits" }));
+  expect(logs?.code).toBe("ANALYTICS_FAILED");
+  expect(logs?.message).toBe("metrika_logs_too_large: не больше 5 дн. за раз");
+  const [, , goals] = await safe(api.metrikaGoals());
+  expect(goals?.code).toBe("ANALYTICS_FAILED");
+
+  yandexError = null;
+  expect(await api.directReport({ report: "stats" })).toEqual({
+    rows: 3,
+    goals: 2,
+  });
 });
 
 test("ozon stock sync lowers stock and refreshes the product pages", async () => {
