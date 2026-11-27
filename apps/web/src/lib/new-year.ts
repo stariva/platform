@@ -64,6 +64,26 @@ export const ornaments = [
     detail:
       "Шаловливый козлик с цветочным узором — добрый знак наступающего года.",
   },
+  {
+    id: "snowflake",
+    name: "Снежинка",
+    detail: "Ажурная снежинка с цветочной розеткой и народным орнаментом.",
+  },
+  {
+    id: "bell",
+    name: "Колокольчик",
+    detail: "Нарядный колокольчик с бантом, цветочной розеткой и бусинами.",
+  },
+  {
+    id: "star",
+    name: "Звезда",
+    detail: "Пятиконечная звезда с резным цветком и молочным контуром.",
+  },
+  {
+    id: "varezhka",
+    name: "Варежка",
+    detail: "Тёплая варежка с цветком, завитками и уютным зимним узором.",
+  },
 ] as const;
 
 export type Ornament = (typeof ornaments)[number];
@@ -84,7 +104,7 @@ export const ornamentSets = [
     slug: "novogodniy-nabor-russkaya-skazka",
     name: "Русская сказка",
     description:
-      "Вся коллекция: семь разных историй на одной ёлке — от петушка до резного наличника.",
+      "Вся коллекция: одиннадцать разных историй на одной ёлке — от петушка до варежки.",
     ids: ornaments.map((item) => item.id),
   },
 ] satisfies {
@@ -199,7 +219,10 @@ export function newYearSetMerchandising<
   const canCompare =
     items.length > 0 &&
     items.every(
-      (item) => item.product && item.product.currency === setProduct.currency,
+      (item) =>
+        item.product &&
+        item.product.price > 0 &&
+        item.product.currency === setProduct.currency,
     );
   const separateTotal = canCompare
     ? items.reduce((sum, item) => sum + (item.product?.price ?? 0), 0)

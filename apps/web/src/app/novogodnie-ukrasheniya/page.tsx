@@ -68,7 +68,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Русская сказка — Stariva",
+    title: "Новогодние наборы «Русская сказка» — Stariva",
     images: [newYearHero.src],
   },
 };
@@ -286,8 +286,6 @@ export default function NewYearPage() {
             <Image
               src={newYearHero}
               alt="Шар, резной наличник, балалайка, петушок и бублик с красно-молочными узорами на еловых ветвях в тёплом свете гирлянды"
-              loading="eager"
-              fetchPriority="high"
               placeholder="blur"
               sizes="(min-width: 1600px) 880px, (min-width: 1024px) 55vw, calc(100vw - 48px)"
               className="block h-auto w-full"

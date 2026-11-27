@@ -141,6 +141,10 @@ function ProductImage({
   );
 }
 
+function hasProductVisual(product: NewYearConfiguratorProduct): boolean {
+  return newYearProductImage(product) !== "/placeholder.jpg";
+}
+
 function OrnamentCard({
   product,
   selected,
@@ -410,11 +414,21 @@ function BoxOption({
         )}
       >
         {product ? (
-          <ProductImage
-            product={product}
-            sizes="48px"
-            className="max-h-11 max-w-11"
-          />
+          hasProductVisual(product) ? (
+            <ProductImage
+              product={product}
+              sizes="48px"
+              className="max-h-11 max-w-11"
+            />
+          ) : (
+            <GiftIcon
+              className={cn(
+                "size-5",
+                selected ? "text-parchment" : "text-taupe",
+              )}
+              aria-hidden="true"
+            />
+          )
         ) : selected ? (
           <PackageOpenIcon className="size-5" aria-hidden="true" />
         ) : (
@@ -463,7 +477,15 @@ function Preview({ products }: { products: NewYearConfiguratorProduct[] }) {
           className="grid aspect-square place-items-center overflow-hidden rounded-xl bg-white/75 p-1.5"
           title={product.name}
         >
-          <ProductImage product={product} sizes="72px" className="max-h-full" />
+          {hasProductVisual(product) ? (
+            <ProductImage
+              product={product}
+              sizes="72px"
+              className="max-h-full"
+            />
+          ) : (
+            <GiftIcon className="size-5 text-taupe" aria-hidden="true" />
+          )}
         </span>
       ))}
       {products.length > 8 && (

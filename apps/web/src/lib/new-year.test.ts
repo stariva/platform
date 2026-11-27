@@ -97,6 +97,15 @@ test("new year image prefers the database photo and uses collection art only as 
     images: ["https://cdn.stariva.ru/site/images/catalog/placeholder.jpg"],
   });
   assert.equal(newYearProductImage(withoutPhoto), ornamentImage("shar"));
+
+  const snowflakeWithoutPhoto = product({
+    slug: "novogodnee-ukrashenie-snowflake",
+    images: ["https://cdn.stariva.ru/site/images/catalog/placeholder.jpg"],
+  });
+  assert.equal(
+    newYearProductImage(snowflakeWithoutPhoto),
+    ornamentImage("snowflake"),
+  );
 });
 
 test("new year set merchandising resolves composition and honest separate-price savings", () => {

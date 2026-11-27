@@ -34,11 +34,11 @@ export function NewYearTeaser() {
             на вашей ёлке
           </h2>
           <p className="max-w-md text-taupe">
-            Домики, снежинки и народные орнаменты. Девять фигурок, которые
-            хочется рассматривать.
+            Готовые наборы украшений с народными орнаментами — для своей ёлки и
+            тёплых подарков.
           </p>
           <span className="text-sm text-espresso underline underline-offset-4">
-            Посмотреть украшения →
+            Выбрать набор →
           </span>
         </div>
       </Link>
