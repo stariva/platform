@@ -9,8 +9,9 @@ import type { Product } from "./catalog/types";
  * gift_boxes product, so the buyer can choose either variant.
  */
 export const NEW_YEAR_PATH = "/novogodnie-ukrasheniya";
-export const NEW_YEAR_IMAGE =
-  "/images/new-year/collection-russkaya-skazka.webp";
+export const NEW_YEAR_IMAGE = "/images/new-year/hero-russkaya-skazka-v2.webp";
+export const NEW_YEAR_CARD_IMAGE =
+  "/images/new-year/category-russkaya-skazka.webp";
 
 /**
  * Посылка любой конфигурации новогоднего набора — по ней Ozon считает доставку

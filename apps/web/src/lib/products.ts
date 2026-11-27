@@ -1,7 +1,7 @@
 import type { Category, Product } from "./catalog/types";
 import {
   isNewYearSubcategory,
-  NEW_YEAR_IMAGE,
+  NEW_YEAR_CARD_IMAGE,
   NEW_YEAR_PATH,
 } from "./new-year";
 
@@ -96,7 +96,7 @@ export const catalogSections = [
     label: "Новогодние украшения",
     href: NEW_YEAR_PATH,
     desc: "Ёлочные фигурки и наборы с народными орнаментами",
-    image: NEW_YEAR_IMAGE,
+    image: NEW_YEAR_CARD_IMAGE,
   },
   {
     label: "Одежда",
