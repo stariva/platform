@@ -13,7 +13,6 @@ import type { Product } from "@/lib/catalog/types";
 import { isCatalogProductBuyable } from "@/lib/commerce/catalog";
 import {
   groupNewYearProducts,
-  NEW_YEAR_IMAGE,
   NEW_YEAR_PATH,
   newYearProductImage,
   ornamentDetailForSlug,
@@ -21,6 +20,7 @@ import {
 } from "@/lib/new-year";
 import { formatPrice } from "@/lib/products";
 import { SITE_URL } from "@/lib/site-url";
+import newYearHero from "../../../public/images/new-year/hero-russkaya-skazka-v2.webp";
 import { NewYearConfigurator } from "./_components/new-year-configurator";
 
 export const dynamic = "force-dynamic";
@@ -58,12 +58,18 @@ export const metadata: Metadata = {
     description:
       "Маленькие истории для вашей ёлки. Коллекция украшений с народными орнаментами.",
     url: `${SITE_URL}${NEW_YEAR_PATH}`,
-    images: [{ url: NEW_YEAR_IMAGE, width: 1280, height: 1067 }],
+    images: [
+      {
+        url: newYearHero.src,
+        width: newYearHero.width,
+        height: newYearHero.height,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Русская сказка — Stariva",
-    images: [NEW_YEAR_IMAGE],
+    images: [newYearHero.src],
   },
 };
 
@@ -234,11 +240,11 @@ export default function NewYearPage() {
         ]}
       />
       <main className="ny-page bg-parchment pt-15 text-espresso lg:pt-17">
-        <section className="ny-hero">
-          <div className="flex flex-col items-start justify-center px-6 py-12 lg:px-16 lg:py-20">
+        <section className="ny-hero" aria-labelledby="new-year-title">
+          <div className="ny-hero-copy">
             <nav
               aria-label="Хлебные крошки"
-              className="mb-10 flex flex-wrap items-center gap-2 text-xs text-taupe"
+              className="mb-5 flex flex-wrap items-center gap-2 text-xs text-taupe"
             >
               <Link
                 href="/catalog"
@@ -250,20 +256,25 @@ export default function NewYearPage() {
               <span>Новогодние украшения</span>
             </nav>
             <p className="ny-eyebrow">Stariva · Новогодняя коллекция</p>
-            <h1 className="ny-hero-title">
+            <h1 id="new-year-title" className="ny-hero-title">
               Русская
               <br />
               <span>сказка</span>
             </h1>
-            <p className="mt-6 max-w-md text-lg leading-relaxed text-taupe">
+            <p className="mt-5 max-w-md text-base leading-relaxed text-taupe xl:text-lg">
               Маленькие истории для вашей ёлки. Соберите свою коробку фигурок
               или выберите готовый набор с праздничной упаковкой.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="min-h-12">
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild size="lg" className="min-h-12 px-4 sm:px-6">
                 <a href="#configurator">Собрать коробку</a>
               </Button>
-              <Button asChild variant="outline" size="lg" className="min-h-12">
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="min-h-12 px-4 sm:px-6"
+              >
                 <a href="#ornaments">Все фигурки</a>
               </Button>
             </div>
@@ -271,14 +282,15 @@ export default function NewYearPage() {
               Созданы на 3D-принтере · вдохновлены народными орнаментами
             </p>
           </div>
-          <figure className="relative min-h-80 lg:min-h-165">
+          <figure className="ny-hero-art">
             <Image
-              src={NEW_YEAR_IMAGE}
-              alt="Красно-молочные новогодние фигурки с народными узорами: цветочный шар, резной наличник, балалайка, петушок и венок"
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 55vw"
-              className="object-contain"
+              src={newYearHero}
+              alt="Шар, резной наличник, балалайка, петушок и венок с красно-молочными узорами на еловых ветвях в тёплом свете гирлянды"
+              loading="eager"
+              fetchPriority="high"
+              placeholder="blur"
+              sizes="(min-width: 1600px) 880px, (min-width: 1024px) 55vw, calc(100vw - 48px)"
+              className="block h-auto w-full"
             />
             <figcaption className="sr-only">
               Цветочный шар, резной наличник, балалайка, петушок и венок с
