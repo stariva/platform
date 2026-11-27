@@ -30,7 +30,7 @@ import {
   publicObjectUrl,
   uploadPublicObject,
 } from "@stariva/storage";
-import { zipSync } from "fflate";
+import { unzipSync, zipSync } from "fflate";
 import { parseVersion } from "../src/lib/version";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -76,6 +76,48 @@ function collect(dir: string, files: Record<string, Uint8Array>) {
   }
 }
 
+const sha256 = (bytes: Uint8Array) =>
+  createHash("sha256").update(bytes).digest("hex");
+
+/**
+ * RuStore ставит APK как есть: если внутрь попал вчерашний веб-бандл,
+ * первое же открытие увидит более новый `latestRelease` и попросит обновиться.
+ * Поэтому релиз с APK принимаем только когда Capacitor скопировал в него
+ * именно текущий dist. Лишние нативные файлы (`cordova.js`, хеши Capgo) не
+ * мешают — проверяем только файлы бандла.
+ */
+function assertApkMatchesBundle(
+  apkPath: string,
+  files: Record<string, Uint8Array>,
+) {
+  let entries: Record<string, Uint8Array>;
+  try {
+    entries = unzipSync(new Uint8Array(readFileSync(apkPath)));
+  } catch {
+    fail(`APK не читается как zip: ${apkPath}`);
+  }
+  const missing: string[] = [];
+  const different: string[] = [];
+  for (const [key, bytes] of Object.entries(files)) {
+    const packed = entries[`assets/public/${key}`];
+    if (!packed) missing.push(key);
+    else if (sha256(packed) !== sha256(bytes)) different.push(key);
+  }
+  if (missing.length || different.length) {
+    const show = (list: string[]) =>
+      list.length > 5 ? `${list.slice(0, 5).join(", ")}…` : list.join(", ");
+    const parts = [
+      missing.length ? `нет файлов: ${show(missing)}` : "",
+      different.length ? `не совпадают: ${show(different)}` : "",
+    ].filter(Boolean);
+    fail(
+      `APK содержит не текущий бандл ${version} (${parts.join("; ")}). ` +
+        "Соберите APK после поднятия version в package.json и публикуйте тот же файл.",
+    );
+  }
+  console.log(`✓ APK содержит текущий бандл ${version}`);
+}
+
 const files: Record<string, Uint8Array> = {};
 collect(distDir, files);
 const zip = zipSync(files, { level: 9 });
@@ -85,6 +127,7 @@ console.log(
 
 const apkPath = values.apk;
 if (apkPath && !existsSync(apkPath)) fail(`APK не найден: ${apkPath}`);
+if (apkPath) assertApkMatchesBundle(apkPath, files);
 
 if (!values["dry-run"] && !isPublicStorageConfigured()) {
   fail("Не настроен публичный бакет (AWS_S3_* и AWS_S3_PUBLIC_BUCKET в .env)");
@@ -120,9 +163,6 @@ if (values["dry-run"]) {
   );
   process.exit(0);
 }
-
-const sha256 = (bytes: Uint8Array) =>
-  createHash("sha256").update(bytes).digest("hex");
 
 // Контрольная сумма нужна приложению: без неё Capgo бандл не скачает
 const bundleChecksum = sha256(zip);

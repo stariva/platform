@@ -83,30 +83,31 @@ App Store (куда вести iOS, когда оболочка устарела
 
 ## Выпуск новой оболочки (нативные изменения, новый плагин)
 
-1. Поднять `versionName`/`versionCode` (Android) и `MARKETING_VERSION`/
-   `CURRENT_PROJECT_VERSION` (iOS), `bun run cap:sync`. Проще один раз
-   передать версии в команду сборки: `bun run apk:release -- --version-code 12
-   --version-name 1.2.0` — она сама поправит оба файла (Android и iOS) и
-   соберёт APK. `--version-code` обязан быть больше текущего.
-2. Android: собрать подписанный release-APK — `bun run apk:release`. Команда
-   проверит keystore и SDK, соберёт бандл, сделает `cap sync android`,
+1. Сначала поднять `version` бандла в `apps/mobile/package.json`. APK собирается
+   только после этого: иначе внутрь попадёт прежний бандл, и свежеустановленное
+   приложение сразу попросит обновиться (RuStore отклоняет такую сборку).
+2. Передать версии оболочки в команду сборки:
+   `bun run apk:release -- --version-code 12 --version-name 1.2.0`.
+   Она сама поправит файлы Android и
+   iOS, соберёт бандл из актуального `package.json`, сделает `cap sync android`,
    запустит `assembleRelease`, проверит подпись через `apksigner` и положит
    готовый файл в `apps/mobile/apk/stariva-<version>-<code>.apk` (папка
-   игнорируется git; переопределяется флагом `--out`). `--dry-run` только
-   покажет план. Нужны `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`,
-   `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` — в env или `gradle.properties`.
-   **Ключ подписи один на всю жизнь приложения** и хранится вне git: APK с
-   другим ключом не встанет поверх установленного. Без локального SDK то же
-   делает workflow «Mobile release»
-   (`.github/workflows/mobile-release.yml`, запуск вручную с `version_code`/
-   `version_name`) — keystore лежит в секретах `ANDROID_KEYSTORE_*`, готовый
-   APK приходит артефактом и GitHub Release.
-3. Поднять `version` бандла и опубликовать **один раз**, уже с готовым APK:
+   игнорируется git; переопределяется флагом `--out`). `--version-code` обязан
+   быть больше текущего. `--dry-run` только покажет план. Нужны
+   `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+   `ANDROID_KEY_PASSWORD` — в env или `gradle.properties`. **Ключ подписи один
+   на всю жизнь приложения** и хранится вне git: APK с другим ключом не встанет
+   поверх установленного. Без локального SDK то же делает workflow «Mobile
+   release» (`.github/workflows/mobile-release.yml`, запуск вручную с
+   `version_code`/`version_name`) — keystore лежит в секретах
+   `ANDROID_KEYSTORE_*`, готовый APK приходит артефактом и GitHub Release.
+3. Опубликовать **один раз** ровно тот APK, который пойдёт в магазин:
    `bun run release -- --apk <файл> --min-native <новая оболочка> --notes "…"`.
-   Версия публикуется однократно, поэтому запускать `release` до появления APK
-   нельзя. Старые оболочки получат просьбу скачать новую сборку, а не
-   сломанный бандл. Следующие выпуски без `--min-native` наследуют этот минимум
-   и прежнюю ссылку на APK.
+   Скрипт сверяет файлы внутри `assets/public` с текущим `dist` и откажет,
+   если APK собран из другого бандла. Версия публикуется однократно, поэтому
+   запускать `release` до появления APK нельзя. Старые оболочки получат просьбу
+   скачать новую сборку, а не сломанный бандл. Следующие выпуски без
+   `--min-native` наследуют этот минимум и прежнюю ссылку на APK.
 4. iOS: Archive в Xcode → App Store Connect (TestFlight/релиз); ссылка на
    страницу приложения — `VITE_IOS_STORE_URL` в следующей сборке.
 

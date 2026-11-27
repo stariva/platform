@@ -82,7 +82,7 @@
     },
     "apps/mobile": {
       "name": "@stariva/mobile",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "dependencies": {
         "@capacitor-community/keep-awake": "^8.0.1",
         "@capacitor/android": "^8.6.2",
