@@ -11,7 +11,7 @@
     "lint": "biome lint .",
     "check": "biome check .",
     "start": "bun --env-file=../../.env run next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.93",

@@ -43,18 +43,24 @@ const db = {
 const save = setStock as unknown as (args: {
   context: { db: typeof db };
   input: { id: string; stockAvailable: number };
-}) => Promise<{ ozonSynced: boolean }>;
-await assert.rejects(
-  save({ context: { db }, input: { id: "1", stockAvailable: 5 } }),
-  /артикула/,
+}) => Promise<{ ozonSynced: boolean | null }>;
+
+assert.equal(
+  (await save({ context: { db }, input: { id: "1", stockAvailable: 5 } }))
+    .ozonSynced,
+  null,
 );
-assert.equal(updates, 0);
+assert.equal(updates, 1);
+assert.equal(pushes, 0);
 offerId = "offer-1";
 sku = null;
-await assert.rejects(
-  save({ context: { db }, input: { id: "1", stockAvailable: 5 } }),
-  /SKU/,
+assert.equal(
+  (await save({ context: { db }, input: { id: "1", stockAvailable: 5 } }))
+    .ozonSynced,
+  null,
 );
+assert.equal(updates, 2);
+assert.equal(pushes, 0);
 sku = 123;
 assert.equal(
   (await save({ context: { db }, input: { id: "1", stockAvailable: 5 } }))
@@ -62,4 +68,4 @@ assert.equal(
   false,
 );
 assert.equal(pushes, 1);
-assert.equal(updates, 1);
+assert.equal(updates, 3);
