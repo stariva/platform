@@ -5,6 +5,7 @@ import {
   groupNewYearProducts,
   isNewYearSubcategory,
   newYearProductImage,
+  newYearSubcategoryFor,
   ornamentImage,
 } from "./new-year";
 
@@ -69,12 +70,20 @@ test("new year grouping keeps legacy slugs working while products are recategori
     id: "legacy-box",
     slug: "novogodnyaya-podarochnaya-korobka",
   });
-  const other = product({ id: "other", slug: "dizainerskoe-kashpo" });
+  const other = product({
+    id: "other",
+    slug: "novogodnyaya-podarochnaya-korobka-kashpo",
+  });
+  const products = [ornament, set, box, other];
 
-  const groups = groupNewYearProducts([ornament, set, box, other]);
+  const groups = groupNewYearProducts(products);
   assert.deepEqual(groups.ornaments, [ornament]);
   assert.deepEqual(groups.sets, [set]);
   assert.deepEqual(groups.boxes, [box]);
+  assert.deepEqual(
+    products.filter((p) => !newYearSubcategoryFor(p)),
+    [other],
+  );
 });
 
 test("new year image prefers the database photo and uses collection art only as a placeholder fallback", () => {

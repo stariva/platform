@@ -123,59 +123,77 @@ async function Collection() {
         boxes={groups.boxes.map(toNewYearConfiguratorProduct)}
         catalogUnavailable={unavailable}
       />
-      {groups.ornaments.length > 0 && (
-        <section
-          id="ornaments"
-          className="ny-section scroll-mt-24"
-          aria-labelledby="ornaments-title"
-        >
-          <p className="ny-eyebrow">Каждая — со своим характером</p>
-          <h2 id="ornaments-title" className="ny-heading">
-            Фигурки коллекции
-          </h2>
-          <p className="mt-5 max-w-2xl text-taupe">
-            Все карточки, цены и остатки загружаются из каталога. Фигурку можно
-            добавить в корзину отдельно или вернуться к конфигуратору и собрать
-            свою коробку.
-          </p>
-          <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-            {groups.ornaments.map((product, index) => (
-              <article
-                key={product.slug}
-                id={product.slug}
-                className="flex scroll-mt-24 flex-col"
-              >
-                <div className="ny-ornament-art">
-                  <span
-                    className="absolute left-5 top-4 text-xs text-taupe"
-                    aria-hidden="true"
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <Image
-                    src={newYearProductImage(product)}
-                    alt={`Новогоднее украшение «${product.name}»`}
-                    width={240}
-                    height={260}
-                    className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
+      <section
+        id="ornaments"
+        className="ny-section scroll-mt-24"
+        aria-labelledby="ornaments-title"
+      >
+        <p className="ny-eyebrow">Каждая — со своим характером</p>
+        <h2 id="ornaments-title" className="ny-heading">
+          Фигурки коллекции
+        </h2>
+        {groups.ornaments.length > 0 ? (
+          <>
+            <p className="mt-5 max-w-2xl text-taupe">
+              Все карточки, цены и остатки загружаются из каталога. Фигурку
+              можно добавить в корзину отдельно или вернуться к конфигуратору и
+              собрать свою коробку.
+            </p>
+            <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+              {groups.ornaments.map((product, index) => (
+                <article
+                  key={product.slug}
+                  id={product.slug}
+                  className="flex scroll-mt-24 flex-col"
+                >
+                  <div className="ny-ornament-art">
+                    <span
+                      className="absolute left-5 top-4 text-xs text-taupe"
+                      aria-hidden="true"
+                    >
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <Image
+                      src={newYearProductImage(product)}
+                      alt={`Новогоднее украшение «${product.name}»`}
+                      width={240}
+                      height={260}
+                      className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
+                    />
+                  </div>
+                  <h3 className="mt-5 font-serif text-2xl">{product.name}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-taupe">
+                    {product.shortDescription ||
+                      ornamentDetailForSlug(product.slug) ||
+                      "Новогоднее украшение из коллекции «Русская сказка»."}
+                  </p>
+                  <Purchase
+                    product={product}
+                    name={product.name}
+                    unavailable={unavailable}
                   />
-                </div>
-                <h3 className="mt-5 font-serif text-2xl">{product.name}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-taupe">
-                  {product.shortDescription ||
-                    ornamentDetailForSlug(product.slug) ||
-                    "Новогоднее украшение из коллекции «Русская сказка»."}
-                </p>
-                <Purchase
-                  product={product}
-                  name={product.name}
-                  unavailable={unavailable}
-                />
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+                </article>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-5 text-taupe">
+              {unavailable
+                ? "Не удалось загрузить фигурки коллекции."
+                : "Фигурки пока не опубликованы в каталоге."}
+            </p>
+            <ContactMasterButton
+              source="new-year-collection"
+              withPageLink
+              message="Здравствуйте! Подскажите, как заказать новогодние украшения из коллекции «Русская сказка»."
+              className="mt-5 min-h-11 rounded-md border border-espresso/25 px-4 py-3 text-sm transition-colors hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-4"
+            >
+              Уточнить заказ
+            </ContactMasterButton>
+          </>
+        )}
+      </section>
     </>
   );
 }
