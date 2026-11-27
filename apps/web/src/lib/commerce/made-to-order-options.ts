@@ -28,6 +28,17 @@ export const madeToOrderOptionsSchema = z.object({
 
 export type MadeToOrderOptions = z.infer<typeof madeToOrderOptionsSchema>;
 
+/** Состав одного готового набора короткой строкой: «Снежинка, Варежка × 2». */
+export function describeMadeToOrderContents(
+  contents: NonNullable<MadeToOrderOptions["contents"]>,
+): string {
+  return contents
+    .map((item) =>
+      item.quantity > 1 ? `${item.name} × ${item.quantity}` : item.name,
+    )
+    .join(", ");
+}
+
 /** Подпись параметров для корзины, заказа и уведомления: «Размер: M · Цвет: Бежевый». */
 export function describeMadeToOrderOptions(
   options: MadeToOrderOptions,
@@ -37,11 +48,7 @@ export function describeMadeToOrderOptions(
     `Цвет: ${options.color}`,
     ...(options.contents?.length
       ? [
-          `Состав одного набора: ${options.contents
-            .map((item) =>
-              item.quantity > 1 ? `${item.name} × ${item.quantity}` : item.name,
-            )
-            .join(", ")}`,
+          `Состав одного набора: ${describeMadeToOrderContents(options.contents)}`,
         ]
       : []),
     ...options.measurements.map((m) => `${m.label}: ${m.value} см`),

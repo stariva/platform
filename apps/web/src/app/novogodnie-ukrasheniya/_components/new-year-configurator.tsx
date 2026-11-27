@@ -22,6 +22,7 @@ import {
   type NewYearConfiguratorProduct,
   newYearFigurinesPerItem,
   newYearProductImage,
+  newYearSetContents,
   newYearSetMerchandising,
   newYearSubcategoryFor,
   ornamentDetailForSlug,
@@ -58,12 +59,21 @@ function cartLine(
       : subcategory === "ornament_sets"
         ? newYearFigurinesPerItem(product.slug)
         : 0;
+  const contents =
+    subcategory === "ornament_sets"
+      ? newYearSetContents(product.slug)
+      : undefined;
   return {
     productId: product.id,
     productSlug: product.slug,
     fulfillmentType: "made_to_order",
     instantMadeToOrder: true,
-    options: { size: PHOTO_SIZE, color: PHOTO_COLOR, measurements: [] },
+    options: {
+      size: PHOTO_SIZE,
+      color: PHOTO_COLOR,
+      measurements: [],
+      ...(contents?.length ? { contents } : {}),
+    },
     name: product.name,
     image: newYearProductImage(product),
     price: Math.round(product.price * 100),

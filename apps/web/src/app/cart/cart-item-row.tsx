@@ -8,7 +8,10 @@ import {
   type PricedCartItem,
 } from "@/lib/cart/cart-context";
 import type { CartLineState } from "@/lib/cart/use-cart-validation";
-import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
+import {
+  describeMadeToOrderOptions,
+  MAX_MADE_TO_ORDER_QUANTITY,
+} from "@/lib/commerce/made-to-order-options";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +43,7 @@ export function CartItemRow({
   const meta = [
     madeToOrder &&
       item.options &&
-      `Размер: ${item.options.size} · Цвет: ${item.options.color}`,
+      describeMadeToOrderOptions({ ...item.options, comment: undefined }),
     item.quantity > 1 && `${formatPrice(item.price / 100)} за шт.`,
     item.listPrice !== undefined &&
       item.listPrice > item.price &&
