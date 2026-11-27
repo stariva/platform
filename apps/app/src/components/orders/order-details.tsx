@@ -96,6 +96,19 @@ export function OrderItemsCard({ order }: { order: AdminOrderView }) {
                 <dl className="grid gap-2 sm:grid-cols-2">
                   <Field label="Размер">{item.options.size}</Field>
                   <Field label="Цвет">{item.options.color}</Field>
+                  {item.options.contents?.length ? (
+                    <div className="sm:col-span-2">
+                      <Field label="Состав набора">
+                        {item.options.contents
+                          .map((content) =>
+                            content.quantity > 1
+                              ? `${content.name} × ${content.quantity}`
+                              : content.name,
+                          )
+                          .join(", ")}
+                      </Field>
+                    </div>
+                  ) : null}
                   {item.options.measurements.map((m) => (
                     <Field key={m.label} label={m.label}>
                       {`${m.value} см`}

@@ -141,12 +141,17 @@ export async function notifyMadeToOrderPayment(
     const payment = await getOrderPayment(paymentId);
     const order = payment && (await getProductOrderById(payment.orderId));
     if (!payment || !order) return;
-    const outcome = paymentOutcome(
+    const [payments, items] = await Promise.all([
+      listOrderPayments(order.id),
+      getProductOrderItems(order.id),
+    ]);
+    const outcome = paymentOutcome(order, payments, payment);
+    const message = formatMadeToOrderPaymentMessage(
       order,
-      await listOrderPayments(order.id),
+      items,
       payment,
+      outcome,
     );
-    const message = formatMadeToOrderPaymentMessage(order, payment, outcome);
     const id = paymentNoticeId(order, payment, outcome);
     if (!(await send(id, message, "order-payment"))) {
       throw new Error("staff_notification_failed");

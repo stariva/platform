@@ -301,6 +301,29 @@ export function ornamentDetailForSlug(slug: string): string | undefined {
   return id ? ornaments.find((item) => item.id === id)?.detail : undefined;
 }
 
+/** Состав готового набора в заказе: имена и количество фигурок в порядке коллекции. */
+export function newYearSetContents(
+  slug: string,
+): { name: string; quantity: number }[] {
+  const definition = ornamentSets.find((set) => set.slug === slug);
+  if (!definition) return [];
+  const quantities = new Map<Ornament["id"], number>();
+  for (const id of definition.ids) {
+    quantities.set(id, (quantities.get(id) ?? 0) + 1);
+  }
+  return definition.ids.flatMap((id) => {
+    const quantity = quantities.get(id);
+    if (quantity === undefined) return [];
+    quantities.delete(id);
+    return [
+      {
+        name: ornaments.find((item) => item.id === id)?.name ?? id,
+        quantity,
+      },
+    ];
+  });
+}
+
 /** Сколько физических фигурок в одной единице товара: одна отдельная или состав набора. */
 export function newYearFigurinesPerItem(slug: string): number {
   if (ornamentIdForSlug(slug)) return 1;

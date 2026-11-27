@@ -386,6 +386,15 @@ test("instant made-to-order counts ornaments across lines and still allows fixed
     { productSlug: "novogodniy-nabor-zimniy-uyut", quantity: 1 },
   ]);
   assert.equal(setOnly.length, 1);
+  assert.deepEqual(setOnly[0]?.options.contents, [
+    { name: "Снежинка", quantity: 1 },
+    { name: "Варежка", quantity: 1 },
+    { name: "Колокольчик", quantity: 1 },
+    { name: "Звезда", quantity: 1 },
+    { name: "Домик", quantity: 1 },
+    { name: "Самовар", quantity: 1 },
+    { name: "Баранка", quantity: 1 },
+  ]);
 
   const setWithExtraOrnament = await resolveInstantMadeToOrderItems([
     { productSlug: "novogodniy-nabor-zimniy-uyut", quantity: 1 },

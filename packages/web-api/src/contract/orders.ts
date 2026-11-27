@@ -103,6 +103,11 @@ export const orderItemSchema = z.object({
       color: z.string(),
       measurements: z.array(z.object({ label: z.string(), value: z.string() })),
       comment: z.string().optional(),
+      contents: z
+        .array(
+          z.object({ name: z.string(), quantity: z.number().int().positive() }),
+        )
+        .optional(),
     })
     .nullable(),
   image: z.string().nullable(),

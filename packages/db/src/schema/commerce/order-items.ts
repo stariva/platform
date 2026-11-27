@@ -15,6 +15,8 @@ export interface MadeToOrderItemOptions {
   /** Мерки в см; подписи сохраняются как в момент заказа. */
   measurements: { label: string; value: string }[];
   comment?: string;
+  /** Снимок состава готового набора на момент заказа. */
+  contents?: { name: string; quantity: number }[];
 }
 
 /** Позиция в заказе на товары — снапшот цены/названия на момент покупки. */
