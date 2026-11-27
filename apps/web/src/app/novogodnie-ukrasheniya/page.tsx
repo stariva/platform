@@ -49,14 +49,14 @@ const NEW_YEAR_EXAMPLES = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Новогодние украшения — коллекция «Русская сказка»",
+  title: "Новогодние наборы украшений — коллекция «Русская сказка»",
   description:
-    "Ёлочные украшения с народными орнаментами: соберите свою коробку фигурок или выберите готовый набор Stariva с праздничной упаковкой.",
+    "Готовые наборы ёлочных украшений с народными орнаментами: выберите состав Stariva, добавьте праздничную коробку или соберите свою подборку фигурок.",
   alternates: { canonical: `${SITE_URL}${NEW_YEAR_PATH}` },
   openGraph: {
-    title: "Русская сказка — новогодние украшения Stariva",
+    title: "Русская сказка — новогодние наборы украшений Stariva",
     description:
-      "Маленькие истории для вашей ёлки. Коллекция украшений с народными орнаментами.",
+      "Готовые наборы маленьких историй для вашей ёлки. Украшения с народными орнаментами и праздничная упаковка.",
     url: `${SITE_URL}${NEW_YEAR_PATH}`,
     images: [
       {
@@ -158,16 +158,16 @@ async function Collection() {
         className="ny-section scroll-mt-24"
         aria-labelledby="ornaments-title"
       >
-        <p className="ny-eyebrow">Каждая — со своим характером</p>
+        <p className="ny-eyebrow">Если хочется особый состав</p>
         <h2 id="ornaments-title" className="ny-heading">
-          Фигурки коллекции
+          Фигурки по отдельности
         </h2>
         {groups.ornaments.length > 0 ? (
           <>
             <p className="mt-5 max-w-2xl text-taupe">
-              Все карточки, цены и остатки загружаются из каталога. Фигурку
-              можно добавить в корзину отдельно или вернуться к конфигуратору и
-              собрать свою коробку.
+              Сначала посмотрите готовые наборы выше — они уже собраны для ёлки
+              и подарка. Если нужен свой состав, добавьте фигурки по одной или
+              вернитесь к конфигуратору.
             </p>
             <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
               {groups.ornaments.map((product, index) => (
@@ -255,19 +255,19 @@ export default function NewYearPage() {
               <span aria-hidden="true">/</span>
               <span>Новогодние украшения</span>
             </nav>
-            <p className="ny-eyebrow">Stariva · Новогодняя коллекция</p>
+            <p className="ny-eyebrow">Stariva · Новогодние наборы</p>
             <h1 id="new-year-title" className="ny-hero-title">
               Русская
               <br />
               <span>сказка</span>
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-taupe xl:text-lg">
-              Маленькие истории для вашей ёлки. Соберите свою коробку фигурок
-              или выберите готовый набор с праздничной упаковкой.
+              Готовые наборы ёлочных украшений с народными орнаментами. Выберите
+              состав, добавьте праздничную коробку — и тёплый подарок собран.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild size="lg" className="min-h-12 px-4 sm:px-6">
-                <a href="#configurator">Собрать коробку</a>
+                <a href="#configurator">Выбрать набор</a>
               </Button>
               <Button
                 asChild
@@ -275,7 +275,7 @@ export default function NewYearPage() {
                 size="lg"
                 className="min-h-12 px-4 sm:px-6"
               >
-                <a href="#ornaments">Все фигурки</a>
+                <a href="#ornaments">Фигурки по отдельности</a>
               </Button>
             </div>
             <p className="mt-6 text-xs tracking-wide text-taupe">
@@ -285,7 +285,7 @@ export default function NewYearPage() {
           <figure className="ny-hero-art">
             <Image
               src={newYearHero}
-              alt="Шар, резной наличник, балалайка, петушок и венок с красно-молочными узорами на еловых ветвях в тёплом свете гирлянды"
+              alt="Шар, резной наличник, балалайка, петушок и бублик с красно-молочными узорами на еловых ветвях в тёплом свете гирлянды"
               loading="eager"
               fetchPriority="high"
               placeholder="blur"
@@ -293,17 +293,16 @@ export default function NewYearPage() {
               className="block h-auto w-full"
             />
             <figcaption className="sr-only">
-              Цветочный шар, резной наличник, балалайка, петушок и венок с
-              бантом.
+              Цветочный шар, резной наличник, балалайка, петушок и бублик.
             </figcaption>
           </figure>
         </section>
         <div className="ny-ribbon">
-          <span>Для своей ёлки</span>
+          <span>Готовые сочетания</span>
           <span aria-hidden="true">✳</span>
-          <span>Для тёплого подарка</span>
+          <span>Состав виден сразу</span>
           <span aria-hidden="true">✳</span>
-          <span>Для семейных традиций</span>
+          <span>Праздничная коробка по желанию</span>
         </div>
         <Suspense
           fallback={
@@ -398,8 +397,8 @@ export default function NewYearPage() {
           <ol className="mt-10 grid gap-8 md:grid-cols-3">
             {[
               [
-                "Соберите коробку",
-                "Выберите свои фигурки или готовый набор и добавьте напечатанную коробку. Если продажи ещё не открыты, напишите нам через «Уточнить заказ».",
+                "Выберите набор",
+                "Начните с готового сочетания или соберите свою коробку фигурок. Праздничная упаковка добавляется отдельным товаром.",
               ],
               [
                 "Оформите на сайте",

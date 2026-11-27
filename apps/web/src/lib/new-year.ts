@@ -49,7 +49,7 @@ export const ornaments = [
   },
   {
     id: "bublik",
-    name: "Венок с бантом",
+    name: "Бублик",
     detail: "Круглый подвес с ажурной серединой и растительным узором.",
   },
   {
@@ -156,6 +156,60 @@ export function toNewYearConfiguratorProduct(
     dimensions: product.dimensions,
     color: product.color,
   };
+}
+
+export interface NewYearSetCompositionItem<TProduct> {
+  id: Ornament["id"];
+  name: string;
+  slug: string;
+  product?: TProduct;
+}
+
+export interface NewYearSetMerchandising<TProduct> {
+  definition?: (typeof ornamentSets)[number];
+  items: NewYearSetCompositionItem<TProduct>[];
+  separateTotal?: number;
+  savings?: number;
+}
+
+/**
+ * Мерчандайзинговые данные готового набора: статический состав коллекции
+ * плюс актуальные цены отдельных фигурок из каталога. Если хотя бы одной
+ * фигурки нет в каталоге, честное сравнение цен не показываем.
+ */
+export function newYearSetMerchandising<
+  TSet extends { slug: string; price: number; currency: string },
+  TOrnament extends { slug: string; price: number; currency: string },
+>(
+  setProduct: TSet,
+  ornamentProducts: TOrnament[],
+): NewYearSetMerchandising<TOrnament> {
+  const definition = ornamentSets.find((set) => set.slug === setProduct.slug);
+  if (!definition) return { items: [] };
+
+  const items = definition.ids.map((id) => {
+    const slug = ornamentSlug(id);
+    return {
+      id,
+      name: ornaments.find((item) => item.id === id)?.name ?? id,
+      slug,
+      product: ornamentProducts.find((product) => product.slug === slug),
+    };
+  });
+  const canCompare =
+    items.length > 0 &&
+    items.every(
+      (item) => item.product && item.product.currency === setProduct.currency,
+    );
+  const separateTotal = canCompare
+    ? items.reduce((sum, item) => sum + (item.product?.price ?? 0), 0)
+    : undefined;
+  const savings =
+    separateTotal !== undefined && separateTotal > setProduct.price
+      ? separateTotal - setProduct.price
+      : undefined;
+
+  return { definition, items, separateTotal, savings };
 }
 
 /** id статического эскиза по slug'у товара; нужен только как визуальный fallback. */

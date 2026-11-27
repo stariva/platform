@@ -17,11 +17,11 @@ import { flyToCart } from "@/lib/cart/fly-to-cart";
 import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options";
 import { PHOTO_COLOR, PHOTO_SIZE } from "@/lib/made-to-order";
 import {
-  ornaments as collectionOrnaments,
   type NewYearConfiguratorProduct,
   newYearProductImage,
+  newYearSetMerchandising,
   ornamentDetailForSlug,
-  ornamentSets,
+  ornamentImage,
 } from "@/lib/new-year";
 import { formatPrice, productHref } from "@/lib/products";
 import { cn } from "@/lib/utils";
@@ -76,11 +76,15 @@ function ModeButton({
   active,
   title,
   text,
+  badge,
+  featured,
   onClick,
 }: {
   active: boolean;
   title: string;
   text: string;
+  badge?: string;
+  featured?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -89,13 +93,21 @@ function ModeButton({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "min-h-20 flex-1 rounded-2xl border p-4 text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso",
+        "min-h-20 rounded-2xl border p-4 text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso",
+        featured ? "flex-1 sm:flex-[1.18]" : "flex-1 sm:flex-[0.82]",
         active
           ? "border-espresso bg-espresso text-parchment shadow-[0_18px_44px_-26px_rgba(22,21,19,0.7)]"
           : "border-espresso/12 bg-white/55 text-espresso hover:border-espresso/35 hover:bg-white",
       )}
     >
-      <span className="block font-serif text-xl leading-tight">{title}</span>
+      <span className="flex flex-wrap items-center gap-2 font-serif text-xl leading-tight">
+        {title}
+        {badge && (
+          <span className="rounded-full bg-[var(--ny-accent)] px-2 py-0.5 font-sans text-[11px] font-medium tracking-normal text-white">
+            {badge}
+          </span>
+        )}
+      </span>
       <span
         className={cn(
           "mt-1 block text-sm leading-snug",
@@ -200,19 +212,27 @@ function OrnamentCard({
 
 function SetCard({
   product,
+  ornamentProducts,
   selected,
   disabled,
   onSelect,
 }: {
   product: NewYearConfiguratorProduct;
+  ornamentProducts: NewYearConfiguratorProduct[];
   selected: boolean;
   disabled: boolean;
   onSelect: () => void;
 }) {
-  const set = ornamentSets.find((item) => item.slug === product.slug);
-  const composition = set?.ids
-    .map((id) => collectionOrnaments.find((item) => item.id === id)?.name)
+  const merchandising = newYearSetMerchandising(product, ornamentProducts);
+  const compositionNames = merchandising.items
+    .map((item) => item.name)
     .join(", ");
+  const visibleComposition = merchandising.items.slice(0, 7);
+  const hiddenCompositionCount =
+    merchandising.items.length - visibleComposition.length;
+  const hasSeparatePrice =
+    merchandising.separateTotal !== undefined &&
+    merchandising.separateTotal > product.price;
 
   return (
     <div className="flex flex-col">
@@ -228,12 +248,18 @@ function SetCard({
             : "border-espresso/10 bg-white/55 hover:border-espresso/30 hover:bg-white",
         )}
       >
-        <span className="relative grid min-h-48 place-items-center bg-[var(--ny-paper)] p-5">
+        <span className="relative grid min-h-56 place-items-center bg-[var(--ny-paper)] p-5">
           <ProductImage
             product={product}
             sizes="(max-width: 768px) 88vw, 300px"
-            className="max-h-48 transition-transform duration-300 motion-safe:group-hover:scale-105"
+            className="max-h-52 transition-transform duration-300 motion-safe:group-hover:scale-105"
           />
+          {merchandising.items.length > 0 && (
+            <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-espresso shadow-sm">
+              {merchandising.items.length}{" "}
+              {pluralFigurines(merchandising.items.length)}
+            </span>
+          )}
           <span
             className={cn(
               "absolute right-4 top-4 flex size-8 items-center justify-center rounded-full border",
@@ -250,11 +276,51 @@ function SetCard({
           <span className="block font-serif text-2xl leading-tight text-espresso">
             {product.name}
           </span>
-          {(composition || product.shortDescription) && (
+          {(merchandising.definition?.description ||
+            product.shortDescription) && (
             <span className="mt-2 block text-sm leading-relaxed text-taupe">
-              {composition
-                ? `Состав: ${composition}`
-                : product.shortDescription}
+              {merchandising.definition?.description ||
+                product.shortDescription}
+            </span>
+          )}
+          {compositionNames && (
+            <span className="mt-4 block">
+              <span className="flex items-center">
+                {visibleComposition.map((item) => (
+                  <span
+                    key={item.id}
+                    className="-ml-2 grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-espresso/10 bg-white shadow-sm first:ml-0"
+                  >
+                    <Image
+                      src={
+                        item.product
+                          ? newYearProductImage(item.product)
+                          : ornamentImage(item.id)
+                      }
+                      alt=""
+                      width={44}
+                      height={44}
+                      sizes="44px"
+                      className="max-h-9 object-contain"
+                    />
+                  </span>
+                ))}
+                {hiddenCompositionCount > 0 && (
+                  <span className="-ml-2 grid size-11 shrink-0 place-items-center rounded-full border border-espresso/10 bg-white text-xs font-medium text-taupe shadow-sm">
+                    +{hiddenCompositionCount}
+                  </span>
+                )}
+              </span>
+              <span className="mt-2 block text-xs leading-relaxed text-taupe">
+                <span className="font-medium text-espresso">Внутри:</span>{" "}
+                {compositionNames}
+              </span>
+            </span>
+          )}
+          {merchandising.savings !== undefined && (
+            <span className="mt-3 w-fit rounded-full bg-[var(--ny-accent)]/10 px-3 py-1 text-xs font-medium text-[var(--ny-accent)]">
+              Выгода {formatPrice(merchandising.savings, product.currency)} при
+              покупке набором
             </span>
           )}
           {(product.material || product.dimensions) && (
@@ -265,12 +331,25 @@ function SetCard({
             </span>
           )}
           <span className="mt-auto flex items-end justify-between gap-3 pt-5">
-            <span className="text-xl font-medium text-espresso">
-              {formatPrice(product.price, product.currency)}
+            <span>
+              {hasSeparatePrice && (
+                <span className="mb-1 block text-xs text-taupe">
+                  <span className="line-through">
+                    {formatPrice(
+                      merchandising.separateTotal ?? 0,
+                      product.currency,
+                    )}
+                  </span>{" "}
+                  по отдельности
+                </span>
+              )}
+              <span className="text-xl font-medium text-espresso">
+                {formatPrice(product.price, product.currency)}
+              </span>
             </span>
             <span
               className={cn(
-                "text-xs",
+                "text-right text-xs",
                 purchasable(product)
                   ? "text-taupe"
                   : "font-medium text-[var(--ny-accent)]",
@@ -281,7 +360,7 @@ function SetCard({
           </span>
         </span>
       </button>
-      {!set && (
+      {!merchandising.definition && (
         <Link
           href={productHref(product)}
           aria-label={`Состав набора «${product.name}» в карточке товара`}
@@ -425,10 +504,10 @@ export function NewYearConfigurator({
   catalogUnavailable,
 }: NewYearConfiguratorProps) {
   const { add, items } = useCart();
-  const [mode, setMode] = useState<Mode>("custom");
+  const [mode, setMode] = useState<Mode>(sets.length > 0 ? "set" : "custom");
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [selectedSetSlug, setSelectedSetSlug] = useState<string | null>(
-    sets.find(purchasable)?.slug ?? null,
+    sets.find(purchasable)?.slug ?? sets[0]?.slug ?? null,
   );
   const [boxSlug, setBoxSlug] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
@@ -533,29 +612,32 @@ export function NewYearConfigurator({
     >
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="ny-eyebrow">Конфигуратор</p>
+          <p className="ny-eyebrow">Сначала — готовые наборы</p>
           <h2 id="configurator-title" className="ny-heading">
-            Соберите подарок
+            Выберите набор
           </h2>
         </div>
         <p className="max-w-md leading-relaxed text-taupe">
-          Выберите свои фигурки или готовый набор, а затем решите, нужна ли
-          красивая напечатанная коробка.
+          Самый простой путь: состав уже подобран, цена видна сразу, а
+          праздничную коробку можно добавить одним нажатием. Если хочется особый
+          состав, переключитесь на свою коробку.
         </p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <ModeButton
+          active={mode === "set"}
+          title="Готовый набор"
+          text="Сбалансированные сочетания — быстрый выбор для ёлки и подарка."
+          badge="Рекомендуем"
+          featured
+          onClick={() => setMode("set")}
+        />
+        <ModeButton
           active={mode === "custom"}
           title="Своя коробка"
           text="Отметьте любимые фигурки — мы сложим их вместе."
           onClick={() => setMode("custom")}
-        />
-        <ModeButton
-          active={mode === "set"}
-          title="Готовый набор"
-          text="Сочетания, которые уже собраны и упакованы."
-          onClick={() => setMode("set")}
         />
       </div>
 
@@ -583,6 +665,7 @@ export function NewYearConfigurator({
                 <SetCard
                   key={product.slug}
                   product={product}
+                  ornamentProducts={ornaments}
                   selected={selectedSetSlug === product.slug}
                   disabled={!purchasable(product)}
                   onSelect={() => setSelectedSetSlug(product.slug)}

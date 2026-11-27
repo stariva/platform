@@ -5,8 +5,10 @@ import {
   groupNewYearProducts,
   isNewYearSubcategory,
   newYearProductImage,
+  newYearSetMerchandising,
   newYearSubcategoryFor,
   ornamentImage,
+  ornamentSlug,
 } from "./new-year";
 
 const product = (overrides: Partial<Product>): Product => ({
@@ -95,6 +97,48 @@ test("new year image prefers the database photo and uses collection art only as 
     images: ["https://cdn.stariva.ru/site/images/catalog/placeholder.jpg"],
   });
   assert.equal(newYearProductImage(withoutPhoto), ornamentImage("shar"));
+});
+
+test("new year set merchandising resolves composition and honest separate-price savings", () => {
+  const ornaments = (["shar", "window", "bublik"] as const).map((id) =>
+    product({ slug: ornamentSlug(id), price: 990 }),
+  );
+  const set = product({
+    slug: "novogodniy-nabor-zimniy-uyut",
+    price: 1100,
+  });
+
+  const merchandising = newYearSetMerchandising(set, ornaments);
+
+  assert.deepEqual(
+    merchandising.items.map((item) => item.id),
+    ["shar", "window", "bublik"],
+  );
+  assert.equal(merchandising.items[0]?.product, ornaments[0]);
+  assert.equal(merchandising.separateTotal, 2970);
+  assert.equal(merchandising.savings, 1870);
+});
+
+test("new year set merchandising hides comparison when composition pricing is incomplete", () => {
+  const set = product({
+    slug: "novogodniy-nabor-zimniy-uyut",
+    price: 1100,
+  });
+  const incomplete = [product({ slug: ornamentSlug("shar"), price: 990 })];
+
+  const merchandising = newYearSetMerchandising(set, incomplete);
+
+  assert.equal(merchandising.items.length, 3);
+  assert.equal(merchandising.separateTotal, undefined);
+  assert.equal(merchandising.savings, undefined);
+  assert.deepEqual(
+    newYearSetMerchandising(set, []).definition?.name,
+    "Зимний уют",
+  );
+  assert.equal(
+    newYearSetMerchandising(product({ slug: "unknown-set" }), []).items.length,
+    0,
+  );
 });
 
 test("seasonal subcategories are recognized for catalog routing", () => {
