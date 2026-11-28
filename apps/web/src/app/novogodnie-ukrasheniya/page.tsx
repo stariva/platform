@@ -15,9 +15,11 @@ import {
   groupNewYearProducts,
   isNewYearProductPurchasable,
   NEW_YEAR_PATH,
+  type NewYearSharedOrnamentSpecs,
   newYearDisplayName,
   newYearProductImage,
   ornamentDetailForSlug,
+  sharedNewYearOrnamentSpecs,
   toNewYearConfiguratorProduct,
 } from "@/lib/new-year";
 import { formatPrice } from "@/lib/products";
@@ -99,67 +101,85 @@ export const metadata: Metadata = {
   },
 };
 
+function ornamentFulfillmentLabel(
+  product: Product | undefined,
+  unavailable: boolean,
+): string {
+  if (isCatalogProductBuyable(product)) return "В наличии · доставка Ozon";
+  if (isNewYearProductPurchasable(product)) {
+    return "Изготовим за 2–4 дня · доставка Ozon";
+  }
+  if (unavailable) return "Не удалось проверить цену и наличие";
+  return product ? "Сейчас нет в продаже" : "Готовим к продаже";
+}
+
 function Purchase({
   product,
   name,
   unavailable,
+  sharedSpecs,
+  sharedFulfillment,
 }: {
   product?: Product;
   name: string;
   unavailable: boolean;
+  sharedSpecs?: NewYearSharedOrnamentSpecs;
+  sharedFulfillment?: string;
 }) {
   const buyable = isCatalogProductBuyable(product);
   const madeToOrderBuyable = isNewYearProductPurchasable(product);
+  const material =
+    product?.material && product.material.trim() !== sharedSpecs?.material
+      ? product.material
+      : undefined;
+  const dimensions =
+    product?.dimensions && product.dimensions.trim() !== sharedSpecs?.dimensions
+      ? product.dimensions
+      : undefined;
+  const color =
+    product?.color && product.color.trim() !== sharedSpecs?.color
+      ? product.color
+      : undefined;
+  const hasCardSpecs = Boolean(material || dimensions || color);
+  const fulfillment = ornamentFulfillmentLabel(product, unavailable);
+  const showFulfillment = fulfillment !== sharedFulfillment;
+
   return (
     <div className="mt-auto flex flex-col gap-3 pt-5">
-      {product && (
-        <>
-          <p className="text-xl font-medium">
+      {hasCardSpecs && (
+        <dl className="flex flex-col gap-1 text-sm text-taupe">
+          {material && (
+            <div>
+              <dt className="inline">Материал: </dt>
+              <dd className="inline">{material}</dd>
+            </div>
+          )}
+          {dimensions && (
+            <div>
+              <dt className="inline">Размер: </dt>
+              <dd className="inline">{dimensions}</dd>
+            </div>
+          )}
+          {color && (
+            <div>
+              <dt className="inline">Цвет: </dt>
+              <dd className="inline">{color}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+      {showFulfillment && <p className="text-sm text-taupe">{fulfillment}</p>}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {product && (
+          <p className="text-xl font-medium tabular-nums">
             {formatPrice(product.price, product.currency)}
           </p>
-          <dl className="flex flex-col gap-1 text-sm text-taupe">
-            {product.material && (
-              <div>
-                <dt className="inline">Материал: </dt>
-                <dd className="inline">{product.material}</dd>
-              </div>
-            )}
-            {product.dimensions && (
-              <div>
-                <dt className="inline">Размер: </dt>
-                <dd className="inline">{product.dimensions}</dd>
-              </div>
-            )}
-            {product.color && (
-              <div>
-                <dt className="inline">Цвет: </dt>
-                <dd className="inline">{product.color}</dd>
-              </div>
-            )}
-          </dl>
-        </>
-      )}
-      {buyable && product ? (
-        <>
-          <p className="text-sm text-taupe">В наличии · доставка Ozon</p>
+        )}
+        {buyable && product ? (
           <AddToCartButton product={product} />
-        </>
-      ) : madeToOrderBuyable && product ? (
-        <>
-          <p className="text-sm text-taupe">
-            Изготовим за 2–4 дня · доставка Ozon
-          </p>
+        ) : madeToOrderBuyable && product ? (
           <SelectOrnamentButton slug={product.slug} name={name} />
-        </>
-      ) : (
-        <>
-          <p className="text-sm text-taupe">
-            {unavailable
-              ? "Не удалось проверить цену и наличие"
-              : product
-                ? "Сейчас нет в продаже"
-                : "Готовим к продаже"}
-          </p>
+        ) : (
           <ContactMasterButton
             source="new-year-collection"
             withPageLink
@@ -168,8 +188,8 @@ function Purchase({
           >
             Уточнить заказ
           </ContactMasterButton>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -178,6 +198,25 @@ async function Collection() {
   const result = await getProductsResult();
   const groups = groupNewYearProducts(result.products);
   const unavailable = result.status === "unavailable";
+  const sharedSpecs = sharedNewYearOrnamentSpecs(groups.ornaments);
+  const ornamentFulfillments = groups.ornaments
+    .filter(
+      (product) =>
+        isCatalogProductBuyable(product) ||
+        isNewYearProductPurchasable(product),
+    )
+    .map((product) => ornamentFulfillmentLabel(product, unavailable));
+  const sharedFulfillment =
+    ornamentFulfillments.length > 0 &&
+    ornamentFulfillments.every((label) => label === ornamentFulfillments[0])
+      ? ornamentFulfillments[0]
+      : undefined;
+  const hasSharedOverview = Boolean(
+    sharedSpecs.material ||
+      sharedSpecs.dimensions ||
+      sharedSpecs.color ||
+      sharedFulfillment,
+  );
 
   return (
     <>
@@ -192,57 +231,93 @@ async function Collection() {
         className="ny-section scroll-mt-24"
         aria-labelledby="ornaments-title"
       >
-        <p className="ny-eyebrow">Все образы коллекции</p>
-        <h2 id="ornaments-title" className="ny-heading">
-          Фигурки по отдельности
-        </h2>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="ny-eyebrow">Все образы коллекции</p>
+            <h2 id="ornaments-title" className="ny-heading">
+              Фигурки по отдельности
+            </h2>
+            {groups.ornaments.length > 0 && (
+              <p className="mt-5 max-w-2xl text-taupe">
+                Рассмотрите каждый сюжет в деталях. Отметьте любые 7 или больше
+                фигурок в «Свою коробку» — можно собрать как разные образы, так
+                и парные игрушки на ёлку.
+              </p>
+            )}
+          </div>
+          {groups.ornaments.length > 0 && hasSharedOverview && (
+            <dl className="flex flex-col gap-1.5 rounded-2xl border border-espresso/10 bg-[var(--ny-paper)] px-5 py-4 text-sm text-taupe lg:shrink-0">
+              {sharedSpecs.material && (
+                <div>
+                  <dt className="inline font-medium text-espresso">
+                    Материал:{" "}
+                  </dt>
+                  <dd className="inline">{sharedSpecs.material}</dd>
+                </div>
+              )}
+              {sharedSpecs.dimensions && (
+                <div>
+                  <dt className="inline font-medium text-espresso">Размер: </dt>
+                  <dd className="inline">{sharedSpecs.dimensions}</dd>
+                </div>
+              )}
+              {sharedSpecs.color && (
+                <div>
+                  <dt className="inline font-medium text-espresso">Цвет: </dt>
+                  <dd className="inline">{sharedSpecs.color}</dd>
+                </div>
+              )}
+              {sharedFulfillment && (
+                <div className="pt-1 text-espresso/80">
+                  <dt className="sr-only">Срок изготовления и доставка: </dt>
+                  <dd className="inline">{sharedFulfillment}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+        </div>
         {groups.ornaments.length > 0 ? (
-          <>
-            <p className="mt-5 max-w-2xl text-taupe">
-              Рассмотрите каждый сюжет в деталях. Отметьте любые 7 или больше
-              фигурок в «Свою коробку» — можно собрать как разные образы, так и
-              парные игрушки на ёлку.
-            </p>
-            <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-              {groups.ornaments.map((product, index) => {
-                const displayName = newYearDisplayName(product);
-                return (
-                  <article
-                    key={product.slug}
-                    id={product.slug}
-                    className="flex scroll-mt-24 flex-col"
-                  >
-                    <div className="ny-ornament-art">
-                      <span
-                        className="absolute left-5 top-4 text-xs text-taupe"
-                        aria-hidden="true"
-                      >
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <Image
-                        src={newYearProductImage(product)}
-                        alt={`Новогоднее украшение «${displayName}»`}
-                        width={240}
-                        height={260}
-                        className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
-                      />
-                    </div>
-                    <h3 className="mt-5 font-serif text-2xl">{displayName}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-taupe">
-                      {ornamentDetailForSlug(product.slug) ||
-                        product.shortDescription ||
-                        "Новогоднее украшение из коллекции «Русская сказка»."}
-                    </p>
-                    <Purchase
-                      product={product}
-                      name={displayName}
-                      unavailable={unavailable}
+          <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {groups.ornaments.map((product, index) => {
+              const displayName = newYearDisplayName(product);
+              return (
+                <article
+                  key={product.slug}
+                  id={product.slug}
+                  className="flex scroll-mt-24 flex-col"
+                >
+                  <div className="ny-ornament-art">
+                    <span
+                      className="absolute left-5 top-4 text-xs text-taupe"
+                      aria-hidden="true"
+                    >
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <Image
+                      src={newYearProductImage(product)}
+                      alt={`Новогоднее украшение «${displayName}»`}
+                      width={240}
+                      height={260}
+                      className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
                     />
-                  </article>
-                );
-              })}
-            </div>
-          </>
+                  </div>
+                  <h3 className="mt-5 font-serif text-2xl">{displayName}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-taupe">
+                    {ornamentDetailForSlug(product.slug) ||
+                      product.shortDescription ||
+                      "Новогоднее украшение из коллекции «Русская сказка»."}
+                  </p>
+                  <Purchase
+                    product={product}
+                    name={displayName}
+                    unavailable={unavailable}
+                    sharedSpecs={sharedSpecs}
+                    sharedFulfillment={sharedFulfillment}
+                  />
+                </article>
+              );
+            })}
+          </div>
         ) : (
           <>
             <p className="mt-5 text-taupe">
