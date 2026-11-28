@@ -28,6 +28,46 @@ export const NEW_YEAR_PARCEL = {
 /** Отдельные фигурки печатаются партиями: меньше этого количества заказ не принимаем. */
 export const MIN_NEW_YEAR_ORNAMENT_QUANTITY = 7;
 
+/** Ячеек в стандартном подарочном футляре: большему составу нужен большой футляр. */
+export const NEW_YEAR_GIFT_BOX_CAPACITY = 7;
+
+/** Мерчандайзинг подарочных футляров: вместимость и подача в конфигураторе. */
+export const newYearGiftBoxes = [
+  {
+    slug: "novogodnyaya-podarochnaya-korobka",
+    capacity: 7,
+    title: "Подарочный футляр-шкатулка",
+    text: "Выдвижной ящичек с молочным орнаментом и 7 ячейками",
+  },
+  {
+    slug: "novogodnyaya-podarochnaya-korobka-na-14",
+    capacity: 14,
+    title: "Большой футляр на 14 фигурок",
+    text: "Выдвижной ящичек с 14 ячейками — для «Сказочного терема» и больших своих коробок",
+  },
+] as const;
+
+/** Вместимость футляра по slug'у товара; неизвестные коробки считаем стандартными. */
+export function newYearGiftBoxCapacity(slug: string): number {
+  return (
+    newYearGiftBoxes.find((box) => box.slug === slug)?.capacity ??
+    NEW_YEAR_GIFT_BOX_CAPACITY
+  );
+}
+
+/** Подача футляра в конфигураторе; у неизвестных коробок — нейтральный текст. */
+export function newYearGiftBoxMerchandising(slug: string): {
+  title: string;
+  text: string;
+} {
+  const known = newYearGiftBoxes.find((box) => box.slug === slug);
+  if (known) return { title: known.title, text: known.text };
+  return {
+    title: "Подарочный футляр-шкатулка",
+    text: `Выдвижной ящичек с молочным орнаментом и ${NEW_YEAR_GIFT_BOX_CAPACITY} ячейками`,
+  };
+}
+
 export function pluralFigurines(count: number): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
@@ -41,6 +81,16 @@ export function pluralFigurines(count: number): string {
 export function accusativeFigurines(count: number): string {
   const form = pluralFigurines(count);
   return form === "фигурка" ? "фигурку" : form;
+}
+
+export function pluralGiftBoxes(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return "футляр";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return "футляра";
+  }
+  return "футляров";
 }
 
 export const ornaments = [
@@ -169,6 +219,28 @@ export const ornamentSets = [
       "balalaika",
       "window",
       "koza",
+    ],
+  },
+  {
+    slug: "novogodniy-nabor-skazochniy-terem",
+    name: "Сказочный терем",
+    description:
+      "Обе семёрки в одном тереме — 14 образов от матрёшки до резного наличника. Для большой ёлки или семейного подарка.",
+    ids: [
+      "shar",
+      "matryoshka",
+      "loshadka",
+      "house",
+      "samovar",
+      "window",
+      "balalaika",
+      "petukh",
+      "bublik",
+      "koza",
+      "snowflake",
+      "bell",
+      "star",
+      "varezhka",
     ],
   },
 ] satisfies {
