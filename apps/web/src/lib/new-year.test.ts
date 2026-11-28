@@ -4,7 +4,9 @@ import { existsSync } from "node:fs";
 import type { Product } from "./catalog/types";
 import {
   groupNewYearProducts,
+  isNewYearProductPurchasable,
   isNewYearSubcategory,
+  newYearDisplayName,
   newYearProductImage,
   newYearSetMerchandising,
   newYearSubcategoryFor,
@@ -190,4 +192,44 @@ test("seasonal subcategories are recognized for catalog routing", () => {
   assert.equal(isNewYearSubcategory("ornament_sets"), true);
   assert.equal(isNewYearSubcategory("gift_boxes"), true);
   assert.equal(isNewYearSubcategory("planters"), false);
+});
+
+test("newYearDisplayName strips redundant prefix and uses canonical collection names", () => {
+  assert.equal(
+    newYearDisplayName({
+      slug: "novogodnee-ukrashenie-shar",
+      name: "Новогоднее украшение «Ёлочный шар»",
+    }),
+    "Ёлочный шар",
+  );
+  assert.equal(
+    newYearDisplayName({
+      slug: "novogodniy-nabor-zimniy-uyut",
+      name: "Новогодний набор «Зимний уют»",
+    }),
+    "Набор «Зимний уют»",
+  );
+  assert.equal(
+    newYearDisplayName({
+      slug: "custom-ornament-slug",
+      name: "Новогоднее украшение «Снегирь»",
+    }),
+    "Снегирь",
+  );
+});
+
+test("isNewYearProductPurchasable checks madeToOrder RUB pricing", () => {
+  assert.equal(
+    isNewYearProductPurchasable(
+      product({ madeToOrder: true, price: 150, currency: "RUB" }),
+    ),
+    true,
+  );
+  assert.equal(
+    isNewYearProductPurchasable(
+      product({ madeToOrder: false, price: 150, currency: "RUB" }),
+    ),
+    false,
+  );
+  assert.equal(isNewYearProductPurchasable(undefined), false);
 });
