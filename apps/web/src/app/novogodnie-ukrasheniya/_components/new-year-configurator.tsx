@@ -3,13 +3,15 @@
 import {
   CheckIcon,
   GiftIcon,
+  MinusIcon,
   PackageIcon,
   PackageOpenIcon,
+  PlusIcon,
   ShoppingBagIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { reachGoal, trackProductEvent } from "@/lib/analytics";
 import { type CartItem, useCart } from "@/lib/cart/cart-context";
@@ -18,8 +20,10 @@ import { MAX_MADE_TO_ORDER_QUANTITY } from "@/lib/commerce/made-to-order-options
 import { PHOTO_COLOR, PHOTO_SIZE } from "@/lib/made-to-order";
 import {
   accusativeFigurines,
+  isNewYearProductPurchasable,
   MIN_NEW_YEAR_ORNAMENT_QUANTITY,
   type NewYearConfiguratorProduct,
+  newYearDisplayName,
   newYearFigurinesPerItem,
   newYearProductImage,
   newYearSetContents,
@@ -33,6 +37,7 @@ import { formatPrice, productHref } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
 const ADDED_MS = 1800;
+const SELECT_ORNAMENT_EVENT = "stariva:select-new-year-ornament";
 
 type Mode = "custom" | "set";
 
@@ -43,9 +48,39 @@ interface NewYearConfiguratorProps {
   catalogUnavailable: boolean;
 }
 
-function purchasable(product: NewYearConfiguratorProduct): boolean {
-  return Boolean(
-    product.madeToOrder && product.currency === "RUB" && product.price > 0,
+interface SelectedProductEntry {
+  product: NewYearConfiguratorProduct;
+  quantity: number;
+}
+
+const purchasable = isNewYearProductPurchasable;
+
+export function SelectOrnamentButton({
+  slug,
+  name,
+}: {
+  slug: string;
+  name: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => {
+        window.dispatchEvent(
+          new CustomEvent<{ slug: string }>(SELECT_ORNAMENT_EVENT, {
+            detail: { slug },
+          }),
+        );
+        document
+          .getElementById("configurator")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }}
+      aria-label={`Выбрать фигурку «${name}» в свою коробку`}
+      className="min-h-11 rounded-md border-espresso/25 px-4 py-3 text-sm text-espresso transition-colors hover:bg-sand"
+    >
+      В свою коробку
+    </Button>
   );
 }
 
@@ -82,7 +117,7 @@ function cartLine(
 }
 
 function stockLabel(product: NewYearConfiguratorProduct): string {
-  return purchasable(product) ? "Изготовим после заказа" : "Скоро появится";
+  return purchasable(product) ? "Изготовим за 2–4 дня" : "Скоро появится";
 }
 
 function ModeButton({
@@ -145,7 +180,7 @@ function ProductImage({
   return (
     <Image
       src={newYearProductImage(product)}
-      alt={product.name}
+      alt={newYearDisplayName(product)}
       width={360}
       height={360}
       sizes={sizes}
@@ -160,70 +195,116 @@ function hasProductVisual(product: NewYearConfiguratorProduct): boolean {
 
 function OrnamentCard({
   product,
-  selected,
+  quantity,
+  maxQuantity,
   disabled,
-  onToggle,
+  onSetQuantity,
 }: {
   product: NewYearConfiguratorProduct;
-  selected: boolean;
+  quantity: number;
+  maxQuantity: number;
   disabled: boolean;
-  onToggle: () => void;
+  onSetQuantity: (next: number) => void;
 }) {
+  const selected = quantity > 0;
+  const displayName = newYearDisplayName(product);
+  const canIncrease = !disabled && quantity < maxQuantity;
+
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      disabled={disabled}
-      onClick={onToggle}
+    <div
       className={cn(
-        "group relative flex min-h-full flex-col rounded-2xl border p-3 text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso disabled:cursor-not-allowed disabled:opacity-55",
+        "group relative flex min-h-full flex-col rounded-2xl border p-3 text-left transition-all",
+        disabled && "opacity-55",
         selected
           ? "border-(--ny-accent) bg-white shadow-[0_18px_44px_-28px_rgba(165,33,39,0.55)]"
           : "border-espresso/10 bg-white/55 hover:border-espresso/30 hover:bg-white",
       )}
     >
-      <span
-        className={cn(
-          "absolute right-3 top-3 z-10 flex size-7 items-center justify-center rounded-full border transition-colors",
-          selected
-            ? "border-(--ny-accent) bg-(--ny-accent) text-white"
-            : "border-espresso/15 bg-white/85 text-transparent group-hover:border-espresso/30",
-        )}
-        aria-hidden="true"
+      <button
+        type="button"
+        aria-pressed={selected}
+        disabled={disabled}
+        onClick={() => onSetQuantity(selected ? 0 : 1)}
+        className="flex flex-1 flex-col text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-espresso disabled:cursor-not-allowed"
       >
-        <CheckIcon className="size-4" strokeWidth={2.5} />
-      </span>
-      <span className="grid min-h-36 place-items-center rounded-xl bg-[var(--ny-paper)] p-3 sm:min-h-44">
-        <ProductImage
-          product={product}
-          sizes="(max-width: 640px) 42vw, 180px"
-          className="max-h-36 transition-transform duration-300 motion-safe:group-hover:scale-105 sm:max-h-44"
-        />
-      </span>
-      <span className="mt-4 block font-serif text-xl leading-tight text-espresso">
-        {product.name}
-      </span>
-      <span className="mt-2 line-clamp-2 block text-sm leading-relaxed text-taupe">
-        {product.shortDescription ||
-          ornamentDetailForSlug(product.slug) ||
-          "Фигурка из новогодней коллекции."}
-      </span>
-      <span className="mt-auto flex items-end justify-between gap-3 pt-4">
-        <span className="font-medium text-espresso">
-          {formatPrice(product.price, product.currency)}
-        </span>
         <span
           className={cn(
-            "text-xs",
-            purchasable(product)
-              ? "text-taupe"
-              : "font-medium text-(--ny-accent)",
+            "absolute right-3 top-3 z-10 flex min-w-7 h-7 items-center justify-center rounded-full border px-1.5 text-xs font-medium tabular-nums transition-colors",
+            selected
+              ? "border-(--ny-accent) bg-(--ny-accent) text-white"
+              : "border-espresso/15 bg-white/85 text-transparent group-hover:border-espresso/30",
           )}
+          aria-hidden="true"
         >
-          {stockLabel(product)}
+          {quantity > 1 ? (
+            `×${quantity}`
+          ) : (
+            <CheckIcon className="size-4" strokeWidth={2.5} />
+          )}
         </span>
-      </span>
-    </button>
+        <span className="grid min-h-36 place-items-center rounded-xl bg-[var(--ny-paper)] p-3 sm:min-h-44">
+          <ProductImage
+            product={product}
+            sizes="(max-width: 640px) 42vw, 180px"
+            className="max-h-36 transition-transform duration-300 motion-safe:group-hover:scale-105 sm:max-h-44"
+          />
+        </span>
+        <span className="mt-4 block font-serif text-xl leading-tight text-espresso">
+          {displayName}
+        </span>
+        <span className="mt-2 line-clamp-2 block text-sm leading-relaxed text-taupe">
+          {ornamentDetailForSlug(product.slug) ||
+            product.shortDescription ||
+            "Фигурка из новогодней коллекции."}
+        </span>
+      </button>
+      <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+        <span className="font-medium text-espresso tabular-nums">
+          {formatPrice(product.price, product.currency)}
+        </span>
+        {selected ? (
+          <fieldset
+            className="inline-flex items-center rounded-full border border-espresso/15 bg-[var(--ny-paper)]"
+            aria-label={`Количество: ${displayName}`}
+          >
+            <button
+              type="button"
+              onClick={() => onSetQuantity(quantity - 1)}
+              className="flex size-8 items-center justify-center rounded-full text-espresso transition-colors hover:bg-espresso/10"
+              aria-label={`Уменьшить количество «${displayName}»`}
+            >
+              <MinusIcon className="size-3.5" aria-hidden="true" />
+            </button>
+            <output
+              className="min-w-6 text-center text-xs font-medium text-espresso tabular-nums"
+              aria-live="polite"
+            >
+              {quantity}
+            </output>
+            <button
+              type="button"
+              disabled={!canIncrease}
+              onClick={() => onSetQuantity(quantity + 1)}
+              className="flex size-8 items-center justify-center rounded-full text-espresso transition-colors hover:bg-espresso/10 disabled:opacity-30"
+              aria-label={`Увеличить количество «${displayName}»`}
+            >
+              <PlusIcon className="size-3.5" aria-hidden="true" />
+            </button>
+          </fieldset>
+        ) : (
+          <span
+            className={cn(
+              "text-xs",
+              purchasable(product)
+                ? "text-taupe"
+                : "font-medium text-(--ny-accent)",
+            )}
+          >
+            {stockLabel(product)}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -241,6 +322,8 @@ function SetCard({
   onSelect: () => void;
 }) {
   const merchandising = newYearSetMerchandising(product, ornamentProducts);
+  const displayName =
+    merchandising.definition?.name ?? newYearDisplayName(product);
   const compositionNames = merchandising.items
     .map((item) => item.name)
     .join(", ");
@@ -291,7 +374,7 @@ function SetCard({
         </span>
         <span className="flex flex-1 flex-col p-5">
           <span className="block font-serif text-2xl leading-tight text-espresso">
-            {product.name}
+            Набор «{displayName}»
           </span>
           {(merchandising.definition?.description ||
             product.shortDescription) && (
@@ -335,8 +418,8 @@ function SetCard({
           )}
           {merchandising.savings !== undefined && (
             <span className="mt-3 w-fit rounded-full bg-(--ny-accent)/10 px-3 py-1 text-xs font-medium text-(--ny-accent)">
-              Выгода {formatPrice(merchandising.savings, product.currency)} при
-              покупке набором
+              Выгода {formatPrice(merchandising.savings, product.currency)} —
+              7-я фигурка в подарок
             </span>
           )}
           {(product.material || product.dimensions) && (
@@ -467,8 +550,14 @@ function BoxOption({
   );
 }
 
-function Preview({ products }: { products: NewYearConfiguratorProduct[] }) {
-  if (products.length === 0) {
+function Preview({ entries }: { entries: SelectedProductEntry[] }) {
+  const expanded = entries.flatMap(({ product, quantity }) =>
+    Array.from({ length: quantity }, (_, index) => ({
+      key: `${product.slug}-${index}`,
+      product,
+    })),
+  );
+  if (expanded.length === 0) {
     return (
       <div
         data-cart-fly-source
@@ -483,11 +572,11 @@ function Preview({ products }: { products: NewYearConfiguratorProduct[] }) {
       data-cart-fly-source
       className="grid grid-cols-4 gap-2 rounded-2xl bg-[var(--ny-paper)] p-3"
     >
-      {products.slice(0, 8).map((product) => (
+      {expanded.slice(0, 8).map(({ key, product }) => (
         <span
-          key={product.slug}
+          key={key}
           className="grid aspect-square place-items-center overflow-hidden rounded-xl bg-white/75 p-1.5"
-          title={product.name}
+          title={newYearDisplayName(product)}
         >
           {hasProductVisual(product) ? (
             <ProductImage
@@ -500,9 +589,9 @@ function Preview({ products }: { products: NewYearConfiguratorProduct[] }) {
           )}
         </span>
       ))}
-      {products.length > 8 && (
+      {expanded.length > 8 && (
         <span className="grid aspect-square place-items-center rounded-xl bg-white/75 text-sm font-medium text-taupe">
-          +{products.length - 8}
+          +{expanded.length - 8}
         </span>
       )}
     </div>
@@ -539,7 +628,9 @@ export function NewYearConfigurator({
 }: NewYearConfiguratorProps) {
   const { add, items } = useCart();
   const [mode, setMode] = useState<Mode>(sets.length > 0 ? "set" : "custom");
-  const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
+  const [selectedQuantities, setSelectedQuantities] = useState<
+    Record<string, number>
+  >({});
   const [selectedSetSlug, setSelectedSetSlug] = useState<string | null>(
     sets.find(purchasable)?.slug ?? sets[0]?.slug ?? null,
   );
@@ -549,31 +640,92 @@ export function NewYearConfigurator({
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  const selectedOrnaments = useMemo(() => {
+  const quantityInCart = useCallback(
+    (slug: string) =>
+      items.find(
+        (item) =>
+          item.fulfillmentType === "made_to_order" &&
+          item.instantMadeToOrder === true &&
+          item.productSlug === slug,
+      )?.quantity ?? 0,
+    [items],
+  );
+
+  const setOrnamentQuantity = useCallback(
+    (slug: string, nextQuantity: number) => {
+      const product = ornaments.find((item) => item.slug === slug);
+      if (!product || !purchasable(product)) return;
+      const available = Math.max(
+        0,
+        MAX_MADE_TO_ORDER_QUANTITY - quantityInCart(slug),
+      );
+      const clamped = Math.min(
+        Math.max(Math.trunc(nextQuantity), 0),
+        available,
+      );
+      setSelectedQuantities((current) => {
+        if (clamped <= 0) {
+          const { [slug]: _removed, ...rest } = current;
+          return rest;
+        }
+        return { ...current, [slug]: clamped };
+      });
+    },
+    [ornaments, quantityInCart],
+  );
+
+  useEffect(() => {
+    const onSelectOrnament = (event: Event) => {
+      const slug = (event as CustomEvent<{ slug?: string }>).detail?.slug;
+      if (!slug) return;
+      const product = ornaments.find((item) => item.slug === slug);
+      if (!product || !purchasable(product)) return;
+      setMode("custom");
+      setSelectedQuantities((current) => {
+        const available = Math.max(
+          1,
+          MAX_MADE_TO_ORDER_QUANTITY - quantityInCart(slug),
+        );
+        const next = Math.min((current[slug] ?? 0) + 1, available);
+        return { ...current, [slug]: next };
+      });
+    };
+    window.addEventListener(SELECT_ORNAMENT_EVENT, onSelectOrnament);
+    return () =>
+      window.removeEventListener(SELECT_ORNAMENT_EVENT, onSelectOrnament);
+  }, [ornaments, quantityInCart]);
+
+  const selectedOrnamentEntries = useMemo<SelectedProductEntry[]>(() => {
     const bySlug = new Map(ornaments.map((product) => [product.slug, product]));
-    return selectedSlugs.flatMap((slug) => {
+    return Object.entries(selectedQuantities).flatMap(([slug, quantity]) => {
       const product = bySlug.get(slug);
-      return product ? [product] : [];
+      return product && quantity > 0 ? [{ product, quantity }] : [];
     });
-  }, [ornaments, selectedSlugs]);
+  }, [ornaments, selectedQuantities]);
+
+  const selectedCustomFigurinesCount = useMemo(
+    () =>
+      selectedOrnamentEntries.reduce((sum, entry) => sum + entry.quantity, 0),
+    [selectedOrnamentEntries],
+  );
 
   const selectedSet = sets.find((product) => product.slug === selectedSetSlug);
   const selectedBox = boxes.find((product) => product.slug === boxSlug);
-  const mainProducts =
-    mode === "custom" ? selectedOrnaments : selectedSet ? [selectedSet] : [];
-  const productsToAdd = selectedBox
-    ? [...mainProducts, selectedBox]
-    : mainProducts;
-  const total = productsToAdd.reduce((sum, product) => sum + product.price, 0);
-  const hasSelection = mainProducts.length > 0;
+  const mainEntries: SelectedProductEntry[] =
+    mode === "custom"
+      ? selectedOrnamentEntries
+      : selectedSet
+        ? [{ product: selectedSet, quantity: 1 }]
+        : [];
+  const entriesToAdd: SelectedProductEntry[] = selectedBox
+    ? [...mainEntries, { product: selectedBox, quantity: 1 }]
+    : mainEntries;
+  const total = entriesToAdd.reduce(
+    (sum, { product, quantity }) => sum + product.price * quantity,
+    0,
+  );
+  const hasSelection = mainEntries.length > 0;
 
-  const quantityInCart = (slug: string) =>
-    items.find(
-      (item) =>
-        item.fulfillmentType === "made_to_order" &&
-        item.instantMadeToOrder === true &&
-        item.productSlug === slug,
-    )?.quantity ?? 0;
   const figurinesInCart = items.reduce(
     (sum, item) =>
       item.fulfillmentType === "made_to_order" &&
@@ -584,7 +736,7 @@ export function NewYearConfigurator({
         : sum,
     0,
   );
-  const customQuantityAfterAdd = figurinesInCart + selectedOrnaments.length;
+  const customQuantityAfterAdd = figurinesInCart + selectedCustomFigurinesCount;
   const customMinimumMet =
     mode !== "custom" ||
     customQuantityAfterAdd >= MIN_NEW_YEAR_ORNAMENT_QUANTITY;
@@ -594,50 +746,45 @@ export function NewYearConfigurator({
   );
   const limitFor = (_product: NewYearConfiguratorProduct) =>
     MAX_MADE_TO_ORDER_QUANTITY;
-  const blockedByCart = productsToAdd.some(
-    (product) =>
-      purchasable(product) && quantityInCart(product.slug) >= limitFor(product),
+  const blockedByCart = entriesToAdd.some(
+    ({ product, quantity }) =>
+      purchasable(product) &&
+      quantityInCart(product.slug) + quantity > limitFor(product),
   );
   const canAdd =
     hasSelection &&
     customMinimumMet &&
-    productsToAdd.every(purchasable) &&
+    entriesToAdd.every(({ product }) => purchasable(product)) &&
     !blockedByCart;
-
-  const toggleOrnament = (product: NewYearConfiguratorProduct) => {
-    if (!purchasable(product)) return;
-    setSelectedSlugs((current) =>
-      current.includes(product.slug)
-        ? current.filter((slug) => slug !== product.slug)
-        : [...current, product.slug],
-    );
-  };
 
   const addSelection = (trigger: HTMLButtonElement) => {
     if (!canAdd) return;
-    for (const product of productsToAdd) add(cartLine(product));
+    for (const { product, quantity } of entriesToAdd) {
+      add(cartLine(product), quantity);
+    }
 
-    const box = selectedBox ? " в напечатанной коробке" : "";
+    const box = selectedBox ? " в подарочном футляре" : "";
     const summaryName =
       mode === "custom"
-        ? `Свой набор: ${mainProducts.length} ${pluralFigurines(mainProducts.length)}${box}`
-        : `${selectedSet?.name ?? "Новогодний набор"}${box}`;
+        ? `Своя коробка: ${selectedCustomFigurinesCount} ${pluralFigurines(selectedCustomFigurinesCount)}${box}`
+        : `${selectedSet ? newYearDisplayName(selectedSet) : "Новогодний набор"}${box}`;
+    const firstProduct = mainEntries[0]?.product;
     flyToCart({
       trigger,
       item: {
         lineKey: `new-year-configurator:${Date.now()}`,
         name: summaryName,
-        image: mainProducts[0] ? newYearProductImage(mainProducts[0]) : "",
+        image: firstProduct ? newYearProductImage(firstProduct) : "",
         price: Math.round(total * 100),
       },
     });
     trackProductEvent(
       "add",
-      productsToAdd.map((product) => ({
+      entriesToAdd.map(({ product, quantity }) => ({
         id: product.slug,
         name: product.name,
         price: product.price,
-        quantity: 1,
+        quantity,
         category: product.category,
       })),
     );
@@ -673,9 +820,9 @@ export function NewYearConfigurator({
           </h2>
         </div>
         <p className="max-w-md leading-relaxed text-taupe">
-          Самый простой путь: состав уже подобран, цена видна сразу, а
-          праздничную коробку можно добавить одним нажатием. Если хочется особый
-          состав, переключитесь на свою коробку.
+          В готовом наборе 7 гармоничных образов с выгодой 150 ₽ (седьмая
+          фигурка в подарок). А если хочется собрать свою историю или взять
+          парные игрушки на ёлку — переключитесь на «Свою коробку».
         </p>
       </div>
 
@@ -683,15 +830,15 @@ export function NewYearConfigurator({
         <ModeButton
           active={mode === "set"}
           title="Готовый набор"
-          text="Сбалансированные сочетания — быстрый выбор для ёлки и подарка."
-          badge="Рекомендуем"
+          text="7 подобранных сюжетов с выгодой — быстрый выбор для ёлки и подарка."
+          badge="Выгодно"
           featured
           onClick={() => setMode("set")}
         />
         <ModeButton
           active={mode === "custom"}
           title="Своя коробка"
-          text="Отметьте от 7 фигурок — мы сложим их вместе."
+          text="Соберите от 7 любых фигурок (разных или парных) по 150 ₽."
           onClick={() => setMode("custom")}
         />
       </div>
@@ -705,9 +852,15 @@ export function NewYearConfigurator({
                   <OrnamentCard
                     key={product.slug}
                     product={product}
-                    selected={selectedSlugs.includes(product.slug)}
+                    quantity={selectedQuantities[product.slug] ?? 0}
+                    maxQuantity={Math.max(
+                      1,
+                      MAX_MADE_TO_ORDER_QUANTITY - quantityInCart(product.slug),
+                    )}
                     disabled={!purchasable(product)}
-                    onToggle={() => toggleOrnament(product)}
+                    onSetQuantity={(next) =>
+                      setOrnamentQuantity(product.slug, next)
+                    }
                   />
                 ))}
               </div>
@@ -733,30 +886,44 @@ export function NewYearConfigurator({
         </div>
 
         <aside className="rounded-3xl border border-espresso/10 bg-[var(--ny-paper)] p-5 shadow-[0_24px_70px_-46px_rgba(22,21,19,0.55)] lg:sticky lg:top-24">
-          <p className="ny-eyebrow">Ваш выбор</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="ny-eyebrow">Ваш выбор</p>
+            {mode === "custom" && (
+              <span className="text-xs font-medium text-taupe tabular-nums">
+                {selectedCustomFigurinesCount}{" "}
+                {pluralFigurines(selectedCustomFigurinesCount)}
+              </span>
+            )}
+          </div>
           <h3 className="font-serif text-3xl text-espresso">
             {mode === "custom" ? "Своя коробка" : "Готовый набор"}
           </h3>
           <div className="mt-5">
-            <Preview products={productsToAdd} />
+            <Preview entries={entriesToAdd} />
           </div>
 
           <div className="mt-5 space-y-2 text-sm">
-            {mainProducts.length === 0 ? (
+            {mainEntries.length === 0 ? (
               <p className="text-taupe">
                 {mode === "custom"
-                  ? "Отметьте минимум 7 фигурок, которые положить в коробку."
+                  ? "Отметьте минимум 7 фигурок — можно выбирать как разные, так и по 2–3 одинаковые."
                   : "Выберите готовый набор."}
               </p>
             ) : (
               <ul className="space-y-2">
-                {mainProducts.map((product) => (
+                {mainEntries.map(({ product, quantity }) => (
                   <li key={product.slug} className="flex justify-between gap-3">
                     <span className="min-w-0 text-espresso">
-                      {product.name}
+                      {newYearDisplayName(product)}
+                      {quantity > 1 && (
+                        <span className="text-taupe tabular-nums">
+                          {" "}
+                          × {quantity}
+                        </span>
+                      )}
                     </span>
                     <span className="shrink-0 text-taupe tabular-nums">
-                      {formatPrice(product.price, product.currency)}
+                      {formatPrice(product.price * quantity, product.currency)}
                     </span>
                   </li>
                 ))}
@@ -772,8 +939,8 @@ export function NewYearConfigurator({
               <div className="space-y-2">
                 <BoxOption
                   selected={boxSlug === null}
-                  title="Без напечатанной коробки"
-                  text="Фигурки в защитной упаковке"
+                  title="Бережная упаковка для доставки"
+                  text="Надёжная защита в дороге — если берёте для своей ёлки"
                   price={0}
                   onSelect={() => setBoxSlug(null)}
                 />
@@ -781,12 +948,10 @@ export function NewYearConfigurator({
                   <BoxOption
                     key={product.slug}
                     selected={boxSlug === product.slug}
-                    title={product.name}
+                    title="Подарочный футляр-шкатулка"
                     text={
                       purchasable(product)
-                        ? product.shortDescription ||
-                          product.dimensions ||
-                          "Праздничная напечатанная коробка"
+                        ? "Выдвижной ящичек с молочным орнаментом и 7 ячейками"
                         : "Сейчас нет в наличии"
                     }
                     price={product.price}
@@ -803,8 +968,7 @@ export function NewYearConfigurator({
             </fieldset>
           ) : (
             <p className="mt-6 rounded-xl border border-dashed border-espresso/15 p-3 text-xs leading-relaxed text-taupe">
-              Сейчас доступен вариант без напечатанной коробки. Праздничная
-              коробка появится здесь после публикации в каталоге.
+              Украшения приедут в надёжной защитной упаковке для доставки.
             </p>
           )}
 
@@ -819,7 +983,7 @@ export function NewYearConfigurator({
               <p className="mt-3 text-sm leading-relaxed text-(--ny-accent)">
                 Добавьте ещё {customMissing}{" "}
                 {accusativeFigurines(customMissing)} — минимальный заказ
-                новогодних фигурок: {MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт.
+                отдельных фигурок: {MIN_NEW_YEAR_ORNAMENT_QUANTITY} шт.
               </p>
             )}
             {blockedByCart && hasSelection && (
@@ -848,8 +1012,8 @@ export function NewYearConfigurator({
               )}
             </Button>
             <p className="mt-3 text-xs leading-relaxed text-taupe">
-              Цена и состав проверяются по актуальному каталогу. Изделия
-              напечатают после оплаты, доставка рассчитается на следующем шаге.
+              Создадим ваш набор в мастерской после оплаты за 2–4 дня. Доставка
+              в удобный пункт выдачи Ozon рассчитается на следующем шаге.
             </p>
           </div>
         </aside>

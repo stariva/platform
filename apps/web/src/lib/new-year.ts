@@ -314,6 +314,35 @@ export function ornamentDetailForSlug(slug: string): string | undefined {
   return id ? ornaments.find((item) => item.id === id)?.detail : undefined;
 }
 
+const REDUNDANT_TITLE_PREFIX =
+  /^(?:Новогоднее украшение|Новогодний набор)\s+«(.+)»$/i;
+
+/** Короткое чистое имя фигурки или набора для карточек новогоднего лендинга. */
+export function newYearDisplayName(
+  product: Pick<NewYearConfiguratorProduct, "name" | "slug">,
+): string {
+  const ornamentId = ornamentIdForSlug(product.slug);
+  if (ornamentId) {
+    const known = ornaments.find((item) => item.id === ornamentId);
+    if (known) return known.name;
+  }
+  const set = ornamentSets.find((item) => item.slug === product.slug);
+  if (set) return `Набор «${set.name}»`;
+  const match = product.name.trim().match(REDUNDANT_TITLE_PREFIX);
+  return match?.[1] ?? product.name;
+}
+
+/** Можно ли заказать сезонное изделие с изготовлением после оплаты. */
+export function isNewYearProductPurchasable(
+  product:
+    | Pick<NewYearConfiguratorProduct, "madeToOrder" | "currency" | "price">
+    | undefined,
+): boolean {
+  return Boolean(
+    product?.madeToOrder && product.currency === "RUB" && product.price > 0,
+  );
+}
+
 /** Состав готового набора в заказе: имена и количество фигурок в порядке коллекции. */
 export function newYearSetContents(
   slug: string,

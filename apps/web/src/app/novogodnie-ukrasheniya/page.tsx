@@ -13,7 +13,9 @@ import type { Product } from "@/lib/catalog/types";
 import { isCatalogProductBuyable } from "@/lib/commerce/catalog";
 import {
   groupNewYearProducts,
+  isNewYearProductPurchasable,
   NEW_YEAR_PATH,
+  newYearDisplayName,
   newYearProductImage,
   ornamentDetailForSlug,
   toNewYearConfiguratorProduct,
@@ -21,7 +23,10 @@ import {
 import { formatPrice } from "@/lib/products";
 import { SITE_URL } from "@/lib/site-url";
 import newYearHero from "../../../public/images/new-year/hero-russkaya-skazka-v2.webp";
-import { NewYearConfigurator } from "./_components/new-year-configurator";
+import {
+  NewYearConfigurator,
+  SelectOrnamentButton,
+} from "./_components/new-year-configurator";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +109,7 @@ function Purchase({
   unavailable: boolean;
 }) {
   const buyable = isCatalogProductBuyable(product);
+  const madeToOrderBuyable = isNewYearProductPurchasable(product);
   return (
     <div className="mt-auto flex flex-col gap-3 pt-5">
       {product && (
@@ -137,6 +143,13 @@ function Purchase({
         <>
           <p className="text-sm text-taupe">В наличии · доставка Ozon</p>
           <AddToCartButton product={product} />
+        </>
+      ) : madeToOrderBuyable && product ? (
+        <>
+          <p className="text-sm text-taupe">
+            Изготовим за 2–4 дня · доставка Ozon
+          </p>
+          <SelectOrnamentButton slug={product.slug} name={name} />
         </>
       ) : (
         <>
@@ -179,52 +192,55 @@ async function Collection() {
         className="ny-section scroll-mt-24"
         aria-labelledby="ornaments-title"
       >
-        <p className="ny-eyebrow">Если хочется особый состав</p>
+        <p className="ny-eyebrow">Все образы коллекции</p>
         <h2 id="ornaments-title" className="ny-heading">
           Фигурки по отдельности
         </h2>
         {groups.ornaments.length > 0 ? (
           <>
             <p className="mt-5 max-w-2xl text-taupe">
-              Сначала посмотрите готовые наборы выше — они уже собраны для ёлки
-              и подарка. Если нужен свой состав, добавьте фигурки по одной или
-              вернитесь к конфигуратору.
+              Рассмотрите каждый сюжет в деталях. Отметьте любые 7 или больше
+              фигурок в «Свою коробку» — можно собрать как разные образы, так и
+              парные игрушки на ёлку.
             </p>
             <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-              {groups.ornaments.map((product, index) => (
-                <article
-                  key={product.slug}
-                  id={product.slug}
-                  className="flex scroll-mt-24 flex-col"
-                >
-                  <div className="ny-ornament-art">
-                    <span
-                      className="absolute left-5 top-4 text-xs text-taupe"
-                      aria-hidden="true"
-                    >
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <Image
-                      src={newYearProductImage(product)}
-                      alt={`Новогоднее украшение «${product.name}»`}
-                      width={240}
-                      height={260}
-                      className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
+              {groups.ornaments.map((product, index) => {
+                const displayName = newYearDisplayName(product);
+                return (
+                  <article
+                    key={product.slug}
+                    id={product.slug}
+                    className="flex scroll-mt-24 flex-col"
+                  >
+                    <div className="ny-ornament-art">
+                      <span
+                        className="absolute left-5 top-4 text-xs text-taupe"
+                        aria-hidden="true"
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <Image
+                        src={newYearProductImage(product)}
+                        alt={`Новогоднее украшение «${displayName}»`}
+                        width={240}
+                        height={260}
+                        className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
+                      />
+                    </div>
+                    <h3 className="mt-5 font-serif text-2xl">{displayName}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-taupe">
+                      {ornamentDetailForSlug(product.slug) ||
+                        product.shortDescription ||
+                        "Новогоднее украшение из коллекции «Русская сказка»."}
+                    </p>
+                    <Purchase
+                      product={product}
+                      name={displayName}
+                      unavailable={unavailable}
                     />
-                  </div>
-                  <h3 className="mt-5 font-serif text-2xl">{product.name}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-taupe">
-                    {product.shortDescription ||
-                      ornamentDetailForSlug(product.slug) ||
-                      "Новогоднее украшение из коллекции «Русская сказка»."}
-                  </p>
-                  <Purchase
-                    product={product}
-                    name={product.name}
-                    unavailable={unavailable}
-                  />
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </>
         ) : (
@@ -284,7 +300,8 @@ export default function NewYearPage() {
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-taupe xl:text-lg">
               Готовые наборы ёлочных украшений с народными орнаментами. Выберите
-              состав, добавьте праздничную коробку — и тёплый подарок собран.
+              близкий сердцу состав, добавьте подарочную шкатулку — и тёплый
+              семейный подарок собран.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild size="lg" className="min-h-12 px-4 sm:px-6">
@@ -300,7 +317,8 @@ export default function NewYearPage() {
               </Button>
             </div>
             <p className="mt-6 text-xs tracking-wide text-taupe">
-              Созданы на 3D-принтере · вдохновлены народными орнаментами
+              Авторская коллекция Ольги Карпычевой · вдохновлена русской домовой
+              резьбой и вышивкой
             </p>
           </div>
           <figure className="ny-hero-art">
@@ -318,11 +336,11 @@ export default function NewYearPage() {
           </figure>
         </section>
         <div className="ny-ribbon">
-          <span>Готовые сочетания</span>
+          <span>Высота фигурок 8–10 см</span>
           <span aria-hidden="true">✳</span>
-          <span>Состав виден сразу</span>
+          <span>Лёгкие и небьющиеся · с подвесами</span>
           <span aria-hidden="true">✳</span>
-          <span>Праздничная коробка по желанию</span>
+          <span>Изготовим за 2–4 дня · доставка Ozon</span>
         </div>
         <Suspense
           fallback={
@@ -342,13 +360,13 @@ export default function NewYearPage() {
             <div>
               <p className="ny-eyebrow">Подарочный набор</p>
               <h2 id="packaging-title" className="ny-heading">
-                Как выглядит праздничная упаковка
+                Подарочный футляр-шкатулка
               </h2>
             </div>
             <p className="max-w-md leading-relaxed text-taupe">
-              Визуализация показывает формат подарочной коробки: красный
-              выдвижной футляр с молочным орнаментом и отдельными ячейками для
-              фигурок. Оформление зависит от выбранного набора.
+              Красный выдвижной футляр с молочным орнаментом и отдельными
+              ячейками для 7 фигурок. В нём удобно дарить коллекцию без
+              дополнительной упаковки и бережно хранить игрушки из года в год.
             </p>
           </div>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -391,8 +409,8 @@ export default function NewYearPage() {
               </h2>
             </div>
             <p className="max-w-md leading-relaxed text-taupe">
-              Фотографии показывают цвет, фактуру печати и масштаб украшений в
-              интерьере. Актуальный состав коллекции — в каталоге выше.
+              Фотографии показывают живой оттенок, рельефную фактуру и масштаб
+              украшений на еловых ветвях и в домашнем интерьере.
             </p>
           </div>
           <div className="mt-10 grid gap-4 md:grid-cols-12">
@@ -435,17 +453,20 @@ export default function NewYearPage() {
             </div>
             <div className="flex flex-col gap-5 text-taupe leading-relaxed">
               <p>
-                Ёлочный шар, нарядный петух, балалайка и резной наличник. Мы
-                собрали знакомые образы в коллекцию подвесных украшений с
-                растительными орнаментами.
+                Ёлочный шар, расписная матрёшка, нарядный петух, балалайка и
+                резной наличник. Мы собрали родные с детства образы в коллекцию
+                подвесных украшений с тонкими растительными орнаментами.
               </p>
               <p>
-                Фигурки напечатаны на 3D-принтере. У этой технологии есть своя
-                фактура: на поверхности могут быть заметны тонкие линии слоёв.
+                Каждая фигурка создаётся послойно в нашей мастерской из прочного
+                эко-биопластика (PLA). Тонкий рельеф слоёв напоминает фактуру
+                дерева и бересты, а двухцветный узор вплавлен в саму форму и не
+                тускнеет со временем.
               </p>
               <p>
-                Материал, размеры, подвесы и упаковку уточняйте для выбранной
-                модели перед заказом.
+                Украшения лёгкие, не бьются при падении с ветки и безопасны для
+                детей и домашних питомцев. Высота фигурок — 8–10 см, подвесы уже
+                входят в комплект.
               </p>
             </div>
           </div>
@@ -462,16 +483,16 @@ export default function NewYearPage() {
           <ol className="mt-10 grid gap-8 md:grid-cols-3">
             {[
               [
-                "Выберите набор",
-                "Начните с готового сочетания или соберите свою коробку фигурок. Праздничная упаковка добавляется отдельным товаром.",
+                "Выберите набор или свой состав",
+                "Начните с готового набора из 7 фигурок с выгодой или соберите свою коробку. Подарочный футляр с ложементом добавляется одним нажатием.",
               ],
               [
-                "Оформите на сайте",
-                "Для доступных товаров выберите доставку Ozon. Стоимость и доступные даты проверяются при оформлении до оплаты.",
+                "Оформите заказ онлайн",
+                "На следующем шаге выберите удобный пункт выдачи Ozon — стоимость и точная дата доставки рассчитываются сразу до оплаты.",
               ],
               [
                 "Заберите и украсьте ёлку",
-                "Для получения через Ozon нужен аккаунт Ozon. Перед праздниками ориентируйтесь на дату доставки для вашего адреса.",
+                "Изготовим ваш заказ за 2–4 дня и бережно отправим через Ozon Доставку. Уведомление о прибытии придёт в приложение Ozon.",
               ],
             ].map(([title, text], index) => (
               <li key={title}>
