@@ -16,6 +16,7 @@ import {
   ShoppingBagIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -25,7 +26,6 @@ import { OfferAcceptanceNote } from "@/components/stariva/consent-checkbox";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { reachGoal, trackCreatedOrder } from "@/lib/analytics";
@@ -46,6 +46,7 @@ import {
   MobileOrderSummary,
   OrderSummary,
 } from "../../order-summary";
+import { PromoCodeField } from "../../promo-code-field";
 
 type Step = "contact" | "delivery" | "payment";
 
@@ -229,6 +230,11 @@ export default function InstantMadeToOrderCheckoutPage() {
     if (promoState.status !== "idle" && promoState.status !== "checking") {
       setPromoState({ status: "idle" });
     }
+  }
+
+  function handleRemovePromo() {
+    setPromoInput("");
+    setPromoState({ status: "idle" });
   }
 
   async function handleApplyPromo() {
@@ -579,56 +585,23 @@ export default function InstantMadeToOrderCheckoutPage() {
                     onRetry={() => setQuoteAttempt((n) => n + 1)}
                   />
                 )}
-                <div className="space-y-2">
-                  <label
-                    htmlFor="instant-promo-code"
-                    className="text-sm font-medium text-espresso"
-                  >
-                    Промокод
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="instant-promo-code"
-                      value={promoInput}
-                      onChange={(event) => handlePromoInput(event.target.value)}
-                      placeholder="Например, NEWYEAR"
-                      autoComplete="off"
-                      disabled={submitting || promoState.status === "checking"}
-                      aria-invalid={promoState.status === "invalid"}
-                      className="h-12 rounded-full border-espresso/15 px-4 uppercase"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleApplyPromo}
-                      disabled={
-                        submitting ||
-                        !promoInput.trim() ||
-                        promoState.status === "checking"
-                      }
-                      className="h-12 shrink-0 rounded-full border-espresso/20 px-5"
-                    >
-                      {promoState.status === "checking" ? (
-                        <Spinner />
-                      ) : (
-                        "Применить"
-                      )}
-                    </Button>
-                  </div>
-                  {promoState.status === "invalid" && (
-                    <p role="alert" className="text-sm text-terracotta-dark">
-                      {promoState.message}
-                    </p>
-                  )}
-                  {promoState.status === "valid" && (
-                    <p className="text-sm text-espresso">
-                      Промокод применён — скидка{" "}
-                      {formatPrice(
-                        (promoState.validation.discountKopecks ?? 0) / 100,
-                      )}
-                    </p>
-                  )}
-                </div>
+                <PromoCodeField
+                  value={promoInput}
+                  onChange={handlePromoInput}
+                  state={
+                    promoState.status === "valid"
+                      ? {
+                          status: "valid",
+                          code: promoState.validation.code ?? promoInput,
+                          discountKopecks:
+                            promoState.validation.discountKopecks ?? 0,
+                        }
+                      : promoState
+                  }
+                  onApply={handleApplyPromo}
+                  onRemove={handleRemovePromo}
+                  disabled={submitting}
+                />
                 <dl className="lg:hidden space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
                     <dt className="text-taupe">Изделия</dt>
@@ -637,12 +610,21 @@ export default function InstantMadeToOrderCheckoutPage() {
                     </dd>
                   </div>
                   {discount > 0 && (
-                    <div className="flex justify-between gap-4">
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 380,
+                        damping: 26,
+                      }}
+                      className="flex justify-between gap-4"
+                    >
                       <dt className="text-taupe">Скидка</dt>
                       <dd className="text-terracotta-dark tabular-nums">
                         −{formatPrice(discount / 100)}
                       </dd>
-                    </div>
+                    </motion.div>
                   )}
                   <div className="flex justify-between gap-4">
                     <dt className="text-taupe">Доставка</dt>

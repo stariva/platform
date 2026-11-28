@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDownIcon, ImageOffIcon } from "lucide-react";
+import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useId, useState } from "react";
@@ -180,12 +181,17 @@ function SummaryBody({
           </dd>
         </div>
         {discount > 0 && (
-          <div className="flex items-baseline justify-between gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 26 }}
+            className="flex items-baseline justify-between gap-4"
+          >
             <dt className="text-taupe">Скидка</dt>
             <dd className="text-terracotta-dark tabular-nums">
               −{formatPrice(discount / 100)}
             </dd>
-          </div>
+          </motion.div>
         )}
         <div className="flex items-baseline justify-between gap-4">
           <dt className="text-taupe">Доставка</dt>
