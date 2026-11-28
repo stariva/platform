@@ -29,6 +29,12 @@ export {
   upsertLessonProgress,
 } from "./services/course-access";
 export {
+  getOzonDeliveryAccessToken,
+  invalidateOzonDeliveryAccessToken,
+  isOzonDeliveryConfigured,
+  persistOzonDeliveryRefreshToken,
+} from "./services/ozon-delivery-auth";
+export {
   getReadyRendition,
   MAX_RENDITION_ATTEMPTS,
 } from "./services/video-renditions";

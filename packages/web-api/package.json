@@ -11,6 +11,10 @@
       "types": "./dist/contract/index.d.ts",
       "default": "./src/contract/index.ts"
     },
+    "./ozon-delivery-auth": {
+      "types": "./dist/services/ozon-delivery-auth.d.ts",
+      "default": "./src/services/ozon-delivery-auth.ts"
+    },
     "./preorder-bonus": {
       "types": "./dist/preorder-bonus.d.ts",
       "default": "./src/preorder-bonus.ts"
