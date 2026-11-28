@@ -26,6 +26,8 @@ import {
   type NewYearConfiguratorProduct,
   newYearDisplayName,
   newYearFigurinesPerItem,
+  newYearGiftBoxCapacity,
+  newYearGiftBoxMerchandising,
   newYearProductImage,
   newYearSetContents,
   newYearSetMerchandising,
@@ -752,15 +754,44 @@ export function NewYearConfigurator({
       : selectedSet
         ? newYearFigurinesPerItem(selectedSet.slug)
         : 0;
+  const selectedBoxCapacity = selectedBox
+    ? newYearGiftBoxCapacity(selectedBox.slug)
+    : NEW_YEAR_GIFT_BOX_CAPACITY;
   const boxesNeeded = selectedBox
-    ? Math.max(
-        1,
-        Math.ceil(selectedFigurinesCount / NEW_YEAR_GIFT_BOX_CAPACITY),
-      )
+    ? Math.max(1, Math.ceil(selectedFigurinesCount / selectedBoxCapacity))
     : 1;
   const entriesToAdd: SelectedProductEntry[] = selectedBox
     ? [...mainEntries, { product: selectedBox, quantity: boxesNeeded }]
     : mainEntries;
+
+  // Маленький футляр не предлагаем, когда состав в него уже не помещается:
+  // для «Сказочного терема» и больших своих коробок нужен футляр на 14 ячеек.
+  const visibleBoxes = useMemo(() => {
+    const maxCapacity = Math.max(
+      0,
+      ...boxes.map((box) => newYearGiftBoxCapacity(box.slug)),
+    );
+    return boxes.filter((box) => {
+      const capacity = newYearGiftBoxCapacity(box.slug);
+      return capacity >= selectedFigurinesCount || capacity === maxCapacity;
+    });
+  }, [boxes, selectedFigurinesCount]);
+
+  useEffect(() => {
+    if (!boxSlug) return;
+    if (visibleBoxes.some((box) => box.slug === boxSlug)) return;
+    const fallback = visibleBoxes.reduce<
+      (typeof visibleBoxes)[number] | undefined
+    >(
+      (biggest, box) =>
+        !biggest ||
+        newYearGiftBoxCapacity(box.slug) > newYearGiftBoxCapacity(biggest.slug)
+          ? box
+          : biggest,
+      undefined,
+    );
+    setBoxSlug(fallback?.slug ?? null);
+  }, [visibleBoxes, boxSlug]);
   const total = entriesToAdd.reduce(
     (sum, { product, quantity }) => sum + product.price * quantity,
     0,
@@ -987,33 +1018,36 @@ export function NewYearConfigurator({
                   price={0}
                   onSelect={() => setBoxSlug(null)}
                 />
-                {boxes.map((product) => (
-                  <BoxOption
-                    key={product.slug}
-                    selected={boxSlug === product.slug}
-                    title="Подарочный футляр-шкатулка"
-                    text={
-                      purchasable(product)
-                        ? "Выдвижной ящичек с молочным орнаментом и 7 ячейками"
-                        : "Сейчас нет в наличии"
-                    }
-                    price={product.price}
-                    product={product}
-                    disabled={!purchasable(product)}
-                    onSelect={() =>
-                      setBoxSlug((current) =>
-                        current === product.slug ? null : product.slug,
-                      )
-                    }
-                  />
-                ))}
+                {visibleBoxes.map((product) => {
+                  const boxCopy = newYearGiftBoxMerchandising(product.slug);
+                  return (
+                    <BoxOption
+                      key={product.slug}
+                      selected={boxSlug === product.slug}
+                      title={boxCopy.title}
+                      text={
+                        purchasable(product)
+                          ? boxCopy.text
+                          : "Сейчас нет в наличии"
+                      }
+                      price={product.price}
+                      product={product}
+                      disabled={!purchasable(product)}
+                      onSelect={() =>
+                        setBoxSlug((current) =>
+                          current === product.slug ? null : product.slug,
+                        )
+                      }
+                    />
+                  );
+                })}
               </div>
               {selectedBox && boxesNeeded > 1 && (
                 <p className="mt-3 text-xs leading-relaxed text-taupe">
-                  В один футляр помещается {NEW_YEAR_GIFT_BOX_CAPACITY} фигурок
-                  — для вашего состава положим {boxesNeeded}{" "}
-                  {pluralGiftBoxes(boxesNeeded)}, количество можно изменить в
-                  корзине.
+                  В один футляр помещается {selectedBoxCapacity}{" "}
+                  {pluralFigurines(selectedBoxCapacity)} — для вашего состава
+                  положим {boxesNeeded} {pluralGiftBoxes(boxesNeeded)},
+                  количество можно изменить в корзине.
                 </p>
               )}
             </fieldset>

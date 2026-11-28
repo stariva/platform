@@ -28,8 +28,45 @@ export const NEW_YEAR_PARCEL = {
 /** Отдельные фигурки печатаются партиями: меньше этого количества заказ не принимаем. */
 export const MIN_NEW_YEAR_ORNAMENT_QUANTITY = 7;
 
-/** Ячеек в одном подарочном футляре: большему составу нужно несколько футляров. */
+/** Ячеек в стандартном подарочном футляре: большему составу нужен большой футляр. */
 export const NEW_YEAR_GIFT_BOX_CAPACITY = 7;
+
+/** Мерчандайзинг подарочных футляров: вместимость и подача в конфигураторе. */
+export const newYearGiftBoxes = [
+  {
+    slug: "novogodnyaya-podarochnaya-korobka",
+    capacity: 7,
+    title: "Подарочный футляр-шкатулка",
+    text: "Выдвижной ящичек с молочным орнаментом и 7 ячейками",
+  },
+  {
+    slug: "novogodnyaya-podarochnaya-korobka-na-14",
+    capacity: 14,
+    title: "Большой футляр на 14 фигурок",
+    text: "Выдвижной ящичек с 14 ячейками — для «Сказочного терема» и больших своих коробок",
+  },
+] as const;
+
+/** Вместимость футляра по slug'у товара; неизвестные коробки считаем стандартными. */
+export function newYearGiftBoxCapacity(slug: string): number {
+  return (
+    newYearGiftBoxes.find((box) => box.slug === slug)?.capacity ??
+    NEW_YEAR_GIFT_BOX_CAPACITY
+  );
+}
+
+/** Подача футляра в конфигураторе; у неизвестных коробок — нейтральный текст. */
+export function newYearGiftBoxMerchandising(slug: string): {
+  title: string;
+  text: string;
+} {
+  const known = newYearGiftBoxes.find((box) => box.slug === slug);
+  if (known) return { title: known.title, text: known.text };
+  return {
+    title: "Подарочный футляр-шкатулка",
+    text: `Выдвижной ящичек с молочным орнаментом и ${NEW_YEAR_GIFT_BOX_CAPACITY} ячейками`,
+  };
+}
 
 export function pluralFigurines(count: number): string {
   const mod10 = count % 10;
@@ -188,7 +225,7 @@ export const ornamentSets = [
     slug: "novogodniy-nabor-skazochniy-terem",
     name: "Сказочный терем",
     description:
-      "Вся коллекция целиком — все 15 образов от матрёшки до резного наличника. Для большой ёлки, семейного подарка или полного собрания Stariva.",
+      "Обе семёрки в одном тереме — 14 образов от матрёшки до резного наличника. Для большой ёлки или семейного подарка.",
     ids: [
       "shar",
       "matryoshka",
@@ -200,7 +237,6 @@ export const ornamentSets = [
       "petukh",
       "bublik",
       "koza",
-      "kozlik",
       "snowflake",
       "bell",
       "star",

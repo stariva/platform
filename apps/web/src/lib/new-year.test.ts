@@ -8,6 +8,8 @@ import {
   isNewYearSubcategory,
   newYearDisplayName,
   newYearFigurinesPerItem,
+  newYearGiftBoxCapacity,
+  newYearGiftBoxMerchandising,
   newYearProductImage,
   newYearSetContents,
   newYearSetMerchandising,
@@ -190,7 +192,7 @@ test("new year set merchandising hides comparison when composition pricing is in
   );
 });
 
-test("skazochniy terem set spans the whole collection with honest savings", () => {
+test("skazochniy terem set joins both sevens with honest savings", () => {
   const ornamentProducts = ornaments.map((item) =>
     product({ slug: ornamentSlug(item.id), price: 150 }),
   );
@@ -202,16 +204,30 @@ test("skazochniy terem set spans the whole collection with honest savings", () =
   const merchandising = newYearSetMerchandising(set, ornamentProducts);
 
   assert.equal(merchandising.definition?.name, "Сказочный терем");
-  assert.equal(merchandising.items.length, 15);
-  assert.equal(merchandising.separateTotal, 2250);
-  assert.equal(merchandising.savings, 630);
+  assert.equal(merchandising.items.length, 14);
+  assert.equal(merchandising.separateTotal, 2100);
+  assert.equal(merchandising.savings, 480);
   assert.deepEqual(
     newYearSetContents("novogodniy-nabor-skazochniy-terem").length,
-    15,
+    14,
   );
   assert.equal(
     newYearFigurinesPerItem("novogodniy-nabor-skazochniy-terem"),
-    15,
+    14,
+  );
+});
+
+test("gift box capacity follows the box size with a standard fallback", () => {
+  assert.equal(newYearGiftBoxCapacity("novogodnyaya-podarochnaya-korobka"), 7);
+  assert.equal(
+    newYearGiftBoxCapacity("novogodnyaya-podarochnaya-korobka-na-14"),
+    14,
+  );
+  assert.equal(newYearGiftBoxCapacity("unknown-box"), 7);
+  assert.equal(
+    newYearGiftBoxMerchandising("novogodnyaya-podarochnaya-korobka-na-14")
+      .title,
+    "Большой футляр на 14 фигурок",
   );
 });
 
