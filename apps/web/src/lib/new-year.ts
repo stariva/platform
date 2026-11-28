@@ -28,6 +28,9 @@ export const NEW_YEAR_PARCEL = {
 /** Отдельные фигурки печатаются партиями: меньше этого количества заказ не принимаем. */
 export const MIN_NEW_YEAR_ORNAMENT_QUANTITY = 7;
 
+/** Ячеек в одном подарочном футляре: большему составу нужно несколько футляров. */
+export const NEW_YEAR_GIFT_BOX_CAPACITY = 7;
+
 export function pluralFigurines(count: number): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
@@ -41,6 +44,16 @@ export function pluralFigurines(count: number): string {
 export function accusativeFigurines(count: number): string {
   const form = pluralFigurines(count);
   return form === "фигурка" ? "фигурку" : form;
+}
+
+export function pluralGiftBoxes(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return "футляр";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return "футляра";
+  }
+  return "футляров";
 }
 
 export const ornaments = [
@@ -169,6 +182,29 @@ export const ornamentSets = [
       "balalaika",
       "window",
       "koza",
+    ],
+  },
+  {
+    slug: "novogodniy-nabor-skazochniy-terem",
+    name: "Сказочный терем",
+    description:
+      "Вся коллекция целиком — все 15 образов от матрёшки до резного наличника. Для большой ёлки, семейного подарка или полного собрания Stariva.",
+    ids: [
+      "shar",
+      "matryoshka",
+      "loshadka",
+      "house",
+      "samovar",
+      "window",
+      "balalaika",
+      "petukh",
+      "bublik",
+      "koza",
+      "kozlik",
+      "snowflake",
+      "bell",
+      "star",
+      "varezhka",
     ],
   },
 ] satisfies {

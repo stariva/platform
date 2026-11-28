@@ -7,12 +7,15 @@ import {
   isNewYearProductPurchasable,
   isNewYearSubcategory,
   newYearDisplayName,
+  newYearFigurinesPerItem,
   newYearProductImage,
+  newYearSetContents,
   newYearSetMerchandising,
   newYearSubcategoryFor,
   ornamentImage,
   ornamentSlug,
   ornaments,
+  pluralGiftBoxes,
 } from "./new-year";
 
 const product = (overrides: Partial<Product>): Product => ({
@@ -185,6 +188,40 @@ test("new year set merchandising hides comparison when composition pricing is in
     newYearSetMerchandising(product({ slug: "unknown-set" }), []).items.length,
     0,
   );
+});
+
+test("skazochniy terem set spans the whole collection with honest savings", () => {
+  const ornamentProducts = ornaments.map((item) =>
+    product({ slug: ornamentSlug(item.id), price: 150 }),
+  );
+  const set = product({
+    slug: "novogodniy-nabor-skazochniy-terem",
+    price: 1620,
+  });
+
+  const merchandising = newYearSetMerchandising(set, ornamentProducts);
+
+  assert.equal(merchandising.definition?.name, "Сказочный терем");
+  assert.equal(merchandising.items.length, 15);
+  assert.equal(merchandising.separateTotal, 2250);
+  assert.equal(merchandising.savings, 630);
+  assert.deepEqual(
+    newYearSetContents("novogodniy-nabor-skazochniy-terem").length,
+    15,
+  );
+  assert.equal(
+    newYearFigurinesPerItem("novogodniy-nabor-skazochniy-terem"),
+    15,
+  );
+});
+
+test("pluralGiftBoxes uses correct Russian box forms", () => {
+  assert.equal(pluralGiftBoxes(1), "футляр");
+  assert.equal(pluralGiftBoxes(2), "футляра");
+  assert.equal(pluralGiftBoxes(3), "футляра");
+  assert.equal(pluralGiftBoxes(5), "футляров");
+  assert.equal(pluralGiftBoxes(11), "футляров");
+  assert.equal(pluralGiftBoxes(21), "футляр");
 });
 
 test("seasonal subcategories are recognized for catalog routing", () => {
