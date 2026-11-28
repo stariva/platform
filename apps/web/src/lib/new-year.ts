@@ -421,6 +421,38 @@ export function isNewYearProductPurchasable(
   );
 }
 
+export interface NewYearSharedOrnamentSpecs {
+  material?: string;
+  dimensions?: string;
+  color?: string;
+}
+
+function sharedAttribute<TProduct>(
+  products: readonly TProduct[],
+  pick: (product: TProduct) => string | undefined,
+): string | undefined {
+  const values = products
+    .map((product) => pick(product)?.trim())
+    .filter((value): value is string => Boolean(value));
+  if (values.length === 0) return undefined;
+  const first = values[0];
+  return values.every((value) => value === first) ? first : undefined;
+}
+
+/** Общие характеристики фигурок коллекции, чтобы не дублировать их в каждой карточке. */
+export function sharedNewYearOrnamentSpecs(
+  products: readonly Pick<
+    NewYearConfiguratorProduct,
+    "material" | "dimensions" | "color"
+  >[],
+): NewYearSharedOrnamentSpecs {
+  return {
+    material: sharedAttribute(products, (product) => product.material),
+    dimensions: sharedAttribute(products, (product) => product.dimensions),
+    color: sharedAttribute(products, (product) => product.color),
+  };
+}
+
 /** Состав готового набора в заказе: имена и количество фигурок в порядке коллекции. */
 export function newYearSetContents(
   slug: string,

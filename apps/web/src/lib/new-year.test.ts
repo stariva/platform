@@ -18,6 +18,7 @@ import {
   ornamentSlug,
   ornaments,
   pluralGiftBoxes,
+  sharedNewYearOrnamentSpecs,
 } from "./new-year";
 
 const product = (overrides: Partial<Product>): Product => ({
@@ -285,4 +286,46 @@ test("isNewYearProductPurchasable checks madeToOrder RUB pricing", () => {
     false,
   );
   assert.equal(isNewYearProductPurchasable(undefined), false);
+});
+
+test("sharedNewYearOrnamentSpecs extracts common ornament attributes and drops mixed ones", () => {
+  assert.deepEqual(
+    sharedNewYearOrnamentSpecs([
+      product({
+        material: "Эко-биопластик (PLA)",
+        dimensions: "8–10 см, подвес в комплекте",
+        color: "Красный с молочным узором",
+      }),
+      product({
+        material: "Эко-биопластик (PLA)",
+        dimensions: "8–10 см, подвес в комплекте",
+        color: "Красный с молочным узором",
+      }),
+    ]),
+    {
+      material: "Эко-биопластик (PLA)",
+      dimensions: "8–10 см, подвес в комплекте",
+      color: "Красный с молочным узором",
+    },
+  );
+
+  assert.deepEqual(
+    sharedNewYearOrnamentSpecs([
+      product({
+        material: "Эко-биопластик (PLA)",
+        dimensions: "8–10 см, подвес в комплекте",
+        color: "Красный с молочным узором",
+      }),
+      product({
+        material: "Эко-биопластик (PLA)",
+        dimensions: "8–10 см, подвес в комплекте",
+        color: "Молочный с красным узором",
+      }),
+    ]),
+    {
+      material: "Эко-биопластик (PLA)",
+      dimensions: "8–10 см, подвес в комплекте",
+      color: undefined,
+    },
+  );
 });
