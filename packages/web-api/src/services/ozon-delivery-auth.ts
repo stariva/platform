@@ -92,11 +92,12 @@ export async function persistOzonDeliveryRefreshToken(
 /**
  * Если соединение с БД оборвалось уже после ответа Ozon, обычный rollback не
  * отменяет ротацию на стороне Ozon. Пробуем сохранить новый токен повторно,
- * но только поверх того старого значения, из которого он получен.
+ * поверх прежнего значения или вместо seed, исчезнувшего при откате.
  */
 async function recoverRotatedRefreshToken(
   previous: string,
   next: string,
+  insertedSeed: boolean,
 ): Promise<boolean> {
   try {
     return await tokenDb.transaction(async (tx) => {
@@ -107,6 +108,18 @@ async function recoverRotatedRefreshToken(
         .where(eq(ozonDeliveryToken.id, TOKEN_ROW_ID))
         .limit(1);
       if (row?.refreshToken === next) return true;
+      if (!row && insertedSeed) {
+        const inserted = await tx
+          .insert(ozonDeliveryToken)
+          .values({
+            id: TOKEN_ROW_ID,
+            refreshToken: next,
+            updatedAt: new Date(),
+          })
+          .onConflictDoNothing({ target: ozonDeliveryToken.id })
+          .returning({ id: ozonDeliveryToken.id });
+        return inserted.length > 0;
+      }
       if (row?.refreshToken !== previous) return false;
       const updated = await tx
         .update(ozonDeliveryToken)
@@ -126,27 +139,35 @@ async function recoverRotatedRefreshToken(
   }
 }
 
-async function currentRefreshToken(tx: Database): Promise<string> {
+async function currentRefreshToken(
+  tx: Database,
+): Promise<{ refreshToken: string; insertedSeed: boolean }> {
   const [row] = await tx
     .select({ refreshToken: ozonDeliveryToken.refreshToken })
     .from(ozonDeliveryToken)
     .where(eq(ozonDeliveryToken.id, TOKEN_ROW_ID))
     .limit(1);
-  if (row?.refreshToken) return row.refreshToken;
+  if (row?.refreshToken) {
+    return { refreshToken: row.refreshToken, insertedSeed: false };
+  }
 
   // Единственный допустимый fallback на env: строки в БД ещё нет. Если БД
   // недоступна или строка уже есть, старый env не используем — он мог давно
   // отстать от отротированного значения и вернуть интеграцию в сломанное состояние.
   const seed = env.OZON_DELIVERY_REFRESH_TOKEN;
   if (!seed) throw new Error("ozon_delivery_refresh_token_missing");
-  await tx
+  const inserted = await tx
     .insert(ozonDeliveryToken)
     .values({
       id: TOKEN_ROW_ID,
       refreshToken: seed,
       updatedAt: new Date(),
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing({ target: ozonDeliveryToken.id })
+    .returning({ id: ozonDeliveryToken.id });
+  if (inserted.length > 0) {
+    return { refreshToken: seed, insertedSeed: true };
+  }
   const [seeded] = await tx
     .select({ refreshToken: ozonDeliveryToken.refreshToken })
     .from(ozonDeliveryToken)
@@ -154,7 +175,7 @@ async function currentRefreshToken(tx: Database): Promise<string> {
     .limit(1);
   if (!seeded?.refreshToken)
     throw new Error("ozon_delivery_refresh_token_missing");
-  return seeded.refreshToken;
+  return { refreshToken: seeded.refreshToken, insertedSeed: false };
 }
 
 function accessTokenExpiry(
@@ -187,14 +208,14 @@ async function refreshOzonDeliveryAccessToken(): Promise<{
     throw new Error("ozon_delivery_not_configured");
 
   const state: {
-    rotated?: { previous: string; next: string };
+    rotated?: { previous: string; next: string; insertedSeed: boolean };
     refreshedToken?: { accessToken: string; expiresAt: number };
   } = {};
 
   try {
     return await tokenDb.transaction(async (tx) => {
       await lockTokenRotation(tx);
-      const refreshToken = await currentRefreshToken(tx);
+      const { refreshToken, insertedSeed } = await currentRefreshToken(tx);
 
       let res: Response;
       try {
@@ -235,7 +256,11 @@ async function refreshOzonDeliveryAccessToken(): Promise<{
       state.refreshedToken = result;
 
       if (data.refresh_token && data.refresh_token !== refreshToken) {
-        state.rotated = { previous: refreshToken, next: data.refresh_token };
+        state.rotated = {
+          previous: refreshToken,
+          next: data.refresh_token,
+          insertedSeed,
+        };
         const updated = await tx
           .update(ozonDeliveryToken)
           .set({ refreshToken: data.refresh_token, updatedAt: new Date() })
@@ -261,6 +286,7 @@ async function refreshOzonDeliveryAccessToken(): Promise<{
       (await recoverRotatedRefreshToken(
         state.rotated.previous,
         state.rotated.next,
+        state.rotated.insertedSeed,
       ))
     ) {
       logger.warn("ozon.delivery.token_rotation_recovered");

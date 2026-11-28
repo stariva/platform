@@ -7,6 +7,7 @@ let row: { refreshToken: string } | null = { refreshToken: "r1" };
 const events: string[] = [];
 const rotatedTo: string[] = [];
 let failNextRotationUpdate = false;
+let afterRollback: (() => Promise<void>) | undefined;
 
 function sqlText(command: unknown): string {
   return new PgDialect().sqlToQuery(command as SQL).sql;
@@ -16,6 +17,9 @@ const tx = {
   execute: async (command: unknown) => {
     const text = sqlText(command);
     if (text.includes("pg_advisory_xact_lock")) events.push("lock");
+    if (text.includes("pg_try_advisory_xact_lock")) {
+      return { rows: [{ acquired: true }] };
+    }
     return { rows: [] };
   },
   select: () => ({
@@ -32,7 +36,13 @@ const tx = {
         return [];
       };
       return {
-        onConflictDoNothing: apply,
+        onConflictDoNothing: () => ({
+          returning: async () => {
+            if (row) return [];
+            await apply();
+            return [{ id: "current" }];
+          },
+        }),
         onConflictDoUpdate: apply,
       };
     },
@@ -54,11 +64,21 @@ const tx = {
   }),
 };
 
-mock.module("@stariva/db", () => ({ and, eq, sql }));
+mock.module("@stariva/db", () => ({ and, db: {}, eq, sql }));
 mock.module("@stariva/db/client", () => ({
   createDatabase: () => ({
-    transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
-      callback(tx),
+    transaction: async (callback: (tx: unknown) => Promise<unknown>) => {
+      const snapshot = row;
+      try {
+        return await callback(tx);
+      } catch (error) {
+        row = snapshot;
+        const onRollback = afterRollback;
+        afterRollback = undefined;
+        await onRollback?.();
+        throw error;
+      }
+    },
   }),
 }));
 mock.module("@stariva/config", () => ({
@@ -68,6 +88,7 @@ mock.module("../../src/env", () => ({
   env: {
     OZON_DELIVERY_CLIENT_ID: "client-id",
     OZON_DELIVERY_CLIENT_SECRET: "client-secret",
+    OZON_DELIVERY_REFRESH_TOKEN: "seed",
   },
 }));
 
@@ -77,10 +98,19 @@ const {
   isOzonDeliveryConfigured,
   persistOzonDeliveryRefreshToken,
 } = await import("../../src/services/ozon-delivery-auth");
+const { syncOzonPickupPoints } = await import("../../src/services/ozon-pvz");
 
 let refreshCount = 0;
+let pickupPointsStatus = 500;
 const requestedRefreshTokens: string[] = [];
-globalThis.fetch = mock(async (_url, init) => {
+globalThis.fetch = mock(async (url, init) => {
+  if (String(url) === "https://api.ozon.ru/v1/delivery/point/list") {
+    assert.equal(
+      new Headers(init?.headers).get("Authorization"),
+      `Bearer access-${refreshCount}`,
+    );
+    return new Response(null, { status: pickupPointsStatus });
+  }
   refreshCount += 1;
   const refreshToken = new URLSearchParams(String(init?.body)).get(
     "refresh_token",
@@ -144,3 +174,38 @@ const recoveredAccessToken = `access-${refreshCount + 1}`;
 assert.equal(await getOzonDeliveryAccessToken(), recoveredAccessToken);
 assert.equal(row?.refreshToken, `r${refreshCount + 1}`);
 assert.equal(requestedRefreshTokens.at(-1), "r5");
+
+// Откат первой ротации удаляет строку, вставленную из seed.
+invalidateOzonDeliveryAccessToken(recoveredAccessToken);
+row = null;
+failNextRotationUpdate = true;
+const recoveredSeedAccessToken = await getOzonDeliveryAccessToken();
+const rotatedSeed = `r${refreshCount + 1}`;
+assert.equal(requestedRefreshTokens.at(-1), "seed");
+invalidateOzonDeliveryAccessToken(recoveredSeedAccessToken);
+const afterSeed = await getOzonDeliveryAccessToken();
+assert.equal(requestedRefreshTokens.at(-1), rotatedSeed);
+
+// Ручная переавторизация может записать токен между откатом и recovery.
+invalidateOzonDeliveryAccessToken(afterSeed);
+row = null;
+failNextRotationUpdate = true;
+afterRollback = () => persistOzonDeliveryRefreshToken("manual-after-rollback");
+await assert.rejects(getOzonDeliveryAccessToken(), /connection lost/);
+const manualAccessToken = await getOzonDeliveryAccessToken();
+assert.equal(requestedRefreshTokens.at(-1), "manual-after-rollback");
+
+await assert.rejects(
+  syncOzonPickupPoints(),
+  /ozon_delivery_pvz_request_failed_500/,
+);
+assert.equal(await getOzonDeliveryAccessToken(), manualAccessToken);
+pickupPointsStatus = 401;
+await assert.rejects(
+  syncOzonPickupPoints(),
+  /ozon_delivery_pvz_request_failed_401/,
+);
+const refreshedAfter401 = await getOzonDeliveryAccessToken();
+assert.notEqual(refreshedAfter401, manualAccessToken);
+invalidateOzonDeliveryAccessToken(manualAccessToken);
+assert.equal(await getOzonDeliveryAccessToken(), refreshedAfter401);

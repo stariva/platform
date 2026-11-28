@@ -4,7 +4,10 @@ import { createDatabase } from "@stariva/db/client";
 import { ozonPickupPoints } from "@stariva/db/schema";
 import { z } from "zod";
 import { OZON_PVZ_SYNC_TIMEOUTS } from "../contract/jobs";
-import { getOzonDeliveryAccessToken } from "./ozon-delivery-auth";
+import {
+  getOzonDeliveryAccessToken,
+  invalidateOzonDeliveryAccessToken,
+} from "./ozon-delivery-auth";
 
 const OZON_DELIVERY_API_URL = "https://api.ozon.ru";
 const PVZ_PAGE_SIZE = 1000;
@@ -95,6 +98,7 @@ async function fetchAllPickupPoints(
     });
 
     if (!res.ok) {
+      if (res.status === 401) invalidateOzonDeliveryAccessToken(accessToken);
       const detail = await res.text().catch(() => "");
       throw new Error(
         `ozon_delivery_pvz_request_failed_${res.status}: ${detail}`,
