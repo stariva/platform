@@ -6,7 +6,7 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Badge } from "@/components/ui/badge";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 import {
   absoluteImageUrl,
@@ -31,6 +31,7 @@ export const metadata: Metadata = {
     "Мастер-классы по макраме в видеоуроках: одежда, абажуры и декор интерьера. Ольга показывает каждый шаг. Доступ навсегда, видео в HD.",
   alternates: { canonical: `${BASE_URL}/workshops` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Мастер-классы по макраме онлайн — Stariva",
     description:

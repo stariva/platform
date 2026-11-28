@@ -11,7 +11,7 @@ import { Reviews } from "@/components/stariva/reviews";
 import { BULK_DISCOUNT, MAX_ORDER_ITEMS } from "@/lib/b2b/order";
 import { ORDER_STEPS } from "@/lib/b2b/terms";
 import { CONTACTS } from "@/lib/contacts";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { B2BFormat } from "./_components/b2b-format";
 import { B2BOrder } from "./_components/b2b-order";
 
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   description: `Абажуры, панно и кашпо из хлопка для небольших заведений: от 1 до ${MAX_ORDER_ITEMS} изделий, скидка ${BULK_DISCOUNT.percent}% от ${BULK_DISCOUNT.minItems} штук. Без выезда и замеров — по фото, доставка по России.`,
   alternates: { canonical: `${BASE_URL}/b2b` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Макраме для небольших заведений — Stariva",
     description: `Абажуры, панно и кашпо для кофейни, салона или гостевого дома. До ${MAX_ORDER_ITEMS} изделий, заказ по фото, доставка по России.`,

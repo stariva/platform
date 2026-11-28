@@ -13,7 +13,7 @@ import { TREES_PATH } from "@/lib/elka/data";
 import { loadElkaData } from "@/lib/elka/load";
 import { madeToOrderLeadTimeOf } from "@/lib/made-to-order";
 import { productHref } from "@/lib/products";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { ElkaAudiences } from "./_components/elka-audiences";
 import { ElkaBusiness } from "./_components/elka-business";
 import { ElkaComparison } from "./_components/elka-comparison";
@@ -44,6 +44,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${BASE_URL}${TREES_PATH}` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     locale: "ru_RU",
     title: "Ёлка макраме на стену — Stariva",

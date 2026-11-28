@@ -6,7 +6,7 @@ import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, PersonJsonLd } from "@/components/stariva/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Обо мне — Ольга Карпычева, мастер макраме",
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     "Меня зовут Ольга Карпычева. С 2018 года я плету макраме дома в Подмосковье — одежду, абажуры и декор из натурального хлопка.",
   alternates: { canonical: `${BASE_URL}/about` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "profile",
     title: "Обо мне — Ольга Карпычева, мастер макраме",
     description:

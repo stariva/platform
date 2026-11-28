@@ -12,7 +12,7 @@ import { Reviews } from "@/components/stariva/reviews";
 import { getProductsResult } from "@/lib/catalog/service";
 import { WORKSHOP_PATH, WORKSHOP_SLUG } from "@/lib/elka/data";
 import { loadBigTreeWorkshop, loadElkaData } from "@/lib/elka/load";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { getBundle } from "@/lib/workshops/bundles";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { KOMBO_SLUG } from "../elka-makrame-kombo/_data";
@@ -51,6 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
     ...METADATA,
     description: `Сплетите настенную ёлку макраме 50 × 110 см по пошаговым видеоурокам: схема и расчёт шнура, доступ навсегда, обратная связь от мастера. ${offer}`,
     openGraph: {
+      ...SITE_OPEN_GRAPH,
       ...METADATA.openGraph,
       description: `Сплетите настенную ёлку макраме по пошаговым видеоурокам. ${offer}`,
     },
@@ -70,6 +71,7 @@ const METADATA: Metadata = {
   ],
   alternates: { canonical: `${BASE_URL}${WORKSHOP_PATH}` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     locale: "ru_RU",
     title: "Ёлка макраме своими руками — мастер-класс Stariva",

@@ -39,7 +39,7 @@ import {
   getProductSection,
   productHref,
 } from "@/lib/products";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { ProductDetails } from "./product-details";
 
 // ─── FAQ per category (mirrors product-details.tsx) ──────────────────────────
@@ -155,6 +155,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: `${BASE_URL}${url}` },
     openGraph: {
+      ...SITE_OPEN_GRAPH,
       type: "website",
       title,
       description,

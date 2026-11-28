@@ -5,7 +5,7 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { getProductsByCategory } from "@/lib/catalog/service";
-import { SITE_URL } from "@/lib/site-url";
+import { SITE_OPEN_GRAPH, SITE_URL } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 import CategoryFilters from "../catalog/[category]/category-filters";
 
@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     "Абажуры Stariva: фотографии, размеры и цены. Выберите модель для дома или кафе, уточните комплектацию и оформите заказ на сайте.",
   alternates: { canonical: `${SITE_URL}/abazhury` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     title: "Абажуры макраме Stariva",
     url: `${SITE_URL}/abazhury`,
     description:

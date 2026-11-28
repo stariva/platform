@@ -19,7 +19,7 @@ import {
   type ReviewsQuery,
   reviewsHref,
 } from "@/lib/reviews-listing";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { fetchPublishedWorkshops } from "@/lib/workshops/workshops-db";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -44,6 +44,7 @@ export async function generateMetadata({
       canonical: `${BASE_URL}${filtered ? "/reviews" : reviewsHref({ page: query.page })}`,
     },
     openGraph: {
+      ...SITE_OPEN_GRAPH,
       type: "website",
       title: TITLE,
       description: DESCRIPTION,

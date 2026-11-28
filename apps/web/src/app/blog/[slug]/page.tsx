@@ -7,7 +7,7 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate, getPostBySlug } from "@/lib/blog-data";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 
@@ -34,6 +34,7 @@ export async function generateMetadata({
     description: post.excerpt,
     alternates: { canonical: `${BASE_URL}${url}` },
     openGraph: {
+      ...SITE_OPEN_GRAPH,
       type: "article",
       title: post.title,
       description: post.excerpt,
