@@ -24,9 +24,11 @@ export const env = createEnv({
       .positive()
       .default(1020005006898070),
 
-    // OAuth Ozon Доставки для синхронизации ПВЗ
+    // OAuth Ozon Доставки. refresh_token — только первоначальный seed:
+    // после первого обмена актуальное значение живёт в ozon_delivery_token.
     OZON_DELIVERY_CLIENT_ID: z.string().min(1).optional(),
     OZON_DELIVERY_CLIENT_SECRET: z.string().min(1).optional(),
+    OZON_DELIVERY_REFRESH_TOKEN: z.string().min(1).optional(),
 
     // Выгрузка Метрики и Директа (jobs.analytics.*). OAuth-токены из
     // приложения на oauth.yandex.ru: metrika:read и direct:api.
@@ -53,6 +55,7 @@ export const env = createEnv({
     OZON_FBS_WAREHOUSE_ID: process.env.OZON_FBS_WAREHOUSE_ID,
     OZON_DELIVERY_CLIENT_ID: process.env.OZON_DELIVERY_CLIENT_ID,
     OZON_DELIVERY_CLIENT_SECRET: process.env.OZON_DELIVERY_CLIENT_SECRET,
+    OZON_DELIVERY_REFRESH_TOKEN: process.env.OZON_DELIVERY_REFRESH_TOKEN,
     YANDEX_METRIKA_TOKEN: process.env.YANDEX_METRIKA_TOKEN,
     YANDEX_METRIKA_COUNTER_ID: process.env.YANDEX_METRIKA_COUNTER_ID,
     YANDEX_DIRECT_TOKEN: process.env.YANDEX_DIRECT_TOKEN,

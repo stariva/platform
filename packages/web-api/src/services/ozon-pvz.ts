@@ -1,12 +1,11 @@
 import { logger } from "@stariva/config";
 import { and, type Database, db, eq, sql } from "@stariva/db";
 import { createDatabase } from "@stariva/db/client";
-import { ozonDeliveryToken, ozonPickupPoints } from "@stariva/db/schema";
+import { ozonPickupPoints } from "@stariva/db/schema";
 import { z } from "zod";
 import { OZON_PVZ_SYNC_TIMEOUTS } from "../contract/jobs";
-import { env } from "../env";
+import { getOzonDeliveryAccessToken } from "./ozon-delivery-auth";
 
-const OZON_DELIVERY_OAUTH_URL = "https://xapi.ozon.ru";
 const OZON_DELIVERY_API_URL = "https://api.ozon.ru";
 const PVZ_PAGE_SIZE = 1000;
 const DB_TIMEOUT_MS = 5_000;
@@ -63,72 +62,7 @@ const pvzListResponseSchema = z
   })
   .passthrough();
 
-const tokenResponseSchema = z
-  .object({
-    access_token: z.string(),
-    refresh_token: z.string().optional().nullable(),
-    expires_in: z.number().optional().nullable(),
-  })
-  .passthrough();
-
-export function isOzonDeliveryConfigured(): boolean {
-  return !!env.OZON_DELIVERY_CLIENT_ID && !!env.OZON_DELIVERY_CLIENT_SECRET;
-}
-
-/** Получает access_token через refresh_token из БД; при ротации — сохраняет новый. */
-async function getDeliveryAccessToken(
-  tx: Database,
-  signal: AbortSignal,
-): Promise<string> {
-  const clientId = env.OZON_DELIVERY_CLIENT_ID;
-  const clientSecret = env.OZON_DELIVERY_CLIENT_SECRET;
-  if (!clientId || !clientSecret)
-    throw new Error("ozon_delivery_not_configured");
-
-  const row = await tx
-    .select({ refreshToken: ozonDeliveryToken.refreshToken })
-    .from(ozonDeliveryToken)
-    .where(eq(ozonDeliveryToken.id, "current"))
-    .then((rows) => rows[0] ?? null);
-
-  signal.throwIfAborted();
-  if (!row) throw new Error("ozon_delivery_refresh_token_missing");
-
-  const params = new URLSearchParams({
-    grant_type: "refresh_token",
-    client_id: clientId,
-    client_secret: clientSecret,
-    refresh_token: row.refreshToken,
-  });
-
-  const res = await fetch(`${OZON_DELIVERY_OAUTH_URL}/oauth/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-    signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`ozon_delivery_oauth_failed_${res.status}: ${detail}`);
-  }
-
-  const data = tokenResponseSchema.parse(await res.json());
-
-  // Сохраняем новый refresh_token если Ozon ротировал его
-  if (data.refresh_token && data.refresh_token !== row.refreshToken) {
-    await tx
-      .update(ozonDeliveryToken)
-      .set({
-        refreshToken: data.refresh_token,
-        updatedAt: new Date(),
-      })
-      .where(eq(ozonDeliveryToken.id, "current"));
-    logger.info("ozon.delivery.token_rotated");
-  }
-
-  return data.access_token;
-}
+export { isOzonDeliveryConfigured } from "./ozon-delivery-auth";
 
 /** Загружает все страницы ПВЗ из Ozon Доставки. */
 async function fetchAllPickupPoints(
@@ -280,15 +214,10 @@ export async function syncOzonPickupPoints(
     signal.throwIfAborted();
     if (!lock.rows[0]?.acquired) throw new Error("ozon_pvz_sync_in_progress");
 
-    // Ротация токена должна сохраниться даже при сбое загрузки страниц.
-    const accessToken = await syncDb.transaction(async (tokenTx) => {
-      signal.throwIfAborted();
-      await tokenTx.execute(sql`select
-        set_config('statement_timeout', ${String(DB_TIMEOUT_MS)}, true),
-        set_config('idle_in_transaction_session_timeout', '15000', true)`);
-      signal.throwIfAborted();
-      return getDeliveryAccessToken(tokenTx, signal);
-    });
+    // Ротация refresh_token живёт в отдельной короткой транзакции с
+    // advisory lock и сохраняется даже при сбое последующей загрузки страниц.
+    const accessToken = await getOzonDeliveryAccessToken();
+    signal.throwIfAborted();
 
     const rawItems = await fetchAllPickupPoints(accessToken, signal);
     const now = new Date();
