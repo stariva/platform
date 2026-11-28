@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { PartnersFaq } from "./_components/partners-faq";
 import { PartnersHero } from "./_components/partners-hero";
 import { PartnersProcess } from "./_components/partners-process";
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   description: `Рекомендуйте изделия макраме ручной работы Stariva: клиентка, которая назовёт ваше имя, получит скидку ${PARTNER_TERMS.clientDiscount} на первый заказ. Без анкет и договоров.`,
   alternates: { canonical: `${BASE_URL}/partners` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Партнёрам — Stariva",
     description: `Посоветуйте Stariva — клиентка получит скидку ${PARTNER_TERMS.clientDiscount}.`,

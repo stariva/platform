@@ -12,7 +12,7 @@ import {
 import { Reviews } from "@/components/stariva/reviews";
 import { BIG_TREE_PATH, BONUS_TREE_SIZE, WORKSHOP_PATH } from "@/lib/elka/data";
 import { getTreeProducts, loadBigTreeWorkshop } from "@/lib/elka/load";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { BigTreeWorkshop } from "./_components/big-tree-workshop";
 import { BUY_ID, bigTreeFaq } from "./_data";
 
@@ -35,6 +35,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${BASE_URL}${BIG_TREE_PATH}` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     locale: "ru_RU",
     title: "Большая ёлка макраме своими руками — мастер-класс Stariva",

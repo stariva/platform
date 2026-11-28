@@ -3,7 +3,7 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { PhotoshootsFaq } from "./_components/photoshoots-faq";
 import { PhotoshootsHero } from "./_components/photoshoots-hero";
 import { PhotoshootsProcess } from "./_components/photoshoots-process";
@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     "Платья и туники макраме ручной работы для фотосессий в путешествиях и на свадьбах: Марокко, бохо-свадьба у моря, острова, пустыня. Подбор образа и пошив по меркам.",
   alternates: { canonical: `${BASE_URL}/photoshoots` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Платья макраме для фотосессий — Stariva",
     description:

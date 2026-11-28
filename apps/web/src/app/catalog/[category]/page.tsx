@@ -12,7 +12,7 @@ import {
   LAMPSHADE_SUBCATEGORY,
   LAMPSHADES_HREF,
 } from "@/lib/products";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 import CategoryFilters from "./category-filters";
 
@@ -44,6 +44,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: `${BASE_URL}${url}` },
     openGraph: {
+      ...SITE_OPEN_GRAPH,
       type: "website",
       title,
       description,

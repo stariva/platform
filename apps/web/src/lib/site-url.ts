@@ -12,3 +12,13 @@ export const SITE_URL = resolveSiteUrl(
   process.env.NEXT_PUBLIC_SITE_URL,
   process.env.NODE_ENV === "production",
 );
+
+/**
+ * openGraph из leaf-метадаты полностью заменяет родительский (shallow merge),
+ * поэтому базовые поля прокидываем на каждой странице через spread первыми.
+ */
+export const SITE_OPEN_GRAPH = {
+  type: "website",
+  locale: "ru_RU",
+  siteName: "Stariva",
+} as const;

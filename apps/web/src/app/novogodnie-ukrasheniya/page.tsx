@@ -6,7 +6,7 @@ import { AddToCartButton } from "@/components/stariva/add-to-cart-button";
 import { ContactMasterButton } from "@/components/stariva/contact-master";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
-import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
+import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/stariva/json-ld";
 import { Button } from "@/components/ui/button";
 import { getProductsResult } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
@@ -22,8 +22,9 @@ import {
   sharedNewYearOrnamentSpecs,
   toNewYearConfiguratorProduct,
 } from "@/lib/new-year";
-import { formatPrice } from "@/lib/products";
-import { SITE_URL } from "@/lib/site-url";
+import { formatPrice, productHref } from "@/lib/products";
+import { SITE_OPEN_GRAPH, SITE_URL } from "@/lib/site-url";
+import { absoluteImageUrl } from "@/lib/workshops-data";
 import newYearHero from "../../../public/images/new-year/hero-russkaya-skazka-v2.webp";
 import {
   NewYearConfigurator,
@@ -76,28 +77,45 @@ const NEW_YEAR_PACKAGING = [
   },
 ] as const;
 
+const NEW_YEAR_DESCRIPTION =
+  "Готовые наборы маленьких историй для вашей ёлки. Украшения с народными орнаментами и праздничная упаковка.";
+// VK и старые клиенты Telegram не умеют WebP в превью ссылок — отдаём JPEG
+const NEW_YEAR_OG_IMAGE = "/images/new-year/og-russkaya-skazka.jpg";
+
 export const metadata: Metadata = {
   title: "Новогодние наборы украшений — коллекция «Русская сказка»",
   description:
     "Готовые наборы ёлочных украшений с народными орнаментами: выберите состав Stariva, добавьте праздничную коробку или соберите свою подборку фигурок.",
+  keywords: [
+    "новогодние украшения",
+    "ёлочные украшения",
+    "набор ёлочных украшений",
+    "новогодние наборы",
+    "украшения на ёлку",
+    "новогодние фигурки",
+    "подарочный набор украшений",
+    "Stariva",
+  ],
   alternates: { canonical: `${SITE_URL}${NEW_YEAR_PATH}` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     title: "Русская сказка — новогодние наборы украшений Stariva",
-    description:
-      "Готовые наборы маленьких историй для вашей ёлки. Украшения с народными орнаментами и праздничная упаковка.",
+    description: NEW_YEAR_DESCRIPTION,
     url: `${SITE_URL}${NEW_YEAR_PATH}`,
     images: [
       {
-        url: newYearHero.src,
-        width: newYearHero.width,
-        height: newYearHero.height,
+        url: `${SITE_URL}${NEW_YEAR_OG_IMAGE}`,
+        width: 1200,
+        height: 630,
+        alt: "Новогодние украшения «Русская сказка» на еловых ветвях",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Новогодние наборы «Русская сказка» — Stariva",
-    images: [newYearHero.src],
+    description: NEW_YEAR_DESCRIPTION,
+    images: [`${SITE_URL}${NEW_YEAR_OG_IMAGE}`],
   },
 };
 
@@ -218,8 +236,25 @@ async function Collection() {
       sharedFulfillment,
   );
 
+  const collectionItems = [
+    ...groups.sets,
+    ...groups.ornaments,
+    ...groups.boxes,
+  ];
+
   return (
     <>
+      {collectionItems.length > 0 && (
+        <ItemListJsonLd
+          name="Новогодние украшения — коллекция «Русская сказка»"
+          url={NEW_YEAR_PATH}
+          items={collectionItems.map((product) => ({
+            name: product.name,
+            url: productHref(product),
+            image: absoluteImageUrl(SITE_URL, newYearProductImage(product)),
+          }))}
+        />
+      )}
       <NewYearConfigurator
         ornaments={groups.ornaments.map(toNewYearConfiguratorProduct)}
         sets={groups.sets.map(toNewYearConfiguratorProduct)}
@@ -301,7 +336,14 @@ async function Collection() {
                       className="h-52 w-full object-contain p-4 transition-transform duration-300 motion-safe:hover:scale-105 sm:h-60"
                     />
                   </div>
-                  <h3 className="mt-5 font-serif text-2xl">{displayName}</h3>
+                  <h3 className="mt-5 font-serif text-2xl">
+                    <Link
+                      href={productHref(product)}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {displayName}
+                    </Link>
+                  </h3>
                   <p className="mt-2 text-sm leading-relaxed text-taupe">
                     {ornamentDetailForSlug(product.slug) ||
                       product.shortDescription ||
@@ -369,6 +411,7 @@ export default function NewYearPage() {
             </nav>
             <p className="ny-eyebrow">Stariva · Новогодние наборы</p>
             <h1 id="new-year-title" className="ny-hero-title">
+              <span className="sr-only">Новогодние украшения </span>
               Русская
               <br />
               <span>сказка</span>

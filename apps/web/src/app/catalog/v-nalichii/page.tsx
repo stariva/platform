@@ -8,7 +8,7 @@ import { getInStockProductsResult } from "@/lib/catalog/service";
 import { IN_STOCK_HREF, IN_STOCK_SHIP_DAYS, pluralItems } from "@/lib/in-stock";
 import { MADE_TO_ORDER_DAYS } from "@/lib/made-to-order";
 import { productHref, productSectionKey, sectionFilters } from "@/lib/products";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import CategoryFilters from "../[category]/category-filters";
 
 // Остатки приходят из Ozon в рантайме (в билд-образе нет креденшелов),
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   description,
   alternates: { canonical: `${BASE_URL}${IN_STOCK_HREF}` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title,
     description,

@@ -12,7 +12,7 @@ import {
   WORKSHOP_TREE_SIZE,
 } from "@/lib/elka/data";
 import { getTreeProducts } from "@/lib/elka/load";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { getBundle } from "@/lib/workshops/bundles";
 import { getWorkshopBySlug } from "@/lib/workshops/workshops-db";
 import { KomboOffer } from "./_components/kombo-offer";
@@ -37,6 +37,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${BASE_URL}${PATH}` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     locale: "ru_RU",
     title: "Две ёлки макраме своими руками — комбо мастер-классов Stariva",

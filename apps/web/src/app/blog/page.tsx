@@ -5,7 +5,7 @@ import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { ItemListJsonLd } from "@/components/stariva/json-ld";
 import { blogPosts, formatDate } from "@/lib/blog-data";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 
 export const metadata: Metadata = {
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     "Статьи о технике макраме, уходе за изделиями, истории ремесла и философии осознанного потребления. Блог Stariva.",
   alternates: { canonical: `${BASE_URL}/blog` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Блог Stariva — о макраме, уюте и осознанной жизни",
     description:

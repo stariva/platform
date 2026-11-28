@@ -12,7 +12,7 @@ import { getFeaturedProducts } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
 import { isPurchasable } from "@/lib/in-stock";
 import { catalogSections, formatPrice, productHref } from "@/lib/products";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { absoluteImageUrl } from "@/lib/workshops-data";
 
 // Рендерим страницу динамически на каждый запрос: сборка образа идёт без
@@ -27,6 +27,7 @@ export const metadata: Metadata = {
     "Каталог изделий ручного макраме: платья, абажуры, сумки и декор интерьера из натурального хлопка. Купить на сайте с доставкой по России.",
   alternates: { canonical: `${BASE_URL}/catalog` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Каталог Stariva — изделия в технике макраме ручной работы",
     description:

@@ -24,7 +24,7 @@ import { getFeaturedProducts } from "@/lib/catalog/service";
 import type { Product } from "@/lib/catalog/types";
 import { getHomeCopy } from "@/lib/home-portfolio";
 import { formatPrice, productHref } from "@/lib/products";
-import { SITE_URL } from "@/lib/site-url";
+import { SITE_OPEN_GRAPH, SITE_URL } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -33,6 +33,7 @@ export const metadata: Metadata = {
     "Платья, топы и туники макраме ручной работы по вашим меркам. Выберите образ — цвет, плетение, стоимость и срок обсудим с Ольгой.",
   alternates: { canonical: SITE_URL },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     title: "Stariva — сплетено для вас",
     description:
       "Одежда макраме по вашим меркам. Вы выбираете образ — Ольга плетёт его вручную.",

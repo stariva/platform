@@ -20,7 +20,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { getWorkshopReviews } from "@/lib/catalog/service";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { preorderBonusFor } from "@/lib/workshops/preorder-bonus";
 import {
   fetchPublishedWorkshops,
@@ -89,6 +89,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: `${BASE_URL}${url}` },
     openGraph: {
+      ...SITE_OPEN_GRAPH,
       type: "website",
       title,
       description,

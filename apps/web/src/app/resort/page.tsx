@@ -6,7 +6,7 @@ import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd } from "@/components/stariva/json-ld";
 import { Reviews } from "@/components/stariva/reviews";
 import { BULK_DISCOUNT, MAX_ORDER_ITEMS } from "@/lib/b2b/order";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { ResortAdvantages } from "./_components/resort-advantages";
 import { ResortContactStrip } from "./_components/resort-contact-strip";
 import { ResortCtaDownload } from "./_components/resort-cta-download";
@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   description: `Абажуры, панно и кашпо из хлопка для баз отдыха, глэмпингов и загородных отелей: от 1 до ${MAX_ORDER_ITEMS} изделий, скидка ${BULK_DISCOUNT.percent}% от ${BULK_DISCOUNT.minItems} штук. Заказ по фото, без выезда, доставка по России.`,
   alternates: { canonical: `${BASE_URL}/resort` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Макраме для баз отдыха — Stariva",
     description: `Абажуры, панно и кашпо для домиков, веранд и ресепшна. До ${MAX_ORDER_ITEMS} изделий в одном стиле, заказ по фото, чек НПД.`,

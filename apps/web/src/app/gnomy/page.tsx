@@ -11,7 +11,7 @@ import {
 import { Reviews } from "@/components/stariva/reviews";
 import { getProductsResult } from "@/lib/catalog/service";
 import { productHref } from "@/lib/products";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { GnomesCards } from "./_components/gnomes-cards";
 import { GnomesHero } from "./_components/gnomes-hero";
 import { GnomesIdeas } from "./_components/gnomes-ideas";
@@ -47,6 +47,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${BASE_URL}${GNOMES_PATH}` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     locale: "ru_RU",
     title: "Два вязаных гнома — Тыква и Мухомор — Stariva",

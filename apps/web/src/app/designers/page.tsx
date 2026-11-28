@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Footer } from "@/components/stariva/footer";
 import { Header } from "@/components/stariva/header";
 import { BreadcrumbJsonLd, FAQJsonLd } from "@/components/stariva/json-ld";
-import { SITE_URL as BASE_URL } from "@/lib/site-url";
+import { SITE_URL as BASE_URL, SITE_OPEN_GRAPH } from "@/lib/site-url";
 import { DesignerBrief } from "./_components/designer-brief";
 import { DesignersAssortment } from "./_components/designers-assortment";
 import { DesignersChecklist } from "./_components/designers-checklist";
@@ -22,6 +22,7 @@ export const metadata: Metadata = {
     "Условия для дизайнеров интерьера: скидка с первого изделия, абажуры, панно и перегородки макраме под проект, расчёт для сметы за 2 рабочих дня и бриф онлайн.",
   alternates: { canonical: `${BASE_URL}/designers` },
   openGraph: {
+    ...SITE_OPEN_GRAPH,
     type: "website",
     title: "Дизайнерам интерьера — Stariva",
     description:
