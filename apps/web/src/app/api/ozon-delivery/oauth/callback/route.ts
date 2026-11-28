@@ -24,8 +24,8 @@ const callbackQuerySchema = z.object({
 /**
  * Принимает code от Ozon после того, как продавец подтвердил доступ на
  * странице авторизации (см. /api/ozon-delivery/oauth/authorize), и меняет
- * его на refresh_token. Значение нужно один раз скопировать в
- * OZON_DELIVERY_REFRESH_TOKEN — дальше access_token обновляется сам.
+ * его на refresh_token. Актуальное значение хранится в БД и ротируется
+ * автоматически; OZON_DELIVERY_REFRESH_TOKEN в env — только seed для пустой БД.
  */
 export async function GET(request: NextRequest) {
   // Иначе любой продавец Ozon подменил бы токен магазина своим
@@ -93,19 +93,23 @@ export async function GET(request: NextRequest) {
     );
   }
   const data = parsedToken.data;
+  let persisted = true;
   try {
     await persistOzonDeliveryRefreshToken(data.refresh_token);
   } catch (error) {
+    persisted = false;
     console.error(
       "[ozon-delivery/oauth/callback] Не удалось сохранить refresh_token в БД:",
       error,
     );
   }
   const response = NextResponse.json({
-    message:
-      "refresh_token получен. Сохраните его в OZON_DELIVERY_REFRESH_TOKEN и оставляйте " +
-      "эту переменную заданной: isOzonDeliveryConfigured() требует её, даже если " +
-      "актуальный токен хранится в БД.",
+    message: persisted
+      ? "refresh_token сохранён в базе и будет ротироваться автоматически. " +
+        "OZON_DELIVERY_REFRESH_TOKEN в env нужен только как первоначальный seed для пустой БД."
+      : "refresh_token получен, но не сохранился в базе. Сохраните его вручную: " +
+        "после ротации Ozon старое значение станет недействительным.",
+    persisted,
     refresh_token: data.refresh_token,
     scope: data.scope,
   });

@@ -15,8 +15,8 @@ export const env = createEnv({
     // client_id/client_secret выдаются в личном кабинете продавца при
     // создании частного приложения (Настройки → Управление частными
     // приложениями). refresh_token получаем один раз через authorization_code
-    // (см. /api/ozon-delivery/oauth/callback), дальше access_token обновляется
-    // автоматически.
+    // (см. /api/ozon-delivery/oauth/callback), дальше актуальное значение
+    // хранится в БД; переменная в env — только seed для первого запуска.
     OZON_DELIVERY_CLIENT_ID: z.string().min(1).optional(),
     OZON_DELIVERY_CLIENT_SECRET: z.string().min(1).optional(),
     OZON_DELIVERY_REFRESH_TOKEN: z.string().min(1).optional(),
